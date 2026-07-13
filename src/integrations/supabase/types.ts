@@ -105,6 +105,51 @@ export type Database = {
           },
         ]
       }
+      jurisdiction_syncs: {
+        Row: {
+          created_at: string
+          error: string
+          findings: Json
+          id: string
+          portal_name: string
+          portal_url: string
+          project_id: string
+          source_url: string
+          status: string
+          summary: string
+          updated_at: string
+          user_id: string
+        }
+        Insert: {
+          created_at?: string
+          error?: string
+          findings?: Json
+          id?: string
+          portal_name?: string
+          portal_url?: string
+          project_id: string
+          source_url?: string
+          status?: string
+          summary?: string
+          updated_at?: string
+          user_id: string
+        }
+        Update: {
+          created_at?: string
+          error?: string
+          findings?: Json
+          id?: string
+          portal_name?: string
+          portal_url?: string
+          project_id?: string
+          source_url?: string
+          status?: string
+          summary?: string
+          updated_at?: string
+          user_id?: string
+        }
+        Relationships: []
+      }
       permit_items: {
         Row: {
           category: string
