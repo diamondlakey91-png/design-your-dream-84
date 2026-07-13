@@ -22,6 +22,7 @@ import {
   listJurisdictionSyncs,
   applySyncToChecklist,
   analyzeDocument,
+  reviewPlan,
   computeProjectHealth,
   listInspections,
   addInspection,
