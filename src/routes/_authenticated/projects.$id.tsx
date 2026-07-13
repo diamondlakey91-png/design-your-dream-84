@@ -199,6 +199,7 @@ function OverviewTab({
       <HealthScoreCard projectId={project.id} />
       <PermitRoadmap
         projectId={project.id}
+        userId={project.user_id}
         stage={stage}
         onAdvance={() => advance.mutate()}
         advancing={advance.isPending}
