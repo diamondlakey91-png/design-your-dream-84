@@ -597,6 +597,27 @@ function DocRow({ doc, projectId, onDelete }: { doc: { id: string; name: string;
                   Sheets: {pr.sheets_detected.join(", ")}
                 </p>
               )}
+              {pr.jurisdiction_context && (pr.jurisdiction_context.jurisdiction || (pr.jurisdiction_context.applied_amendments?.length ?? 0) > 0) && (
+                <div className="p-2 rounded-md bg-brand/5 ring-1 ring-brand/20 space-y-1">
+                  <p className="text-[10px] font-mono uppercase tracking-wider text-brand">
+                    Jurisdiction: {pr.jurisdiction_context.jurisdiction || "—"}
+                  </p>
+                  {(pr.jurisdiction_context.applied_amendments?.length ?? 0) > 0 && (
+                    <p className="text-xs text-foreground/80">
+                      Applied: {pr.jurisdiction_context.applied_amendments!.join(" · ")}
+                    </p>
+                  )}
+                  {(pr.jurisdiction_context.source_urls?.length ?? 0) > 0 && (
+                    <div className="flex flex-wrap gap-1.5">
+                      {pr.jurisdiction_context.source_urls!.slice(0, 5).map((u, i) => (
+                        <a key={i} href={u} target="_blank" rel="noreferrer" className="text-[10px] font-mono text-brand hover:underline truncate max-w-[220px]">
+                          {new URL(u).hostname}
+                        </a>
+                      ))}
+                    </div>
+                  )}
+                </div>
+              )}
               {findings.length === 0 ? (
                 <p className="text-sm text-muted-foreground">No issues flagged.</p>
               ) : (
@@ -615,6 +636,9 @@ function DocRow({ doc, projectId, onDelete }: { doc: { id: string; name: string;
                         )}
                         {f.code_reference && (
                           <span className="text-[10px] font-mono text-muted-foreground">{f.code_reference}</span>
+                        )}
+                        {f.local_amendment && (
+                          <span className="text-[10px] font-mono text-brand">Local: {f.local_amendment}</span>
                         )}
                       </div>
                       <p className="text-sm font-medium mt-1">{f.title}</p>
