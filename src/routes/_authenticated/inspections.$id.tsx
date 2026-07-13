@@ -53,7 +53,8 @@ function InspectionMode() {
   }, [q.data, hydrated]);
 
   const save = useMutation({
-    mutationFn: (patch: Parameters<typeof saveFn>[0]["data"]) => saveFn({ data: patch }),
+    mutationFn: (patch: { checklist?: ChecklistItem[]; photos?: { path: string; caption: string }[]; notes?: string; status?: "passed" | "failed" }) =>
+      saveFn({ data: { id, ...patch } }),
     onSuccess: () => qc.invalidateQueries({ queryKey: ["inspection", id] }),
     onError: (e) => toast.error(e instanceof Error ? e.message : "Save failed"),
   });
