@@ -1880,7 +1880,7 @@ async function fetchJurisdictionAmendments(
     queries.map((q) => firecrawlSearch(fcKey, q, 3).catch(() => [])),
   );
   const seen = new Set<string>();
-  const candidates: Array<{ url: string; title: string; description?: string }> = [];
+  const candidates: Array<{ url: string; title?: string; description?: string }> = [];
   for (const hits of searches) {
     for (const h of hits) {
       if (seen.has(h.url)) continue;
