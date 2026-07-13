@@ -81,27 +81,31 @@ function PortalsPage() {
   }, [query, state, platform, address, permitNo, navigate]);
 
   const availableStates = useMemo(() => {
-    const s = new Set(PORTAL_REGISTRY.map((p) => p.state));
+    const s = new Set(allEntries.map((p) => p.state));
     return US_STATES.filter((x) => s.has(x));
-  }, []);
+  }, [allEntries]);
 
   const results = useMemo(() => {
     const q = query.trim().toLowerCase();
-    return PORTAL_REGISTRY.filter((p) => {
+    return allEntries.filter((p) => {
       if (state && p.state !== state) return false;
       if (platform && p.platform !== platform) return false;
       if (q && !`${p.jurisdiction} ${p.state} ${p.platform}`.toLowerCase().includes(q)) return false;
       return true;
     }).sort((a, b) => a.jurisdiction.localeCompare(b.jurisdiction));
-  }, [query, state, platform]);
+  }, [query, state, platform, allEntries]);
 
   const counts = useMemo(() => {
     const m = new Map<PortalPlatform, number>();
-    for (const p of PORTAL_REGISTRY) m.set(p.platform, (m.get(p.platform) ?? 0) + 1);
+    for (const p of allEntries) m.set(p.platform, (m.get(p.platform) ?? 0) + 1);
     return m;
-  }, []);
+  }, [allEntries]);
 
   // Suggested direct deep links based on the query + permit#/address.
+  const extraEntries = useMemo(
+    () => (mappingsQ.data ?? []).filter((m) => m.is_active).map(buildEntryFromMapping),
+    [mappingsQ.data],
+  );
   const suggested = useMemo(() => {
     if (!query.trim() || (!permitNo.trim() && !address.trim())) return [];
     const jurisdictionHint = state ? `${query.trim()}, ${state}` : query.trim();
@@ -109,8 +113,9 @@ function PortalsPage() {
       permitNumber: permitNo.trim() || undefined,
       address: address.trim() || undefined,
       limit: 4,
+      extra: extraEntries,
     });
-  }, [query, state, permitNo, address]);
+  }, [query, state, permitNo, address, extraEntries]);
 
 
 
@@ -122,12 +127,23 @@ function PortalsPage() {
             <Building2 className="size-5" />
             <span className="font-mono text-[10px] uppercase tracking-widest">Permit Portals</span>
           </div>
-          <h1 className="text-2xl font-semibold tracking-tight">Nationwide Portal Directory</h1>
+          <div className="flex items-start justify-between gap-3">
+            <h1 className="text-2xl font-semibold tracking-tight">Nationwide Portal Directory</h1>
+            {adminQ.data === true && (
+              <Link
+                to="/admin/portals"
+                className="inline-flex items-center gap-1.5 rounded-lg border border-brand/40 bg-brand/10 px-2.5 py-1.5 text-[11px] font-medium text-brand hover:bg-brand/20"
+              >
+                <ShieldAlert className="size-3.5" /> Manage mappings
+              </Link>
+            )}
+          </div>
           <p className="text-sm text-muted-foreground">
-            Direct links to {PORTAL_REGISTRY.length}+ live municipal permit portals. Search by jurisdiction, filter by
+            Direct links to {allEntries.length}+ live municipal permit portals. Search by jurisdiction, filter by
             platform, or pre-fill any portal with an address or permit number.
           </p>
         </header>
+
 
         {/* Platform legend */}
         <div className="flex flex-wrap gap-2">
