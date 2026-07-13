@@ -1,10 +1,15 @@
-import { createFileRoute, useNavigate } from "@tanstack/react-router";
+import { createFileRoute, Link, useNavigate } from "@tanstack/react-router";
 import { zodValidator, fallback } from "@tanstack/zod-adapter";
 import { z } from "zod";
 import { useEffect, useMemo, useState } from "react";
+import { useQuery } from "@tanstack/react-query";
+import { useServerFn } from "@tanstack/react-start";
 import { AppShell } from "@/components/AppShell";
-import { PORTAL_REGISTRY, PORTAL_PLATFORMS, US_STATES, findPortalDeepLinks, type PortalEntry, type PortalPlatform } from "@/lib/portalRegistry";
-import { ExternalLink, Search, Building2, FileText, MapPin, Hash, Info, Zap } from "lucide-react";
+import { PORTAL_REGISTRY, PORTAL_PLATFORMS, US_STATES, findPortalDeepLinks, buildEntryFromMapping, type PortalEntry, type PortalPlatform } from "@/lib/portalRegistry";
+import { listPortalMappings } from "@/lib/portals.functions";
+import { useIsAdmin } from "@/hooks/useIsAdmin";
+import { ExternalLink, Search, Building2, FileText, MapPin, Hash, Info, Zap, ShieldAlert } from "lucide-react";
+
 
 const portalsSearchSchema = z.object({
   q: fallback(z.string(), "").default(""),
@@ -40,8 +45,29 @@ function PortalsPage() {
   const [address, setAddress] = useState(sp.address);
   const [permitNo, setPermitNo] = useState(sp.permit);
 
+  const adminQ = useIsAdmin();
+  const listFn = useServerFn(listPortalMappings);
+  const mappingsQ = useQuery({
+    queryKey: ["portal-mappings"],
+    queryFn: () => listFn(),
+    staleTime: 60_000,
+  });
+
+  // Merge: DB entries override built-ins by (jurisdiction+state+platform).
+  const allEntries = useMemo<PortalEntry[]>(() => {
+    const dbEntries = (mappingsQ.data ?? [])
+      .filter((m) => m.is_active)
+      .map((m) => buildEntryFromMapping(m));
+    const key = (e: PortalEntry) => `${e.jurisdiction.toLowerCase()}|${e.state}|${e.platform}`;
+    const byKey = new Map<string, PortalEntry>();
+    for (const e of PORTAL_REGISTRY) byKey.set(key(e), e);
+    for (const e of dbEntries) byKey.set(key(e), e);
+    return Array.from(byKey.values());
+  }, [mappingsQ.data]);
+
   // Keep local state in sync when the URL changes (back/forward, deep link).
   useEffect(() => { setQuery(sp.q); setState(sp.state); setPlatform((sp.platform as PortalPlatform) || ""); setAddress(sp.address); setPermitNo(sp.permit); }, [sp.q, sp.state, sp.platform, sp.address, sp.permit]);
+
 
   // Push local state into URL (debounced) so the page is shareable.
   useEffect(() => {
@@ -55,27 +81,31 @@ function PortalsPage() {
   }, [query, state, platform, address, permitNo, navigate]);
 
   const availableStates = useMemo(() => {
-    const s = new Set(PORTAL_REGISTRY.map((p) => p.state));
+    const s = new Set(allEntries.map((p) => p.state));
     return US_STATES.filter((x) => s.has(x));
-  }, []);
+  }, [allEntries]);
 
   const results = useMemo(() => {
     const q = query.trim().toLowerCase();
-    return PORTAL_REGISTRY.filter((p) => {
+    return allEntries.filter((p) => {
       if (state && p.state !== state) return false;
       if (platform && p.platform !== platform) return false;
       if (q && !`${p.jurisdiction} ${p.state} ${p.platform}`.toLowerCase().includes(q)) return false;
       return true;
     }).sort((a, b) => a.jurisdiction.localeCompare(b.jurisdiction));
-  }, [query, state, platform]);
+  }, [query, state, platform, allEntries]);
 
   const counts = useMemo(() => {
     const m = new Map<PortalPlatform, number>();
-    for (const p of PORTAL_REGISTRY) m.set(p.platform, (m.get(p.platform) ?? 0) + 1);
+    for (const p of allEntries) m.set(p.platform, (m.get(p.platform) ?? 0) + 1);
     return m;
-  }, []);
+  }, [allEntries]);
 
   // Suggested direct deep links based on the query + permit#/address.
+  const extraEntries = useMemo(
+    () => (mappingsQ.data ?? []).filter((m) => m.is_active).map(buildEntryFromMapping),
+    [mappingsQ.data],
+  );
   const suggested = useMemo(() => {
     if (!query.trim() || (!permitNo.trim() && !address.trim())) return [];
     const jurisdictionHint = state ? `${query.trim()}, ${state}` : query.trim();
@@ -83,8 +113,9 @@ function PortalsPage() {
       permitNumber: permitNo.trim() || undefined,
       address: address.trim() || undefined,
       limit: 4,
+      extra: extraEntries,
     });
-  }, [query, state, permitNo, address]);
+  }, [query, state, permitNo, address, extraEntries]);
 
 
 
@@ -96,12 +127,23 @@ function PortalsPage() {
             <Building2 className="size-5" />
             <span className="font-mono text-[10px] uppercase tracking-widest">Permit Portals</span>
           </div>
-          <h1 className="text-2xl font-semibold tracking-tight">Nationwide Portal Directory</h1>
+          <div className="flex items-start justify-between gap-3">
+            <h1 className="text-2xl font-semibold tracking-tight">Nationwide Portal Directory</h1>
+            {adminQ.data === true && (
+              <Link
+                to="/admin/portals"
+                className="inline-flex items-center gap-1.5 rounded-lg border border-brand/40 bg-brand/10 px-2.5 py-1.5 text-[11px] font-medium text-brand hover:bg-brand/20"
+              >
+                <ShieldAlert className="size-3.5" /> Manage mappings
+              </Link>
+            )}
+          </div>
           <p className="text-sm text-muted-foreground">
-            Direct links to {PORTAL_REGISTRY.length}+ live municipal permit portals. Search by jurisdiction, filter by
+            Direct links to {allEntries.length}+ live municipal permit portals. Search by jurisdiction, filter by
             platform, or pre-fill any portal with an address or permit number.
           </p>
         </header>
+
 
         {/* Platform legend */}
         <div className="flex flex-wrap gap-2">

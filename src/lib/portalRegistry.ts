@@ -478,11 +478,43 @@ export type PortalMatch = {
   linkKind: "permit" | "address" | "home";
 };
 
+/** Convert a DB-backed portal mapping row into a runtime PortalEntry. */
+export function buildEntryFromMapping(m: {
+  jurisdiction: string;
+  state: string;
+  platform: string;
+  url: string;
+  address_search_template?: string | null;
+  permit_search_template?: string | null;
+  plan_review_url?: string | null;
+  notes?: string | null;
+}): PortalEntry {
+  const platform: PortalPlatform = (PORTAL_PLATFORMS as string[]).includes(m.platform)
+    ? (m.platform as PortalPlatform)
+    : "Custom";
+  const fill = (tpl: string | null | undefined, q: string) =>
+    tpl ? tpl.replace(/\{q\}/g, encodeURIComponent(q.trim())) : undefined;
+  return {
+    jurisdiction: m.jurisdiction,
+    state: m.state,
+    platform,
+    url: m.url,
+    addressSearch: m.address_search_template
+      ? (a: string) => fill(m.address_search_template, a) as string
+      : undefined,
+    permitSearch: m.permit_search_template
+      ? (n: string) => fill(m.permit_search_template, n) as string
+      : undefined,
+    planReviewUrl: m.plan_review_url ?? undefined,
+    notes: m.notes ?? undefined,
+  };
+}
+
 /** Rank the registry against a jurisdiction + optional address/permit, and
  * return the top-N matches with their best available deep link. */
 export function findPortalDeepLinks(
   jurisdiction: string,
-  opts: { permitNumber?: string; address?: string; limit?: number } = {},
+  opts: { permitNumber?: string; address?: string; limit?: number; extra?: PortalEntry[] } = {},
 ): PortalMatch[] {
   const { permitNumber, address } = opts;
   const limit = opts.limit ?? 6;
@@ -491,8 +523,14 @@ export function findPortalDeepLinks(
 
   const nameTokens = name.split(" ").filter((t) => t.length >= 3);
 
+  // Merge: DB entries override built-ins on (jurisdiction+state+platform).
+  const byKey = new Map<string, PortalEntry>();
+  const key = (e: PortalEntry) => `${normalize(e.jurisdiction)}|${e.state}|${e.platform}`;
+  for (const e of PORTAL_REGISTRY) byKey.set(key(e), e);
+  for (const e of opts.extra ?? []) byKey.set(key(e), e);
+
   const scored: PortalMatch[] = [];
-  for (const entry of PORTAL_REGISTRY) {
+  for (const entry of byKey.values()) {
     const entryName = normalize(entry.jurisdiction);
     let score = 0;
     if (state && entry.state === state) score += 3;
@@ -514,4 +552,5 @@ export function findPortalDeepLinks(
   scored.sort((a, b) => b.score - a.score);
   return scored.slice(0, limit);
 }
+
 

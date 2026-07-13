@@ -64,7 +64,9 @@ import { formatDistanceToNow, format } from "date-fns";
 import ReactMarkdown from "react-markdown";
 import remarkGfm from "remark-gfm";
 import { useState, useRef, useEffect, useMemo } from "react";
-import { findPortalDeepLinks } from "@/lib/portalRegistry";
+import { findPortalDeepLinks, buildEntryFromMapping } from "@/lib/portalRegistry";
+import { listPortalMappings } from "@/lib/portals.functions";
+
 
 import { supabase } from "@/integrations/supabase/client";
 
@@ -2036,11 +2038,18 @@ function LivePermitCard({
 }
 
 function PortalDeepLinks({ jurisdiction, permitNumber, address }: { jurisdiction: string; permitNumber: string; address: string }) {
+  const listFn = useServerFn(listPortalMappings);
+  const mappingsQ = useQuery({ queryKey: ["portal-mappings"], queryFn: () => listFn(), staleTime: 60_000 });
+  const extra = useMemo(
+    () => (mappingsQ.data ?? []).filter((m) => m.is_active).map(buildEntryFromMapping),
+    [mappingsQ.data],
+  );
   const matches = useMemo(
-    () => findPortalDeepLinks(jurisdiction, { permitNumber: permitNumber || undefined, address: address || undefined, limit: 4 }),
-    [jurisdiction, permitNumber, address],
+    () => findPortalDeepLinks(jurisdiction, { permitNumber: permitNumber || undefined, address: address || undefined, limit: 4, extra }),
+    [jurisdiction, permitNumber, address, extra],
   );
   if (matches.length === 0) return null;
+
   return (
     <div className="pt-2 border-t border-border">
       <p className="text-[10px] font-mono uppercase tracking-widest text-brand mb-1.5">DIRECT PORTAL DEEP LINKS</p>
