@@ -5,25 +5,21 @@ import { createCheckoutSession } from "@/lib/payments.functions";
 interface StripeEmbeddedCheckoutProps {
   priceId: string;
   quantity?: number;
-  customerEmail?: string;
-  userId?: string;
   returnUrl?: string;
 }
 
 export function StripeEmbeddedCheckout({
   priceId,
   quantity,
-  customerEmail,
-  userId,
   returnUrl,
 }: StripeEmbeddedCheckoutProps) {
   const fetchClientSecret = async (): Promise<string> => {
+    // Identity is derived server-side from the authenticated session —
+    // never pass a client-supplied userId or email.
     const result = await createCheckoutSession({
       data: {
         priceId,
         quantity,
-        customerEmail,
-        userId,
         returnUrl: returnUrl || window.location.href,
         environment: getStripeEnvironment(),
       },
