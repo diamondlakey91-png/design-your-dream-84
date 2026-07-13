@@ -4580,16 +4580,16 @@ export const generateDailyBriefing = createServerFn({ method: "POST" })
         generated_at: new Date().toISOString(),
       };
     }
-    const pMap = new Map(projects.map((p) => [p.id, p.name]));
+    const pMap = new Map(projects.map((p) => [p.id, p.name] as const));
     const today = new Date(); today.setHours(0, 0, 0, 0);
     const compactDl = (dls.data ?? []).map((d) => ({
-      project: pMap.get(d.project_id) ?? "?",
+      project: (d.project_id && pMap.get(d.project_id)) || "?",
       title: d.title,
       due: d.due_date,
       days: d.due_date ? Math.round((new Date(d.due_date).getTime() - today.getTime()) / 86400000) : null,
     }));
-    const compactAct = (acts.data ?? []).map((a) => ({ project: pMap.get(a.project_id) ?? "?", msg: a.message }));
-    const compactInsp = (insp.data ?? []).map((i) => ({ project: pMap.get(i.project_id) ?? "?", type: i.type, status: i.status, when: i.scheduled_date }));
+    const compactAct = (acts.data ?? []).map((a) => ({ project: (a.project_id && pMap.get(a.project_id)) || "?", msg: a.description }));
+    const compactInsp = (insp.data ?? []).map((i) => ({ project: (i.project_id && pMap.get(i.project_id)) || "?", type: i.inspection_type, status: i.status, when: i.scheduled_date }));
 
     const prompt = `You are the user's chief-of-staff for commercial permitting. Produce a concise morning briefing.
 Today: ${new Date().toISOString().slice(0, 10)}
