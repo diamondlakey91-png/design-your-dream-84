@@ -315,10 +315,16 @@ export const sendChatMessage = createServerFn({ method: "POST" })
       .limit(40);
 
     let projectContext = "";
+    let jurisdictionBlock = "";
     const p = thread.projects as { name: string; project_type: string; location: string; jurisdiction: string; current_stage: number; permits_issued: number; permit_count: number } | null;
     if (p) {
       projectContext = `\n\n[Active project context]\n- Name: ${p.name}\n- Type: ${p.project_type}\n- Location: ${p.location || "unspecified"}\n- Jurisdiction: ${p.jurisdiction || "unspecified"}\n- Current stage: ${STAGE_NAMES[p.current_stage]} (${p.current_stage + 1}/5)\n- Permits: ${p.permits_issued}/${p.permit_count} issued\nUse this context when the user's question refers to "this project", "my project", or asks about next steps.`;
+      if (p.jurisdiction) {
+        const jc = await loadJurisdictionContextBlock(context.supabase, p.jurisdiction);
+        jurisdictionBlock = jc.block;
+      }
     }
+
 
     const { data: userMsg, error: uerr } = await context.supabase
       .from("chat_messages")
