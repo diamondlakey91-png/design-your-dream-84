@@ -1905,6 +1905,89 @@ async function fetchJurisdictionAmendments(
 }
 
 
+export const reviewPlan = createServerFn({ method: "POST" })
+  .middleware([requireSupabaseAuth])
+  .inputValidator((input: unknown) => z.object({ id: z.string().uuid() }).parse(input))
+  .handler(async ({ data, context }) => {
+    requireFeature(await getEntitlement(context.supabase, context.userId), "planReview");
+
+    const aiKey = process.env.LOVABLE_API_KEY;
+    if (!aiKey) throw new Error("AI is not configured");
+    const fcKey = process.env.FIRECRAWL_API_KEY;
+
+    const { data: doc } = await context.supabase
+      .from("project_documents").select("*").eq("id", data.id).maybeSingle();
+    if (!doc) throw new Error("Document not found");
+
+    const { data: project } = await context.supabase
+      .from("projects").select("name, jurisdiction, project_type, location")
+      .eq("id", doc.project_id).maybeSingle();
+
+    const { data: signed, error: sErr } = await context.supabase
+      .storage.from("project-docs").createSignedUrl(doc.storage_path, 600);
+    if (sErr || !signed?.signedUrl) throw new Error("Could not access document");
+
+    const mime = doc.mime_type || "application/pdf";
+    const isImage = mime.startsWith("image/");
+    const isPdf = mime === "application/pdf" || doc.name.toLowerCase().endsWith(".pdf");
+    if (!isImage && !isPdf) throw new Error("Only PDF or image plans can be reviewed.");
+
+    const juris = project?.jurisdiction || "the local jurisdiction";
+    const ptype = project?.project_type || "the project";
+
+    // Pull cached jurisdiction profile (if the user has built one) for extra context.
+    let profileContext = "";
+    if (project?.jurisdiction) {
+      const { data: prof } = await context.supabase
+        .from("jurisdiction_profiles")
+        .select("name, state, department, overview, permits, fees, timelines, source_urls")
+        .eq("slug", toSlug(project.jurisdiction))
+        .maybeSingle();
+      if (prof) {
+        profileContext = `CACHED JURISDICTION PROFILE\n${JSON.stringify(prof).slice(0, 2500)}`;
+      }
+    }
+
+    // Live-fetch jurisdiction-specific code amendments (works for any US jurisdiction).
+    const { context: amendmentsContext, sources: amendmentSources } =
+      await fetchJurisdictionAmendments(fcKey, juris);
+
+    const jurisBlock = [profileContext, amendmentsContext].filter(Boolean).join("\n\n===\n\n");
+
+    const instruction = `You are a licensed plan reviewer analyzing construction drawings for ${ptype} in ${juris}. Review the attached plan set for issues that THIS jurisdiction's plan checker would flag — using the jurisdiction's LOCAL amendments to the model codes wherever provided below, not just the base IBC/IFC/ADA.
+
+${jurisBlock ? `JURISDICTION-SPECIFIC CONTEXT (authoritative — prefer over model-code defaults when they conflict):\n${jurisBlock}\n\n` : `No cached jurisdictional data was available. Apply the currently adopted code cycle for ${juris} (state-adopted IBC/IFC/IECC + any local amendments you are confident about). If unsure which cycle applies, cite the model code and note "verify local amendment".\n\n`}Focus on FOUR categories:
+1. missing_exits — insufficient exits, exit access travel distance, dead-end corridors, exit width, exit signage/illumination (IBC Ch.10 + local amendments).
+2. ada — accessibility: door clearances, ramp slopes, restroom fixture clearances, accessible route, parking, reach ranges, signage (ADA 2010 / ICC A117.1 + state accessibility code, e.g. CBC 11B in CA, TAS in TX, MAAB in MA, NYC Ch.11).
+3. fire_code — fire separation, occupancy separation, sprinkler/alarm coverage, fire-rated assemblies, hydrant/FDC access (IBC Ch.7-9, IFC + local fire amendments).
+4. permitting_mistake — missing sheets, incomplete title block, missing code analysis, unstamped drawings, missing energy compliance (IECC or state equivalent — e.g. Title 24 CA, Stretch Code MA), zoning setbacks, jurisdiction-specific submittal requirements.
+
+Return ONLY valid JSON in this exact shape (no fences, no prose):
+{
+  "overall_summary": "3-5 sentence assessment referencing the jurisdiction",
+  "overall_risk": "low" | "medium" | "high",
+  "sheets_detected": ["A0.0", "A1.1", ...],
+  "jurisdiction_context": {
+    "jurisdiction": "${juris}",
+    "applied_amendments": ["short label of each local amendment or code cycle you applied"],
+    "source_urls": ${JSON.stringify(amendmentSources)}
+  },
+  "findings": [
+    {
+      "category": "missing_exits" | "ada" | "fire_code" | "permitting_mistake" | "other",
+      "severity": "low" | "medium" | "high",
+      "title": "short label (<80 chars)",
+      "detail": "what is wrong and where (<240 chars)",
+      "code_reference": "model code, e.g. IBC 1006.2.1 or ADA 404.2.3",
+      "local_amendment": "jurisdiction-specific amendment/section if applicable, else ''",
+      "sheet_reference": "e.g. A2.1 or 'not shown'",
+      "recommendation": "concrete fix (<200 chars)"
+    }
+  ]
+}
+
+Rules: only flag issues you can actually see or reasonably infer from the plan. If the plan appears compliant in a category, omit it. Never fabricate specific code sections or local amendment numbers — leave those fields blank if unsure. If the document is not a plan set, return findings: [] and explain in overall_summary.`;
+
     const contentParts: unknown[] = [{ type: "text", text: instruction }];
     if (isImage) {
       contentParts.push({ type: "image_url", image_url: { url: signed.signedUrl } });
@@ -1922,6 +2005,7 @@ async function fetchJurisdictionAmendments(
         file: { filename: doc.name, file_data: `data:${mime};base64,${b64}` },
       });
     }
+
 
     const resp = await fetch("https://ai.gateway.lovable.dev/v1/chat/completions", {
       method: "POST",
