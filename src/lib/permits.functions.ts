@@ -1,6 +1,8 @@
 import { createServerFn } from "@tanstack/react-start";
 import { requireSupabaseAuth } from "@/integrations/supabase/auth-middleware";
 import { z } from "zod";
+import { getEntitlement, requireFeature, requireProjectQuota } from "@/lib/entitlements";
+
 
 // ---- Projects ----
 export const listProjects = createServerFn({ method: "GET" })
