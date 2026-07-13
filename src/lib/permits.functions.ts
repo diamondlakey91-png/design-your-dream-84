@@ -1737,8 +1737,10 @@ export const analyzeDocument = createServerFn({ method: "POST" })
   .middleware([requireSupabaseAuth])
   .inputValidator((input: unknown) => z.object({ id: z.string().uuid() }).parse(input))
   .handler(async ({ data, context }) => {
+    requireFeature(await getEntitlement(context.supabase, context.userId), "docReader");
     const aiKey = process.env.LOVABLE_API_KEY;
     if (!aiKey) throw new Error("AI is not configured");
+
 
     const { data: doc } = await context.supabase
       .from("project_documents").select("*").eq("id", data.id).maybeSingle();
