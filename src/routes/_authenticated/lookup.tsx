@@ -278,3 +278,79 @@ function SourceChip({ active, label }: { active?: boolean; label: string }) {
     </span>
   );
 }
+
+const UTILITY_META = {
+  one_call: { label: "811 One-Call", Icon: PhoneCall, tone: "text-amber-500 border-amber-500/30 bg-amber-500/10" },
+  water_sewer: { label: "Water / Sewer", Icon: Droplets, tone: "text-sky-400 border-sky-500/30 bg-sky-500/10" },
+  gas: { label: "Natural Gas", Icon: Flame, tone: "text-orange-400 border-orange-500/30 bg-orange-500/10" },
+  electric: { label: "Electric", Icon: Zap, tone: "text-yellow-400 border-yellow-500/30 bg-yellow-500/10" },
+  telecom: { label: "Telecom / Fiber", Icon: Cable, tone: "text-violet-400 border-violet-500/30 bg-violet-500/10" },
+  stormwater: { label: "Stormwater", Icon: CloudRain, tone: "text-teal-400 border-teal-500/30 bg-teal-500/10" },
+} as const;
+
+function UtilityPanel({ utility }: { utility: UtilityResult }) {
+  const groups = utility.contacts.reduce<Record<string, typeof utility.contacts>>((acc, c) => {
+    (acc[c.category] ||= []).push(c);
+    return acc;
+  }, {});
+  const order: (keyof typeof UTILITY_META)[] = ["one_call", "water_sewer", "gas", "electric", "telecom", "stormwater"];
+  return (
+    <section className="space-y-4">
+      <div className="rounded-xl border border-border bg-card p-4 space-y-2">
+        <div className="flex items-center gap-2 text-brand">
+          <Droplets className="size-4" />
+          <span className="font-mono text-[10px] uppercase tracking-widest">Utility Coordination</span>
+        </div>
+        <h2 className="text-lg font-semibold">Water · sewer · gas · electric · telecom · 811</h2>
+        <p className="text-xs text-muted-foreground">Service providers and one-call locates for {utility.jurisdiction}. Always file 811 tickets before excavation.</p>
+      </div>
+
+      {utility.steps.length > 0 && (
+        <div className="rounded-xl border border-border bg-card p-4 space-y-2">
+          <div className="font-mono text-[10px] uppercase tracking-widest text-muted-foreground">Recommended sequence</div>
+          <ol className="space-y-2">
+            {utility.steps.map((s, i) => (
+              <li key={i} className="flex gap-3 text-xs">
+                <span className="mt-0.5 inline-flex size-5 items-center justify-center rounded-full bg-brand/15 text-[10px] font-mono text-brand">{i + 1}</span>
+                <div className="flex-1">
+                  <div className="text-sm font-medium">{s.step}</div>
+                  <div className="text-[11px] text-muted-foreground">{s.owner} · {s.timing}</div>
+                  {s.notes && <div className="text-[11px] mt-0.5">{s.notes}</div>}
+                </div>
+              </li>
+            ))}
+          </ol>
+        </div>
+      )}
+
+      <div className="grid gap-2">
+        {order.filter((k) => groups[k]?.length).map((k) => {
+          const meta = UTILITY_META[k];
+          return (
+            <div key={k} className="rounded-xl border border-border bg-card overflow-hidden">
+              <div className={`flex items-center gap-2 px-3 py-2 border-b border-border ${meta.tone}`}>
+                <meta.Icon className="size-4" />
+                <span className="font-mono text-[10px] uppercase tracking-widest">{meta.label}</span>
+              </div>
+              <div className="divide-y divide-border">
+                {groups[k].map((c, i) => (
+                  <div key={i} className="p-3 space-y-1">
+                    <div className="flex items-start justify-between gap-2">
+                      <div className="text-sm font-medium">{c.name}</div>
+                      {c.phone && <span className="font-mono text-[11px] text-muted-foreground">{c.phone}</span>}
+                    </div>
+                    {c.notes && <p className="text-[11px] text-muted-foreground">{c.notes}</p>}
+                    <a href={c.url} target="_blank" rel="noreferrer" className="inline-flex items-center gap-1 text-[11px] text-brand hover:underline">
+                      <ExternalLink className="size-3" /> Open
+                    </a>
+                  </div>
+                ))}
+              </div>
+            </div>
+          );
+        })}
+      </div>
+    </section>
+  );
+}
+
