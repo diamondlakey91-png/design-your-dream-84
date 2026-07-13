@@ -1859,6 +1859,15 @@ const PlanReviewSchema = z.object({
     local_amendment: z.string().default(""),
     sheet_reference: z.string().default(""),
     recommendation: z.string().default(""),
+    // Location on the plan for visual markup (page is 1-indexed; bbox is normalized 0-1
+    // with origin top-left). All optional — omit when the AI can't localize the issue.
+    page: z.number().int().min(1).max(500).optional(),
+    bbox: z.object({
+      x: z.number().min(0).max(1),
+      y: z.number().min(0).max(1),
+      w: z.number().min(0).max(1),
+      h: z.number().min(0).max(1),
+    }).optional(),
   })).max(60).default([]),
 });
 
@@ -1977,12 +1986,18 @@ Return ONLY valid JSON in this exact shape (no fences, no prose):
       "code_reference": "model code, e.g. IBC 1006.2.1 or ADA 404.2.3",
       "local_amendment": "jurisdiction-specific amendment/section if applicable, else ''",
       "sheet_reference": "e.g. A2.1 or 'not shown'",
-      "recommendation": "concrete fix (<200 chars)"
+      "recommendation": "concrete fix (<200 chars)",
+      "page": 1,
+      "bbox": { "x": 0.12, "y": 0.34, "w": 0.18, "h": 0.09 }
     }
   ]
 }
 
-Rules: only flag issues you can actually see or reasonably infer from the plan. If the plan appears compliant in a category, omit it. Never fabricate specific code sections or local amendment numbers — leave those fields blank if unsure. If the document is not a plan set, return findings: [] and explain in overall_summary.`;
+Rules: only flag issues you can actually see or reasonably infer from the plan. If the plan appears compliant in a category, omit it. Never fabricate specific code sections or local amendment numbers — leave those fields blank if unsure. If the document is not a plan set, return findings: [] and explain in overall_summary.
+
+LOCATION (VERY IMPORTANT for markup): for every finding you visually identify on a sheet, include:
+- "page": the 1-indexed page number of the PDF (or 1 for a single image) that contains the issue.
+- "bbox": normalized box coordinates {x, y, w, h} in [0,1], where (0,0) is the TOP-LEFT of that page/image, x+w and y+h must stay <= 1, and the box tightly frames the problem region (e.g. the missing exit, the non-compliant door, the fire-rated wall). Do not include a bbox that fills the whole page; leave bbox off entirely if you can't localize the issue.`;
 
   const contentParts: unknown[] = [{ type: "text", text: instruction }];
   if (isImage) {
@@ -2635,3 +2650,185 @@ Return ONLY JSON: { "overall_risk": "low|medium|high", "risks": [{ "severity": "
     return callGeminiJSON(prompt, "You are a permit risk analyst. Only flag concrete, data-supported risks. Output JSON only.", RiskSchema);
   });
 
+
+// ============================================================
+// REDLINED PLAN PDF — burns AI review bboxes onto the plan
+// ============================================================
+
+// Severity → RGB (0-1) used for both the box outline and label chip fill.
+function severityRgb(sev: string): [number, number, number] {
+  if (sev === "high") return [0.85, 0.15, 0.15];
+  if (sev === "medium") return [0.95, 0.55, 0.05];
+  return [0.10, 0.55, 0.35];
+}
+
+export const generateRedlinedPdf = createServerFn({ method: "POST" })
+  .middleware([requireSupabaseAuth])
+  .inputValidator((input: unknown) => z.object({ id: z.string().uuid() }).parse(input))
+  .handler(async ({ data, context }) => {
+    requireFeature(await getEntitlement(context.supabase, context.userId), "planReview");
+
+    const { data: doc } = await context.supabase
+      .from("project_documents").select("*").eq("id", data.id).maybeSingle();
+    if (!doc) throw new Error("Document not found");
+    const review = doc.plan_review as z.infer<typeof PlanReviewSchema> | null;
+    if (!review || !Array.isArray(review.findings) || review.findings.length === 0) {
+      throw new Error("Run Plan Review first — no findings to markup.");
+    }
+
+    const mime = doc.mime_type || "application/pdf";
+    const isImage = mime.startsWith("image/");
+    const isPdf = mime === "application/pdf" || doc.name.toLowerCase().endsWith(".pdf");
+    if (!isImage && !isPdf) throw new Error("Only PDF or image plans can be marked up.");
+
+    const { data: signed, error: sErr } = await context.supabase
+      .storage.from("project-docs").createSignedUrl(doc.storage_path, 600);
+    if (sErr || !signed?.signedUrl) throw new Error("Could not access document");
+    const srcResp = await fetch(signed.signedUrl);
+    if (!srcResp.ok) throw new Error("Could not download plan");
+    const srcBytes = new Uint8Array(await srcResp.arrayBuffer());
+
+    // Lazy-load pdf-lib on the server to keep the client bundle lean.
+    const { PDFDocument, StandardFonts, rgb, degrees: _deg } = await import("pdf-lib");
+    void _deg;
+
+    let pdf: import("pdf-lib").PDFDocument;
+    if (isPdf) {
+      pdf = await PDFDocument.load(srcBytes, { ignoreEncryption: true });
+    } else {
+      pdf = await PDFDocument.create();
+      const img = mime.includes("png")
+        ? await pdf.embedPng(srcBytes)
+        : await pdf.embedJpg(srcBytes);
+      const page = pdf.addPage([img.width, img.height]);
+      page.drawImage(img, { x: 0, y: 0, width: img.width, height: img.height });
+    }
+
+    const font = await pdf.embedFont(StandardFonts.HelveticaBold);
+    const pages = pdf.getPages();
+
+    // Group findings by page (1-indexed → 0-indexed). Findings with no page default to page 1.
+    const byPage = new Map<number, Array<{ n: number; f: z.infer<typeof PlanReviewSchema>["findings"][number] }>>();
+    review.findings.forEach((f, idx) => {
+      const p = Math.min(Math.max((f.page ?? 1) - 1, 0), pages.length - 1);
+      if (!byPage.has(p)) byPage.set(p, []);
+      byPage.get(p)!.push({ n: idx + 1, f });
+    });
+
+    let drawn = 0;
+    for (const [pageIdx, items] of byPage) {
+      const page = pages[pageIdx];
+      const { width, height } = page.getSize();
+      for (const { n, f } of items) {
+        if (!f.bbox) continue;
+        const { x, y, w, h } = f.bbox;
+        // AI uses top-left origin; pdf-lib uses bottom-left. Convert.
+        const px = Math.max(0, x) * width;
+        const py = Math.max(0, height - (y + h) * height);
+        const pw = Math.max(6, Math.min(w * width, width - px));
+        const ph = Math.max(6, Math.min(h * height, height - py));
+        const [r, g, b] = severityRgb(f.severity);
+
+        // Semi-transparent fill + hard outline.
+        page.drawRectangle({
+          x: px, y: py, width: pw, height: ph,
+          color: rgb(r, g, b),
+          opacity: 0.12,
+          borderColor: rgb(r, g, b),
+          borderWidth: 2,
+          borderOpacity: 1,
+        });
+
+        // Numbered chip anchored to the box's top-left corner.
+        const label = String(n);
+        const chipSize = 18;
+        const chipX = px;
+        const chipY = py + ph - chipSize;
+        page.drawRectangle({
+          x: chipX, y: chipY, width: chipSize + label.length * 4, height: chipSize,
+          color: rgb(r, g, b), opacity: 0.95,
+        });
+        page.drawText(label, {
+          x: chipX + 5, y: chipY + 4, size: 11, font, color: rgb(1, 1, 1),
+        });
+        drawn++;
+      }
+    }
+
+    // Append a findings-index page so the numbered chips resolve to explanations.
+    const indexPage = pdf.addPage([612, 792]); // US Letter
+    const regular = await pdf.embedFont(StandardFonts.Helvetica);
+    const draw = (t: string, x: number, y: number, size = 10, bold = false, color: [number,number,number] = [0,0,0]) => {
+      indexPage.drawText(t, { x, y, size, font: bold ? font : regular, color: rgb(color[0], color[1], color[2]) });
+    };
+    draw("AI PLAN REVIEW — REDLINE INDEX", 40, 750, 14, true);
+    draw(`${doc.name}`, 40, 732, 10, false, [0.35, 0.35, 0.35]);
+    if (review.jurisdiction_context?.jurisdiction) {
+      draw(`Jurisdiction: ${review.jurisdiction_context.jurisdiction}`, 40, 718, 9, false, [0.35, 0.35, 0.35]);
+    }
+    draw(`Overall risk: ${review.overall_risk.toUpperCase()}  ·  Findings: ${review.findings.length}`, 40, 704, 9, false, [0.35, 0.35, 0.35]);
+
+    let cursor = 680;
+    review.findings.forEach((f, idx) => {
+      if (cursor < 60) {
+        const p = pdf.addPage([612, 792]);
+        p.drawText("REDLINE INDEX (cont.)", { x: 40, y: 750, size: 12, font, color: rgb(0,0,0) });
+        cursor = 720;
+        // Swap indexPage reference implicitly via closure by rebinding draw target:
+        // simplest: draw remaining directly on p
+        const [r, g, b] = severityRgb(f.severity);
+        p.drawRectangle({ x: 40, y: cursor - 2, width: 14, height: 14, color: rgb(r,g,b) });
+        p.drawText(String(idx + 1), { x: 44, y: cursor + 2, size: 9, font, color: rgb(1,1,1) });
+        p.drawText(`[${f.severity.toUpperCase()}] ${f.title}`.slice(0, 90), { x: 62, y: cursor + 2, size: 10, font, color: rgb(0,0,0) });
+        cursor -= 14;
+        const wrap = (t: string, max: number) => {
+          const words = t.split(/\s+/); const out: string[] = []; let line = "";
+          for (const w of words) { if ((line + " " + w).length > max) { out.push(line); line = w; } else { line = line ? line + " " + w : w; } }
+          if (line) out.push(line); return out;
+        };
+        wrap(f.detail, 105).forEach((line) => { p.drawText(line, { x: 62, y: cursor, size: 9, font: regular, color: rgb(0.25, 0.25, 0.25) }); cursor -= 11; });
+        const meta = [f.sheet_reference && `Sheet ${f.sheet_reference}`, f.code_reference, f.local_amendment && `Local: ${f.local_amendment}`].filter(Boolean).join("  ·  ");
+        if (meta) { p.drawText(meta.slice(0, 110), { x: 62, y: cursor, size: 8, font: regular, color: rgb(0.4, 0.4, 0.4) }); cursor -= 10; }
+        if (f.recommendation) { wrap("→ " + f.recommendation, 110).forEach((line) => { p.drawText(line, { x: 62, y: cursor, size: 8, font: regular, color: rgb(0.15, 0.4, 0.15) }); cursor -= 10; }); }
+        cursor -= 8;
+        return;
+      }
+      const [r, g, b] = severityRgb(f.severity);
+      indexPage.drawRectangle({ x: 40, y: cursor - 2, width: 14, height: 14, color: rgb(r,g,b) });
+      indexPage.drawText(String(idx + 1), { x: 44, y: cursor + 2, size: 9, font, color: rgb(1,1,1) });
+      indexPage.drawText(`[${f.severity.toUpperCase()}] ${f.title}`.slice(0, 90), { x: 62, y: cursor + 2, size: 10, font, color: rgb(0,0,0) });
+      cursor -= 14;
+      const wrap = (t: string, max: number) => {
+        const words = t.split(/\s+/); const out: string[] = []; let line = "";
+        for (const w of words) { if ((line + " " + w).length > max) { out.push(line); line = w; } else { line = line ? line + " " + w : w; } }
+        if (line) out.push(line); return out;
+      };
+      wrap(f.detail, 105).forEach((line) => { indexPage.drawText(line, { x: 62, y: cursor, size: 9, font: regular, color: rgb(0.25, 0.25, 0.25) }); cursor -= 11; });
+      const meta = [f.sheet_reference && `Sheet ${f.sheet_reference}`, f.code_reference, f.local_amendment && `Local: ${f.local_amendment}`].filter(Boolean).join("  ·  ");
+      if (meta) { indexPage.drawText(meta.slice(0, 110), { x: 62, y: cursor, size: 8, font: regular, color: rgb(0.4, 0.4, 0.4) }); cursor -= 10; }
+      if (f.recommendation) {
+        wrap("→ " + f.recommendation, 110).forEach((line) => { indexPage.drawText(line, { x: 62, y: cursor, size: 8, font: regular, color: rgb(0.15, 0.4, 0.15) }); cursor -= 10; });
+      }
+      cursor -= 8;
+    });
+
+    const outBytes = await pdf.save();
+    const stamp = new Date().toISOString().replace(/[:.]/g, "-");
+    const outPath = `${doc.storage_path.replace(/\.[^/.]+$/, "")}.redlined-${stamp}.pdf`;
+    const { error: upErr } = await context.supabase.storage
+      .from("project-docs").upload(outPath, outBytes, {
+        contentType: "application/pdf", upsert: true,
+      });
+    if (upErr) throw new Error(upErr.message);
+    const { data: outSigned, error: signErr } = await context.supabase.storage
+      .from("project-docs").createSignedUrl(outPath, 3600);
+    if (signErr || !outSigned?.signedUrl) throw new Error("Could not sign redlined PDF");
+
+    await context.supabase.from("activity").insert({
+      user_id: context.userId,
+      project_id: doc.project_id,
+      description: `Generated redlined plan PDF for "${doc.name}" — ${drawn} markup${drawn === 1 ? "" : "s"} across ${byPage.size} page${byPage.size === 1 ? "" : "s"}.`,
+    });
+
+    return { url: outSigned.signedUrl, path: outPath, markups: drawn, pages: byPage.size };
+  });
