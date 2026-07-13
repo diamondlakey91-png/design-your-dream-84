@@ -30,12 +30,8 @@ function ProjectDetail() {
     queryFn: () => getFn({ data: { id } }),
   });
 
-  const summary = useMutation({
-    mutationFn: () => summarizeFn({ data: { id } }),
-    onError: (e) => toast.error(e instanceof Error ? e.message : "Failed"),
-  });
-
-
+  const advance = useMutation({
+    mutationFn: () => advanceFn({ data: { id } }),
     onSuccess: () => {
       queryClient.invalidateQueries({ queryKey: ["project", id] });
       queryClient.invalidateQueries({ queryKey: ["projects"] });
@@ -43,6 +39,12 @@ function ProjectDetail() {
     },
     onError: (e) => toast.error(e instanceof Error ? e.message : "Failed"),
   });
+
+  const summary = useMutation({
+    mutationFn: () => summarizeFn({ data: { id } }),
+    onError: (e) => toast.error(e instanceof Error ? e.message : "Failed"),
+  });
+
 
   if (q.isLoading) {
     return <AppShell><div className="p-6 text-sm text-muted-foreground">Loading…</div></AppShell>;
