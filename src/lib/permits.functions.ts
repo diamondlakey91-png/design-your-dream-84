@@ -323,6 +323,11 @@ export const addPermitItem = createServerFn({ method: "POST" })
       })
       .select("*").single();
     if (error) throw new Error(error.message);
+    await context.supabase.from("activity").insert({
+      user_id: context.userId,
+      project_id: data.project_id,
+      description: `Added checklist item: ${data.name}`,
+    });
     return row;
   });
 
@@ -330,8 +335,17 @@ export const deletePermitItem = createServerFn({ method: "POST" })
   .middleware([requireSupabaseAuth])
   .inputValidator((input: unknown) => z.object({ id: z.string().uuid() }).parse(input))
   .handler(async ({ data, context }) => {
+    const { data: row } = await context.supabase
+      .from("permit_items").select("name, project_id").eq("id", data.id).maybeSingle();
     const { error } = await context.supabase.from("permit_items").delete().eq("id", data.id);
     if (error) throw new Error(error.message);
+    if (row) {
+      await context.supabase.from("activity").insert({
+        user_id: context.userId,
+        project_id: row.project_id,
+        description: `Removed checklist item: ${row.name}`,
+      });
+    }
     return { ok: true };
   });
 
