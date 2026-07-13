@@ -2120,19 +2120,21 @@ export const lookupPermitsByAddress = createServerFn({ method: "POST" })
       jurisdictionGuess = inferred.trim().split("\n")[0].slice(0, 120);
     }
 
-    // 2. Find the official permit portal for this jurisdiction.
-    const portalQuery = `${jurisdictionGuess} building permit search portal site:.gov OR Accela OR energov OR opengov OR citizenserve`;
-    const portalHits = await firecrawlSearch(fcKey, portalQuery, 5);
-    if (portalHits.length === 0) {
-      throw new Error(`No official permit portal found for "${jurisdictionGuess}". Try entering the jurisdiction manually.`);
-    }
-    const portal = portalHits.find((h) => /(\.gov|accela|energov|opengov|citizenserve|permitium|mygovernmentonline|viewpointcloud)/i.test(h.url)) ?? portalHits[0];
-
     // 2b. Known-jurisdiction direct search URLs. Many municipal portals (Accela,
     // EnerGov, etc.) do not expose individual permit records to Google, so
     // address-only web search misses active applications. For jurisdictions we
     // know, hit the portal's own search endpoint directly.
     const directSearchUrls = buildDirectPortalSearchUrls(jurisdictionGuess, addr);
+
+    // 2. Find the official permit portal for this jurisdiction (best-effort).
+    const portalQuery = `${jurisdictionGuess} building permit search portal site:.gov OR Accela OR energov OR opengov OR citizenserve`;
+    const portalHits = await firecrawlSearch(fcKey, portalQuery, 5).catch(() => []);
+    const portal = portalHits.length
+      ? (portalHits.find((h) => /(\.gov|accela|energov|opengov|citizenserve|permitium|mygovernmentonline|viewpointcloud)/i.test(h.url)) ?? portalHits[0])
+      : { url: directSearchUrls[0] || "", title: jurisdictionGuess, description: "" };
+    if (!portal.url && directSearchUrls.length === 0) {
+      throw new Error(`No official permit portal found for "${jurisdictionGuess}". Try entering the jurisdiction manually.`);
+    }
 
     // 3. Search the web for permit records at this specific address.
     // Try multiple address variants to catch differing portal formats.
