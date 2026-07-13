@@ -105,31 +105,99 @@ export const listDeadlines = createServerFn({ method: "GET" })
     return data ?? [];
   });
 
-// ---- Chat ----
-export const listChatMessages = createServerFn({ method: "GET" })
+// ---- Chat threads ----
+export const listThreads = createServerFn({ method: "GET" })
   .middleware([requireSupabaseAuth])
   .handler(async ({ context }) => {
     const { data, error } = await context.supabase
-      .from("chat_messages")
-      .select("*")
-      .order("created_at", { ascending: true })
+      .from("chat_threads")
+      .select("*, projects(name)")
+      .order("last_message_at", { ascending: false })
       .limit(100);
     if (error) throw new Error(error.message);
     return data ?? [];
   });
 
+export const createThread = createServerFn({ method: "POST" })
+  .middleware([requireSupabaseAuth])
+  .inputValidator((input: unknown) => z.object({
+    title: z.string().max(120).optional(),
+    project_id: z.string().uuid().nullable().optional(),
+  }).parse(input))
+  .handler(async ({ data, context }) => {
+    const { data: row, error } = await context.supabase
+      .from("chat_threads")
+      .insert({
+        user_id: context.userId,
+        title: data.title || "New chat",
+        project_id: data.project_id ?? null,
+      })
+      .select("*").single();
+    if (error) throw new Error(error.message);
+    return row;
+  });
+
+export const renameThread = createServerFn({ method: "POST" })
+  .middleware([requireSupabaseAuth])
+  .inputValidator((input: unknown) => z.object({
+    id: z.string().uuid(),
+    title: z.string().min(1).max(120),
+  }).parse(input))
+  .handler(async ({ data, context }) => {
+    const { error } = await context.supabase
+      .from("chat_threads").update({ title: data.title }).eq("id", data.id);
+    if (error) throw new Error(error.message);
+    return { ok: true };
+  });
+
+export const setThreadProject = createServerFn({ method: "POST" })
+  .middleware([requireSupabaseAuth])
+  .inputValidator((input: unknown) => z.object({
+    id: z.string().uuid(),
+    project_id: z.string().uuid().nullable(),
+  }).parse(input))
+  .handler(async ({ data, context }) => {
+    const { error } = await context.supabase
+      .from("chat_threads").update({ project_id: data.project_id }).eq("id", data.id);
+    if (error) throw new Error(error.message);
+    return { ok: true };
+  });
+
+export const deleteThread = createServerFn({ method: "POST" })
+  .middleware([requireSupabaseAuth])
+  .inputValidator((input: unknown) => z.object({ id: z.string().uuid() }).parse(input))
+  .handler(async ({ data, context }) => {
+    const { error } = await context.supabase.from("chat_threads").delete().eq("id", data.id);
+    if (error) throw new Error(error.message);
+    return { ok: true };
+  });
+
+export const listThreadMessages = createServerFn({ method: "GET" })
+  .middleware([requireSupabaseAuth])
+  .inputValidator((input: unknown) => z.object({ thread_id: z.string().uuid() }).parse(input))
+  .handler(async ({ data, context }) => {
+    const { data: rows, error } = await context.supabase
+      .from("chat_messages")
+      .select("*")
+      .eq("thread_id", data.thread_id)
+      .order("created_at", { ascending: true })
+      .limit(500);
+    if (error) throw new Error(error.message);
+    return rows ?? [];
+  });
+
 const SendChatInput = z.object({
-  content: z.string().min(1).max(2000),
-  project_id: z.string().uuid().optional().nullable(),
+  thread_id: z.string().uuid(),
+  content: z.string().min(1).max(4000),
 });
 
 const STAGE_NAMES = ["Pre-Planning", "Plans Submitted", "In Review", "Approved", "Issued"];
 
-async function callLovableAI(apiKey: string, messages: Array<{ role: string; content: string }>) {
+async function callLovableAI(apiKey: string, messages: Array<{ role: string; content: string }>, model = "google/gemini-2.5-pro") {
   const resp = await fetch("https://ai.gateway.lovable.dev/v1/chat/completions", {
     method: "POST",
     headers: { "Content-Type": "application/json", "Lovable-API-Key": apiKey },
-    body: JSON.stringify({ model: "google/gemini-2.5-pro", messages }),
+    body: JSON.stringify({ model, messages }),
   });
   if (!resp.ok) {
     const txt = await resp.text();
@@ -166,25 +234,33 @@ export const sendChatMessage = createServerFn({ method: "POST" })
     const apiKey = process.env.LOVABLE_API_KEY;
     if (!apiKey) throw new Error("AI is not configured");
 
+    // Verify thread ownership + pull project context
+    const { data: thread } = await context.supabase
+      .from("chat_threads").select("*, projects(*)").eq("id", data.thread_id).maybeSingle();
+    if (!thread) throw new Error("Thread not found");
+
     const { data: history } = await context.supabase
       .from("chat_messages")
       .select("role, content")
+      .eq("thread_id", data.thread_id)
       .order("created_at", { ascending: true })
-      .limit(30);
+      .limit(40);
 
-    // Optional project context
     let projectContext = "";
-    if (data.project_id) {
-      const { data: p } = await context.supabase
-        .from("projects").select("*").eq("id", data.project_id).maybeSingle();
-      if (p) {
-        projectContext = `\n\n[Active project context]\n- Name: ${p.name}\n- Type: ${p.project_type}\n- Location: ${p.location || "unspecified"}\n- Jurisdiction: ${p.jurisdiction || "unspecified"}\n- Current stage: ${STAGE_NAMES[p.current_stage]} (${p.current_stage + 1}/5)\n- Permits: ${p.permits_issued}/${p.permit_count} issued\nUse this context when the user's question refers to "this project", "my project", or asks about next steps.`;
-      }
+    const p = thread.projects as { name: string; project_type: string; location: string; jurisdiction: string; current_stage: number; permits_issued: number; permit_count: number } | null;
+    if (p) {
+      projectContext = `\n\n[Active project context]\n- Name: ${p.name}\n- Type: ${p.project_type}\n- Location: ${p.location || "unspecified"}\n- Jurisdiction: ${p.jurisdiction || "unspecified"}\n- Current stage: ${STAGE_NAMES[p.current_stage]} (${p.current_stage + 1}/5)\n- Permits: ${p.permits_issued}/${p.permit_count} issued\nUse this context when the user's question refers to "this project", "my project", or asks about next steps.`;
     }
 
     const { data: userMsg, error: uerr } = await context.supabase
       .from("chat_messages")
-      .insert({ user_id: context.userId, role: "user", content: data.content })
+      .insert({
+        user_id: context.userId,
+        thread_id: data.thread_id,
+        role: "user",
+        content: data.content,
+        parts: [{ type: "text", text: data.content }],
+      })
       .select("*").single();
     if (uerr) throw new Error(uerr.message);
 
@@ -198,9 +274,27 @@ export const sendChatMessage = createServerFn({ method: "POST" })
 
     const { data: assistantMsg, error: aerr } = await context.supabase
       .from("chat_messages")
-      .insert({ user_id: context.userId, role: "assistant", content: reply })
+      .insert({
+        user_id: context.userId,
+        thread_id: data.thread_id,
+        role: "assistant",
+        content: reply,
+        parts: [{ type: "text", text: reply }],
+      })
       .select("*").single();
     if (aerr) throw new Error(aerr.message);
+
+    // Auto-title on the first exchange
+    if ((history?.length ?? 0) === 0 && (thread.title === "New chat" || !thread.title)) {
+      const title = data.content.slice(0, 60).replace(/\s+/g, " ").trim();
+      await context.supabase.from("chat_threads")
+        .update({ title, last_message_at: new Date().toISOString() })
+        .eq("id", data.thread_id);
+    } else {
+      await context.supabase.from("chat_threads")
+        .update({ last_message_at: new Date().toISOString() })
+        .eq("id", data.thread_id);
+    }
 
     return { user: userMsg, assistant: assistantMsg };
   });
@@ -244,14 +338,6 @@ No preamble, no closing pleasantries.`;
       { role: "user", content: userPrompt },
     ]);
     return { summary: reply };
-  });
-
-export const clearChat = createServerFn({ method: "POST" })
-  .middleware([requireSupabaseAuth])
-  .handler(async ({ context }) => {
-    const { error } = await context.supabase.from("chat_messages").delete().eq("user_id", context.userId);
-    if (error) throw new Error(error.message);
-    return { ok: true };
   });
 
 // ---- Permit checklist ----
