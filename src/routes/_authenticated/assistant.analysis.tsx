@@ -680,7 +680,7 @@ function SourcesSection({ sources }: { sources: Array<Record<string, unknown>> }
                 )}
               </div>
               <div className="text-[11px] text-zinc-500">{String(s.agency ?? "")}</div>
-              {s.url && (
+              {Boolean(s.url) && (
                 <a href={String(s.url)} target="_blank" rel="noopener noreferrer" className="text-[11px] text-sky-300 hover:underline break-all">
                   {String(s.url)}
                 </a>
