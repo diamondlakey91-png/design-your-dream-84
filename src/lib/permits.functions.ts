@@ -1692,6 +1692,195 @@ function buildDirectPortalSearchUrls(jurisdiction: string, address: string): str
   if (/raleigh,?\s*nc/.test(j)) {
     urls.push(`https://aca-prod.accela.com/RALEIGH/Cap/GlobalSearchResults.aspx?QueryText=${enc}`);
   }
+  // Additional Maryland
+  if (/montgomery(\s+county)?,?\s*md/.test(j)) {
+    urls.push(`https://eservices.montgomerycountymd.gov/DPSPermitting/CitizenAccess/Cap/GlobalSearchResults.aspx?QueryText=${enc}`);
+  }
+  if (/prince\s+george'?s?(\s+county)?,?\s*md/.test(j)) {
+    urls.push(`https://aca-prod.accela.com/PGC/Cap/GlobalSearchResults.aspx?QueryText=${enc}`);
+  }
+  if (/howard(\s+county)?,?\s*md/.test(j)) {
+    urls.push(`https://aca-prod.accela.com/HOWARD/Cap/GlobalSearchResults.aspx?QueryText=${enc}`);
+  }
+  if (/anne\s+arundel(\s+county)?,?\s*md/.test(j)) {
+    urls.push(`https://aca-prod.accela.com/AACOUNTY/Cap/GlobalSearchResults.aspx?QueryText=${enc}`);
+  }
+  // Additional CA
+  if (/oakland,?\s*ca/.test(j)) {
+    urls.push(`https://aca-prod.accela.com/OAKLAND/Cap/GlobalSearchResults.aspx?QueryText=${enc}`);
+  }
+  if (/san\s+jose,?\s*ca/.test(j)) {
+    urls.push(`https://aca-prod.accela.com/SANJOSECA/Cap/GlobalSearchResults.aspx?QueryText=${enc}`);
+  }
+  if (/sacramento,?\s*ca/.test(j)) {
+    urls.push(`https://aca-prod.accela.com/SACRAMENTO/Cap/GlobalSearchResults.aspx?QueryText=${enc}`);
+  }
+  if (/long\s+beach,?\s*ca/.test(j)) {
+    urls.push(`https://aca-prod.accela.com/LONGBEACH/Cap/GlobalSearchResults.aspx?QueryText=${enc}`);
+  }
+  if (/anaheim,?\s*ca/.test(j)) {
+    urls.push(`https://aca-prod.accela.com/ANAHEIM/Cap/GlobalSearchResults.aspx?QueryText=${enc}`);
+  }
+  if (/riverside,?\s*ca/.test(j)) {
+    urls.push(`https://aca-prod.accela.com/RIVERSIDECA/Cap/GlobalSearchResults.aspx?QueryText=${enc}`);
+  }
+  if (/fresno,?\s*ca/.test(j)) {
+    urls.push(`https://aca-prod.accela.com/FRESNO/Cap/GlobalSearchResults.aspx?QueryText=${enc}`);
+  }
+  // Additional TX
+  if (/san\s+antonio,?\s*tx/.test(j)) {
+    urls.push(`https://aca-prod.accela.com/SANANTONIO_TX/Cap/GlobalSearchResults.aspx?QueryText=${enc}`);
+  }
+  if (/fort\s+worth,?\s*tx/.test(j)) {
+    urls.push(`https://aca-prod.accela.com/FORTWORTH/Cap/GlobalSearchResults.aspx?QueryText=${enc}`);
+  }
+  if (/el\s+paso,?\s*tx/.test(j)) {
+    urls.push(`https://aca-prod.accela.com/ELPASOTX/Cap/GlobalSearchResults.aspx?QueryText=${enc}`);
+  }
+  if (/plano,?\s*tx/.test(j)) {
+    urls.push(`https://aca-prod.accela.com/PLANO/Cap/GlobalSearchResults.aspx?QueryText=${enc}`);
+  }
+  if (/arlington,?\s*tx/.test(j)) {
+    urls.push(`https://aca-prod.accela.com/ARLINGTON_TX/Cap/GlobalSearchResults.aspx?QueryText=${enc}`);
+  }
+  // FL
+  if (/orlando,?\s*fl/.test(j)) {
+    urls.push(`https://aca-prod.accela.com/ORLANDO/Cap/GlobalSearchResults.aspx?QueryText=${enc}`);
+  }
+  if (/tampa,?\s*fl/.test(j)) {
+    urls.push(`https://aca-prod.accela.com/TAMPA/Cap/GlobalSearchResults.aspx?QueryText=${enc}`);
+  }
+  if (/jacksonville,?\s*fl|duval\s+county,?\s*fl/.test(j)) {
+    urls.push(`https://aca-prod.accela.com/JACKSONVILLE/Cap/GlobalSearchResults.aspx?QueryText=${enc}`);
+  }
+  if (/fort\s+lauderdale,?\s*fl/.test(j)) {
+    urls.push(`https://aca-prod.accela.com/FTL/Cap/GlobalSearchResults.aspx?QueryText=${enc}`);
+  }
+  if (/miami-?dade,?\s*fl/.test(j)) {
+    urls.push(`https://www.miamidade.gov/Apps/RER/EPSPortal/Main/PermitSearch?address=${enc}`);
+  }
+  // WA/OR
+  if (/tacoma,?\s*wa/.test(j)) {
+    urls.push(`https://aca-prod.accela.com/TACOMA/Cap/GlobalSearchResults.aspx?QueryText=${enc}`);
+  }
+  if (/king\s+county,?\s*wa/.test(j)) {
+    urls.push(`https://aca-prod.accela.com/KINGCO/Cap/GlobalSearchResults.aspx?QueryText=${enc}`);
+  }
+  if (/eugene,?\s*or/.test(j)) {
+    urls.push(`https://aca-prod.accela.com/EUGENE/Cap/GlobalSearchResults.aspx?QueryText=${enc}`);
+  }
+  // NY/NJ/PA/CT
+  if (/pittsburgh,?\s*pa/.test(j)) {
+    urls.push(`https://aca-prod.accela.com/PITTSBURGHPA/Cap/GlobalSearchResults.aspx?QueryText=${enc}`);
+  }
+  if (/newark,?\s*nj/.test(j)) {
+    urls.push(`https://aca-prod.accela.com/NEWARK/Cap/GlobalSearchResults.aspx?QueryText=${enc}`);
+  }
+  if (/jersey\s+city,?\s*nj/.test(j)) {
+    urls.push(`https://aca-prod.accela.com/JCNJ/Cap/GlobalSearchResults.aspx?QueryText=${enc}`);
+  }
+  if (/hartford,?\s*ct/.test(j)) {
+    urls.push(`https://aca-prod.accela.com/HARTFORD/Cap/GlobalSearchResults.aspx?QueryText=${enc}`);
+  }
+  // Midwest
+  if (/detroit,?\s*mi/.test(j)) {
+    urls.push(`https://aca-prod.accela.com/DETROIT/Cap/GlobalSearchResults.aspx?QueryText=${enc}`);
+  }
+  if (/columbus,?\s*oh/.test(j)) {
+    urls.push(`https://aca-prod.accela.com/COLUMBUS/Cap/GlobalSearchResults.aspx?QueryText=${enc}`);
+  }
+  if (/cleveland,?\s*oh/.test(j)) {
+    urls.push(`https://aca-prod.accela.com/CLEVELAND/Cap/GlobalSearchResults.aspx?QueryText=${enc}`);
+  }
+  if (/cincinnati,?\s*oh/.test(j)) {
+    urls.push(`https://aca-prod.accela.com/CINCINNATI/Cap/GlobalSearchResults.aspx?QueryText=${enc}`);
+  }
+  if (/indianapolis,?\s*in|marion\s+county,?\s*in/.test(j)) {
+    urls.push(`https://permitsandcases.indy.gov/CitizenAccess/Cap/GlobalSearchResults.aspx?QueryText=${enc}`);
+  }
+  if (/milwaukee,?\s*wi/.test(j)) {
+    urls.push(`https://aca-prod.accela.com/MILWAUKEE/Cap/GlobalSearchResults.aspx?QueryText=${enc}`);
+  }
+  if (/st\.?\s*louis,?\s*mo/.test(j)) {
+    urls.push(`https://aca-prod.accela.com/STLOUISMO/Cap/GlobalSearchResults.aspx?QueryText=${enc}`);
+  }
+  if (/kansas\s+city,?\s*mo/.test(j)) {
+    urls.push(`https://aca-prod.accela.com/KCMO/Cap/GlobalSearchResults.aspx?QueryText=${enc}`);
+  }
+  // Mountain
+  if (/salt\s+lake\s+city,?\s*ut/.test(j)) {
+    urls.push(`https://aca-prod.accela.com/SLC/Cap/GlobalSearchResults.aspx?QueryText=${enc}`);
+  }
+  if (/albuquerque,?\s*nm/.test(j)) {
+    urls.push(`https://aca-prod.accela.com/ABQ/Cap/GlobalSearchResults.aspx?QueryText=${enc}`);
+  }
+  if (/tucson,?\s*az/.test(j)) {
+    urls.push(`https://aca-prod.accela.com/TUCSON/Cap/GlobalSearchResults.aspx?QueryText=${enc}`);
+  }
+  if (/mesa,?\s*az/.test(j)) {
+    urls.push(`https://aca-prod.accela.com/MESA/Cap/GlobalSearchResults.aspx?QueryText=${enc}`);
+  }
+  if (/las\s+vegas,?\s*nv|clark\s+county,?\s*nv/.test(j)) {
+    urls.push(`https://aca-prod.accela.com/CLARKCO/Cap/GlobalSearchResults.aspx?QueryText=${enc}`);
+  }
+  if (/reno,?\s*nv/.test(j)) {
+    urls.push(`https://aca-prod.accela.com/RENO/Cap/GlobalSearchResults.aspx?QueryText=${enc}`);
+  }
+  if (/boise,?\s*id/.test(j)) {
+    urls.push(`https://aca-prod.accela.com/BOISE/Cap/GlobalSearchResults.aspx?QueryText=${enc}`);
+  }
+  // Southeast
+  if (/durham,?\s*nc/.test(j)) {
+    urls.push(`https://aca-prod.accela.com/DURHAM/Cap/GlobalSearchResults.aspx?QueryText=${enc}`);
+  }
+  if (/charleston,?\s*sc/.test(j)) {
+    urls.push(`https://aca-prod.accela.com/CHARLESTON/Cap/GlobalSearchResults.aspx?QueryText=${enc}`);
+  }
+  if (/columbia,?\s*sc/.test(j)) {
+    urls.push(`https://aca-prod.accela.com/COLUMBIASC/Cap/GlobalSearchResults.aspx?QueryText=${enc}`);
+  }
+  if (/savannah,?\s*ga/.test(j)) {
+    urls.push(`https://aca-prod.accela.com/SAVANNAH/Cap/GlobalSearchResults.aspx?QueryText=${enc}`);
+  }
+  if (/birmingham,?\s*al/.test(j)) {
+    urls.push(`https://aca-prod.accela.com/BIRMINGHAM/Cap/GlobalSearchResults.aspx?QueryText=${enc}`);
+  }
+  if (/new\s+orleans,?\s*la/.test(j)) {
+    urls.push(`https://onestopapp.nola.gov/Search.aspx?address=${enc}`);
+  }
+  if (/memphis,?\s*tn|shelby\s+county,?\s*tn/.test(j)) {
+    urls.push(`https://aca-prod.accela.com/MEMPHIS/Cap/GlobalSearchResults.aspx?QueryText=${enc}`);
+  }
+  if (/knoxville,?\s*tn/.test(j)) {
+    urls.push(`https://aca-prod.accela.com/KNOXVILLE/Cap/GlobalSearchResults.aspx?QueryText=${enc}`);
+  }
+  if (/louisville,?\s*ky/.test(j)) {
+    urls.push(`https://aca-prod.accela.com/LOUISVILLE/Cap/GlobalSearchResults.aspx?QueryText=${enc}`);
+  }
+  // Additional VA
+  if (/henrico(\s+county)?,?\s*va/.test(j)) {
+    urls.push(`https://energov.henrico.us/EnerGov_Prod/SelfService#/search?searchText=${enc}`);
+  }
+  if (/chesterfield(\s+county)?,?\s*va/.test(j)) {
+    urls.push(`https://energov.chesterfield.gov/EnerGov_Prod/SelfService#/search?searchText=${enc}`);
+  }
+  // New England
+  if (/providence,?\s*ri/.test(j)) {
+    urls.push(`https://aca-prod.accela.com/PROVIDENCE/Cap/GlobalSearchResults.aspx?QueryText=${enc}`);
+  }
+  if (/portland,?\s*me/.test(j)) {
+    urls.push(`https://aca-prod.accela.com/PORTLANDME/Cap/GlobalSearchResults.aspx?QueryText=${enc}`);
+  }
+  if (/cambridge,?\s*ma/.test(j)) {
+    urls.push(`https://aca-prod.accela.com/CAMBRIDGE/Cap/GlobalSearchResults.aspx?QueryText=${enc}`);
+  }
+  // AK/HI
+  if (/anchorage,?\s*ak/.test(j)) {
+    urls.push(`https://aca-prod.accela.com/ANCHORAGE/Cap/GlobalSearchResults.aspx?QueryText=${enc}`);
+  }
+  if (/honolulu,?\s*hi/.test(j)) {
+    urls.push(`https://aca-prod.accela.com/HONOLULU/Cap/GlobalSearchResults.aspx?QueryText=${enc}`);
+  }
 
   // Generic Accela guess for any jurisdiction not hardcoded above (~thousands of
   // agencies run on Accela Civic Platform at aca-prod.accela.com/<AGENCY>/). Uses
@@ -1706,11 +1895,206 @@ function buildDirectPortalSearchUrls(jurisdiction: string, address: string): str
       .slice(0, 24);
     if (slug) {
       urls.push(`https://aca-prod.accela.com/${slug.toUpperCase()}/Cap/GlobalSearchResults.aspx?QueryText=${enc}`);
+      // EnerGov (Tyler) is the other dominant civic platform
+      urls.push(`https://energov.${slug}.gov/EnerGov_Prod/SelfService#/search?searchText=${enc}`);
     }
   }
 
   return urls;
 }
+
+// ------------------------------ Utility Coordination ------------------------------
+// Every US state (+DC) has a one-call "811" center for underground utility locates.
+// This is a state-anchored, always-safe starting point for water/gas/electric/telecom
+// coordination on any project. Provider search links help identify actual service
+// utilities for the address.
+const ONE_CALL_811_BY_STATE: Record<string, { name: string; url: string; phone: string }> = {
+  AL: { name: "Alabama 811", url: "https://www.al811.com/", phone: "811" },
+  AK: { name: "Alaska Digline", url: "https://akonecall.com/", phone: "811" },
+  AZ: { name: "Arizona 811", url: "https://arizona811.com/", phone: "811" },
+  AR: { name: "Arkansas One Call", url: "https://arkonecall.com/", phone: "811" },
+  CA: { name: "USA North 811 / DigAlert (S. CA)", url: "https://usanorth811.org/", phone: "811" },
+  CO: { name: "Colorado 811", url: "https://colorado811.org/", phone: "811" },
+  CT: { name: "Call Before You Dig CT", url: "https://www.cbyd.com/", phone: "811" },
+  DE: { name: "Miss Utility of Delmarva", url: "https://www.missutility.net/delaware/", phone: "811" },
+  DC: { name: "Miss Utility (DC/MD/VA)", url: "https://www.missutility.net/", phone: "811" },
+  FL: { name: "Sunshine 811", url: "https://www.sunshine811.com/", phone: "811" },
+  GA: { name: "Georgia 811", url: "https://www.georgia811.com/", phone: "811" },
+  HI: { name: "Hawaii One Call", url: "https://www.hawaiionecall.com/", phone: "811" },
+  ID: { name: "Digline Idaho", url: "https://digline.com/", phone: "811" },
+  IL: { name: "JULIE Illinois", url: "https://illinois1call.com/", phone: "811" },
+  IN: { name: "Indiana 811", url: "https://indiana811.org/", phone: "811" },
+  IA: { name: "Iowa One Call", url: "https://www.iowaonecall.com/", phone: "811" },
+  KS: { name: "Kansas One Call", url: "https://www.kansasonecall.com/", phone: "811" },
+  KY: { name: "Kentucky 811", url: "https://kentucky811.org/", phone: "811" },
+  LA: { name: "Louisiana 811", url: "https://www.louisiana811.com/", phone: "811" },
+  ME: { name: "Dig Safe (New England)", url: "https://www.digsafe.com/", phone: "811" },
+  MD: { name: "Miss Utility (DC/MD/VA)", url: "https://www.missutility.net/", phone: "811" },
+  MA: { name: "Dig Safe (New England)", url: "https://www.digsafe.com/", phone: "811" },
+  MI: { name: "MISS DIG 811", url: "https://www.missdig811.org/", phone: "811" },
+  MN: { name: "Gopher State One Call", url: "https://www.gopherstateonecall.org/", phone: "811" },
+  MS: { name: "Mississippi 811", url: "https://www.ms811.org/", phone: "811" },
+  MO: { name: "Missouri 811", url: "https://mo1call.com/", phone: "811" },
+  MT: { name: "Montana 811", url: "https://montana811.org/", phone: "811" },
+  NE: { name: "Nebraska 811", url: "https://ne811.org/", phone: "811" },
+  NV: { name: "USA North 811", url: "https://usanorth811.org/", phone: "811" },
+  NH: { name: "Dig Safe (New England)", url: "https://www.digsafe.com/", phone: "811" },
+  NJ: { name: "New Jersey One Call", url: "https://www.nj1-call.org/", phone: "811" },
+  NM: { name: "New Mexico 811", url: "https://nm811.org/", phone: "811" },
+  NY: { name: "Dig Safely New York / NYC 811", url: "https://www.digsafelynewyork.com/", phone: "811" },
+  NC: { name: "NC 811", url: "https://www.nc811.org/", phone: "811" },
+  ND: { name: "North Dakota One Call", url: "https://www.ndonecall.com/", phone: "811" },
+  OH: { name: "Ohio 811 (OUPS)", url: "https://www.oups.org/", phone: "811" },
+  OK: { name: "Oklahoma 811", url: "https://www.okie811.org/", phone: "811" },
+  OR: { name: "Oregon Utility Notification Center", url: "https://digsafelyoregon.com/", phone: "811" },
+  PA: { name: "PA One Call", url: "https://www.pa1call.org/", phone: "811" },
+  RI: { name: "Dig Safe (New England)", url: "https://www.digsafe.com/", phone: "811" },
+  SC: { name: "SC 811", url: "https://www.sc811.com/", phone: "811" },
+  SD: { name: "South Dakota One Call", url: "https://www.sdonecall.com/", phone: "811" },
+  TN: { name: "Tennessee 811", url: "https://tn811.com/", phone: "811" },
+  TX: { name: "Texas 811", url: "https://www.texas811.org/", phone: "811" },
+  UT: { name: "Blue Stakes of Utah", url: "https://bluestakes.org/", phone: "811" },
+  VT: { name: "Dig Safe (New England)", url: "https://www.digsafe.com/", phone: "811" },
+  VA: { name: "Miss Utility of Virginia", url: "https://www.missutilityofvirginia.com/", phone: "811" },
+  WA: { name: "Washington 811", url: "https://www.washington811.com/", phone: "811" },
+  WV: { name: "Miss Utility of West Virginia", url: "https://www.wv811.com/", phone: "811" },
+  WI: { name: "Diggers Hotline", url: "https://www.diggershotline.com/", phone: "811" },
+  WY: { name: "Wyoming 811", url: "https://www.onecallofwyoming.com/", phone: "811" },
+};
+
+function extractStateCode(text: string): string | null {
+  const m = text.toUpperCase().match(/\b([A-Z]{2})\b(?:\s*\d{5})?$/);
+  if (m && ONE_CALL_811_BY_STATE[m[1]]) return m[1];
+  const any = text.toUpperCase().match(/\b(A[KLRZ]|C[AOT]|D[CE]|FL|GA|HI|I[ADLN]|K[SY]|LA|M[ADEINOST]|N[CDEHJMVY]|O[HKR]|PA|RI|S[CD]|T[NX]|UT|V[AT]|W[AIVY])\b/);
+  return any && ONE_CALL_811_BY_STATE[any[1]] ? any[1] : null;
+}
+
+export type UtilityContact = {
+  category: "water_sewer" | "gas" | "electric" | "telecom" | "stormwater" | "one_call";
+  name: string;
+  url: string;
+  phone?: string;
+  notes?: string;
+};
+
+function buildUtilityCoordinationContacts(jurisdiction: string, address: string): UtilityContact[] {
+  const j = jurisdiction.toLowerCase();
+  const state = extractStateCode(`${address} ${jurisdiction}`);
+  const contacts: UtilityContact[] = [];
+
+  // 811 one-call (state)
+  if (state && ONE_CALL_811_BY_STATE[state]) {
+    const oc = ONE_CALL_811_BY_STATE[state];
+    contacts.push({
+      category: "one_call",
+      name: oc.name,
+      url: oc.url,
+      phone: oc.phone,
+      notes: "Call 811 or file a locate ticket at least 2–3 business days before any excavation. Required by law in every US state.",
+    });
+  }
+
+  // Jurisdiction water/sewer authorities (major cities/counties)
+  if (/baltimore(\s+city)?,\s*md/.test(j)) contacts.push({ category: "water_sewer", name: "Baltimore DPW – Water & Wastewater", url: "https://publicworks.baltimorecity.gov/", phone: "311", notes: "Water taps, sewer connections, and stormwater in Baltimore City." });
+  if (/washington,?\s*dc/.test(j)) contacts.push({ category: "water_sewer", name: "DC Water", url: "https://www.dcwater.com/", phone: "202-354-3600" });
+  if (/arlington(\s+county)?,?\s*va/.test(j)) contacts.push({ category: "water_sewer", name: "Arlington County Water/Sewer", url: "https://www.arlingtonva.us/Government/Programs/Water-Sewer", phone: "703-228-6555" });
+  if (/fairfax(\s+county)?,?\s*va/.test(j)) contacts.push({ category: "water_sewer", name: "Fairfax Water", url: "https://www.fairfaxwater.org/", phone: "703-698-5800" });
+  if (/new york,?\s*ny|nyc/.test(j)) contacts.push({ category: "water_sewer", name: "NYC DEP – Water & Sewer", url: "https://www.nyc.gov/site/dep/", phone: "718-595-7000" });
+  if (/los angeles,?\s*ca/.test(j)) contacts.push({ category: "water_sewer", name: "LADWP (Water)", url: "https://www.ladwp.com/", phone: "1-800-342-5397" });
+  if (/chicago,?\s*il/.test(j)) contacts.push({ category: "water_sewer", name: "Chicago Dept of Water Management", url: "https://www.chicago.gov/city/en/depts/water.html", phone: "311" });
+  if (/san francisco,?\s*ca/.test(j)) contacts.push({ category: "water_sewer", name: "SFPUC – Water & Sewer", url: "https://sfpuc.org/", phone: "415-551-3000" });
+  if (/seattle,?\s*wa/.test(j)) contacts.push({ category: "water_sewer", name: "Seattle Public Utilities", url: "https://www.seattle.gov/utilities", phone: "206-684-3000" });
+  if (/boston,?\s*ma/.test(j)) contacts.push({ category: "water_sewer", name: "Boston Water & Sewer Commission", url: "https://www.bwsc.org/", phone: "617-989-7000" });
+  if (/austin,?\s*tx/.test(j)) contacts.push({ category: "water_sewer", name: "Austin Water", url: "https://www.austintexas.gov/department/austin-water", phone: "512-972-0101" });
+  if (/miami,?\s*fl|miami-?dade/.test(j)) contacts.push({ category: "water_sewer", name: "Miami-Dade Water & Sewer Dept", url: "https://www.miamidade.gov/global/water/home.page", phone: "305-665-7477" });
+  if (/philadelphia,?\s*pa/.test(j)) contacts.push({ category: "water_sewer", name: "Philadelphia Water Dept", url: "https://water.phila.gov/", phone: "215-685-6300" });
+  if (/houston,?\s*tx/.test(j)) contacts.push({ category: "water_sewer", name: "Houston Public Works – Water", url: "https://www.houstonpublicworks.org/houston-water", phone: "311" });
+  if (/dallas,?\s*tx/.test(j)) contacts.push({ category: "water_sewer", name: "Dallas Water Utilities", url: "https://dallascityhall.com/departments/waterutilities/", phone: "214-651-1441" });
+  if (/atlanta,?\s*ga/.test(j)) contacts.push({ category: "water_sewer", name: "Atlanta Dept of Watershed Management", url: "https://www.atlantawatershed.org/", phone: "404-546-0311" });
+
+  // AI/web-search fallback: generic search links so the AI + user can drill in
+  const enc = encodeURIComponent(`${jurisdiction} water sewer utility connection new service`);
+  contacts.push({
+    category: "water_sewer",
+    name: `Search: water/sewer authority for ${jurisdiction}`,
+    url: `https://www.google.com/search?q=${enc}`,
+    notes: "Use if the local water/sewer provider isn't listed above.",
+  });
+
+  const gasQ = encodeURIComponent(`${jurisdiction} natural gas service provider new connection ${address}`);
+  contacts.push({
+    category: "gas",
+    name: `Search: gas provider for this address`,
+    url: `https://www.google.com/search?q=${gasQ}`,
+    notes: "US gas is provider-specific (e.g. BGE, Washington Gas, PG&E, ConEd, Southern Company). Confirm the serving utility by address.",
+  });
+
+  const elecQ = encodeURIComponent(`${jurisdiction} electric utility service provider new connection ${address}`);
+  contacts.push({
+    category: "electric",
+    name: `Search: electric utility for this address`,
+    url: `https://www.google.com/search?q=${elecQ}`,
+    notes: "Coordinate temporary power, meter set, and permanent service release with the serving electric utility.",
+  });
+
+  const telQ = encodeURIComponent(`${jurisdiction} telecom fiber cable service ${address}`);
+  contacts.push({
+    category: "telecom",
+    name: `Search: telecom / fiber providers`,
+    url: `https://www.google.com/search?q=${telQ}`,
+    notes: "Verizon, AT&T, Comcast, Lumen, Crown Castle and local fiber ISPs may all need coordination for tenant fit-outs.",
+  });
+
+  return contacts;
+}
+
+const UtilityLookupInput = z.object({
+  address: z.string().min(3).max(300),
+  jurisdiction: z.string().max(200).optional().default(""),
+});
+
+export const lookupUtilityCoordination = createServerFn({ method: "POST" })
+  .middleware([requireSupabaseAuth])
+  .inputValidator((input: unknown) => UtilityLookupInput.parse(input))
+  .handler(async ({ data }) => {
+    const aiKey = process.env.LOVABLE_API_KEY;
+    const addr = data.address;
+    let juris = data.jurisdiction?.trim() || "";
+    if (!juris && aiKey) {
+      const inferred = await callLovableAI(aiKey, [
+        { role: "system", content: "You extract US permit jurisdictions from addresses. Reply with ONLY the jurisdiction in the form 'City, ST' or 'County, ST'. No prose." },
+        { role: "user", content: `Address: ${addr}\nJurisdiction:` },
+      ]);
+      juris = inferred.trim().split("\n")[0].slice(0, 120);
+    }
+    const contacts = buildUtilityCoordinationContacts(juris, addr);
+
+    // Ask AI to sequence utility coordination steps for this jurisdiction.
+    let steps: Array<{ step: string; owner: string; timing: string; notes?: string }> = [];
+    if (aiKey) {
+      try {
+        const raw = await callLovableAI(aiKey, [
+          { role: "system", content: "You are a US construction utility-coordination expert. Return STRICT JSON only: {\"steps\":[{\"step\":\"\",\"owner\":\"\",\"timing\":\"\",\"notes\":\"\"}]}. 5-9 steps covering: 811 locates, water/sewer tap application + fees, gas service application + meter set, electric service application (temp + permanent), telecom/fiber, stormwater, ROW/encroachment. Sequence realistically for this jurisdiction." },
+          { role: "user", content: `Address: ${addr}\nJurisdiction: ${juris}\nReturn JSON.` },
+        ]);
+        const m = raw.match(/\{[\s\S]*\}/);
+        if (m) {
+          const parsed = JSON.parse(m[0]) as { steps?: typeof steps };
+          if (Array.isArray(parsed.steps)) steps = parsed.steps.slice(0, 12);
+        }
+      } catch {
+        // non-fatal
+      }
+    }
+
+    return {
+      jurisdiction: juris || "Unknown",
+      address: addr,
+      contacts,
+      steps,
+    };
+  });
+
 
 
 
