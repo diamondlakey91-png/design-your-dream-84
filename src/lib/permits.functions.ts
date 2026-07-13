@@ -1342,3 +1342,110 @@ Return ONLY valid JSON of this exact shape:
   });
 
 
+// ---- Extract permit checklist items from a chat message ----
+const ExtractedItem = z.object({
+  name: z.string().min(1).max(200),
+  category: z.string().min(1).max(80),
+  required: z.boolean(),
+  why: z.string().max(400).optional(),
+});
+
+export const extractChecklistFromMessage = createServerFn({ method: "POST" })
+  .middleware([requireSupabaseAuth])
+  .inputValidator((input: unknown) =>
+    z.object({
+      project_id: z.string().uuid(),
+      content: z.string().min(1).max(20000),
+    }).parse(input),
+  )
+  .handler(async ({ data, context }) => {
+    const apiKey = process.env.LOVABLE_API_KEY;
+    if (!apiKey) throw new Error("AI is not configured");
+
+    const { data: p } = await context.supabase
+      .from("projects").select("name, project_type, location, jurisdiction")
+      .eq("id", data.project_id).maybeSingle();
+    if (!p) throw new Error("Project not found");
+
+    const { data: existing } = await context.supabase
+      .from("permit_items").select("name").eq("project_id", data.project_id);
+    const existingNames = (existing ?? []).map((r) => r.name.toLowerCase().trim());
+
+    const prompt = `Extract permit / approval / inspection checklist items mentioned or clearly implied in the assistant reply below, for this project. Return ONLY valid JSON, no prose.
+
+Project: ${p.name}
+Type: ${p.project_type}
+Location: ${p.location || "unspecified"}
+Jurisdiction: ${p.jurisdiction || "unspecified"}
+
+Existing checklist items (do NOT duplicate — case-insensitive name match):
+${existingNames.length ? existingNames.map((n) => `- ${n}`).join("\n") : "(none yet)"}
+
+Assistant reply:
+"""
+${data.content}
+"""
+
+Return this JSON shape:
+{"items":[{"name":"Building Permit","category":"Building","required":true,"why":"..."}]}
+
+Rules:
+- 0 to 12 items. If nothing permit-like was mentioned, return {"items":[]}.
+- category is one of: Building, MEP, Fire, Health, Zoning, Sign, Right-of-Way, Grading, Demolition, Stormwater, Historic, Environmental, Occupancy.
+- name is the specific permit/approval name; use the local term when jurisdiction is known.
+- required=true for likely-required, false for conditional.
+- why is one short clause (<160 chars) explaining trigger.
+- Do NOT include items whose name already appears in the existing list above.`;
+
+    const raw = await callLovableAI(apiKey, [
+      { role: "system", content: SYSTEM_PROMPT },
+      { role: "user", content: prompt },
+    ]);
+    const cleaned = raw.replace(/```json|```/g, "").trim();
+    const s = cleaned.indexOf("{");
+    const e = cleaned.lastIndexOf("}");
+    let parsed: { items: Array<z.infer<typeof ExtractedItem>> };
+    try {
+      parsed = JSON.parse(cleaned.slice(s, e + 1));
+    } catch {
+      throw new Error("AI returned unparseable output. Try again.");
+    }
+    const items = z.object({ items: z.array(ExtractedItem).max(20) }).parse(parsed).items;
+    const filtered = items.filter((it) => !existingNames.includes(it.name.toLowerCase().trim()));
+    return { items: filtered };
+  });
+
+export const addPermitItemsBulk = createServerFn({ method: "POST" })
+  .middleware([requireSupabaseAuth])
+  .inputValidator((input: unknown) =>
+    z.object({
+      project_id: z.string().uuid(),
+      items: z.array(ExtractedItem).min(1).max(20),
+    }).parse(input),
+  )
+  .handler(async ({ data, context }) => {
+    const { data: existing } = await context.supabase
+      .from("permit_items").select("sort_order").eq("project_id", data.project_id);
+    const startOrder = (existing ?? []).reduce((m, r) => Math.max(m, r.sort_order ?? 0), 0) + 1;
+
+    const rows = data.items.map((it, idx) => ({
+      user_id: context.userId,
+      project_id: data.project_id,
+      name: it.name,
+      category: it.category,
+      required: it.required,
+      notes: it.why ?? "",
+      sort_order: startOrder + idx,
+    }));
+    const { data: inserted, error } = await context.supabase
+      .from("permit_items").insert(rows).select("*");
+    if (error) throw new Error(error.message);
+
+    await context.supabase.from("activity").insert({
+      user_id: context.userId,
+      project_id: data.project_id,
+      description: `Added ${inserted.length} checklist item${inserted.length === 1 ? "" : "s"} from AI chat.`,
+    });
+    return { inserted };
+  });
+
