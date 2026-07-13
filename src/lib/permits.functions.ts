@@ -1746,8 +1746,10 @@ export const updateInspectionFields = createServerFn({ method: "POST" })
       }
     }
     const { data: row, error } = await context.supabase
-      // @ts-expect-error jsonb columns typed loosely
-      .from("inspections").update(patch).eq("id", data.id).select("*").single();
+      .from("inspections")
+      .update(patch as never)
+      .eq("id", data.id)
+      .select("*").single();
     if (error) throw new Error(error.message);
     if (data.status) {
       await context.supabase.from("activity").insert({
