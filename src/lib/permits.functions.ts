@@ -340,7 +340,7 @@ export const sendChatMessage = createServerFn({ method: "POST" })
     if (uerr) throw new Error(uerr.message);
 
     const messages = [
-      { role: "system", content: SYSTEM_PROMPT + projectContext },
+      { role: "system", content: SYSTEM_PROMPT + projectContext + jurisdictionBlock },
       ...(history ?? []),
       { role: "user", content: data.content },
     ];
