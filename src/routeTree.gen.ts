@@ -19,6 +19,7 @@ import { Route as AuthenticatedJurisdictionsRouteImport } from './routes/_authen
 import { Route as AuthenticatedDashboardRouteImport } from './routes/_authenticated/dashboard'
 import { Route as AuthenticatedAssistantRouteImport } from './routes/_authenticated/assistant'
 import { Route as AuthenticatedProjectsIndexRouteImport } from './routes/_authenticated/projects.index'
+import { Route as AuthenticatedAssistantIndexRouteImport } from './routes/_authenticated/assistant.index'
 import { Route as ShareReportsTokenRouteImport } from './routes/share.reports.$token'
 import { Route as ApiChatStreamRouteImport } from './routes/api/chat.stream'
 import { Route as AuthenticatedProjectsIdRouteImport } from './routes/_authenticated/projects.$id'
@@ -78,6 +79,12 @@ const AuthenticatedProjectsIndexRoute =
     id: '/projects/',
     path: '/projects/',
     getParentRoute: () => AuthenticatedRouteRoute,
+  } as any)
+const AuthenticatedAssistantIndexRoute =
+  AuthenticatedAssistantIndexRouteImport.update({
+    id: '/',
+    path: '/',
+    getParentRoute: () => AuthenticatedAssistantRoute,
   } as any)
 const ShareReportsTokenRoute = ShareReportsTokenRouteImport.update({
   id: '/share/reports/$token',
@@ -141,6 +148,7 @@ export interface FileRoutesByFullPath {
   '/projects/$id': typeof AuthenticatedProjectsIdRoute
   '/api/chat/stream': typeof ApiChatStreamRoute
   '/share/reports/$token': typeof ShareReportsTokenRoute
+  '/assistant/': typeof AuthenticatedAssistantIndexRoute
   '/projects/': typeof AuthenticatedProjectsIndexRoute
   '/api/public/payments/webhook': typeof ApiPublicPaymentsWebhookRoute
 }
@@ -148,7 +156,6 @@ export interface FileRoutesByTo {
   '/': typeof IndexRoute
   '/auth': typeof AuthRoute
   '/pricing': typeof PricingRoute
-  '/assistant': typeof AuthenticatedAssistantRouteWithChildren
   '/dashboard': typeof AuthenticatedDashboardRoute
   '/jurisdictions': typeof AuthenticatedJurisdictionsRouteWithChildren
   '/lookup': typeof AuthenticatedLookupRoute
@@ -160,6 +167,7 @@ export interface FileRoutesByTo {
   '/projects/$id': typeof AuthenticatedProjectsIdRoute
   '/api/chat/stream': typeof ApiChatStreamRoute
   '/share/reports/$token': typeof ShareReportsTokenRoute
+  '/assistant': typeof AuthenticatedAssistantIndexRoute
   '/projects': typeof AuthenticatedProjectsIndexRoute
   '/api/public/payments/webhook': typeof ApiPublicPaymentsWebhookRoute
 }
@@ -181,6 +189,7 @@ export interface FileRoutesById {
   '/_authenticated/projects/$id': typeof AuthenticatedProjectsIdRoute
   '/api/chat/stream': typeof ApiChatStreamRoute
   '/share/reports/$token': typeof ShareReportsTokenRoute
+  '/_authenticated/assistant/': typeof AuthenticatedAssistantIndexRoute
   '/_authenticated/projects/': typeof AuthenticatedProjectsIndexRoute
   '/api/public/payments/webhook': typeof ApiPublicPaymentsWebhookRoute
 }
@@ -202,6 +211,7 @@ export interface FileRouteTypes {
     | '/projects/$id'
     | '/api/chat/stream'
     | '/share/reports/$token'
+    | '/assistant/'
     | '/projects/'
     | '/api/public/payments/webhook'
   fileRoutesByTo: FileRoutesByTo
@@ -209,7 +219,6 @@ export interface FileRouteTypes {
     | '/'
     | '/auth'
     | '/pricing'
-    | '/assistant'
     | '/dashboard'
     | '/jurisdictions'
     | '/lookup'
@@ -221,6 +230,7 @@ export interface FileRouteTypes {
     | '/projects/$id'
     | '/api/chat/stream'
     | '/share/reports/$token'
+    | '/assistant'
     | '/projects'
     | '/api/public/payments/webhook'
   id:
@@ -241,6 +251,7 @@ export interface FileRouteTypes {
     | '/_authenticated/projects/$id'
     | '/api/chat/stream'
     | '/share/reports/$token'
+    | '/_authenticated/assistant/'
     | '/_authenticated/projects/'
     | '/api/public/payments/webhook'
   fileRoutesById: FileRoutesById
@@ -328,6 +339,13 @@ declare module '@tanstack/react-router' {
       preLoaderRoute: typeof AuthenticatedProjectsIndexRouteImport
       parentRoute: typeof AuthenticatedRouteRoute
     }
+    '/_authenticated/assistant/': {
+      id: '/_authenticated/assistant/'
+      path: '/'
+      fullPath: '/assistant/'
+      preLoaderRoute: typeof AuthenticatedAssistantIndexRouteImport
+      parentRoute: typeof AuthenticatedAssistantRoute
+    }
     '/share/reports/$token': {
       id: '/share/reports/$token'
       path: '/share/reports/$token'
@@ -390,12 +408,14 @@ declare module '@tanstack/react-router' {
 interface AuthenticatedAssistantRouteChildren {
   AuthenticatedAssistantThreadIdRoute: typeof AuthenticatedAssistantThreadIdRoute
   AuthenticatedAssistantAnalysisRoute: typeof AuthenticatedAssistantAnalysisRoute
+  AuthenticatedAssistantIndexRoute: typeof AuthenticatedAssistantIndexRoute
 }
 
 const AuthenticatedAssistantRouteChildren: AuthenticatedAssistantRouteChildren =
   {
     AuthenticatedAssistantThreadIdRoute: AuthenticatedAssistantThreadIdRoute,
     AuthenticatedAssistantAnalysisRoute: AuthenticatedAssistantAnalysisRoute,
+    AuthenticatedAssistantIndexRoute: AuthenticatedAssistantIndexRoute,
   }
 
 const AuthenticatedAssistantRouteWithChildren =
