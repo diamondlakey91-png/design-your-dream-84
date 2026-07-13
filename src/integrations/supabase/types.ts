@@ -334,6 +334,50 @@ export type Database = {
         }
         Relationships: []
       }
+      permit_analyses: {
+        Row: {
+          analysis: Json
+          created_at: string
+          id: string
+          intake: Json
+          jurisdiction: string | null
+          project_id: string | null
+          title: string
+          updated_at: string
+          user_id: string
+        }
+        Insert: {
+          analysis?: Json
+          created_at?: string
+          id?: string
+          intake?: Json
+          jurisdiction?: string | null
+          project_id?: string | null
+          title?: string
+          updated_at?: string
+          user_id: string
+        }
+        Update: {
+          analysis?: Json
+          created_at?: string
+          id?: string
+          intake?: Json
+          jurisdiction?: string | null
+          project_id?: string | null
+          title?: string
+          updated_at?: string
+          user_id?: string
+        }
+        Relationships: [
+          {
+            foreignKeyName: "permit_analyses_project_id_fkey"
+            columns: ["project_id"]
+            isOneToOne: false
+            referencedRelation: "projects"
+            referencedColumns: ["id"]
+          },
+        ]
+      }
       permit_items: {
         Row: {
           application_fields: Json | null
