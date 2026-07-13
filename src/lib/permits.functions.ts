@@ -1539,6 +1539,80 @@ function buildDirectPortalSearchUrls(jurisdiction: string, address: string): str
   if (/philadelphia,?\s*pa/.test(j)) {
     urls.push(`https://eclipse.phila.gov/phillylmsprod/int/lms/Login.aspx#address=${enc}`);
   }
+  // Virginia
+  if (/arlington(\s+county)?,?\s*va/.test(j)) {
+    urls.push(`https://aca-prod.accela.com/ARLINGTON/Cap/GlobalSearchResults.aspx?QueryText=${enc}`);
+    urls.push(`https://permits.arlingtonva.us/CitizenAccess/Cap/GlobalSearchResults.aspx?QueryText=${enc}`);
+  }
+  if (/fairfax(\s+county)?,?\s*va/.test(j)) {
+    urls.push(`https://www.fairfaxcounty.gov/plan2build/permit-status?address=${enc}`);
+    urls.push(`https://aca-prod.accela.com/FFXC/Cap/GlobalSearchResults.aspx?QueryText=${enc}`);
+  }
+  if (/loudoun(\s+county)?,?\s*va/.test(j)) {
+    urls.push(`https://aca-prod.accela.com/LOUDOUN/Cap/GlobalSearchResults.aspx?QueryText=${enc}`);
+  }
+  if (/prince\s+william(\s+county)?,?\s*va/.test(j)) {
+    urls.push(`https://eservices.pwcgov.org/BuildingDevelopment/Cap/GlobalSearchResults.aspx?QueryText=${enc}`);
+  }
+  if (/alexandria,?\s*va/.test(j)) {
+    urls.push(`https://aca-prod.accela.com/ALEXANDRIA/Cap/GlobalSearchResults.aspx?QueryText=${enc}`);
+  }
+  if (/richmond,?\s*va/.test(j)) {
+    urls.push(`https://energov.richmondgov.com/EnerGov_Prod/SelfService#/search?searchText=${enc}`);
+  }
+  if (/virginia\s+beach,?\s*va/.test(j)) {
+    urls.push(`https://energov.vbgov.com/EnerGov_Prod/SelfService#/search?searchText=${enc}`);
+  }
+  // Additional major jurisdictions
+  if (/houston,?\s*tx/.test(j)) {
+    urls.push(`https://ipermits.houstontx.gov/publicsearch/PermitSearch?SearchText=${enc}`);
+  }
+  if (/dallas,?\s*tx/.test(j)) {
+    urls.push(`https://developdallas.dallascityhall.com/publicsearch/PermitSearch?SearchText=${enc}`);
+  }
+  if (/phoenix,?\s*az/.test(j)) {
+    urls.push(`https://apps-secure.phoenix.gov/PDD/Search/Permits?address=${enc}`);
+  }
+  if (/san\s+diego,?\s*ca/.test(j)) {
+    urls.push(`https://aca-prod.accela.com/SANDIEGO/Cap/GlobalSearchResults.aspx?QueryText=${enc}`);
+  }
+  if (/denver,?\s*co/.test(j)) {
+    urls.push(`https://aca-prod.accela.com/denver/Cap/GlobalSearchResults.aspx?QueryText=${enc}`);
+  }
+  if (/atlanta,?\s*ga/.test(j)) {
+    urls.push(`https://aca-prod.accela.com/ATLANTA_GA/Cap/GlobalSearchResults.aspx?QueryText=${enc}`);
+  }
+  if (/portland,?\s*or/.test(j)) {
+    urls.push(`https://www.portlandmaps.com/search/?query=${enc}`);
+  }
+  if (/minneapolis,?\s*mn/.test(j)) {
+    urls.push(`https://aca-prod.accela.com/MINNEAPOLIS/Cap/GlobalSearchResults.aspx?QueryText=${enc}`);
+  }
+  if (/nashville,?\s*tn|davidson\s+county,?\s*tn/.test(j)) {
+    urls.push(`https://epermits.nashville.gov/CitizenAccess/Cap/GlobalSearchResults.aspx?QueryText=${enc}`);
+  }
+  if (/charlotte,?\s*nc|mecklenburg,?\s*nc/.test(j)) {
+    urls.push(`https://aca-prod.accela.com/CLTNC/Cap/GlobalSearchResults.aspx?QueryText=${enc}`);
+  }
+  if (/raleigh,?\s*nc/.test(j)) {
+    urls.push(`https://aca-prod.accela.com/RALEIGH/Cap/GlobalSearchResults.aspx?QueryText=${enc}`);
+  }
+
+  // Generic Accela guess for any jurisdiction not hardcoded above (~thousands of
+  // agencies run on Accela Civic Platform at aca-prod.accela.com/<AGENCY>/). Uses
+  // a slugified jurisdiction name so we always have at least one portal-side URL
+  // to hand Firecrawl, instead of relying solely on web search.
+  if (urls.length === 0) {
+    const slug = jurisdiction
+      .toLowerCase()
+      .replace(/,.*$/, "")
+      .replace(/\bcounty\b/g, "")
+      .replace(/[^a-z0-9]+/g, "")
+      .slice(0, 24);
+    if (slug) {
+      urls.push(`https://aca-prod.accela.com/${slug.toUpperCase()}/Cap/GlobalSearchResults.aspx?QueryText=${enc}`);
+    }
+  }
 
   return urls;
 }
