@@ -61,7 +61,7 @@ function InspectionMode() {
 
   const persist = (patch: { checklist?: ChecklistItem[]; photos?: Photo[]; notes?: string }) => {
     const clean = patch.photos ? patch.photos.map(({ path, caption }) => ({ path, caption: caption ?? "" })) : undefined;
-    save.mutate({ id, ...patch, photos: clean });
+    save.mutate({ ...patch, photos: clean });
   };
 
   const toggleItem = (itemId: string, field: "checked" | "failed") => {
