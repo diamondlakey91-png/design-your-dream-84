@@ -141,34 +141,58 @@ function LookupPage() {
   );
 }
 
+function confidenceStyle(c: string) {
+  switch (c) {
+    case "high": return { bg: "bg-emerald-500/10", fg: "text-emerald-500", border: "border-emerald-500/30", label: "High confidence", Icon: ShieldCheck };
+    case "medium": return { bg: "bg-brand/10", fg: "text-brand", border: "border-brand/30", label: "Medium confidence", Icon: ShieldQuestion };
+    case "low": return { bg: "bg-amber-500/10", fg: "text-amber-500", border: "border-amber-500/30", label: "Low confidence", Icon: ShieldAlert };
+    default: return { bg: "bg-muted", fg: "text-muted-foreground", border: "border-border", label: "No match", Icon: ShieldAlert };
+  }
+}
+
 function Results({ result }: { result: LookupResult }) {
+  const overall = confidenceStyle(result.overall_confidence || (result.findings.length ? "medium" : "none"));
+  const src = result.sources_scanned;
   return (
     <section className="space-y-4">
-      <div className="rounded-xl border border-border bg-card p-4 space-y-2">
-        <div className="flex items-center gap-2 text-xs text-muted-foreground">
-          <Building2 className="size-3.5" />
-          <span className="font-mono uppercase tracking-widest">{result.jurisdiction}</span>
+      <div className="rounded-xl border border-border bg-card p-4 space-y-3">
+        <div className="flex items-center justify-between gap-2">
+          <div className="flex items-center gap-2 text-xs text-muted-foreground">
+            <Building2 className="size-3.5" />
+            <span className="font-mono uppercase tracking-widest">{result.jurisdiction}</span>
+          </div>
+          <span className={`inline-flex items-center gap-1 rounded-full border ${overall.border} ${overall.bg} ${overall.fg} px-2 py-0.5 text-[10px] font-mono uppercase tracking-wider`}>
+            <overall.Icon className="size-3" />
+            {overall.label}
+          </span>
         </div>
         <p className="text-sm">{result.summary}</p>
+
+        <div className="flex flex-wrap gap-1.5 pt-1">
+          <SourceChip active={src?.official_portal} label="Official portal" />
+          <SourceChip active={src?.direct_portal_search} label="Direct portal search" />
+          <SourceChip active={src?.web_search} label="Web search" />
+        </div>
+
+        {result.no_match_reason && (
+          <div className="flex items-start gap-2 rounded-md border border-amber-500/30 bg-amber-500/5 p-2.5 text-xs text-amber-600 dark:text-amber-400">
+            <Info className="size-3.5 shrink-0 mt-0.5" />
+            <div>
+              <div className="font-medium">Why matches are limited</div>
+              <p className="mt-0.5 text-amber-700/90 dark:text-amber-300/90">{result.no_match_reason}</p>
+            </div>
+          </div>
+        )}
+
         <div className="flex flex-wrap gap-2 pt-1">
           {result.portal_url && (
-            <a
-              href={result.portal_url}
-              target="_blank"
-              rel="noreferrer"
-              className="inline-flex items-center gap-1 rounded-md border border-border px-2.5 py-1 text-xs hover:bg-accent"
-            >
+            <a href={result.portal_url} target="_blank" rel="noreferrer" className="inline-flex items-center gap-1 rounded-md border border-border px-2.5 py-1 text-xs hover:bg-accent">
               <ExternalLink className="size-3" />
               {result.portal_name || "Official portal"}
             </a>
           )}
           {result.search_url && result.search_url !== result.portal_url && (
-            <a
-              href={result.search_url}
-              target="_blank"
-              rel="noreferrer"
-              className="inline-flex items-center gap-1 rounded-md border border-border px-2.5 py-1 text-xs hover:bg-accent"
-            >
+            <a href={result.search_url} target="_blank" rel="noreferrer" className="inline-flex items-center gap-1 rounded-md border border-border px-2.5 py-1 text-xs hover:bg-accent">
               <Search className="size-3" />
               Search by address
             </a>
@@ -185,39 +209,57 @@ function Results({ result }: { result: LookupResult }) {
             No permit records matched this exact address in the sources scanned. Use the portal link above to search directly.
           </div>
         )}
-        {result.findings.map((f, i) => (
-          <div key={i} className="rounded-lg border border-border bg-card p-3 space-y-1.5">
-            <div className="flex items-start justify-between gap-2">
-              <div>
-                <div className="text-sm font-medium">{f.permit_type || "Permit"}</div>
-                {f.permit_number && (
-                  <div className="font-mono text-xs text-muted-foreground">#{f.permit_number}</div>
-                )}
+        {result.findings.map((f, i) => {
+          const conf = confidenceStyle(f.match_confidence);
+          return (
+            <div key={i} className={`rounded-lg border ${conf.border} bg-card p-3 space-y-1.5`}>
+              <div className="flex items-start justify-between gap-2">
+                <div>
+                  <div className="text-sm font-medium">{f.permit_type || "Permit"}</div>
+                  {f.permit_number && (
+                    <div className="font-mono text-xs text-muted-foreground">#{f.permit_number}</div>
+                  )}
+                </div>
+                <div className="flex flex-col items-end gap-1">
+                  <span className="rounded-full bg-brand/10 px-2 py-0.5 text-[10px] font-mono uppercase tracking-wider text-brand">
+                    {f.status}
+                  </span>
+                  <span className={`inline-flex items-center gap-1 rounded-full ${conf.bg} ${conf.fg} px-2 py-0.5 text-[10px] font-mono uppercase tracking-wider`}>
+                    <conf.Icon className="size-3" />
+                    {f.match_confidence} · {f.match_score}
+                  </span>
+                </div>
               </div>
-              <span className="rounded-full bg-brand/10 px-2 py-0.5 text-[10px] font-mono uppercase tracking-wider text-brand">
-                {f.status}
-              </span>
+              {f.address && <div className="text-xs text-muted-foreground">{f.address}</div>}
+              {f.description && <p className="text-xs">{f.description}</p>}
+              {f.match_reason && (
+                <div className="flex items-start gap-1.5 rounded-md bg-muted/50 px-2 py-1.5 text-[11px] text-muted-foreground">
+                  <Info className="size-3 shrink-0 mt-0.5" />
+                  <span><span className="font-medium text-foreground">Match:</span> {f.match_reason}</span>
+                </div>
+              )}
+              <div className="flex flex-wrap gap-x-3 gap-y-0.5 text-[11px] text-muted-foreground">
+                {f.applicant && <span>Applicant: {f.applicant}</span>}
+                {f.filed_date && <span>Filed: {f.filed_date}</span>}
+                {f.updated_date && <span>Updated: {f.updated_date}</span>}
+              </div>
+              {f.source_url && (
+                <a href={f.source_url} target="_blank" rel="noreferrer" className="inline-flex items-center gap-1 text-[11px] text-brand hover:underline">
+                  <ExternalLink className="size-3" /> Source
+                </a>
+              )}
             </div>
-            {f.address && <div className="text-xs text-muted-foreground">{f.address}</div>}
-            {f.description && <p className="text-xs">{f.description}</p>}
-            <div className="flex flex-wrap gap-x-3 gap-y-0.5 text-[11px] text-muted-foreground">
-              {f.applicant && <span>Applicant: {f.applicant}</span>}
-              {f.filed_date && <span>Filed: {f.filed_date}</span>}
-              {f.updated_date && <span>Updated: {f.updated_date}</span>}
-            </div>
-            {f.source_url && (
-              <a
-                href={f.source_url}
-                target="_blank"
-                rel="noreferrer"
-                className="inline-flex items-center gap-1 text-[11px] text-brand hover:underline"
-              >
-                <ExternalLink className="size-3" /> Source
-              </a>
-            )}
-          </div>
-        ))}
+          );
+        })}
       </div>
     </section>
+  );
+}
+
+function SourceChip({ active, label }: { active?: boolean; label: string }) {
+  return (
+    <span className={`inline-flex items-center gap-1 rounded-full border px-2 py-0.5 text-[10px] font-mono uppercase tracking-wider ${active ? "border-emerald-500/30 bg-emerald-500/10 text-emerald-500" : "border-border bg-muted text-muted-foreground line-through opacity-60"}`}>
+      {active ? "✓" : "—"} {label}
+    </span>
   );
 }
