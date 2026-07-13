@@ -27,6 +27,10 @@ import {
   listInspections,
   addInspection,
   deleteInspection,
+  draftClientUpdate,
+  summarizeReviewerComments,
+  generateMeetingAgenda,
+  flagScheduleRisks,
 } from "@/lib/permits.functions";
 import {
   ArrowLeft,
