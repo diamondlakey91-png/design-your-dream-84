@@ -553,3 +553,205 @@ export const listActivity = createServerFn({ method: "GET" })
     return rows ?? [];
   });
 
+// ---- Live Jurisdiction Sync (Firecrawl + AI) ----
+export const listJurisdictionSyncs = createServerFn({ method: "GET" })
+  .middleware([requireSupabaseAuth])
+  .inputValidator((input: unknown) => z.object({ project_id: z.string().uuid() }).parse(input))
+  .handler(async ({ data, context }) => {
+    const { data: rows, error } = await context.supabase
+      .from("jurisdiction_syncs")
+      .select("*")
+      .eq("project_id", data.project_id)
+      .order("created_at", { ascending: false })
+      .limit(20);
+    if (error) throw new Error(error.message);
+    return rows ?? [];
+  });
+
+type FirecrawlSearchResult = { url: string; title?: string; description?: string };
+
+async function firecrawlSearch(apiKey: string, query: string, limit = 5): Promise<FirecrawlSearchResult[]> {
+  const resp = await fetch("https://api.firecrawl.dev/v2/search", {
+    method: "POST",
+    headers: { "Content-Type": "application/json", Authorization: `Bearer ${apiKey}` },
+    body: JSON.stringify({ query, limit }),
+  });
+  if (!resp.ok) throw new Error(`Firecrawl search failed [${resp.status}]: ${(await resp.text()).slice(0, 200)}`);
+  const j = (await resp.json()) as { data?: { web?: FirecrawlSearchResult[] } | FirecrawlSearchResult[] };
+  const raw = Array.isArray(j.data) ? j.data : j.data?.web ?? [];
+  return raw.filter((r) => r?.url);
+}
+
+async function firecrawlScrape(apiKey: string, url: string): Promise<{ markdown: string; title: string }> {
+  const resp = await fetch("https://api.firecrawl.dev/v2/scrape", {
+    method: "POST",
+    headers: { "Content-Type": "application/json", Authorization: `Bearer ${apiKey}` },
+    body: JSON.stringify({ url, formats: ["markdown"], onlyMainContent: true }),
+  });
+  if (!resp.ok) throw new Error(`Firecrawl scrape failed [${resp.status}]: ${(await resp.text()).slice(0, 200)}`);
+  const j = (await resp.json()) as { data?: { markdown?: string; metadata?: { title?: string } } };
+  return { markdown: j.data?.markdown ?? "", title: j.data?.metadata?.title ?? "" };
+}
+
+const FindingSchema = z.object({
+  permit_or_record: z.string(),
+  status: z.string(),
+  applicant_or_address: z.string().optional().default(""),
+  filed_or_updated: z.string().optional().default(""),
+  notes: z.string().optional().default(""),
+});
+
+const SyncExtractionSchema = z.object({
+  portal_name: z.string(),
+  portal_url: z.string(),
+  findings: z.array(FindingSchema).max(15),
+  summary: z.string(),
+});
+
+export const syncJurisdiction = createServerFn({ method: "POST" })
+  .middleware([requireSupabaseAuth])
+  .inputValidator((input: unknown) => z.object({ project_id: z.string().uuid() }).parse(input))
+  .handler(async ({ data, context }) => {
+    const fcKey = process.env.FIRECRAWL_API_KEY;
+    const aiKey = process.env.LOVABLE_API_KEY;
+    if (!fcKey) throw new Error("Firecrawl is not configured");
+    if (!aiKey) throw new Error("AI is not configured");
+
+    const { data: p } = await context.supabase
+      .from("projects").select("*").eq("id", data.project_id).maybeSingle();
+    if (!p) throw new Error("Project not found");
+    if (!p.jurisdiction) throw new Error("Add a jurisdiction to this project first (e.g. \"Los Angeles, CA\").");
+
+    // Insert pending row so realtime shows a live "syncing" state
+    const { data: pending, error: perr } = await context.supabase
+      .from("jurisdiction_syncs")
+      .insert({
+        user_id: context.userId,
+        project_id: data.project_id,
+        status: "searching",
+        summary: `Searching official permit portal for ${p.jurisdiction}…`,
+      })
+      .select("*").single();
+    if (perr) throw new Error(perr.message);
+
+    try {
+      // 1. Find the jurisdiction's permit portal
+      const portalQuery = `${p.jurisdiction} building permit search portal site:.gov OR "permit search" OR Accela OR "energov"`;
+      const portalHits = await firecrawlSearch(fcKey, portalQuery, 5);
+      if (portalHits.length === 0) throw new Error(`No official permit portal found for ${p.jurisdiction}.`);
+
+      // Prefer .gov / accela / energov / opengov
+      const preferred = portalHits.find((h) => /(\.gov|accela|energov|opengov|citizenserve|permitium|mygovernmentonline)/i.test(h.url)) ?? portalHits[0];
+
+      await context.supabase
+        .from("jurisdiction_syncs").update({
+          status: "scraping",
+          portal_url: preferred.url,
+          portal_name: preferred.title ?? preferred.url,
+          source_url: preferred.url,
+          summary: `Reading ${preferred.title ?? preferred.url}…`,
+        }).eq("id", pending.id);
+
+      // 2. Also search for the project itself on the portal / news
+      const projectQuery = `"${p.name}" ${p.location || p.jurisdiction} permit status`;
+      const projectHits = await firecrawlSearch(fcKey, projectQuery, 3).catch(() => []);
+
+      // 3. Scrape the portal landing page
+      const scraped = await firecrawlScrape(fcKey, preferred.url);
+      const portalSnippet = scraped.markdown.slice(0, 4000);
+
+      const projectSnippets = (
+        await Promise.all(
+          projectHits.slice(0, 2).map(async (h) => {
+            try {
+              const s = await firecrawlScrape(fcKey, h.url);
+              return `SOURCE: ${h.url}\nTITLE: ${h.title ?? ""}\n${s.markdown.slice(0, 2000)}`;
+            } catch {
+              return `SOURCE: ${h.url}\nTITLE: ${h.title ?? ""}\nDESC: ${h.description ?? ""}`;
+            }
+          }),
+        )
+      ).join("\n\n---\n\n");
+
+      // 4. Ask AI to extract structured findings
+      const extractionPrompt = `You are analyzing live web content for the Permivio permit tracker.
+
+PROJECT
+- Name: ${p.name}
+- Address / Location: ${p.location || "(not provided)"}
+- Jurisdiction: ${p.jurisdiction}
+- Type: ${p.project_type}
+
+CANDIDATE PORTAL (${preferred.url})
+${portalSnippet}
+
+RELATED SEARCH RESULTS FOR THIS PROJECT
+${projectSnippets || "(none)"}
+
+TASK
+Return ONLY valid JSON matching this exact shape:
+{
+  "portal_name": "official name of the permit portal or department",
+  "portal_url": "canonical URL to search permits in this jurisdiction",
+  "findings": [
+    {
+      "permit_or_record": "record number or permit type",
+      "status": "Issued | Under Review | Submitted | Approved | Expired | Withdrawn | Unknown",
+      "applicant_or_address": "if listed",
+      "filed_or_updated": "date if listed",
+      "notes": "1 short clause"
+    }
+  ],
+  "summary": "2-4 sentence plain-English summary of what the live portal shows for this jurisdiction and whether any record appears to match this project. Be honest if no direct match was found — say 'No direct match; use the portal link to search by address.'"
+}
+
+RULES
+- Never invent record numbers, status, or dates. If a field isn't in the source text, omit that finding or set the field to "".
+- findings may be an empty array. Prefer accuracy over volume.
+- portal_url must be a real URL taken from the sources above.`;
+
+      const raw = await callLovableAI(aiKey, [
+        { role: "system", content: "You extract structured permit-portal data. Output valid JSON only, no prose, no fences." },
+        { role: "user", content: extractionPrompt },
+      ]);
+      const cleaned = raw.replace(/```json|```/g, "").trim();
+      const start = cleaned.indexOf("{");
+      const end = cleaned.lastIndexOf("}");
+      let parsed: z.infer<typeof SyncExtractionSchema>;
+      try {
+        parsed = SyncExtractionSchema.parse(JSON.parse(cleaned.slice(start, end + 1)));
+      } catch {
+        throw new Error("AI returned unparseable sync result. Try again.");
+      }
+
+      const { data: done, error: derr } = await context.supabase
+        .from("jurisdiction_syncs").update({
+          status: "complete",
+          portal_name: parsed.portal_name || preferred.title || preferred.url,
+          portal_url: parsed.portal_url || preferred.url,
+          source_url: preferred.url,
+          findings: parsed.findings,
+          summary: parsed.summary,
+          error: "",
+        }).eq("id", pending.id).select("*").single();
+      if (derr) throw new Error(derr.message);
+
+      await context.supabase.from("activity").insert({
+        user_id: context.userId,
+        project_id: data.project_id,
+        description: `Live jurisdiction sync: ${parsed.findings.length} record${parsed.findings.length === 1 ? "" : "s"} from ${parsed.portal_name || "portal"}.`,
+      });
+
+      return done;
+    } catch (e) {
+      const msg = e instanceof Error ? e.message : String(e);
+      await context.supabase
+        .from("jurisdiction_syncs").update({
+          status: "error",
+          error: msg,
+          summary: `Sync failed: ${msg}`,
+        }).eq("id", pending.id);
+      throw new Error(msg);
+    }
+  });
+
