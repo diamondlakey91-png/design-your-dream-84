@@ -282,7 +282,7 @@ export const updatePermitItem = createServerFn({ method: "POST" })
     }).parse(input),
   )
   .handler(async ({ data, context }) => {
-    const patch: Record<string, unknown> = {};
+    const patch: { status?: string; notes?: string; due_date?: string | null } = {};
     if (data.status) patch.status = data.status;
     if (data.notes !== undefined) patch.notes = data.notes;
     if (data.due_date !== undefined) patch.due_date = data.due_date;
