@@ -30,7 +30,6 @@ function ThreadView() {
   const qc = useQueryClient();
 
   const listMsgs = useServerFn(listThreadMessages);
-  const sendFn = useServerFn(sendChatMessage);
   const listThreadsFn = useServerFn(listThreads);
   const projectsFn = useServerFn(listProjects);
   const setProjectFn = useServerFn(setThreadProject);
@@ -42,6 +41,9 @@ function ThreadView() {
   const [titleDraft, setTitleDraft] = useState("");
   const [intakeOpen, setIntakeOpen] = useState(false);
   const [extractOpen, setExtractOpen] = useState<null | { messageId: string; content: string }>(null);
+  const [streaming, setStreaming] = useState<{ user: string; assistant: string } | null>(null);
+  const [sending, setSending] = useState(false);
+  const abortRef = useRef<AbortController | null>(null);
   const scrollRef = useRef<HTMLDivElement>(null);
   const textareaRef = useRef<HTMLTextAreaElement>(null);
   const intakeFn = useServerFn(intakeGenerateChecklist);
@@ -62,16 +64,51 @@ function ThreadView() {
   const activeProject = projects.find((p) => p.id === thread?.project_id) ?? null;
   const messages = messagesQ.data ?? [];
 
-  const send = useMutation({
-    mutationFn: (content: string) => sendFn({ data: { thread_id: threadId, content } }),
-    onSuccess: () => {
-      qc.invalidateQueries({ queryKey: ["chat-thread", threadId] });
-      qc.invalidateQueries({ queryKey: ["chat-threads"] });
+  const streamSend = useCallback(async (content: string) => {
+    setSending(true);
+    setStreaming({ user: content, assistant: "" });
+    const controller = new AbortController();
+    abortRef.current = controller;
+    try {
+      const { data: sess } = await supabase.auth.getSession();
+      const token = sess.session?.access_token;
+      if (!token) throw new Error("Not signed in");
+      const resp = await fetch("/api/chat/stream", {
+        method: "POST",
+        headers: { "Content-Type": "application/json", Authorization: `Bearer ${token}` },
+        body: JSON.stringify({ thread_id: threadId, content }),
+        signal: controller.signal,
+      });
+      if (!resp.ok || !resp.body) {
+        const txt = await resp.text().catch(() => "");
+        throw new Error(txt || `Request failed (${resp.status})`);
+      }
+      const reader = resp.body.getReader();
+      const decoder = new TextDecoder();
+      let acc = "";
+      while (true) {
+        const { done, value } = await reader.read();
+        if (done) break;
+        acc += decoder.decode(value, { stream: true });
+        setStreaming({ user: content, assistant: acc });
+      }
+      await qc.invalidateQueries({ queryKey: ["chat-thread", threadId] });
+      await qc.invalidateQueries({ queryKey: ["chat-threads"] });
+      setStreaming(null);
       setInput("");
       requestAnimationFrame(() => textareaRef.current?.focus());
-    },
-    onError: (e) => toast.error(e instanceof Error ? e.message : "Send failed"),
-  });
+    } catch (e) {
+      if ((e as { name?: string })?.name !== "AbortError") {
+        toast.error(e instanceof Error ? e.message : "Send failed");
+      }
+      setStreaming(null);
+    } finally {
+      setSending(false);
+      abortRef.current = null;
+    }
+  }, [qc, threadId]);
+
+  const send = { isPending: sending };
 
   const setProject = useMutation({
     mutationFn: (project_id: string | null) => setProjectFn({ data: { id: threadId, project_id } }),
@@ -100,14 +137,14 @@ function ThreadView() {
 
   useEffect(() => {
     scrollRef.current?.scrollTo({ top: scrollRef.current.scrollHeight, behavior: "smooth" });
-  }, [messages.length, send.isPending]);
+  }, [messages.length, streaming?.assistant, sending]);
 
   useEffect(() => { textareaRef.current?.focus(); }, [threadId]);
 
   const submit = () => {
     const v = input.trim();
-    if (!v || send.isPending) return;
-    send.mutate(v);
+    if (!v || sending) return;
+    void streamSend(v);
   };
 
   const suggestions = activeProject
