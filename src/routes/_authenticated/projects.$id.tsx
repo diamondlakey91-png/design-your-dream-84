@@ -669,6 +669,56 @@ function DocRow({ doc, projectId, onDelete }: { doc: { id: string; name: string;
                   ))}
                 </ul>
               )}
+              {findings.length > 0 && (
+                <div className="pt-2 border-t border-border/50 space-y-2">
+                  <div className="flex flex-wrap gap-2">
+                    <button
+                      onClick={() => addFixes.mutate()}
+                      disabled={addFixes.isPending}
+                      className="text-[10px] font-mono uppercase tracking-wider px-2 py-1 rounded bg-brand/15 text-brand hover:bg-brand/25 disabled:opacity-50"
+                    >
+                      {addFixes.isPending ? "Adding…" : `Add ${findings.length} fix${findings.length === 1 ? "" : "es"} to checklist`}
+                    </button>
+                    <button
+                      onClick={() => draft.mutate()}
+                      disabled={draft.isPending}
+                      className="text-[10px] font-mono uppercase tracking-wider px-2 py-1 rounded bg-brand/15 text-brand hover:bg-brand/25 disabled:opacity-50"
+                    >
+                      {draft.isPending ? "Drafting…" : "Draft reviewer response"}
+                    </button>
+                  </div>
+                  {letter && (
+                    <div className="p-3 rounded-lg bg-muted/40 ring-1 ring-black/5 space-y-2">
+                      <div className="flex items-center justify-between gap-2">
+                        <p className="text-[10px] font-mono uppercase tracking-wider text-muted-foreground">Draft response letter</p>
+                        <div className="flex gap-2">
+                          <button
+                            onClick={() => { navigator.clipboard.writeText(letter); toast.success("Copied"); }}
+                            className="text-[10px] font-mono uppercase tracking-wider text-brand hover:opacity-80"
+                          >Copy</button>
+                          <button
+                            onClick={() => {
+                              const blob = new Blob([letter], { type: "text/plain" });
+                              const url = URL.createObjectURL(blob);
+                              const a = document.createElement("a");
+                              a.href = url;
+                              a.download = `${doc.name.replace(/\.[^.]+$/, "")}-response.txt`;
+                              a.click();
+                              URL.revokeObjectURL(url);
+                            }}
+                            className="text-[10px] font-mono uppercase tracking-wider text-brand hover:opacity-80"
+                          >Download</button>
+                          <button
+                            onClick={() => setLetter(null)}
+                            className="text-[10px] font-mono uppercase tracking-wider text-muted-foreground hover:opacity-80"
+                          >Close</button>
+                        </div>
+                      </div>
+                      <pre className="text-xs text-foreground whitespace-pre-wrap font-sans leading-relaxed max-h-96 overflow-auto">{letter}</pre>
+                    </div>
+                  )}
+                </div>
+              )}
             </div>
           )}
         </div>
