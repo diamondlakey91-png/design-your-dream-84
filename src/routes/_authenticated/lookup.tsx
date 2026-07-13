@@ -3,8 +3,8 @@ import { useServerFn } from "@tanstack/react-start";
 import { useMutation } from "@tanstack/react-query";
 import { useState } from "react";
 import { AppShell } from "@/components/AppShell";
-import { lookupPermitsByAddress } from "@/lib/permits.functions";
-import { MapPin, Search, ExternalLink, Building2, Loader2, AlertCircle, ShieldCheck, ShieldAlert, ShieldQuestion, Info } from "lucide-react";
+import { lookupPermitsByAddress, lookupUtilityCoordination } from "@/lib/permits.functions";
+import { MapPin, Search, ExternalLink, Building2, Loader2, AlertCircle, ShieldCheck, ShieldAlert, ShieldQuestion, Info, Droplets, Flame, Zap, Cable, PhoneCall, CloudRain } from "lucide-react";
 
 export const Route = createFileRoute("/_authenticated/lookup")({
   component: LookupPage,
@@ -26,32 +26,45 @@ export const Route = createFileRoute("/_authenticated/lookup")({
 });
 
 type LookupResult = Awaited<ReturnType<typeof lookupPermitsByAddress>>;
+type UtilityResult = Awaited<ReturnType<typeof lookupUtilityCoordination>>;
 
 const KNOWN_JURISDICTIONS: string[] = [
-  "Baltimore City, MD",
-  "Baltimore County, MD",
+  "Baltimore City, MD", "Baltimore County, MD", "Montgomery County, MD", "Prince George's County, MD", "Howard County, MD", "Anne Arundel County, MD",
   "Washington, DC",
-  "New York, NY",
-  "Los Angeles, CA",
-  "Chicago, IL",
-  "San Francisco, CA",
-  "Seattle, WA",
-  "Boston, MA",
-  "Austin, TX",
-  "Miami, FL",
-  "Philadelphia, PA",
+  "Arlington County, VA", "Fairfax County, VA", "Loudoun County, VA", "Prince William County, VA", "Alexandria, VA", "Richmond, VA", "Virginia Beach, VA", "Henrico County, VA", "Chesterfield County, VA",
+  "New York, NY", "Newark, NJ", "Jersey City, NJ", "Hartford, CT",
+  "Philadelphia, PA", "Pittsburgh, PA",
+  "Los Angeles, CA", "San Diego, CA", "San Francisco, CA", "San Jose, CA", "Oakland, CA", "Sacramento, CA", "Long Beach, CA", "Anaheim, CA", "Riverside, CA", "Fresno, CA",
+  "Chicago, IL", "Minneapolis, MN", "Milwaukee, WI", "Detroit, MI", "Columbus, OH", "Cleveland, OH", "Cincinnati, OH", "Indianapolis, IN", "St. Louis, MO", "Kansas City, MO",
+  "Seattle, WA", "Tacoma, WA", "King County, WA", "Portland, OR", "Eugene, OR", "Boise, ID",
+  "Boston, MA", "Cambridge, MA", "Providence, RI", "Portland, ME",
+  "Austin, TX", "Houston, TX", "Dallas, TX", "San Antonio, TX", "Fort Worth, TX", "El Paso, TX", "Plano, TX", "Arlington, TX",
+  "Phoenix, AZ", "Tucson, AZ", "Mesa, AZ", "Denver, CO", "Salt Lake City, UT", "Albuquerque, NM", "Las Vegas, NV", "Reno, NV",
+  "Miami, FL", "Miami-Dade, FL", "Orlando, FL", "Tampa, FL", "Jacksonville, FL", "Fort Lauderdale, FL",
+  "Atlanta, GA", "Savannah, GA", "Charlotte, NC", "Raleigh, NC", "Durham, NC", "Charleston, SC", "Columbia, SC", "Nashville, TN", "Memphis, TN", "Knoxville, TN", "Birmingham, AL", "New Orleans, LA", "Louisville, KY",
+  "Anchorage, AK", "Honolulu, HI",
 ];
 
 function LookupPage() {
   const [address, setAddress] = useState("");
   const [jurisdiction, setJurisdiction] = useState("");
   const [result, setResult] = useState<LookupResult | null>(null);
+  const [utility, setUtility] = useState<UtilityResult | null>(null);
 
   const lookupFn = useServerFn(lookupPermitsByAddress);
+  const utilityFn = useServerFn(lookupUtilityCoordination);
+
   const mutation = useMutation({
-    mutationFn: (vars: { address: string; jurisdiction: string }) => lookupFn({ data: vars }),
-    onSuccess: (data) => setResult(data),
+    mutationFn: async (vars: { address: string; jurisdiction: string }) => {
+      const [permits, util] = await Promise.all([
+        lookupFn({ data: vars }),
+        utilityFn({ data: vars }).catch(() => null),
+      ]);
+      return { permits, util };
+    },
+    onSuccess: (d) => { setResult(d.permits); setUtility(d.util); },
   });
+
 
   const onSubmit = (e: React.FormEvent) => {
     e.preventDefault();
