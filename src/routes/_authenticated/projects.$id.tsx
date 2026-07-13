@@ -516,7 +516,12 @@ function DeadlinesTab({ projectId }: { projectId: string }) {
 
   return (
     <div className="space-y-4">
-      <p className="text-sm font-semibold">Deadlines & reminders</p>
+      <p className="text-sm font-semibold flex items-center gap-2">
+        Deadlines & reminders
+        <span className="inline-flex items-center gap-1 text-[9px] font-mono uppercase tracking-widest text-emerald-600 dark:text-emerald-400">
+          <span className="size-1.5 rounded-full bg-emerald-500 animate-pulse" /> Live
+        </span>
+      </p>
 
       {ours.length === 0 ? (
         <div className="p-6 text-center rounded-xl border border-dashed border-border text-sm text-muted-foreground">No deadlines yet.</div>
