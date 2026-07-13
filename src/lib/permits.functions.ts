@@ -3651,8 +3651,8 @@ Rules:
         user_id: context.userId,
         project_id: data.project_id ?? null,
         title: data.project_name,
-        intake: data,
-        analysis,
+        intake: data as unknown as Record<string, string>,
+        analysis: analysis as unknown as Record<string, string>,
         jurisdiction: jurisdictionText,
       })
       .select("*")
@@ -3660,6 +3660,7 @@ Rules:
     if (error) throw new Error(error.message);
     return row;
   });
+
 
 export const listPermitAnalyses = createServerFn({ method: "GET" })
   .middleware([requireSupabaseAuth])
