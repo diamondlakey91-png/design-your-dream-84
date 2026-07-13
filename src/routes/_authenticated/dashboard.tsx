@@ -231,8 +231,22 @@ function CreateProjectDialog({ onClose }: { onClose: () => void }) {
           <Field label="Project type">
             <select value={projectType} onChange={(e) => setProjectType(e.target.value)}
               className="h-11 rounded-lg border border-input bg-card px-3 text-sm outline-none focus:border-brand">
-              <option>Commercial</option><option>Residential</option>
-              <option>Mixed-Use</option><option>Industrial</option><option>Civil</option>
+              <optgroup label="Commercial">
+                <option>Tenant Fit-Out</option>
+                <option>New Build</option>
+                <option>Shell / Core-and-Shell</option>
+                <option>Renovation</option>
+                <option>Addition</option>
+                <option>Change of Use</option>
+                <option>Demolition</option>
+                <option>Commercial</option>
+              </optgroup>
+              <optgroup label="Other">
+                <option>Residential</option>
+                <option>Mixed-Use</option>
+                <option>Industrial</option>
+                <option>Civil</option>
+              </optgroup>
             </select>
           </Field>
           <Field label="Estimated permit count">
