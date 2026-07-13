@@ -2,11 +2,14 @@ import { createFileRoute, Link, useNavigate } from "@tanstack/react-router";
 import { useMutation, useQuery, useQueryClient } from "@tanstack/react-query";
 import { useServerFn } from "@tanstack/react-start";
 import { AppShell } from "@/components/AppShell";
-import { getProject, advanceStage } from "@/lib/permits.functions";
-import { ArrowLeft, MapPin, Building2, Landmark, ArrowRight } from "lucide-react";
+import { getProject, advanceStage, summarizeProjectNextSteps } from "@/lib/permits.functions";
+import { ArrowLeft, MapPin, Building2, Landmark, ArrowRight, Sparkles, RefreshCw } from "lucide-react";
 import { STAGES } from "@/lib/permits";
 import { toast } from "sonner";
 import { formatDistanceToNow } from "date-fns";
+import ReactMarkdown from "react-markdown";
+import remarkGfm from "remark-gfm";
+
 
 export const Route = createFileRoute("/_authenticated/projects/$id")({
   head: () => ({ meta: [{ title: "Project — Permivio" }, { name: "robots", content: "noindex" }] }),
@@ -18,7 +21,9 @@ function ProjectDetail() {
   const navigate = useNavigate();
   const getFn = useServerFn(getProject);
   const advanceFn = useServerFn(advanceStage);
+  const summarizeFn = useServerFn(summarizeProjectNextSteps);
   const queryClient = useQueryClient();
+
 
   const q = useQuery({
     queryKey: ["project", id],
@@ -34,6 +39,12 @@ function ProjectDetail() {
     },
     onError: (e) => toast.error(e instanceof Error ? e.message : "Failed"),
   });
+
+  const summary = useMutation({
+    mutationFn: () => summarizeFn({ data: { id } }),
+    onError: (e) => toast.error(e instanceof Error ? e.message : "Failed"),
+  });
+
 
   if (q.isLoading) {
     return <AppShell><div className="p-6 text-sm text-muted-foreground">Loading…</div></AppShell>;
@@ -103,6 +114,43 @@ function ProjectDetail() {
             </button>
           )}
         </section>
+
+        {/* AI Next Steps */}
+        <section>
+          <div className="flex items-center justify-between mb-3">
+            <p className="font-mono text-[10px] uppercase tracking-widest text-muted-foreground">
+              AI_NEXT_STEPS
+            </p>
+            <button
+              onClick={() => summary.mutate()}
+              disabled={summary.isPending}
+              className="inline-flex items-center gap-1.5 text-[11px] font-mono uppercase tracking-wider text-brand hover:opacity-80 disabled:opacity-50"
+            >
+              {summary.data ? <RefreshCw className="size-3" /> : <Sparkles className="size-3" />}
+              {summary.isPending ? "Thinking…" : summary.data ? "Regenerate" : "Generate"}
+            </button>
+          </div>
+          {summary.data ? (
+            <div className="p-4 bg-card ring-1 ring-black/5 rounded-xl">
+              <div
+                className="text-sm text-foreground leading-relaxed
+                  [&_p]:my-2 [&_p:first-child]:mt-0 [&_p:last-child]:mb-0
+                  [&_ul]:my-2 [&_ul]:pl-5 [&_ul]:list-disc [&_ul]:space-y-1.5
+                  [&_ol]:my-2 [&_ol]:pl-5 [&_ol]:list-decimal [&_ol]:space-y-1.5
+                  [&_li]:marker:text-brand
+                  [&_strong]:text-foreground [&_strong]:font-semibold"
+              >
+                <ReactMarkdown remarkPlugins={[remarkGfm]}>{summary.data.summary}</ReactMarkdown>
+              </div>
+            </div>
+          ) : (
+            <div className="p-4 bg-card ring-1 ring-black/5 rounded-xl text-sm text-muted-foreground">
+              Generate an AI summary of the next concrete steps for this project based on its jurisdiction and current stage.
+            </div>
+          )}
+        </section>
+
+
 
         {/* Metadata */}
         <section className="grid grid-cols-1 gap-3">

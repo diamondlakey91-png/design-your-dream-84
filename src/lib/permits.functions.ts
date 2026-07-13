@@ -118,7 +118,46 @@ export const listChatMessages = createServerFn({ method: "GET" })
     return data ?? [];
   });
 
-const SendChatInput = z.object({ content: z.string().min(1).max(2000) });
+const SendChatInput = z.object({
+  content: z.string().min(1).max(2000),
+  project_id: z.string().uuid().optional().nullable(),
+});
+
+const STAGE_NAMES = ["Pre-Planning", "Plans Submitted", "In Review", "Approved", "Issued"];
+
+async function callLovableAI(apiKey: string, messages: Array<{ role: string; content: string }>) {
+  const resp = await fetch("https://ai.gateway.lovable.dev/v1/chat/completions", {
+    method: "POST",
+    headers: { "Content-Type": "application/json", "Lovable-API-Key": apiKey },
+    body: JSON.stringify({ model: "google/gemini-2.5-pro", messages }),
+  });
+  if (!resp.ok) {
+    const txt = await resp.text();
+    if (resp.status === 429) throw new Error("Too many requests — try again in a moment.");
+    if (resp.status === 402) throw new Error("AI credits exhausted. Please top up.");
+    throw new Error(`AI error: ${txt.slice(0, 200)}`);
+  }
+  const json = (await resp.json()) as { choices?: Array<{ message?: { content?: string } }> };
+  return json.choices?.[0]?.message?.content?.trim() ?? "I couldn't generate a response.";
+}
+
+const SYSTEM_PROMPT = `You are the Permivio Permit Assistant — a specialist that helps contractors, architects, and developers identify the building, trade, planning, and regulatory permits required for construction projects in specific United States jurisdictions.
+
+Core rules:
+- Anchor every answer to the jurisdiction the user names (city + state, or county). If they didn't name one, ask for it before listing permits.
+- Cite the responsible department by name when you know it (e.g. "LADBS", "NYC DOB", "Dallas Development Services", "Chicago Department of Buildings", "SF DBI"). If uncertain, say "the local Building Department" — never invent a department name.
+- Distinguish permit types: building, MEP (mechanical/electrical/plumbing), fire, health, zoning/planning, sign, right-of-way/encroachment, grading, demolition, stormwater/SWPPP, ADA, historic review, environmental (CEQA/NEPA), and Certificate of Occupancy.
+- Note when a permit typically requires stamped drawings from a licensed architect or engineer, and when a licensed contractor of record is required.
+- Flag common jurisdiction-specific quirks when relevant (e.g. Title 24 energy in California, LL97 in NYC, Chapter 11B in California, Florida wind-load, coastal commission, historic districts).
+- Be explicit about what you don't know. If a rule depends on scope you weren't told (square footage, occupancy type, change of use, tenant improvement vs. new build), ask a focused follow-up.
+- Never fabricate fee amounts, review timelines, or code section numbers. If you cite a code section, only cite widely-known ones (IBC, IRC, NEC, IPC, IMC, Title 24) — otherwise say "check the adopted code edition".
+
+Format:
+- Start with a one-line summary tailored to the project + jurisdiction.
+- Then a markdown list. Each item: **Permit / Approval** — one-line why, tagged \`[REQUIRED]\`, \`[LIKELY]\`, or \`[CONDITIONAL]\`. Group by phase (Pre-construction → Construction → Occupancy) when there are more than 4 items.
+- End with one line: "Verify with <department name or 'the local Building Department'> — codes and thresholds change."
+
+Keep answers tight. No filler, no repeated disclaimers, no marketing tone.`;
 
 export const sendChatMessage = createServerFn({ method: "POST" })
   .middleware([requireSupabaseAuth])
@@ -127,65 +166,84 @@ export const sendChatMessage = createServerFn({ method: "POST" })
     const apiKey = process.env.LOVABLE_API_KEY;
     if (!apiKey) throw new Error("AI is not configured");
 
-    // Load history
     const { data: history } = await context.supabase
       .from("chat_messages")
       .select("role, content")
       .order("created_at", { ascending: true })
-      .limit(40);
+      .limit(30);
 
-    // Persist user message
+    // Optional project context
+    let projectContext = "";
+    if (data.project_id) {
+      const { data: p } = await context.supabase
+        .from("projects").select("*").eq("id", data.project_id).maybeSingle();
+      if (p) {
+        projectContext = `\n\n[Active project context]\n- Name: ${p.name}\n- Type: ${p.project_type}\n- Location: ${p.location || "unspecified"}\n- Jurisdiction: ${p.jurisdiction || "unspecified"}\n- Current stage: ${STAGE_NAMES[p.current_stage]} (${p.current_stage + 1}/5)\n- Permits: ${p.permits_issued}/${p.permit_count} issued\nUse this context when the user's question refers to "this project", "my project", or asks about next steps.`;
+      }
+    }
+
     const { data: userMsg, error: uerr } = await context.supabase
       .from("chat_messages")
       .insert({ user_id: context.userId, role: "user", content: data.content })
-      .select("*")
-      .single();
+      .select("*").single();
     if (uerr) throw new Error(uerr.message);
 
-    const systemPrompt = `You are the Permivio Permit Assistant — a specialist that helps contractors identify the building, trade, and regulatory permits they need for a given project and jurisdiction in the United States.
-
-Reply in this exact structure, in plain markdown:
-1. One short sentence acknowledging the project.
-2. A markdown list of likely required permits. Each item: **Permit Name** — one short reason, and a tag "[REQUIRED]" or "[LIKELY]".
-3. A one-sentence disclaimer that the user should verify with the local jurisdiction.
-
-Be concise, practical, and confident. No filler.`;
-
     const messages = [
-      { role: "system", content: systemPrompt },
+      { role: "system", content: SYSTEM_PROMPT + projectContext },
       ...(history ?? []),
       { role: "user", content: data.content },
     ];
 
-    const resp = await fetch("https://ai.gateway.lovable.dev/v1/chat/completions", {
-      method: "POST",
-      headers: {
-        "Content-Type": "application/json",
-        "Lovable-API-Key": apiKey,
-      },
-      body: JSON.stringify({
-        model: "google/gemini-2.5-flash",
-        messages,
-      }),
-    });
-
-    if (!resp.ok) {
-      const txt = await resp.text();
-      if (resp.status === 429) throw new Error("Too many requests — try again in a moment.");
-      if (resp.status === 402) throw new Error("AI credits exhausted. Please top up.");
-      throw new Error(`AI error: ${txt.slice(0, 200)}`);
-    }
-    const json = await resp.json() as { choices?: Array<{ message?: { content?: string } }> };
-    const reply = json.choices?.[0]?.message?.content?.trim() ?? "I couldn't generate a response.";
+    const reply = await callLovableAI(apiKey, messages);
 
     const { data: assistantMsg, error: aerr } = await context.supabase
       .from("chat_messages")
       .insert({ user_id: context.userId, role: "assistant", content: reply })
-      .select("*")
-      .single();
+      .select("*").single();
     if (aerr) throw new Error(aerr.message);
 
     return { user: userMsg, assistant: assistantMsg };
+  });
+
+export const summarizeProjectNextSteps = createServerFn({ method: "POST" })
+  .middleware([requireSupabaseAuth])
+  .inputValidator((input: unknown) => z.object({ id: z.string().uuid() }).parse(input))
+  .handler(async ({ data, context }) => {
+    const apiKey = process.env.LOVABLE_API_KEY;
+    if (!apiKey) throw new Error("AI is not configured");
+
+    const { data: p, error } = await context.supabase
+      .from("projects").select("*").eq("id", data.id).maybeSingle();
+    if (error) throw new Error(error.message);
+    if (!p) throw new Error("Project not found");
+
+    const { data: recent } = await context.supabase
+      .from("activity").select("description, created_at")
+      .eq("project_id", data.id).order("created_at", { ascending: false }).limit(6);
+
+    const userPrompt = `Summarize the concrete next steps for this project.
+
+Project: ${p.name}
+Type: ${p.project_type}
+Location: ${p.location || "unspecified"}
+Jurisdiction: ${p.jurisdiction || "unspecified"}
+Current pipeline stage: ${STAGE_NAMES[p.current_stage]} (${p.current_stage + 1} of 5)
+Permits issued: ${p.permits_issued} of ${p.permit_count}
+Recent activity:
+${(recent ?? []).map((a) => `- ${a.description}`).join("\n") || "- (none)"}
+
+Produce:
+1. One short sentence stating exactly where this project stands.
+2. A markdown list of the next 3–5 concrete actions the team should take THIS WEEK, given the stage and jurisdiction. Each action starts with a verb. If a jurisdiction-specific submittal is required to advance, name it.
+3. A one-line watch-out (what commonly delays this stage in this jurisdiction).
+
+No preamble, no closing pleasantries.`;
+
+    const reply = await callLovableAI(apiKey, [
+      { role: "system", content: SYSTEM_PROMPT },
+      { role: "user", content: userPrompt },
+    ]);
+    return { summary: reply };
   });
 
 export const clearChat = createServerFn({ method: "POST" })
@@ -195,3 +253,4 @@ export const clearChat = createServerFn({ method: "POST" })
     if (error) throw new Error(error.message);
     return { ok: true };
   });
+
