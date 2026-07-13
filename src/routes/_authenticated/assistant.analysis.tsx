@@ -571,7 +571,7 @@ function SequenceSection({ steps }: { steps: Array<Record<string, unknown>> }) {
               <div className="text-[11px] text-zinc-500 mt-0.5">
                 {String(s.responsible_party ?? "—")}{s.dependency ? ` · depends on ${String(s.dependency)}` : ""}
               </div>
-              {s.notes && <div className="text-xs text-zinc-300 mt-1.5">{String(s.notes)}</div>}
+              {Boolean(s.notes) && <div className="text-xs text-zinc-300 mt-1.5">{String(s.notes)}</div>}
             </div>
           </li>
         ))}
