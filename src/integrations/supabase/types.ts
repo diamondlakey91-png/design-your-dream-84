@@ -409,6 +409,8 @@ export type Database = {
           id: string
           mime_type: string
           name: string
+          plan_review: Json | null
+          plan_reviewed_at: string | null
           project_id: string
           size_bytes: number
           storage_path: string
@@ -422,6 +424,8 @@ export type Database = {
           id?: string
           mime_type?: string
           name: string
+          plan_review?: Json | null
+          plan_reviewed_at?: string | null
           project_id: string
           size_bytes?: number
           storage_path: string
@@ -435,6 +439,8 @@ export type Database = {
           id?: string
           mime_type?: string
           name?: string
+          plan_review?: Json | null
+          plan_reviewed_at?: string | null
           project_id?: string
           size_bytes?: number
           storage_path?: string
