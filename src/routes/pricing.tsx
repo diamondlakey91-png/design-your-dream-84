@@ -91,6 +91,7 @@ const tiers: Tier[] = [
     ],
     cta: "Choose Professional",
     href: "/auth",
+    priceId: "professional_monthly",
     featured: true,
     badge: "MOST POPULAR",
   },
