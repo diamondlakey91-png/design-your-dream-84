@@ -1974,3 +1974,177 @@ export const computeProjectHealth = createServerFn({ method: "GET" })
 
     return { score, risk, reasons, overdue, upcoming7, inspFailed, inspPassed, requiredCount, doneCount };
   });
+
+// ============================================================
+// AI COPILOT — client updates, agendas, risk flags, summaries
+// ============================================================
+
+
+
+async function callGeminiJSON<T>(prompt: string, system: string, schema: z.ZodType<T>): Promise<T> {
+  const aiKey = process.env.LOVABLE_API_KEY;
+  if (!aiKey) throw new Error("AI is not configured");
+  const resp = await fetch("https://ai.gateway.lovable.dev/v1/chat/completions", {
+    method: "POST",
+    headers: { "Content-Type": "application/json", "Lovable-API-Key": aiKey },
+    body: JSON.stringify({
+      model: "google/gemini-2.5-pro",
+      messages: [
+        { role: "system", content: system },
+        { role: "user", content: prompt },
+      ],
+    }),
+  });
+  if (!resp.ok) {
+    const t = await resp.text();
+    if (resp.status === 429) throw new Error("Too many requests — try again shortly.");
+    if (resp.status === 402) throw new Error("AI credits exhausted. Please top up.");
+    throw new Error(`AI error: ${t.slice(0, 200)}`);
+  }
+  const j = (await resp.json()) as { choices?: Array<{ message?: { content?: string } }> };
+  const raw = (j.choices?.[0]?.message?.content ?? "").trim().replace(/```json|```/g, "").trim();
+  const s = raw.indexOf("{");
+  const e = raw.lastIndexOf("}");
+  try {
+    return schema.parse(JSON.parse(raw.slice(s, e + 1)));
+  } catch {
+    throw new Error("AI returned an unreadable response. Try again.");
+  }
+}
+
+// eslint-disable-next-line @typescript-eslint/no-explicit-any
+async function gatherProjectContext(supabase: any, projectId: string) {
+  const [p, items, deadlines, activity, insp] = await Promise.all([
+    supabase.from("projects").select("*").eq("id", projectId).maybeSingle(),
+    supabase.from("permit_items").select("*").eq("project_id", projectId),
+    supabase.from("deadlines").select("*").eq("project_id", projectId).order("due_date", { ascending: true }),
+    supabase.from("activity").select("*").eq("project_id", projectId).order("created_at", { ascending: false }).limit(15),
+    supabase.from("inspections").select("*").eq("project_id", projectId).order("scheduled_date", { ascending: true }),
+  ]);
+  return { project: p.data, items: items.data ?? [], deadlines: deadlines.data ?? [], activity: activity.data ?? [], inspections: insp.data ?? [] };
+}
+
+// ---- Draft client update ----
+const ClientUpdateSchema = z.object({
+  subject: z.string(),
+  body_markdown: z.string(),
+  highlights: z.array(z.string()).max(6).default([]),
+});
+
+export const draftClientUpdate = createServerFn({ method: "POST" })
+  .middleware([requireSupabaseAuth])
+  .inputValidator((input: unknown) => z.object({
+    project_id: z.string().uuid(),
+    tone: z.enum(["formal", "friendly", "brief"]).default("friendly"),
+    audience: z.string().max(120).default("Client / owner"),
+  }).parse(input))
+  .handler(async ({ data, context }) => {
+    const ctx = await gatherProjectContext(context.supabase, data.project_id);
+    if (!ctx.project) throw new Error("Project not found");
+    const prompt = `Draft a ${data.tone} status update email for ${data.audience} on this permit project.
+
+PROJECT: ${JSON.stringify({ name: ctx.project.name, jurisdiction: ctx.project.jurisdiction, project_type: ctx.project.project_type, location: ctx.project.location, stage: ctx.project.current_stage, status: ctx.project.status })}
+PERMITS: ${JSON.stringify(ctx.items.map((i: { name: string; status: string; due_date: string | null }) => ({ name: i.name, status: i.status, due: i.due_date })))}
+UPCOMING DEADLINES: ${JSON.stringify(ctx.deadlines.slice(0, 8).map((d: { title: string; due_date: string | null }) => ({ title: d.title, due: d.due_date })))}
+RECENT ACTIVITY: ${JSON.stringify(ctx.activity.slice(0, 8).map((a: { description: string }) => a.description))}
+INSPECTIONS: ${JSON.stringify(ctx.inspections.slice(0, 5).map((i: { type: string; scheduled_date: string | null; result: string | null }) => ({ type: i.type, date: i.scheduled_date, result: i.result })))}
+
+Return ONLY JSON: { "subject": "...", "body_markdown": "email in markdown with a greeting, 3-5 short paragraphs covering progress / next steps / any blockers / dates, and a professional sign-off placeholder", "highlights": ["bullet 1"] }
+
+Only use facts from the data. If a field is missing, don't fabricate it. Never invent permit numbers or approval dates.`;
+    return callGeminiJSON(prompt, "You are a construction project manager writing concise, accurate client updates. Output JSON only.", ClientUpdateSchema);
+  });
+
+// ---- Summarize reviewer comments across all analyzed docs ----
+const ReviewerSummarySchema = z.object({
+  top_themes: z.array(z.string()).max(8).default([]),
+  by_discipline: z.array(z.object({
+    discipline: z.string(),
+    items: z.array(z.string()).max(10).default([]),
+  })).max(10).default([]),
+  suggested_response_order: z.array(z.string()).max(10).default([]),
+});
+
+export const summarizeReviewerComments = createServerFn({ method: "POST" })
+  .middleware([requireSupabaseAuth])
+  .inputValidator((input: unknown) => z.object({ project_id: z.string().uuid() }).parse(input))
+  .handler(async ({ data, context }) => {
+    const { data: docs } = await context.supabase
+      .from("project_documents")
+      .select("name, ai_summary, ai_action_items, plan_review")
+      .eq("project_id", data.project_id);
+    const analyzed = (docs ?? []).filter((d) => d.ai_summary || d.ai_action_items || d.plan_review);
+    if (analyzed.length === 0) throw new Error("Analyze or plan-review at least one document first.");
+    const prompt = `Consolidate reviewer comments across these documents into themes an owner/PM can act on:
+
+${JSON.stringify(analyzed)}
+
+Return ONLY JSON: { "top_themes": ["..."], "by_discipline": [{ "discipline": "Mechanical", "items": ["..."] }], "suggested_response_order": ["do this first", "..."] }.
+Only use facts present. Skip disciplines with no comments.`;
+    return callGeminiJSON(prompt, "You group construction plan-review comments into actionable themes. Output JSON only.", ReviewerSummarySchema);
+  });
+
+// ---- Meeting agenda ----
+const AgendaSchema = z.object({
+  title: z.string(),
+  duration_minutes: z.number().int().default(30),
+  attendees_suggested: z.array(z.string()).max(10).default([]),
+  agenda: z.array(z.object({
+    minutes: z.number().int().default(5),
+    topic: z.string(),
+    notes: z.string().default(""),
+  })).max(15).default([]),
+  decisions_needed: z.array(z.string()).max(10).default([]),
+});
+
+export const generateMeetingAgenda = createServerFn({ method: "POST" })
+  .middleware([requireSupabaseAuth])
+  .inputValidator((input: unknown) => z.object({
+    project_id: z.string().uuid(),
+    meeting_type: z.enum(["kickoff", "weekly_status", "pre_submittal", "review_response", "inspection_prep"]).default("weekly_status"),
+  }).parse(input))
+  .handler(async ({ data, context }) => {
+    const ctx = await gatherProjectContext(context.supabase, data.project_id);
+    if (!ctx.project) throw new Error("Project not found");
+    const prompt = `Generate a ${data.meeting_type.replace("_", " ")} meeting agenda for this permit project.
+PROJECT: ${JSON.stringify({ name: ctx.project.name, jurisdiction: ctx.project.jurisdiction, stage: ctx.project.current_stage })}
+PERMITS: ${JSON.stringify(ctx.items.map((i: { name: string; status: string; due_date: string | null }) => ({ name: i.name, status: i.status, due: i.due_date })))}
+DEADLINES: ${JSON.stringify(ctx.deadlines.slice(0, 8).map((d: { title: string; due_date: string | null }) => ({ title: d.title, due: d.due_date })))}
+INSPECTIONS: ${JSON.stringify(ctx.inspections.slice(0, 5).map((i: { type: string; scheduled_date: string | null; result: string | null }) => ({ type: i.type, date: i.scheduled_date, result: i.result })))}
+
+Return ONLY JSON: { "title": "...", "duration_minutes": 30, "attendees_suggested": ["Owner", "GC", "Architect"], "agenda": [{ "minutes": 5, "topic": "...", "notes": "..." }], "decisions_needed": ["..."] }.`;
+    return callGeminiJSON(prompt, "You produce tight, actionable construction meeting agendas. Output JSON only.", AgendaSchema);
+  });
+
+// ---- Schedule risks ----
+const RiskSchema = z.object({
+  overall_risk: z.enum(["low", "medium", "high"]).default("medium"),
+  risks: z.array(z.object({
+    severity: z.enum(["low", "medium", "high"]).default("medium"),
+    title: z.string(),
+    detail: z.string(),
+    mitigation: z.string().default(""),
+    related: z.string().default(""),
+  })).max(15).default([]),
+});
+
+export const flagScheduleRisks = createServerFn({ method: "POST" })
+  .middleware([requireSupabaseAuth])
+  .inputValidator((input: unknown) => z.object({ project_id: z.string().uuid() }).parse(input))
+  .handler(async ({ data, context }) => {
+    const ctx = await gatherProjectContext(context.supabase, data.project_id);
+    if (!ctx.project) throw new Error("Project not found");
+    const today = new Date().toISOString().slice(0, 10);
+    const prompt = `Identify schedule and permitting risks for this project as of ${today}.
+PROJECT: ${JSON.stringify({ name: ctx.project.name, jurisdiction: ctx.project.jurisdiction, project_type: ctx.project.project_type, stage: ctx.project.current_stage })}
+PERMITS: ${JSON.stringify(ctx.items.map((i: { name: string; status: string; due_date: string | null }) => ({ name: i.name, status: i.status, due: i.due_date })))}
+DEADLINES: ${JSON.stringify(ctx.deadlines.map((d: { title: string; due_date: string | null }) => ({ title: d.title, due: d.due_date })))}
+INSPECTIONS: ${JSON.stringify(ctx.inspections.map((i: { type: string; scheduled_date: string | null; result: string | null }) => ({ type: i.type, date: i.scheduled_date, result: i.result })))}
+RECENT ACTIVITY: ${JSON.stringify(ctx.activity.map((a: { description: string }) => a.description))}
+
+Flag: overdue items, tight review windows, inspection sequencing gaps, missing statuses, jurisdiction-specific bottlenecks. Only flag issues supported by the data.
+
+Return ONLY JSON: { "overall_risk": "low|medium|high", "risks": [{ "severity": "high", "title": "...", "detail": "...", "mitigation": "...", "related": "permit or deadline reference" }] }.`;
+    return callGeminiJSON(prompt, "You are a permit risk analyst. Only flag concrete, data-supported risks. Output JSON only.", RiskSchema);
+  });
+
