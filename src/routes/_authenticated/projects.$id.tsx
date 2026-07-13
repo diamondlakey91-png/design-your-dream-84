@@ -23,6 +23,7 @@ import {
   applySyncToChecklist,
   analyzeDocument,
   reviewPlan,
+  batchReviewPlans,
   addPlanReviewFixesToChecklist,
   draftReviewerResponse,
   computeProjectHealth,
@@ -446,24 +447,61 @@ function DocsTab({ projectId, userId }: { projectId: string; userId: string }) {
 
   const docs = q.data ?? [];
 
+  const batchFn = useServerFn(batchReviewPlans);
+  const [report, setReport] = useState<Awaited<ReturnType<typeof batchReviewPlans>> | null>(null);
+  const [forceRerun, setForceRerun] = useState(false);
+  const batch = useMutation({
+    mutationFn: () => batchFn({ data: { project_id: projectId, force: forceRerun } }),
+    onSuccess: (r) => {
+      setReport(r);
+      qc.invalidateQueries({ queryKey: ["docs", projectId] });
+      qc.invalidateQueries({ queryKey: ["activity", projectId] });
+      qc.invalidateQueries({ queryKey: ["health", projectId] });
+      toast.success(`Batch review complete — ${r.total_findings} findings across ${r.documents_reviewed} plan(s)`);
+    },
+    onError: (e) => toast.error(e instanceof Error ? e.message : "Batch review failed"),
+  });
+
+  const planCount = docs.filter((d) => (d.mime_type || "").startsWith("image/") || (d.mime_type || "") === "application/pdf" || d.name.toLowerCase().endsWith(".pdf")).length;
+
   return (
     <div className="space-y-4">
-      <div className="flex items-center justify-between">
+      <div className="flex items-center justify-between gap-2 flex-wrap">
         <div>
           <p className="text-sm font-semibold">Project documents</p>
           <p className="text-xs text-muted-foreground">Plans, permits, correspondence — private to you.</p>
         </div>
-        <label className="inline-flex items-center gap-1.5 text-[11px] font-mono uppercase tracking-wider text-brand hover:opacity-80 cursor-pointer">
-          <Upload className="size-3" /> {uploading ? "Uploading…" : "Upload"}
-          <input
-            ref={fileRef}
-            type="file"
-            className="hidden"
-            disabled={uploading}
-            onChange={(e) => { const f = e.target.files?.[0]; if (f) onUpload(f); }}
-          />
-        </label>
+        <div className="flex items-center gap-3">
+          {planCount > 0 && (
+            <>
+              <label className="inline-flex items-center gap-1 text-[10px] font-mono uppercase tracking-wider text-muted-foreground cursor-pointer">
+                <input type="checkbox" checked={forceRerun} onChange={(e) => setForceRerun(e.target.checked)} className="size-3" />
+                Re-run all
+              </label>
+              <button
+                onClick={() => batch.mutate()}
+                disabled={batch.isPending}
+                className="inline-flex items-center gap-1.5 text-[11px] font-mono uppercase tracking-wider text-brand hover:opacity-80 disabled:opacity-50"
+                title="One-click AI review of every uploaded plan + consolidated PermitHealth report"
+              >
+                <Sparkles className="size-3" /> {batch.isPending ? "Batch reviewing…" : `Batch review (${planCount})`}
+              </button>
+            </>
+          )}
+          <label className="inline-flex items-center gap-1.5 text-[11px] font-mono uppercase tracking-wider text-brand hover:opacity-80 cursor-pointer">
+            <Upload className="size-3" /> {uploading ? "Uploading…" : "Upload"}
+            <input
+              ref={fileRef}
+              type="file"
+              className="hidden"
+              disabled={uploading}
+              onChange={(e) => { const f = e.target.files?.[0]; if (f) onUpload(f); }}
+            />
+          </label>
+        </div>
       </div>
+
+      {report && <BatchReport report={report} onClose={() => setReport(null)} />}
 
       {docs.length === 0 ? (
         <div className="p-6 text-center rounded-xl border border-dashed border-border text-sm text-muted-foreground">No documents yet.</div>
@@ -473,6 +511,89 @@ function DocsTab({ projectId, userId }: { projectId: string; userId: string }) {
             <DocRow key={d.id} doc={d} projectId={projectId} onDelete={() => del.mutate(d.id)} />
           ))}
         </ul>
+      )}
+    </div>
+  );
+}
+
+function BatchReport({ report, onClose }: { report: Awaited<ReturnType<typeof batchReviewPlans>>; onClose: () => void }) {
+  const riskColor = report.overall_risk === "high" ? "text-destructive" : report.overall_risk === "medium" ? "text-amber-600" : "text-emerald-600";
+  return (
+    <div className="rounded-xl border border-brand/40 bg-brand/5 p-4 space-y-3">
+      <div className="flex items-start justify-between gap-2">
+        <div>
+          <p className="text-[11px] font-mono uppercase tracking-wider text-brand">Consolidated PermitHealth Report</p>
+          <p className="text-xs text-muted-foreground mt-0.5">
+            {report.documents_reviewed} plan{report.documents_reviewed === 1 ? "" : "s"} analyzed
+            {report.documents_newly_reviewed > 0 ? ` · ${report.documents_newly_reviewed} newly reviewed` : ""}
+            {report.jurisdictions.length > 0 ? ` · ${report.jurisdictions.join(", ")}` : ""}
+          </p>
+        </div>
+        <button onClick={onClose} className="text-[11px] font-mono uppercase tracking-wider text-muted-foreground hover:text-foreground">Close</button>
+      </div>
+
+      <div className="grid grid-cols-2 sm:grid-cols-4 gap-2">
+        <div className="rounded-lg border border-border bg-background p-2">
+          <p className="text-[10px] font-mono uppercase text-muted-foreground">Plan Health</p>
+          <p className={`text-2xl font-bold ${riskColor}`}>{report.plan_health_score}</p>
+          <p className="text-[10px] uppercase text-muted-foreground">{report.overall_risk} risk</p>
+        </div>
+        <div className="rounded-lg border border-border bg-background p-2">
+          <p className="text-[10px] font-mono uppercase text-muted-foreground">Findings</p>
+          <p className="text-2xl font-bold">{report.total_findings}</p>
+          <p className="text-[10px] uppercase text-destructive">{report.by_severity.high} high</p>
+        </div>
+        <div className="rounded-lg border border-border bg-background p-2">
+          <p className="text-[10px] font-mono uppercase text-muted-foreground">Medium</p>
+          <p className="text-2xl font-bold text-amber-600">{report.by_severity.medium}</p>
+        </div>
+        <div className="rounded-lg border border-border bg-background p-2">
+          <p className="text-[10px] font-mono uppercase text-muted-foreground">Low</p>
+          <p className="text-2xl font-bold text-emerald-600">{report.by_severity.low}</p>
+        </div>
+      </div>
+
+      {Object.keys(report.by_category).length > 0 && (
+        <div className="flex flex-wrap gap-1.5">
+          {Object.entries(report.by_category).map(([k, v]) => (
+            <span key={k} className="text-[10px] font-mono uppercase tracking-wider px-2 py-0.5 rounded-md border border-border bg-background">
+              {k.replace(/_/g, " ")} · {v}
+            </span>
+          ))}
+        </div>
+      )}
+
+      {report.documents_failed.length > 0 && (
+        <div className="text-xs text-destructive">
+          Failed to review: {report.documents_failed.map((f) => f.name).join(", ")}
+        </div>
+      )}
+
+      {report.top_findings.length > 0 && (
+        <div className="space-y-1.5">
+          <p className="text-[11px] font-mono uppercase tracking-wider text-muted-foreground">Top findings</p>
+          <ul className="space-y-1.5">
+            {report.top_findings.map((f, i) => (
+              <li key={i} className="text-xs rounded-md border border-border bg-background p-2">
+                <div className="flex items-center gap-2">
+                  <span className={`text-[9px] font-mono uppercase px-1.5 py-0.5 rounded ${f.severity === "high" ? "bg-destructive/15 text-destructive" : f.severity === "medium" ? "bg-amber-500/15 text-amber-700 dark:text-amber-500" : "bg-emerald-500/15 text-emerald-700 dark:text-emerald-500"}`}>{f.severity}</span>
+                  <span className="text-[9px] font-mono uppercase text-muted-foreground">{f.category.replace(/_/g, " ")}</span>
+                  <span className="font-medium">{f.title}</span>
+                </div>
+                <p className="mt-1 text-muted-foreground">{f.detail}</p>
+                <p className="mt-1 text-[10px] text-muted-foreground">
+                  {f.document_name}{f.sheet_reference ? ` · ${f.sheet_reference}` : ""}{f.code_reference ? ` · ${f.code_reference}` : ""}{f.local_amendment ? ` · Local: ${f.local_amendment}` : ""}
+                </p>
+              </li>
+            ))}
+          </ul>
+        </div>
+      )}
+
+      {report.applied_amendments.length > 0 && (
+        <p className="text-[10px] text-muted-foreground">
+          Applied amendments: {report.applied_amendments.slice(0, 6).join(" · ")}
+        </p>
       )}
     </div>
   );

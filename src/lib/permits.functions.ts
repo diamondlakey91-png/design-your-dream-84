@@ -1905,56 +1905,52 @@ async function fetchJurisdictionAmendments(
 }
 
 
-export const reviewPlan = createServerFn({ method: "POST" })
-  .middleware([requireSupabaseAuth])
-  .inputValidator((input: unknown) => z.object({ id: z.string().uuid() }).parse(input))
-  .handler(async ({ data, context }) => {
-    requireFeature(await getEntitlement(context.supabase, context.userId), "planReview");
+// Internal: run plan review for one document. Reused by reviewPlan + batchReviewPlans.
+async function runPlanReviewForDocument(
+  // eslint-disable-next-line @typescript-eslint/no-explicit-any
+  supabase: any,
+  userId: string,
+  docId: string,
+) {
+  const aiKey = process.env.LOVABLE_API_KEY;
+  if (!aiKey) throw new Error("AI is not configured");
+  const fcKey = process.env.FIRECRAWL_API_KEY;
 
-    const aiKey = process.env.LOVABLE_API_KEY;
-    if (!aiKey) throw new Error("AI is not configured");
-    const fcKey = process.env.FIRECRAWL_API_KEY;
+  const { data: doc } = await supabase.from("project_documents").select("*").eq("id", docId).maybeSingle();
+  if (!doc) throw new Error("Document not found");
 
-    const { data: doc } = await context.supabase
-      .from("project_documents").select("*").eq("id", data.id).maybeSingle();
-    if (!doc) throw new Error("Document not found");
+  const { data: project } = await supabase
+    .from("projects").select("name, jurisdiction, project_type, location")
+    .eq("id", doc.project_id).maybeSingle();
 
-    const { data: project } = await context.supabase
-      .from("projects").select("name, jurisdiction, project_type, location")
-      .eq("id", doc.project_id).maybeSingle();
+  const { data: signed, error: sErr } = await supabase
+    .storage.from("project-docs").createSignedUrl(doc.storage_path, 600);
+  if (sErr || !signed?.signedUrl) throw new Error("Could not access document");
 
-    const { data: signed, error: sErr } = await context.supabase
-      .storage.from("project-docs").createSignedUrl(doc.storage_path, 600);
-    if (sErr || !signed?.signedUrl) throw new Error("Could not access document");
+  const mime = doc.mime_type || "application/pdf";
+  const isImage = mime.startsWith("image/");
+  const isPdf = mime === "application/pdf" || doc.name.toLowerCase().endsWith(".pdf");
+  if (!isImage && !isPdf) throw new Error("Only PDF or image plans can be reviewed.");
 
-    const mime = doc.mime_type || "application/pdf";
-    const isImage = mime.startsWith("image/");
-    const isPdf = mime === "application/pdf" || doc.name.toLowerCase().endsWith(".pdf");
-    if (!isImage && !isPdf) throw new Error("Only PDF or image plans can be reviewed.");
+  const juris = project?.jurisdiction || "the local jurisdiction";
+  const ptype = project?.project_type || "the project";
 
-    const juris = project?.jurisdiction || "the local jurisdiction";
-    const ptype = project?.project_type || "the project";
+  let profileContext = "";
+  if (project?.jurisdiction) {
+    const { data: prof } = await supabase
+      .from("jurisdiction_profiles")
+      .select("name, state, department, overview, permits, fees, timelines, source_urls")
+      .eq("slug", toSlug(project.jurisdiction))
+      .maybeSingle();
+    if (prof) profileContext = `CACHED JURISDICTION PROFILE\n${JSON.stringify(prof).slice(0, 2500)}`;
+  }
 
-    // Pull cached jurisdiction profile (if the user has built one) for extra context.
-    let profileContext = "";
-    if (project?.jurisdiction) {
-      const { data: prof } = await context.supabase
-        .from("jurisdiction_profiles")
-        .select("name, state, department, overview, permits, fees, timelines, source_urls")
-        .eq("slug", toSlug(project.jurisdiction))
-        .maybeSingle();
-      if (prof) {
-        profileContext = `CACHED JURISDICTION PROFILE\n${JSON.stringify(prof).slice(0, 2500)}`;
-      }
-    }
+  const { context: amendmentsContext, sources: amendmentSources } =
+    await fetchJurisdictionAmendments(fcKey, juris);
 
-    // Live-fetch jurisdiction-specific code amendments (works for any US jurisdiction).
-    const { context: amendmentsContext, sources: amendmentSources } =
-      await fetchJurisdictionAmendments(fcKey, juris);
+  const jurisBlock = [profileContext, amendmentsContext].filter(Boolean).join("\n\n===\n\n");
 
-    const jurisBlock = [profileContext, amendmentsContext].filter(Boolean).join("\n\n===\n\n");
-
-    const instruction = `You are a licensed plan reviewer analyzing construction drawings for ${ptype} in ${juris}. Review the attached plan set for issues that THIS jurisdiction's plan checker would flag — using the jurisdiction's LOCAL amendments to the model codes wherever provided below, not just the base IBC/IFC/ADA.
+  const instruction = `You are a licensed plan reviewer analyzing construction drawings for ${ptype} in ${juris}. Review the attached plan set for issues that THIS jurisdiction's plan checker would flag — using the jurisdiction's LOCAL amendments to the model codes wherever provided below, not just the base IBC/IFC/ADA.
 
 ${jurisBlock ? `JURISDICTION-SPECIFIC CONTEXT (authoritative — prefer over model-code defaults when they conflict):\n${jurisBlock}\n\n` : `No cached jurisdictional data was available. Apply the currently adopted code cycle for ${juris} (state-adopted IBC/IFC/IECC + any local amendments you are confident about). If unsure which cycle applies, cite the model code and note "verify local amendment".\n\n`}Focus on FOUR categories:
 1. missing_exits — insufficient exits, exit access travel distance, dead-end corridors, exit width, exit signage/illumination (IBC Ch.10 + local amendments).
@@ -1988,72 +1984,195 @@ Return ONLY valid JSON in this exact shape (no fences, no prose):
 
 Rules: only flag issues you can actually see or reasonably infer from the plan. If the plan appears compliant in a category, omit it. Never fabricate specific code sections or local amendment numbers — leave those fields blank if unsure. If the document is not a plan set, return findings: [] and explain in overall_summary.`;
 
-    const contentParts: unknown[] = [{ type: "text", text: instruction }];
-    if (isImage) {
-      contentParts.push({ type: "image_url", image_url: { url: signed.signedUrl } });
-    } else {
-      const fileResp = await fetch(signed.signedUrl);
-      if (!fileResp.ok) throw new Error("Could not download plan for review");
-      const buf = new Uint8Array(await fileResp.arrayBuffer());
-      let bin = "";
-      for (let i = 0; i < buf.length; i += 0x8000) {
-        bin += String.fromCharCode(...buf.subarray(i, i + 0x8000));
-      }
-      const b64 = btoa(bin);
-      contentParts.push({
-        type: "file",
-        file: { filename: doc.name, file_data: `data:${mime};base64,${b64}` },
-      });
-    }
+  const contentParts: unknown[] = [{ type: "text", text: instruction }];
+  if (isImage) {
+    contentParts.push({ type: "image_url", image_url: { url: signed.signedUrl } });
+  } else {
+    const fileResp = await fetch(signed.signedUrl);
+    if (!fileResp.ok) throw new Error("Could not download plan for review");
+    const buf = new Uint8Array(await fileResp.arrayBuffer());
+    let bin = "";
+    for (let i = 0; i < buf.length; i += 0x8000) bin += String.fromCharCode(...buf.subarray(i, i + 0x8000));
+    const b64 = btoa(bin);
+    contentParts.push({ type: "file", file: { filename: doc.name, file_data: `data:${mime};base64,${b64}` } });
+  }
 
+  const resp = await fetch("https://ai.gateway.lovable.dev/v1/chat/completions", {
+    method: "POST",
+    headers: { "Content-Type": "application/json", "Lovable-API-Key": aiKey },
+    body: JSON.stringify({
+      model: "google/gemini-2.5-pro",
+      messages: [
+        { role: "system", content: "You are a senior plan reviewer. Output valid JSON only, no prose, no code fences." },
+        { role: "user", content: contentParts },
+      ],
+    }),
+  });
+  if (!resp.ok) {
+    const t = await resp.text();
+    if (resp.status === 429) throw new Error("Too many requests — try again shortly.");
+    if (resp.status === 402) throw new Error("AI credits exhausted. Please top up.");
+    throw new Error(`AI error: ${t.slice(0, 200)}`);
+  }
+  const j = (await resp.json()) as { choices?: Array<{ message?: { content?: string } }> };
+  const raw = (j.choices?.[0]?.message?.content ?? "").trim();
+  const cleaned = raw.replace(/```json|```/g, "").trim();
+  const s = cleaned.indexOf("{");
+  const e = cleaned.lastIndexOf("}");
+  let parsed: z.infer<typeof PlanReviewSchema>;
+  try {
+    parsed = PlanReviewSchema.parse(JSON.parse(cleaned.slice(s, e + 1)));
+  } catch {
+    throw new Error("AI returned an unreadable review. Try again.");
+  }
 
-    const resp = await fetch("https://ai.gateway.lovable.dev/v1/chat/completions", {
-      method: "POST",
-      headers: { "Content-Type": "application/json", "Lovable-API-Key": aiKey },
-      body: JSON.stringify({
-        model: "google/gemini-2.5-pro",
-        messages: [
-          { role: "system", content: "You are a senior plan reviewer. Output valid JSON only, no prose, no code fences." },
-          { role: "user", content: contentParts },
-        ],
-      }),
-    });
-    if (!resp.ok) {
-      const t = await resp.text();
-      if (resp.status === 429) throw new Error("Too many requests — try again shortly.");
-      if (resp.status === 402) throw new Error("AI credits exhausted. Please top up.");
-      throw new Error(`AI error: ${t.slice(0, 200)}`);
-    }
-    const j = (await resp.json()) as { choices?: Array<{ message?: { content?: string } }> };
-    const raw = (j.choices?.[0]?.message?.content ?? "").trim();
-    const cleaned = raw.replace(/```json|```/g, "").trim();
-    const s = cleaned.indexOf("{");
-    const e = cleaned.lastIndexOf("}");
-    let parsed: z.infer<typeof PlanReviewSchema>;
-    try {
-      parsed = PlanReviewSchema.parse(JSON.parse(cleaned.slice(s, e + 1)));
-    } catch {
-      throw new Error("AI returned an unreadable review. Try again.");
-    }
+  const { data: updated, error: uErr } = await supabase
+    .from("project_documents")
+    .update({ plan_review: parsed, plan_reviewed_at: new Date().toISOString() })
+    .eq("id", docId).select("*").single();
+  if (uErr) throw new Error(uErr.message);
 
-    const { data: updated, error: uErr } = await context.supabase
+  const high = parsed.findings.filter(f => f.severity === "high").length;
+  await supabase.from("activity").insert({
+    user_id: userId,
+    project_id: doc.project_id,
+    description: `AI plan review on "${doc.name}" — ${parsed.findings.length} finding${parsed.findings.length === 1 ? "" : "s"}${high ? ` (${high} high-severity)` : ""}.`,
+  });
+
+  return { document: updated, review: parsed };
+}
+
+export const reviewPlan = createServerFn({ method: "POST" })
+  .middleware([requireSupabaseAuth])
+  .inputValidator((input: unknown) => z.object({ id: z.string().uuid() }).parse(input))
+  .handler(async ({ data, context }) => {
+    requireFeature(await getEntitlement(context.supabase, context.userId), "planReview");
+    return runPlanReviewForDocument(context.supabase, context.userId, data.id);
+  });
+
+// Batch review + consolidated PermitHealth report across all plan documents in a project.
+export const batchReviewPlans = createServerFn({ method: "POST" })
+  .middleware([requireSupabaseAuth])
+  .inputValidator((input: unknown) => z.object({
+    project_id: z.string().uuid(),
+    force: z.boolean().optional().default(false),
+  }).parse(input))
+  .handler(async ({ data, context }) => {
+    requireFeature(await getEntitlement(context.supabase, context.userId), "planReview");
+    const { supabase, userId } = context;
+
+    const { data: docs } = await supabase
       .from("project_documents")
-      .update({
-        plan_review: parsed,
-        plan_reviewed_at: new Date().toISOString(),
-      })
-      .eq("id", data.id)
-      .select("*").single();
-    if (uErr) throw new Error(uErr.message);
+      .select("id, name, mime_type, plan_review, plan_reviewed_at")
+      .eq("project_id", data.project_id);
 
-    const high = parsed.findings.filter(f => f.severity === "high").length;
-    await context.supabase.from("activity").insert({
-      user_id: context.userId,
-      project_id: doc.project_id,
-      description: `AI plan review on "${doc.name}" — ${parsed.findings.length} finding${parsed.findings.length === 1 ? "" : "s"}${high ? ` (${high} high-severity)` : ""}.`,
+    const isPlan = (d: { name: string; mime_type: string | null }) =>
+      (d.mime_type || "").startsWith("image/") ||
+      (d.mime_type || "") === "application/pdf" ||
+      d.name.toLowerCase().endsWith(".pdf");
+
+    const plans = (docs ?? []).filter(isPlan);
+    if (plans.length === 0) throw new Error("No plan documents (PDF or image) to review.");
+
+    const targets = data.force ? plans : plans.filter((d) => !d.plan_reviewed_at);
+
+    // Run reviews sequentially — Gemini gets angry with parallel large PDFs.
+    const results: Array<{ id: string; name: string; ok: boolean; error?: string }> = [];
+    for (const d of targets) {
+      try {
+        await runPlanReviewForDocument(supabase, userId, d.id);
+        results.push({ id: d.id, name: d.name, ok: true });
+      } catch (err) {
+        results.push({ id: d.id, name: d.name, ok: false, error: err instanceof Error ? err.message : "Failed" });
+      }
+    }
+
+    // Reload all plans (now with fresh reviews).
+    const { data: refreshed } = await supabase
+      .from("project_documents")
+      .select("id, name, plan_review, plan_reviewed_at")
+      .eq("project_id", data.project_id)
+      .in("id", plans.map((p) => p.id));
+
+    type Finding = {
+      category: string; severity: "low"|"medium"|"high"; title: string; detail: string;
+      code_reference?: string; local_amendment?: string; sheet_reference?: string; recommendation?: string;
+      document_name: string; document_id: string;
+    };
+    const allFindings: Finding[] = [];
+    const perDoc: Array<{ id: string; name: string; risk: string; count: number; summary: string }> = [];
+    const jurisdictions = new Set<string>();
+    const amendments = new Set<string>();
+    const sources = new Set<string>();
+
+    for (const d of refreshed ?? []) {
+      const pr = d.plan_review as {
+        overall_summary?: string; overall_risk?: "low"|"medium"|"high";
+        jurisdiction_context?: { jurisdiction?: string; applied_amendments?: string[]; source_urls?: string[] };
+        findings?: Array<Omit<Finding, "document_name" | "document_id">>;
+      } | null;
+      if (!pr) continue;
+      const findings = pr.findings ?? [];
+      for (const f of findings) allFindings.push({ ...f, document_name: d.name, document_id: d.id });
+      perDoc.push({
+        id: d.id, name: d.name,
+        risk: pr.overall_risk || "medium",
+        count: findings.length,
+        summary: pr.overall_summary || "",
+      });
+      if (pr.jurisdiction_context?.jurisdiction) jurisdictions.add(pr.jurisdiction_context.jurisdiction);
+      (pr.jurisdiction_context?.applied_amendments || []).forEach((a) => amendments.add(a));
+      (pr.jurisdiction_context?.source_urls || []).forEach((u) => sources.add(u));
+    }
+
+    const bySeverity = { high: 0, medium: 0, low: 0 };
+    const byCategory: Record<string, number> = {};
+    for (const f of allFindings) {
+      bySeverity[f.severity] = (bySeverity[f.severity] ?? 0) + 1;
+      byCategory[f.category] = (byCategory[f.category] ?? 0) + 1;
+    }
+
+    // Composite plan-health score (independent of project health).
+    let planHealth = 100;
+    planHealth -= bySeverity.high * 10;
+    planHealth -= bySeverity.medium * 4;
+    planHealth -= bySeverity.low * 1;
+    planHealth = Math.max(0, Math.min(100, planHealth));
+    const risk: "low"|"medium"|"high" =
+      bySeverity.high >= 3 || planHealth < 50 ? "high" :
+      bySeverity.high >= 1 || planHealth < 75 ? "medium" : "low";
+
+    const topFindings = [...allFindings]
+      .sort((a, b) => (a.severity === "high" ? -1 : b.severity === "high" ? 1 : a.severity === "medium" ? -1 : 1))
+      .slice(0, 10);
+
+    const report = {
+      generated_at: new Date().toISOString(),
+      project_id: data.project_id,
+      documents_total: plans.length,
+      documents_reviewed: perDoc.length,
+      documents_newly_reviewed: results.filter((r) => r.ok).length,
+      documents_failed: results.filter((r) => !r.ok),
+      total_findings: allFindings.length,
+      by_severity: bySeverity,
+      by_category: byCategory,
+      plan_health_score: planHealth,
+      overall_risk: risk,
+      jurisdictions: Array.from(jurisdictions),
+      applied_amendments: Array.from(amendments).slice(0, 20),
+      source_urls: Array.from(sources).slice(0, 15),
+      per_document: perDoc,
+      top_findings: topFindings,
+      all_findings: allFindings,
+    };
+
+    await supabase.from("activity").insert({
+      user_id: userId,
+      project_id: data.project_id,
+      description: `Batch plan review: ${perDoc.length} plan${perDoc.length === 1 ? "" : "s"} · ${allFindings.length} finding${allFindings.length === 1 ? "" : "s"} (${bySeverity.high} high) · Health ${planHealth}.`,
     });
 
-    return { document: updated, review: parsed };
+    return report;
   });
 
 // ============= Plan Review → Fix List / Reviewer Response =============
