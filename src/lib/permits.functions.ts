@@ -1477,6 +1477,59 @@ const AddressLookupSchema = z.object({
   summary: z.string(),
 });
 
+// Direct portal search URL templates for jurisdictions where the public portal
+// is not well-indexed by Google (Accela, EnerGov, etc). Extend as needed —
+// each entry returns URLs we can hand to Firecrawl to scrape address-scoped
+// search results directly from the source of truth.
+function buildDirectPortalSearchUrls(jurisdiction: string, address: string): string[] {
+  const j = jurisdiction.toLowerCase();
+  const streetOnly = address.replace(/,.*$/, "").trim();
+  const enc = encodeURIComponent(streetOnly);
+  const urls: string[] = [];
+
+  if (/baltimore(\s+city)?,\s*md/.test(j)) {
+    // Baltimore City ePermits — Accela Citizen Access global search
+    urls.push(`https://cels.baltimorehousing.org/CitizenAccess/Cap/GlobalSearchResults.aspx?QueryText=${enc}`);
+  }
+  if (/baltimore\s+county,\s*md/.test(j)) {
+    urls.push(`https://permits.baltimorecountymd.gov/CitizenAccess/Cap/GlobalSearchResults.aspx?QueryText=${enc}`);
+  }
+  if (/washington,?\s*dc|district of columbia/.test(j)) {
+    urls.push(`https://eservices.dcra.dc.gov/DCRAPermitApplicationSearch/Search/Permit?address=${enc}`);
+  }
+  if (/new york,?\s*ny|nyc/.test(j)) {
+    urls.push(`https://a810-bisweb.nyc.gov/bisweb/PropertyProfileOverviewServlet?requestid=1&allbin=&houseno=${enc}`);
+  }
+  if (/los angeles,?\s*ca/.test(j)) {
+    urls.push(`https://www.ladbsservices2.lacity.org/OnlineServices/PermitReport/PermitReportAddress?address=${enc}`);
+  }
+  if (/chicago,?\s*il/.test(j)) {
+    urls.push(`https://webapps1.chicago.gov/buildingrecords/?addr=${enc}`);
+  }
+  if (/san francisco,?\s*ca/.test(j)) {
+    urls.push(`https://dbiweb02.sfgov.org/dbipts/default.aspx?page=AddressLookup&Address=${enc}`);
+  }
+  if (/seattle,?\s*wa/.test(j)) {
+    urls.push(`https://cosaccela.seattle.gov/portal/Cap/GlobalSearchResults.aspx?QueryText=${enc}`);
+  }
+  if (/boston,?\s*ma/.test(j)) {
+    urls.push(`https://www.boston.gov/permits?search=${enc}`);
+  }
+  if (/austin,?\s*tx/.test(j)) {
+    urls.push(`https://abc.austintexas.gov/web/permit/public-search-other?reset=true&t_selected_search=CAP&t_selected_property=STREET_NUMBER&t_selected_permit_type=BP&t_STREET_NUMBER=${enc}`);
+  }
+  if (/miami,?\s*fl/.test(j)) {
+    urls.push(`https://apps.miamigov.com/eBuilding/PropertySearch.aspx?address=${enc}`);
+  }
+  if (/philadelphia,?\s*pa/.test(j)) {
+    urls.push(`https://eclipse.phila.gov/phillylmsprod/int/lms/Login.aspx#address=${enc}`);
+  }
+
+  return urls;
+}
+
+
+
 export const lookupPermitsByAddress = createServerFn({ method: "POST" })
   .middleware([requireSupabaseAuth])
   .inputValidator((input: unknown) => AddressLookupInput.parse(input))
@@ -1507,15 +1560,48 @@ export const lookupPermitsByAddress = createServerFn({ method: "POST" })
     }
     const portal = portalHits.find((h) => /(\.gov|accela|energov|opengov|citizenserve|permitium|mygovernmentonline|viewpointcloud)/i.test(h.url)) ?? portalHits[0];
 
-    // 3. Search the web for permit records at this specific address.
-    const addressQuery = `"${addr}" permit ${jurisdictionGuess} site:.gov OR accela OR energov OR opengov OR citizenserve`;
-    const addressHits = await firecrawlSearch(fcKey, addressQuery, 6).catch(() => []);
+    // 2b. Known-jurisdiction direct search URLs. Many municipal portals (Accela,
+    // EnerGov, etc.) do not expose individual permit records to Google, so
+    // address-only web search misses active applications. For jurisdictions we
+    // know, hit the portal's own search endpoint directly.
+    const directSearchUrls = buildDirectPortalSearchUrls(jurisdictionGuess, addr);
 
-    // 4. Scrape portal landing + top address hits.
+    // 3. Search the web for permit records at this specific address.
+    // Try multiple address variants to catch differing portal formats.
+    const streetOnly = addr.replace(/,.*$/, "").trim(); // "1603 Whetstone Way"
+    const cityState = jurisdictionGuess;
+    const addressQueries = [
+      `"${addr}" permit ${cityState}`,
+      `"${streetOnly}" permit ${cityState} site:.gov`,
+      `"${streetOnly}" ${cityState} accela OR energov OR opengov OR citizenserve OR permits`,
+    ];
+    const addressHitsNested = await Promise.all(
+      addressQueries.map((q) => firecrawlSearch(fcKey, q, 5).catch(() => [])),
+    );
+    const seenUrls = new Set<string>();
+    const addressHits = addressHitsNested.flat().filter((h) => {
+      if (seenUrls.has(h.url)) return false;
+      seenUrls.add(h.url);
+      return true;
+    });
+
+    // 4. Scrape portal landing + direct portal search URLs + top address hits.
     const portalScrape = await firecrawlScrape(fcKey, portal.url).catch(() => ({ markdown: "", title: "" }));
+    const directScrapes = (
+      await Promise.all(
+        directSearchUrls.map(async (u: string) => {
+          try {
+            const s = await firecrawlScrape(fcKey, u);
+            return `DIRECT PORTAL SEARCH: ${u}\n${s.markdown.slice(0, 4000)}`;
+          } catch {
+            return "";
+          }
+        }),
+      )
+    ).filter(Boolean).join("\n\n---\n\n");
     const addressScrapes = (
       await Promise.all(
-        addressHits.slice(0, 3).map(async (h) => {
+        addressHits.slice(0, 4).map(async (h) => {
           try {
             const s = await firecrawlScrape(fcKey, h.url);
             return `SOURCE: ${h.url}\nTITLE: ${h.title ?? ""}\n${s.markdown.slice(0, 2500)}`;
@@ -1526,6 +1612,7 @@ export const lookupPermitsByAddress = createServerFn({ method: "POST" })
       )
     ).join("\n\n---\n\n");
 
+
     // 5. Ask AI to extract structured permit records for this address.
     const extractionPrompt = `You are Permivio's live permit lookup. Extract permit records tied to the address below from the real source text provided. Never invent data.
 
@@ -1535,7 +1622,10 @@ JURISDICTION (inferred): ${jurisdictionGuess}
 OFFICIAL PORTAL CANDIDATE (${portal.url})
 ${portalScrape.markdown.slice(0, 3500)}
 
-ADDRESS SEARCH RESULTS
+DIRECT PORTAL SEARCH RESULTS (authoritative — prefer these over web search when present)
+${directScrapes || "(none)"}
+
+ADDRESS SEARCH RESULTS (web)
 ${addressScrapes || "(none)"}
 
 Return ONLY valid JSON in this shape:
@@ -1584,7 +1674,7 @@ RULES
       jurisdiction: parsed.jurisdiction || jurisdictionGuess,
       portal_name: parsed.portal_name || portal.title || portal.url,
       portal_url: parsed.portal_url || portal.url,
-      search_url: parsed.search_url,
+      search_url: parsed.search_url || directSearchUrls[0] || "",
       findings: parsed.findings,
       summary: parsed.summary,
       searched_at: new Date().toISOString(),
