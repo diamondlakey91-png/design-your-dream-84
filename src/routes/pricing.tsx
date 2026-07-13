@@ -72,6 +72,7 @@ const tiers: Tier[] = [
     ],
     cta: "Start with Starter",
     href: "/auth",
+    priceId: "starter_monthly",
   },
   {
     name: "Professional",
