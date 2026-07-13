@@ -487,6 +487,18 @@ function DeadlinesTab({ projectId }: { projectId: string }) {
   const q = useQuery({ queryKey: ["deadlines"], queryFn: () => listFn() });
   const ours = (q.data ?? []).filter((d) => d.project_id === projectId);
 
+  useEffect(() => {
+    const channel = supabase
+      .channel(`deadlines:${projectId}`)
+      .on(
+        "postgres_changes",
+        { event: "*", schema: "public", table: "deadlines", filter: `project_id=eq.${projectId}` },
+        () => qc.invalidateQueries({ queryKey: ["deadlines"] }),
+      )
+      .subscribe();
+    return () => { supabase.removeChannel(channel); };
+  }, [projectId, qc]);
+
   const add = useMutation({
     mutationFn: () => addFn({ data: { project_id: projectId, title: title.trim(), due_date: date } }),
     onSuccess: () => { qc.invalidateQueries({ queryKey: ["deadlines"] }); setTitle(""); setDate(""); toast.success("Deadline added"); },
