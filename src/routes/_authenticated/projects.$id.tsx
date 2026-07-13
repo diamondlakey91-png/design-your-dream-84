@@ -502,7 +502,7 @@ function DocsTab({ projectId, userId }: { projectId: string; userId: string }) {
         </div>
       </div>
 
-      {report && <BatchReport report={report} onClose={() => setReport(null)} />}
+      {report && <BatchReport report={report} projectId={projectId} onClose={() => setReport(null)} />}
 
       {docs.length === 0 ? (
         <div className="p-6 text-center rounded-xl border border-dashed border-border text-sm text-muted-foreground">No documents yet.</div>
