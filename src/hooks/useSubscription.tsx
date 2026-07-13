@@ -74,12 +74,14 @@ export function useSubscription(): SubscriptionState {
     return () => { if (channel) supabase.removeChannel(channel); };
   }, []);
 
-  const tier = getTier(row?.price_id);
-  const isActive = isSubscriptionActive(row?.status, row?.current_period_end);
-  const cancelPending = Boolean(row?.cancel_at_period_end);
+  const tier = BETA_MODE ? BETA_TIER : getTier(row?.price_id);
+  const isActive = BETA_MODE ? true : isSubscriptionActive(row?.status, row?.current_period_end);
+  const cancelPending = BETA_MODE ? false : Boolean(row?.cancel_at_period_end);
 
   const activationTs = row?.current_period_start ? new Date(row.current_period_start).getTime() : row?.created_at ? new Date(row.created_at).getTime() : 0;
-  const isInWelcomeWindow = isActive && activationTs > 0 && Date.now() - activationTs < 7 * 24 * 60 * 60 * 1000;
+  const isInWelcomeWindow = BETA_MODE
+    ? true
+    : isActive && activationTs > 0 && Date.now() - activationTs < 7 * 24 * 60 * 60 * 1000;
 
   return {
     loading,
@@ -87,8 +89,9 @@ export function useSubscription(): SubscriptionState {
     tier,
     isActive,
     cancelPending,
-    hasFeature: (f) => isActive && tierHasFeature(tier, f),
+    hasFeature: (f) => BETA_MODE ? tierHasFeature(tier, f) : (isActive && tierHasFeature(tier, f)),
     isInWelcomeWindow,
     refetch: () => setNonce((n) => n + 1),
   };
 }
+
