@@ -19,6 +19,7 @@ import { Route as AuthenticatedAssistantRouteImport } from './routes/_authentica
 import { Route as AuthenticatedProjectsIndexRouteImport } from './routes/_authenticated/projects.index'
 import { Route as AuthenticatedProjectsIdRouteImport } from './routes/_authenticated/projects.$id'
 import { Route as AuthenticatedJurisdictionsSlugRouteImport } from './routes/_authenticated/jurisdictions.$slug'
+import { Route as AuthenticatedInspectionsIdRouteImport } from './routes/_authenticated/inspections.$id'
 import { Route as AuthenticatedAssistantThreadIdRouteImport } from './routes/_authenticated/assistant.$threadId'
 
 const AuthRoute = AuthRouteImport.update({
@@ -73,6 +74,12 @@ const AuthenticatedJurisdictionsSlugRoute =
     path: '/$slug',
     getParentRoute: () => AuthenticatedJurisdictionsRoute,
   } as any)
+const AuthenticatedInspectionsIdRoute =
+  AuthenticatedInspectionsIdRouteImport.update({
+    id: '/inspections/$id',
+    path: '/inspections/$id',
+    getParentRoute: () => AuthenticatedRouteRoute,
+  } as any)
 const AuthenticatedAssistantThreadIdRoute =
   AuthenticatedAssistantThreadIdRouteImport.update({
     id: '/$threadId',
@@ -88,6 +95,7 @@ export interface FileRoutesByFullPath {
   '/jurisdictions': typeof AuthenticatedJurisdictionsRouteWithChildren
   '/lookup': typeof AuthenticatedLookupRoute
   '/assistant/$threadId': typeof AuthenticatedAssistantThreadIdRoute
+  '/inspections/$id': typeof AuthenticatedInspectionsIdRoute
   '/jurisdictions/$slug': typeof AuthenticatedJurisdictionsSlugRoute
   '/projects/$id': typeof AuthenticatedProjectsIdRoute
   '/projects/': typeof AuthenticatedProjectsIndexRoute
@@ -100,6 +108,7 @@ export interface FileRoutesByTo {
   '/jurisdictions': typeof AuthenticatedJurisdictionsRouteWithChildren
   '/lookup': typeof AuthenticatedLookupRoute
   '/assistant/$threadId': typeof AuthenticatedAssistantThreadIdRoute
+  '/inspections/$id': typeof AuthenticatedInspectionsIdRoute
   '/jurisdictions/$slug': typeof AuthenticatedJurisdictionsSlugRoute
   '/projects/$id': typeof AuthenticatedProjectsIdRoute
   '/projects': typeof AuthenticatedProjectsIndexRoute
@@ -114,6 +123,7 @@ export interface FileRoutesById {
   '/_authenticated/jurisdictions': typeof AuthenticatedJurisdictionsRouteWithChildren
   '/_authenticated/lookup': typeof AuthenticatedLookupRoute
   '/_authenticated/assistant/$threadId': typeof AuthenticatedAssistantThreadIdRoute
+  '/_authenticated/inspections/$id': typeof AuthenticatedInspectionsIdRoute
   '/_authenticated/jurisdictions/$slug': typeof AuthenticatedJurisdictionsSlugRoute
   '/_authenticated/projects/$id': typeof AuthenticatedProjectsIdRoute
   '/_authenticated/projects/': typeof AuthenticatedProjectsIndexRoute
@@ -128,6 +138,7 @@ export interface FileRouteTypes {
     | '/jurisdictions'
     | '/lookup'
     | '/assistant/$threadId'
+    | '/inspections/$id'
     | '/jurisdictions/$slug'
     | '/projects/$id'
     | '/projects/'
@@ -140,6 +151,7 @@ export interface FileRouteTypes {
     | '/jurisdictions'
     | '/lookup'
     | '/assistant/$threadId'
+    | '/inspections/$id'
     | '/jurisdictions/$slug'
     | '/projects/$id'
     | '/projects'
@@ -153,6 +165,7 @@ export interface FileRouteTypes {
     | '/_authenticated/jurisdictions'
     | '/_authenticated/lookup'
     | '/_authenticated/assistant/$threadId'
+    | '/_authenticated/inspections/$id'
     | '/_authenticated/jurisdictions/$slug'
     | '/_authenticated/projects/$id'
     | '/_authenticated/projects/'
@@ -236,6 +249,13 @@ declare module '@tanstack/react-router' {
       preLoaderRoute: typeof AuthenticatedJurisdictionsSlugRouteImport
       parentRoute: typeof AuthenticatedJurisdictionsRoute
     }
+    '/_authenticated/inspections/$id': {
+      id: '/_authenticated/inspections/$id'
+      path: '/inspections/$id'
+      fullPath: '/inspections/$id'
+      preLoaderRoute: typeof AuthenticatedInspectionsIdRouteImport
+      parentRoute: typeof AuthenticatedRouteRoute
+    }
     '/_authenticated/assistant/$threadId': {
       id: '/_authenticated/assistant/$threadId'
       path: '/$threadId'
@@ -279,6 +299,7 @@ interface AuthenticatedRouteRouteChildren {
   AuthenticatedDashboardRoute: typeof AuthenticatedDashboardRoute
   AuthenticatedJurisdictionsRoute: typeof AuthenticatedJurisdictionsRouteWithChildren
   AuthenticatedLookupRoute: typeof AuthenticatedLookupRoute
+  AuthenticatedInspectionsIdRoute: typeof AuthenticatedInspectionsIdRoute
   AuthenticatedProjectsIdRoute: typeof AuthenticatedProjectsIdRoute
   AuthenticatedProjectsIndexRoute: typeof AuthenticatedProjectsIndexRoute
 }
@@ -288,6 +309,7 @@ const AuthenticatedRouteRouteChildren: AuthenticatedRouteRouteChildren = {
   AuthenticatedDashboardRoute: AuthenticatedDashboardRoute,
   AuthenticatedJurisdictionsRoute: AuthenticatedJurisdictionsRouteWithChildren,
   AuthenticatedLookupRoute: AuthenticatedLookupRoute,
+  AuthenticatedInspectionsIdRoute: AuthenticatedInspectionsIdRoute,
   AuthenticatedProjectsIdRoute: AuthenticatedProjectsIdRoute,
   AuthenticatedProjectsIndexRoute: AuthenticatedProjectsIndexRoute,
 }

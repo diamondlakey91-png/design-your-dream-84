@@ -1590,3 +1590,249 @@ RULES
       searched_at: new Date().toISOString(),
     };
   });
+
+// ---- AI Document Reader ----
+const DocAnalysisSchema = z.object({
+  summary: z.string(),
+  document_type: z.string().default(""),
+  action_items: z.array(z.object({
+    reviewer: z.string().default(""),
+    discipline: z.string().default(""),
+    request: z.string(),
+    reference: z.string().default(""),
+  })).max(30).default([]),
+  key_dates: z.array(z.object({ label: z.string(), date: z.string() })).max(10).default([]),
+});
+
+export const analyzeDocument = createServerFn({ method: "POST" })
+  .middleware([requireSupabaseAuth])
+  .inputValidator((input: unknown) => z.object({ id: z.string().uuid() }).parse(input))
+  .handler(async ({ data, context }) => {
+    const aiKey = process.env.LOVABLE_API_KEY;
+    if (!aiKey) throw new Error("AI is not configured");
+
+    const { data: doc } = await context.supabase
+      .from("project_documents").select("*").eq("id", data.id).maybeSingle();
+    if (!doc) throw new Error("Document not found");
+
+    const { data: signed, error: sErr } = await context.supabase
+      .storage.from("project-docs").createSignedUrl(doc.storage_path, 600);
+    if (sErr || !signed?.signedUrl) throw new Error("Could not access document");
+
+    const mime = doc.mime_type || "application/pdf";
+    const isImage = mime.startsWith("image/");
+    const isPdf = mime === "application/pdf" || doc.name.toLowerCase().endsWith(".pdf");
+    if (!isImage && !isPdf) {
+      throw new Error("Only PDFs and images can be analyzed right now.");
+    }
+
+    const instruction = `You are analyzing a construction / permit document for Permivio. Extract concrete action items a project manager must respond to.
+
+Return ONLY valid JSON in this exact shape:
+{
+  "summary": "2-4 sentence plain-English summary of what this document is and what it requires.",
+  "document_type": "e.g. Plan Review Comments, Correction Letter, Approved Permit, Inspection Report, Fee Invoice",
+  "action_items": [
+    { "reviewer": "e.g. Mechanical Reviewer", "discipline": "Mechanical | Electrical | Plumbing | Structural | Building | Fire | Zoning | Other", "request": "concrete action, imperative voice", "reference": "sheet #, code section, or page if listed" }
+  ],
+  "key_dates": [ { "label": "Deadline / Expiration / Inspection", "date": "as printed" } ]
+}
+
+Rules: never invent items not in the document. If the document is just an approval with no actions, return action_items: []. Keep each request under 160 characters.`;
+
+    const contentParts: unknown[] = [{ type: "text", text: instruction }];
+    if (isImage) {
+      contentParts.push({ type: "image_url", image_url: { url: signed.signedUrl } });
+    } else {
+      // PDF via file part with signed URL fetched by us then base64'd
+      const fileResp = await fetch(signed.signedUrl);
+      if (!fileResp.ok) throw new Error("Could not download document for analysis");
+      const buf = new Uint8Array(await fileResp.arrayBuffer());
+      // btoa in chunks to avoid stack blowout
+      let bin = "";
+      for (let i = 0; i < buf.length; i += 0x8000) {
+        bin += String.fromCharCode(...buf.subarray(i, i + 0x8000));
+      }
+      const b64 = btoa(bin);
+      contentParts.push({
+        type: "file",
+        file: { filename: doc.name, file_data: `data:${mime};base64,${b64}` },
+      });
+    }
+
+    const resp = await fetch("https://ai.gateway.lovable.dev/v1/chat/completions", {
+      method: "POST",
+      headers: { "Content-Type": "application/json", "Lovable-API-Key": aiKey },
+      body: JSON.stringify({
+        model: "google/gemini-2.5-pro",
+        messages: [
+          { role: "system", content: "You extract structured action items from construction permit documents. Output valid JSON only, no prose, no fences." },
+          { role: "user", content: contentParts },
+        ],
+      }),
+    });
+    if (!resp.ok) {
+      const t = await resp.text();
+      if (resp.status === 429) throw new Error("Too many requests — try again shortly.");
+      if (resp.status === 402) throw new Error("AI credits exhausted. Please top up.");
+      throw new Error(`AI error: ${t.slice(0, 200)}`);
+    }
+    const j = (await resp.json()) as { choices?: Array<{ message?: { content?: string } }> };
+    const raw = (j.choices?.[0]?.message?.content ?? "").trim();
+    const cleaned = raw.replace(/```json|```/g, "").trim();
+    const s = cleaned.indexOf("{");
+    const e = cleaned.lastIndexOf("}");
+    let parsed: z.infer<typeof DocAnalysisSchema>;
+    try {
+      parsed = DocAnalysisSchema.parse(JSON.parse(cleaned.slice(s, e + 1)));
+    } catch {
+      throw new Error("AI returned an unreadable analysis. Try again.");
+    }
+
+    const { data: updated, error: uErr } = await context.supabase
+      .from("project_documents")
+      .update({
+        ai_summary: parsed.summary,
+        ai_action_items: parsed.action_items,
+        analyzed_at: new Date().toISOString(),
+      })
+      .eq("id", data.id)
+      .select("*").single();
+    if (uErr) throw new Error(uErr.message);
+
+    await context.supabase.from("activity").insert({
+      user_id: context.userId,
+      project_id: doc.project_id,
+      description: `AI analyzed "${doc.name}" — ${parsed.action_items.length} action item${parsed.action_items.length === 1 ? "" : "s"}.`,
+    });
+
+    return { document: updated, analysis: parsed };
+  });
+
+// ---- Inspection Mode fields ----
+export const updateInspectionFields = createServerFn({ method: "POST" })
+  .middleware([requireSupabaseAuth])
+  .inputValidator((input: unknown) => z.object({
+    id: z.string().uuid(),
+    checklist: z.array(z.object({
+      id: z.string(),
+      label: z.string(),
+      checked: z.boolean(),
+      failed: z.boolean().optional().default(false),
+      note: z.string().optional().default(""),
+    })).optional(),
+    photos: z.array(z.object({ path: z.string(), caption: z.string().optional().default("") })).optional(),
+    notes: z.string().max(4000).optional(),
+    result: z.string().max(40).optional(),
+    status: z.enum(["scheduled", "passed", "failed", "rescheduled", "canceled"]).optional(),
+  }).parse(input))
+  .handler(async ({ data, context }) => {
+    const patch: {
+      checklist?: typeof data.checklist;
+      photos?: typeof data.photos;
+      notes?: string;
+      result?: string;
+      status?: typeof data.status;
+      result_date?: string;
+    } = {};
+    if (data.checklist !== undefined) patch.checklist = data.checklist;
+    if (data.photos !== undefined) patch.photos = data.photos;
+    if (data.notes !== undefined) patch.notes = data.notes;
+    if (data.result !== undefined) patch.result = data.result;
+    if (data.status !== undefined) {
+      patch.status = data.status;
+      if (data.status === "passed" || data.status === "failed") {
+        patch.result_date = new Date().toISOString().slice(0, 10);
+      }
+    }
+    const { data: row, error } = await context.supabase
+      .from("inspections")
+      .update(patch as never)
+      .eq("id", data.id)
+      .select("*").single();
+    if (error) throw new Error(error.message);
+    if (data.status) {
+      await context.supabase.from("activity").insert({
+        user_id: context.userId,
+        project_id: row.project_id,
+        description: `Inspection "${row.inspection_type}" marked ${data.status}.`,
+      });
+    }
+    return row;
+  });
+
+export const getInspection = createServerFn({ method: "GET" })
+  .middleware([requireSupabaseAuth])
+  .inputValidator((input: unknown) => z.object({ id: z.string().uuid() }).parse(input))
+  .handler(async ({ data, context }) => {
+    const { data: row, error } = await context.supabase
+      .from("inspections").select("*, projects(name, jurisdiction, location)").eq("id", data.id).maybeSingle();
+    if (error) throw new Error(error.message);
+    if (!row) throw new Error("Inspection not found");
+    // Sign each photo path
+    const photos = Array.isArray(row.photos) ? row.photos as Array<{ path: string; caption?: string }> : [];
+    const signed = await Promise.all(photos.map(async (p) => {
+      const { data: s } = await context.supabase.storage.from("project-docs").createSignedUrl(p.path, 3600);
+      return { ...p, url: s?.signedUrl ?? null };
+    }));
+    return { ...row, photos: signed };
+  });
+
+// ---- Health score (server-computed from project + checklist + deadlines + inspections) ----
+export const computeProjectHealth = createServerFn({ method: "GET" })
+  .middleware([requireSupabaseAuth])
+  .inputValidator((input: unknown) => z.object({ project_id: z.string().uuid() }).parse(input))
+  .handler(async ({ data, context }) => {
+    const [proj, items, dls, insp] = await Promise.all([
+      context.supabase.from("projects").select("current_stage, permit_count, permits_issued").eq("id", data.project_id).maybeSingle(),
+      context.supabase.from("permit_items").select("status, required").eq("project_id", data.project_id),
+      context.supabase.from("deadlines").select("due_date").eq("project_id", data.project_id),
+      context.supabase.from("inspections").select("status").eq("project_id", data.project_id),
+    ]);
+    const project = proj.data;
+    const permits = items.data ?? [];
+    const deadlines = dls.data ?? [];
+    const inspections = insp.data ?? [];
+
+    const today = new Date(); today.setHours(0, 0, 0, 0);
+    const overdue = deadlines.filter((d) => d.due_date && new Date(d.due_date) < today).length;
+    const upcoming7 = deadlines.filter((d) => {
+      if (!d.due_date) return false;
+      const diff = (new Date(d.due_date).getTime() - today.getTime()) / 86400000;
+      return diff >= 0 && diff <= 7;
+    }).length;
+
+    const requiredCount = permits.filter((p) => p.required).length || permits.length;
+    const doneCount = permits.filter((p) => p.status === "issued" || p.status === "approved").length;
+    const notStarted = permits.filter((p) => p.status === "not_started").length;
+    const inspFailed = inspections.filter((i) => i.status === "failed").length;
+    const inspPassed = inspections.filter((i) => i.status === "passed").length;
+
+    // Score: start 100, subtract penalties
+    let score = 100;
+    score -= overdue * 12;
+    score -= upcoming7 * 3;
+    score -= inspFailed * 8;
+    if (requiredCount > 0) {
+      const stalled = notStarted / requiredCount;
+      score -= Math.round(stalled * 20);
+      const progress = doneCount / requiredCount;
+      score += Math.round((progress - 0.5) * 10); // bonus for >50% done, penalty <50%
+    }
+    if (project && project.permit_count > 0 && project.permits_issued === project.permit_count) score = Math.max(score, 92);
+    score = Math.max(0, Math.min(100, score));
+
+    let risk: "low" | "medium" | "high" = "low";
+    if (score < 50 || overdue >= 2 || inspFailed >= 2) risk = "high";
+    else if (score < 75 || overdue >= 1 || inspFailed >= 1 || upcoming7 >= 3) risk = "medium";
+
+    const reasons: string[] = [];
+    if (overdue) reasons.push(`${overdue} overdue deadline${overdue === 1 ? "" : "s"}`);
+    if (upcoming7) reasons.push(`${upcoming7} due this week`);
+    if (inspFailed) reasons.push(`${inspFailed} failed inspection${inspFailed === 1 ? "" : "s"}`);
+    if (inspPassed) reasons.push(`${inspPassed} passed inspection${inspPassed === 1 ? "" : "s"}`);
+    if (requiredCount > 0) reasons.push(`${doneCount}/${requiredCount} permits complete`);
+    if (reasons.length === 0) reasons.push("No signals yet — add checklist items and deadlines.");
+
+    return { score, risk, reasons, overdue, upcoming7, inspFailed, inspPassed, requiredCount, doneCount };
+  });

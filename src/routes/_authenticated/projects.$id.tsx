@@ -21,6 +21,11 @@ import {
   syncJurisdiction,
   listJurisdictionSyncs,
   applySyncToChecklist,
+  analyzeDocument,
+  computeProjectHealth,
+  listInspections,
+  addInspection,
+  deleteInspection,
 } from "@/lib/permits.functions";
 import {
   ArrowLeft,
@@ -51,7 +56,7 @@ export const Route = createFileRoute("/_authenticated/projects/$id")({
   component: ProjectDetail,
 });
 
-type Tab = "overview" | "checklist" | "docs" | "deadlines" | "timeline";
+type Tab = "overview" | "checklist" | "docs" | "deadlines" | "inspections" | "timeline";
 
 const STATUS_LABEL: Record<string, string> = {
   not_started: "Not started",
@@ -112,7 +117,7 @@ function ProjectDetail() {
       {/* Tabs */}
       <nav className="sticky top-0 z-10 bg-background/95 backdrop-blur border-b border-border">
         <div className="flex overflow-x-auto">
-          {(["overview", "checklist", "docs", "deadlines", "timeline"] as Tab[]).map((t) => (
+          {(["overview", "checklist", "docs", "deadlines", "inspections", "timeline"] as Tab[]).map((t) => (
             <button
               key={t}
               onClick={() => setTab(t)}
@@ -133,6 +138,7 @@ function ProjectDetail() {
         {tab === "checklist" && <ChecklistTab projectId={id} jurisdiction={project.jurisdiction} />}
         {tab === "docs" && <DocsTab projectId={id} userId={project.user_id} />}
         {tab === "deadlines" && <DeadlinesTab projectId={id} />}
+        {tab === "inspections" && <InspectionsTab projectId={id} userId={project.user_id} />}
         {tab === "timeline" && <TimelineTab projectId={id} />}
       </div>
     </AppShell>
@@ -164,6 +170,7 @@ function OverviewTab({
 
   return (
     <>
+      <HealthScoreCard projectId={project.id} />
       <section>
         <p className="font-mono text-[10px] uppercase tracking-widest text-muted-foreground mb-3">PERMIT_PIPELINE</p>
         <div className="flex gap-1 mb-4">
@@ -451,26 +458,84 @@ function DocsTab({ projectId, userId }: { projectId: string; userId: string }) {
       ) : (
         <ul className="space-y-2">
           {docs.map((d) => (
-            <li key={d.id} className="p-3 bg-card ring-1 ring-black/5 rounded-xl flex items-center gap-3">
-              <FileText className="size-5 text-brand shrink-0" />
-              <div className="flex-1 min-w-0">
-                {d.url ? (
-                  <a href={d.url} target="_blank" rel="noreferrer" className="text-sm font-medium hover:text-brand truncate block">{d.name}</a>
-                ) : (
-                  <span className="text-sm font-medium truncate block">{d.name}</span>
-                )}
-                <p className="text-[11px] font-mono uppercase text-muted-foreground">
-                  {(d.size_bytes / 1024).toFixed(1)} KB · {formatDistanceToNow(new Date(d.created_at), { addSuffix: true })}
-                </p>
-              </div>
-              <button onClick={() => del.mutate(d.id)} className="text-muted-foreground hover:text-destructive" aria-label="Delete">
-                <Trash2 className="size-4" />
-              </button>
-            </li>
+            <DocRow key={d.id} doc={d} projectId={projectId} onDelete={() => del.mutate(d.id)} />
           ))}
         </ul>
       )}
     </div>
+  );
+}
+
+function DocRow({ doc, projectId, onDelete }: { doc: { id: string; name: string; url: string | null; size_bytes: number; created_at: string; mime_type: string; ai_summary?: string | null; ai_action_items?: unknown; analyzed_at?: string | null }; projectId: string; onDelete: () => void }) {
+  const analyzeFn = useServerFn(analyzeDocument);
+  const qc = useQueryClient();
+  const [open, setOpen] = useState(false);
+  const canAnalyze = (doc.mime_type || "").startsWith("image/") || (doc.mime_type || "") === "application/pdf" || doc.name.toLowerCase().endsWith(".pdf");
+  const analyze = useMutation({
+    mutationFn: () => analyzeFn({ data: { id: doc.id } }),
+    onSuccess: () => { qc.invalidateQueries({ queryKey: ["docs", projectId] }); qc.invalidateQueries({ queryKey: ["activity", projectId] }); setOpen(true); toast.success("AI analysis complete"); },
+    onError: (e) => toast.error(e instanceof Error ? e.message : "Analysis failed"),
+  });
+  const items = Array.isArray(doc.ai_action_items) ? doc.ai_action_items as Array<{ reviewer?: string; discipline?: string; request: string; reference?: string }> : [];
+  return (
+    <li className="p-3 bg-card ring-1 ring-black/5 rounded-xl">
+      <div className="flex items-center gap-3">
+        <FileText className="size-5 text-brand shrink-0" />
+        <div className="flex-1 min-w-0">
+          {doc.url ? (
+            <a href={doc.url} target="_blank" rel="noreferrer" className="text-sm font-medium hover:text-brand truncate block">{doc.name}</a>
+          ) : (
+            <span className="text-sm font-medium truncate block">{doc.name}</span>
+          )}
+          <p className="text-[11px] font-mono uppercase text-muted-foreground">
+            {(doc.size_bytes / 1024).toFixed(1)} KB · {formatDistanceToNow(new Date(doc.created_at), { addSuffix: true })}
+            {doc.analyzed_at && <> · <span className="text-brand">AI analyzed</span></>}
+          </p>
+        </div>
+        {canAnalyze && (
+          <button
+            onClick={() => analyze.mutate()}
+            disabled={analyze.isPending}
+            className="text-[10px] font-mono uppercase tracking-wider px-2 py-1 rounded bg-brand/15 text-brand hover:bg-brand/25 disabled:opacity-50"
+          >
+            {analyze.isPending ? "Reading…" : doc.analyzed_at ? "Re-analyze" : "Analyze"}
+          </button>
+        )}
+        <button onClick={onDelete} className="text-muted-foreground hover:text-destructive" aria-label="Delete">
+          <Trash2 className="size-4" />
+        </button>
+      </div>
+      {doc.ai_summary && (
+        <div className="mt-3 pl-8">
+          <button onClick={() => setOpen((v) => !v)} className="text-[11px] font-mono uppercase tracking-wider text-brand hover:opacity-80">
+            {open ? "Hide" : "Show"} AI reading ({items.length} action{items.length === 1 ? "" : "s"})
+          </button>
+          {open && (
+            <div className="mt-2 p-3 rounded-lg bg-background ring-1 ring-black/5 space-y-2">
+              <p className="text-sm text-foreground leading-relaxed">{doc.ai_summary}</p>
+              {items.length > 0 && (
+                <ul className="space-y-1.5">
+                  {items.map((it, i) => (
+                    <li key={i} className="text-sm flex gap-2">
+                      <span className="text-brand mt-1">•</span>
+                      <span>
+                        {(it.reviewer || it.discipline) && (
+                          <span className="text-[10px] font-mono uppercase tracking-wider text-muted-foreground mr-1.5">
+                            [{it.discipline || it.reviewer}]
+                          </span>
+                        )}
+                        {it.request}
+                        {it.reference && <span className="text-muted-foreground text-xs"> — {it.reference}</span>}
+                      </span>
+                    </li>
+                  ))}
+                </ul>
+              )}
+            </div>
+          )}
+        </div>
+      )}
+    </li>
   );
 }
 
@@ -842,3 +907,164 @@ function LiveJurisdictionSync({ projectId, jurisdiction }: { projectId: string; 
   );
 }
 
+
+/* ---------------- Health Score ---------------- */
+function HealthScoreCard({ projectId }: { projectId: string }) {
+  const healthFn = useServerFn(computeProjectHealth);
+  const q = useQuery({
+    queryKey: ["health", projectId],
+    queryFn: () => healthFn({ data: { project_id: projectId } }),
+    refetchInterval: 30000,
+  });
+
+  if (q.isLoading || !q.data) {
+    return (
+      <section className="p-4 bg-card ring-1 ring-black/5 rounded-xl">
+        <p className="text-[10px] font-mono uppercase tracking-widest text-muted-foreground">Permit Health</p>
+        <p className="text-sm text-muted-foreground mt-1">Calculating…</p>
+      </section>
+    );
+  }
+  const { score, risk, reasons } = q.data;
+  const riskColor =
+    risk === "low" ? "text-emerald-600 dark:text-emerald-400 bg-emerald-500/15" :
+    risk === "medium" ? "text-amber-700 dark:text-amber-300 bg-amber-500/15" :
+    "text-destructive bg-destructive/15";
+  const scoreColor = score >= 80 ? "text-emerald-500" : score >= 60 ? "text-amber-500" : "text-destructive";
+  return (
+    <section className="p-4 bg-card ring-1 ring-black/5 rounded-xl">
+      <div className="flex items-center gap-4">
+        <div className="relative shrink-0">
+          <svg viewBox="0 0 60 60" className="size-16 -rotate-90">
+            <circle cx="30" cy="30" r="26" strokeWidth="6" className="stroke-muted" fill="none" />
+            <circle
+              cx="30" cy="30" r="26" strokeWidth="6" fill="none"
+              strokeLinecap="round"
+              className={scoreColor}
+              stroke="currentColor"
+              strokeDasharray={`${(score / 100) * 163.4} 163.4`}
+            />
+          </svg>
+          <div className={`absolute inset-0 flex items-center justify-center text-xl font-bold ${scoreColor}`}>{score}</div>
+        </div>
+        <div className="flex-1 min-w-0">
+          <div className="flex items-center gap-2">
+            <p className="text-sm font-semibold">Permit Health</p>
+            <span className={`text-[9px] font-mono uppercase tracking-widest px-1.5 py-0.5 rounded ${riskColor}`}>
+              {risk} risk
+            </span>
+          </div>
+          <ul className="mt-1 space-y-0.5">
+            {reasons.slice(0, 4).map((r, i) => (
+              <li key={i} className="text-xs text-muted-foreground">• {r}</li>
+            ))}
+          </ul>
+        </div>
+      </div>
+    </section>
+  );
+}
+
+/* ---------------- Inspections ---------------- */
+type InspectionRow = {
+  id: string;
+  inspection_type: string;
+  status: string;
+  scheduled_date: string | null;
+  inspector: string | null;
+  result: string | null;
+};
+
+function InspectionsTab({ projectId, userId }: { projectId: string; userId: string }) {
+  void userId;
+  const listFn = useServerFn(listInspections);
+  const addFn = useServerFn(addInspection);
+  const delFn = useServerFn(deleteInspection);
+  const qc = useQueryClient();
+  const [type, setType] = useState("");
+  const [date, setDate] = useState("");
+  const [inspector, setInspector] = useState("");
+
+  const q = useQuery({ queryKey: ["inspections", projectId], queryFn: () => listFn({ data: { project_id: projectId } }) });
+
+  useEffect(() => {
+    const ch = supabase
+      .channel(`insp:${projectId}`)
+      .on("postgres_changes", { event: "*", schema: "public", table: "inspections", filter: `project_id=eq.${projectId}` },
+        () => qc.invalidateQueries({ queryKey: ["inspections", projectId] }))
+      .subscribe();
+    return () => { supabase.removeChannel(ch); };
+  }, [projectId, qc]);
+
+  const add = useMutation({
+    mutationFn: () => addFn({ data: { project_id: projectId, inspection_type: type.trim(), scheduled_date: date || null, inspector } }),
+    onSuccess: () => { setType(""); setDate(""); setInspector(""); toast.success("Inspection scheduled"); },
+    onError: (e) => toast.error(e instanceof Error ? e.message : "Failed"),
+  });
+  const del = useMutation({
+    mutationFn: (id: string) => delFn({ data: { id } }),
+    onSuccess: () => qc.invalidateQueries({ queryKey: ["inspections", projectId] }),
+  });
+
+  const rows = (q.data ?? []) as InspectionRow[];
+  const statusColor: Record<string, string> = {
+    scheduled: "bg-blue-500/15 text-blue-700 dark:text-blue-300",
+    passed: "bg-emerald-500/15 text-emerald-700 dark:text-emerald-300",
+    failed: "bg-destructive/15 text-destructive",
+    rescheduled: "bg-amber-500/15 text-amber-700 dark:text-amber-300",
+    canceled: "bg-muted text-muted-foreground",
+  };
+
+  return (
+    <div className="space-y-4">
+      <div>
+        <p className="text-sm font-semibold">On-site inspections</p>
+        <p className="text-xs text-muted-foreground">Tap any inspection to enter mobile Inspection Mode.</p>
+      </div>
+
+      {rows.length === 0 ? (
+        <div className="p-6 text-center rounded-xl border border-dashed border-border text-sm text-muted-foreground">No inspections yet.</div>
+      ) : (
+        <ul className="space-y-2">
+          {rows.map((i) => (
+            <li key={i.id} className="p-3 bg-card ring-1 ring-black/5 rounded-xl flex items-center gap-3">
+              <Link to="/inspections/$id" params={{ id: i.id }} className="flex-1 min-w-0">
+                <p className="text-sm font-medium truncate">{i.inspection_type}</p>
+                <p className="text-[11px] font-mono uppercase text-muted-foreground">
+                  {i.scheduled_date ? format(new Date(i.scheduled_date), "MMM d, yyyy") : "unscheduled"}
+                  {i.inspector ? ` · ${i.inspector}` : ""}
+                </p>
+              </Link>
+              <span className={`text-[9px] font-mono uppercase tracking-widest px-1.5 py-0.5 rounded ${statusColor[i.status] ?? "bg-muted"}`}>{i.status}</span>
+              <button onClick={() => del.mutate(i.id)} className="text-muted-foreground hover:text-destructive" aria-label="Delete">
+                <Trash2 className="size-4" />
+              </button>
+            </li>
+          ))}
+        </ul>
+      )}
+
+      <form
+        onSubmit={(e) => { e.preventDefault(); if (type.trim()) add.mutate(); }}
+        className="space-y-2 p-3 bg-card ring-1 ring-black/5 rounded-xl"
+      >
+        <input
+          value={type} onChange={(e) => setType(e.target.value)}
+          placeholder="Inspection type (e.g. Rough Electrical)"
+          className="w-full h-10 px-3 rounded-lg bg-background ring-1 ring-black/5 text-sm outline-none focus:ring-brand"
+        />
+        <div className="flex gap-2">
+          <input type="date" value={date} onChange={(e) => setDate(e.target.value)}
+            className="flex-1 h-10 px-3 rounded-lg bg-background ring-1 ring-black/5 text-sm outline-none focus:ring-brand" />
+          <input value={inspector} onChange={(e) => setInspector(e.target.value)}
+            placeholder="Inspector"
+            className="flex-1 h-10 px-3 rounded-lg bg-background ring-1 ring-black/5 text-sm outline-none focus:ring-brand" />
+        </div>
+        <button disabled={add.isPending || !type.trim()}
+          className="w-full h-10 rounded-lg bg-primary text-primary-foreground text-sm font-semibold disabled:opacity-50">
+          Schedule inspection
+        </button>
+      </form>
+    </div>
+  );
+}
