@@ -64,7 +64,9 @@ import { formatDistanceToNow, format } from "date-fns";
 import ReactMarkdown from "react-markdown";
 import remarkGfm from "remark-gfm";
 import { useState, useRef, useEffect, useMemo } from "react";
-import { findPortalDeepLinks } from "@/lib/portalRegistry";
+import { findPortalDeepLinks, buildEntryFromMapping } from "@/lib/portalRegistry";
+import { listPortalMappings } from "@/lib/portals.functions";
+
 
 import { supabase } from "@/integrations/supabase/client";
 
