@@ -482,27 +482,6 @@ function computePortfolio(
   return { healthScore: score, atRisk, avgProgress };
 }
 
-function pickInsight(
-  projects: { name: string; status: string; current_stage: number }[],
-  urgent: { days: number; title: string; projects?: { name?: string } | null }[],
-): string {
-  const overdue = urgent.find((u) => u.days < 0);
-  if (overdue) {
-    return `${overdue.title} is ${Math.abs(overdue.days)} day${Math.abs(overdue.days) === 1 ? "" : "s"} past due. Draft a status update to the reviewer and log the correction path today to keep the cycle moving.`;
-  }
-  const soon = urgent.find((u) => u.days >= 0 && u.days <= 3);
-  if (soon) {
-    return `${soon.title} is due in ${soon.days} day${soon.days === 1 ? "" : "s"}. Confirm the responsible party and prep the submission package before end of day.`;
-  }
-  if (projects.length === 0) {
-    return "Add your first project to unlock AI-generated permit roadmaps, jurisdiction checklists, and review-cycle risk analysis.";
-  }
-  const inReview = projects.find((p) => p.status?.toLowerCase().includes("review"));
-  if (inReview) {
-    return `${inReview.name} is in review. Ask the assistant to summarize likely reviewer comments for this jurisdiction and pre-draft your correction response.`;
-  }
-  return "All active projects are on-track. Ask the AI Assistant to forecast next-cycle risks and suggest which submission to accelerate.";
-}
 
 /* ---------- create dialog ---------- */
 
