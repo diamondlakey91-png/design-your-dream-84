@@ -254,3 +254,259 @@ export const clearChat = createServerFn({ method: "POST" })
     return { ok: true };
   });
 
+// ---- Permit checklist ----
+export const listPermitItems = createServerFn({ method: "GET" })
+  .middleware([requireSupabaseAuth])
+  .inputValidator((input: unknown) => z.object({ project_id: z.string().uuid() }).parse(input))
+  .handler(async ({ data, context }) => {
+    const { data: rows, error } = await context.supabase
+      .from("permit_items")
+      .select("*")
+      .eq("project_id", data.project_id)
+      .order("sort_order", { ascending: true })
+      .order("created_at", { ascending: true });
+    if (error) throw new Error(error.message);
+    return rows ?? [];
+  });
+
+const PERMIT_STATUSES = ["not_started", "submitted", "under_review", "approved", "issued"] as const;
+
+export const updatePermitItem = createServerFn({ method: "POST" })
+  .middleware([requireSupabaseAuth])
+  .inputValidator((input: unknown) =>
+    z.object({
+      id: z.string().uuid(),
+      status: z.enum(PERMIT_STATUSES).optional(),
+      notes: z.string().max(2000).optional(),
+      due_date: z.string().nullable().optional(),
+    }).parse(input),
+  )
+  .handler(async ({ data, context }) => {
+    const patch: { status?: string; notes?: string; due_date?: string | null } = {};
+    if (data.status) patch.status = data.status;
+    if (data.notes !== undefined) patch.notes = data.notes;
+    if (data.due_date !== undefined) patch.due_date = data.due_date;
+    const { data: row, error } = await context.supabase
+      .from("permit_items").update(patch).eq("id", data.id).select("*").single();
+    if (error) throw new Error(error.message);
+    if (data.status) {
+      await context.supabase.from("activity").insert({
+        user_id: context.userId,
+        project_id: row.project_id,
+        description: `${row.name} → ${data.status.replace(/_/g, " ")}`,
+      });
+    }
+    return row;
+  });
+
+export const addPermitItem = createServerFn({ method: "POST" })
+  .middleware([requireSupabaseAuth])
+  .inputValidator((input: unknown) =>
+    z.object({
+      project_id: z.string().uuid(),
+      name: z.string().min(1).max(200),
+      category: z.string().max(80).default("Building"),
+      required: z.boolean().default(true),
+      due_date: z.string().nullable().optional(),
+    }).parse(input),
+  )
+  .handler(async ({ data, context }) => {
+    const { data: row, error } = await context.supabase
+      .from("permit_items")
+      .insert({
+        user_id: context.userId,
+        project_id: data.project_id,
+        name: data.name,
+        category: data.category,
+        required: data.required,
+        due_date: data.due_date ?? null,
+      })
+      .select("*").single();
+    if (error) throw new Error(error.message);
+    return row;
+  });
+
+export const deletePermitItem = createServerFn({ method: "POST" })
+  .middleware([requireSupabaseAuth])
+  .inputValidator((input: unknown) => z.object({ id: z.string().uuid() }).parse(input))
+  .handler(async ({ data, context }) => {
+    const { error } = await context.supabase.from("permit_items").delete().eq("id", data.id);
+    if (error) throw new Error(error.message);
+    return { ok: true };
+  });
+
+// AI checklist generation
+const ChecklistItemSchema = z.object({
+  name: z.string(),
+  category: z.string(),
+  required: z.boolean(),
+  why: z.string().optional(),
+});
+
+export const generatePermitChecklist = createServerFn({ method: "POST" })
+  .middleware([requireSupabaseAuth])
+  .inputValidator((input: unknown) => z.object({ project_id: z.string().uuid() }).parse(input))
+  .handler(async ({ data, context }) => {
+    const apiKey = process.env.LOVABLE_API_KEY;
+    if (!apiKey) throw new Error("AI is not configured");
+    const { data: p } = await context.supabase
+      .from("projects").select("*").eq("id", data.project_id).maybeSingle();
+    if (!p) throw new Error("Project not found");
+
+    const prompt = `Generate a permit checklist for this project. Return ONLY valid JSON, no prose.
+
+Project: ${p.name}
+Type: ${p.project_type}
+Location: ${p.location || "unspecified"}
+Jurisdiction: ${p.jurisdiction || "unspecified"}
+
+Return this JSON shape:
+{"items":[{"name":"Building Permit","category":"Building","required":true,"why":"..."}]}
+
+Rules:
+- 6 to 12 items, in chronological order (pre-construction → construction → occupancy).
+- category is one of: Building, MEP, Fire, Health, Zoning, Sign, Right-of-Way, Grading, Demolition, Stormwater, Historic, Environmental, Occupancy.
+- required=true for likely-required, false for conditional.
+- name is the specific permit/approval name; where jurisdiction is known, use the local term (e.g. "LADBS Building Permit", "NYC DOB PW1 Filing").
+- why is one short clause explaining trigger.`;
+
+    const raw = await callLovableAI(apiKey, [
+      { role: "system", content: SYSTEM_PROMPT },
+      { role: "user", content: prompt },
+    ]);
+    // Strip fences
+    const cleaned = raw.replace(/```json|```/g, "").trim();
+    const jsonStart = cleaned.indexOf("{");
+    const jsonEnd = cleaned.lastIndexOf("}");
+    let parsed: { items: Array<z.infer<typeof ChecklistItemSchema>> };
+    try {
+      parsed = JSON.parse(cleaned.slice(jsonStart, jsonEnd + 1));
+    } catch {
+      throw new Error("AI returned unparseable checklist. Try again.");
+    }
+    const items = z.object({ items: z.array(ChecklistItemSchema).min(1).max(20) }).parse(parsed).items;
+
+    // Replace existing checklist
+    await context.supabase.from("permit_items").delete().eq("project_id", data.project_id);
+
+    const rows = items.map((it, idx) => ({
+      user_id: context.userId,
+      project_id: data.project_id,
+      name: it.name,
+      category: it.category,
+      required: it.required,
+      notes: it.why ?? "",
+      sort_order: idx,
+    }));
+    const { data: inserted, error } = await context.supabase
+      .from("permit_items").insert(rows).select("*");
+    if (error) throw new Error(error.message);
+
+    await context.supabase.from("activity").insert({
+      user_id: context.userId,
+      project_id: data.project_id,
+      description: `AI generated ${inserted.length} checklist items.`,
+    });
+    return inserted;
+  });
+
+// ---- Documents ----
+export const listDocuments = createServerFn({ method: "GET" })
+  .middleware([requireSupabaseAuth])
+  .inputValidator((input: unknown) => z.object({ project_id: z.string().uuid() }).parse(input))
+  .handler(async ({ data, context }) => {
+    const { data: rows, error } = await context.supabase
+      .from("project_documents")
+      .select("*")
+      .eq("project_id", data.project_id)
+      .order("created_at", { ascending: false });
+    if (error) throw new Error(error.message);
+    // Sign URLs for each
+    const withUrls = await Promise.all(
+      (rows ?? []).map(async (r) => {
+        const { data: signed } = await context.supabase
+          .storage.from("project-docs").createSignedUrl(r.storage_path, 3600);
+        return { ...r, url: signed?.signedUrl ?? null };
+      }),
+    );
+    return withUrls;
+  });
+
+export const registerDocument = createServerFn({ method: "POST" })
+  .middleware([requireSupabaseAuth])
+  .inputValidator((input: unknown) =>
+    z.object({
+      project_id: z.string().uuid(),
+      name: z.string().min(1).max(300),
+      storage_path: z.string().min(1).max(500),
+      mime_type: z.string().max(120).default(""),
+      size_bytes: z.number().int().min(0).default(0),
+    }).parse(input),
+  )
+  .handler(async ({ data, context }) => {
+    const { data: row, error } = await context.supabase
+      .from("project_documents")
+      .insert({
+        user_id: context.userId,
+        project_id: data.project_id,
+        name: data.name,
+        storage_path: data.storage_path,
+        mime_type: data.mime_type,
+        size_bytes: data.size_bytes,
+      })
+      .select("*").single();
+    if (error) throw new Error(error.message);
+    await context.supabase.from("activity").insert({
+      user_id: context.userId,
+      project_id: data.project_id,
+      description: `Uploaded document: ${data.name}`,
+    });
+    return row;
+  });
+
+export const deleteDocument = createServerFn({ method: "POST" })
+  .middleware([requireSupabaseAuth])
+  .inputValidator((input: unknown) => z.object({ id: z.string().uuid() }).parse(input))
+  .handler(async ({ data, context }) => {
+    const { data: row } = await context.supabase
+      .from("project_documents").select("*").eq("id", data.id).maybeSingle();
+    if (!row) return { ok: true };
+    await context.supabase.storage.from("project-docs").remove([row.storage_path]);
+    const { error } = await context.supabase.from("project_documents").delete().eq("id", data.id);
+    if (error) throw new Error(error.message);
+    return { ok: true };
+  });
+
+// ---- Deadlines management ----
+export const addDeadline = createServerFn({ method: "POST" })
+  .middleware([requireSupabaseAuth])
+  .inputValidator((input: unknown) =>
+    z.object({
+      project_id: z.string().uuid(),
+      title: z.string().min(1).max(200),
+      due_date: z.string(),
+    }).parse(input),
+  )
+  .handler(async ({ data, context }) => {
+    const { data: row, error } = await context.supabase
+      .from("deadlines")
+      .insert({
+        user_id: context.userId,
+        project_id: data.project_id,
+        title: data.title,
+        due_date: data.due_date,
+      })
+      .select("*").single();
+    if (error) throw new Error(error.message);
+    return row;
+  });
+
+export const deleteDeadline = createServerFn({ method: "POST" })
+  .middleware([requireSupabaseAuth])
+  .inputValidator((input: unknown) => z.object({ id: z.string().uuid() }).parse(input))
+  .handler(async ({ data, context }) => {
+    const { error } = await context.supabase.from("deadlines").delete().eq("id", data.id);
+    if (error) throw new Error(error.message);
+    return { ok: true };
+  });
+
