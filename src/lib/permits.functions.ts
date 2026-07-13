@@ -1318,18 +1318,28 @@ function toSlug(s: string) {
 
 export const listJurisdictionProfiles = createServerFn({ method: "GET" })
   .middleware([requireSupabaseAuth])
-  .inputValidator((input: unknown) => z.object({ q: z.string().max(120).optional().default("") }).parse(input))
+  .inputValidator((input: unknown) => z.object({
+    q: z.string().max(120).optional().default(""),
+    state: z.string().max(4).optional().default(""),
+    jurisdiction_type: z.string().max(40).optional().default(""),
+    verified_only: z.boolean().optional().default(false),
+  }).parse(input))
   .handler(async ({ data, context }) => {
     let query = context.supabase
       .from("jurisdiction_profiles")
-      .select("id, slug, name, state, department, portal_url, refreshed_at, updated_at")
+      .select("id, slug, name, state, county, jurisdiction_type, department, portal_url, gov_website, verification_status, last_verified_date, confidence, is_demo, permit_categories, refreshed_at, updated_at")
+      .order("is_demo", { ascending: false })
       .order("updated_at", { ascending: false })
-      .limit(50);
-    if (data.q) query = query.ilike("name", `%${data.q}%`);
+      .limit(100);
+    if (data.q) query = query.or(`name.ilike.%${data.q}%,county.ilike.%${data.q}%,department.ilike.%${data.q}%`);
+    if (data.state) query = query.eq("state", data.state.toUpperCase());
+    if (data.jurisdiction_type) query = query.eq("jurisdiction_type", data.jurisdiction_type);
+    if (data.verified_only) query = query.in("verification_status", ["verified", "recently_verified"]);
     const { data: rows, error } = await query;
     if (error) throw new Error(error.message);
     return rows ?? [];
   });
+
 
 export const getJurisdictionProfile = createServerFn({ method: "GET" })
   .middleware([requireSupabaseAuth])
@@ -4195,5 +4205,210 @@ export const analysisToDeadlines = createServerFn({ method: "POST" })
       const { error } = await context.supabase.from("deadlines").insert(rows);
       if (error) throw new Error(error.message);
     }
+    return { count: rows.length };
+  });
+
+
+// ---- Jurisdiction Library: saved + requests + seed ----
+
+export const listSavedJurisdictions = createServerFn({ method: "GET" })
+  .middleware([requireSupabaseAuth])
+  .handler(async ({ context }) => {
+    const { data, error } = await context.supabase
+      .from("saved_jurisdictions")
+      .select("id, jurisdiction_id, pinned, notes, updated_at, jurisdiction:jurisdiction_profiles(id, slug, name, state, county, jurisdiction_type, verification_status, last_verified_date, is_demo)")
+      .order("pinned", { ascending: false })
+      .order("updated_at", { ascending: false });
+    if (error) throw new Error(error.message);
+    return data ?? [];
+  });
+
+export const toggleSaveJurisdiction = createServerFn({ method: "POST" })
+  .middleware([requireSupabaseAuth])
+  .inputValidator((input: unknown) => z.object({ jurisdiction_id: z.string().uuid() }).parse(input))
+  .handler(async ({ data, context }) => {
+    const { data: existing } = await context.supabase
+      .from("saved_jurisdictions").select("id")
+      .eq("user_id", context.userId).eq("jurisdiction_id", data.jurisdiction_id).maybeSingle();
+    if (existing) {
+      await context.supabase.from("saved_jurisdictions").delete().eq("id", existing.id);
+      return { saved: false };
+    }
+    const { error } = await context.supabase
+      .from("saved_jurisdictions")
+      .insert({ user_id: context.userId, jurisdiction_id: data.jurisdiction_id });
+    if (error) throw new Error(error.message);
+    return { saved: true };
+  });
+
+export const updateSavedJurisdiction = createServerFn({ method: "POST" })
+  .middleware([requireSupabaseAuth])
+  .inputValidator((input: unknown) => z.object({
+    jurisdiction_id: z.string().uuid(),
+    pinned: z.boolean().optional(),
+    notes: z.string().max(4000).optional(),
+  }).parse(input))
+  .handler(async ({ data, context }) => {
+    const patch: { pinned?: boolean; notes?: string } = {};
+    if (typeof data.pinned === "boolean") patch.pinned = data.pinned;
+    if (typeof data.notes === "string") patch.notes = data.notes;
+    if (Object.keys(patch).length === 0) return { ok: true };
+    const { error } = await context.supabase
+      .from("saved_jurisdictions").update(patch)
+      .eq("user_id", context.userId).eq("jurisdiction_id", data.jurisdiction_id);
+    if (error) throw new Error(error.message);
+
+    return { ok: true };
+  });
+
+export const listJurisdictionRequests = createServerFn({ method: "GET" })
+  .middleware([requireSupabaseAuth])
+  .handler(async ({ context }) => {
+    const { data, error } = await context.supabase
+      .from("jurisdiction_requests").select("*")
+      .order("created_at", { ascending: false }).limit(50);
+    if (error) throw new Error(error.message);
+    return data ?? [];
+  });
+
+export const createJurisdictionRequest = createServerFn({ method: "POST" })
+  .middleware([requireSupabaseAuth])
+  .inputValidator((input: unknown) => z.object({
+    jurisdiction_name: z.string().trim().min(2).max(160),
+    state: z.string().trim().max(4).default(""),
+    county: z.string().trim().max(120).default(""),
+    project_address: z.string().trim().max(240).default(""),
+    permit_type: z.string().trim().max(120).default(""),
+    project_type: z.string().trim().max(120).default(""),
+    priority: z.enum(["low", "normal", "high", "urgent"]).default("normal"),
+    notes: z.string().max(2000).default(""),
+  }).parse(input))
+  .handler(async ({ data, context }) => {
+    const { data: row, error } = await context.supabase
+      .from("jurisdiction_requests")
+      .insert({ ...data, state: data.state.toUpperCase(), user_id: context.userId })
+      .select("*").single();
+    if (error) throw new Error(error.message);
+    return row;
+  });
+
+// Seed demonstration jurisdictions (idempotent, per-user creator)
+export const seedDemoJurisdictions = createServerFn({ method: "POST" })
+  .middleware([requireSupabaseAuth])
+  .handler(async ({ context }) => {
+    const demos = [
+      {
+        slug: "arlington-county-va",
+        name: "Arlington County, VA",
+        state: "VA", county: "Arlington County",
+        jurisdiction_type: "county",
+        department: "Department of Community Planning, Housing and Development — Inspection Services",
+        portal_url: "https://aca-prod.accela.com/ARLINGTONCO/Default.aspx",
+        gov_website: "https://www.arlingtonva.us/Government/Programs/Building",
+        phone: "703-228-3800",
+        email: "inspections@arlingtonva.us",
+        office_address: "2100 Clarendon Blvd, Arlington, VA 22201",
+        office_hours: "Mon–Fri, 8:00 AM – 5:00 PM",
+        overview: "Arlington County reviews and issues building, trade, land-disturbing, and certificate-of-occupancy permits through the Inspection Services Division. Most applications are filed through the Accela Citizen Access portal.",
+      },
+      {
+        slug: "montgomery-county-md",
+        name: "Montgomery County, MD",
+        state: "MD", county: "Montgomery County",
+        jurisdiction_type: "county",
+        department: "Department of Permitting Services (DPS)",
+        portal_url: "https://eplans.montgomerycountymd.gov/",
+        gov_website: "https://www.montgomerycountymd.gov/dps/",
+        phone: "311 (or 240-777-0311)",
+        email: "mc311@montgomerycountymd.gov",
+        office_address: "2425 Reedie Dr, 7th Floor, Wheaton, MD 20902",
+        office_hours: "Mon–Fri, 7:30 AM – 4:00 PM",
+        overview: "Montgomery County DPS handles building, electrical, mechanical, sediment control, right-of-way, and use-and-occupancy permits. Plans are submitted through the ePlans / ePermits system.",
+      },
+      {
+        slug: "prince-georges-county-md",
+        name: "Prince George's County, MD",
+        state: "MD", county: "Prince George's County",
+        jurisdiction_type: "county",
+        department: "Department of Permitting, Inspections and Enforcement (DPIE)",
+        portal_url: "https://mypermits.princegeorgescountymd.gov/",
+        gov_website: "https://www.princegeorgescountymd.gov/government/departments-offices/permitting-inspections-enforcement",
+        phone: "301-636-2050",
+        email: "dpie@co.pg.md.us",
+        office_address: "9400 Peppercorn Pl, Largo, MD 20774",
+        office_hours: "Mon–Fri, 8:00 AM – 4:00 PM",
+        overview: "DPIE issues building, grading, use-and-occupancy, and health permits for Prince George's County. Most permits are filed through the MyPermits online portal.",
+      },
+      {
+        slug: "washington-dc",
+        name: "Washington, DC",
+        state: "DC", county: "District of Columbia",
+        jurisdiction_type: "district",
+        department: "Department of Buildings (DOB)",
+        portal_url: "https://dob.dc.gov/service/permit-wizard",
+        gov_website: "https://dob.dc.gov/",
+        phone: "202-671-3500",
+        email: "dob@dc.gov",
+        office_address: "1100 4th St SW, Washington, DC 20024",
+        office_hours: "Mon–Fri, 8:30 AM – 4:30 PM",
+        overview: "The DC Department of Buildings issues construction, trade, and certificate-of-occupancy permits. Applications are filed through DOB's ProjectDox / Permit Wizard system.",
+      },
+      {
+        slug: "tampa-fl",
+        name: "Tampa, FL",
+        state: "FL", county: "Hillsborough County",
+        jurisdiction_type: "city",
+        department: "Construction Services Division",
+        portal_url: "https://aca-prod.accela.com/TAMPA/Default.aspx",
+        gov_website: "https://www.tampa.gov/development-and-economic-opportunity/programs/construction-services",
+        phone: "813-274-3100",
+        email: "constructionservices@tampagov.net",
+        office_address: "1400 N Boulevard, Tampa, FL 33607",
+        office_hours: "Mon–Fri, 8:00 AM – 5:00 PM",
+        overview: "City of Tampa Construction Services reviews building, electrical, mechanical, plumbing, and sign permits within city limits. Filings run through the Accela Citizen Access portal.",
+      },
+    ];
+
+    const commonPermits = [
+      { name: "Commercial Building Permit", department: "Building", verification_status: "unverified" },
+      { name: "Tenant Improvement", department: "Building", verification_status: "unverified" },
+      { name: "Mechanical / Electrical / Plumbing", department: "Building", verification_status: "unverified" },
+      { name: "Fire Protection", department: "Fire", verification_status: "unverified" },
+      { name: "Sign Permit", department: "Zoning", verification_status: "unverified" },
+      { name: "Certificate of Occupancy", department: "Building", verification_status: "unverified" },
+    ];
+
+    const rows = demos.map((d) => ({
+      ...d,
+      created_by: context.userId,
+      is_demo: true,
+      verification_status: "demo",
+      confidence: "demo",
+      last_verified_date: null,
+      permits: [],
+      fees: [],
+      timelines: [],
+      contacts: [],
+      source_urls: [d.gov_website, d.portal_url].filter(Boolean),
+      departments: [
+        { name: "Building", responsibility: "Building & trade permits, inspections", webpage: d.gov_website, portal: d.portal_url },
+        { name: "Planning / Zoning", responsibility: "Zoning approval, site plan, signs", webpage: d.gov_website },
+        { name: "Fire", responsibility: "Fire protection & life safety review", webpage: d.gov_website },
+        { name: "Certificate of Occupancy", responsibility: "Final approval after inspections", webpage: d.gov_website },
+      ],
+      permit_categories: commonPermits,
+      submission_portals: [{
+        name: d.portal_url.includes("accela") ? "Accela Citizen Access" : "Official permit portal",
+        agency: d.department, url: d.portal_url,
+        account_required: true, online_submission: true, payment: true, inspection_scheduling: true, status_tracking: true,
+      }],
+      requirements: [],
+      sources: [{ title: "Official department page", agency: d.department, url: d.gov_website, accessed_at: new Date().toISOString().slice(0, 10) }],
+    }));
+
+    const { error } = await context.supabase
+      .from("jurisdiction_profiles")
+      .upsert(rows, { onConflict: "slug" });
+    if (error) throw new Error(error.message);
     return { count: rows.length };
   });
