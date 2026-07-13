@@ -678,7 +678,7 @@ function LiveJurisdictionSync({ projectId, jurisdiction }: { projectId: string; 
 
   const q = useQuery({
     queryKey: ["jurisdiction_syncs", projectId],
-    queryFn: () => listFn({ data: { project_id: projectId } }) as Promise<SyncRow[]>,
+    queryFn: () => listFn({ data: { project_id: projectId } }) as unknown as Promise<SyncRow[]>,
   });
 
   useEffect(() => {
