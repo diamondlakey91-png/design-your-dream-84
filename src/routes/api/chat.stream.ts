@@ -89,9 +89,17 @@ export const Route = createFileRoute("/api/chat/stream")({
         const content = (body.content ?? "").trim();
         if (!threadId || !content) return new Response("Missing thread_id or content", { status: 400 });
 
-        const { data: thread } = await supabase
+        let { data: thread } = await supabase
           .from("chat_threads").select("*, projects(*)").eq("id", threadId).maybeSingle();
-        if (!thread) return new Response("Thread not found", { status: 404 });
+        if (!thread) {
+          // Auto-provision missing thread (URL may point to a thread that was never persisted).
+          const { data: created, error: cerr } = await supabase
+            .from("chat_threads")
+            .insert({ id: threadId, user_id: userId, title: "New chat" })
+            .select("*, projects(*)").single();
+          if (cerr || !created) return new Response(cerr?.message || "Thread not found", { status: 500 });
+          thread = created;
+        }
 
         const { data: history } = await supabase
           .from("chat_messages")
