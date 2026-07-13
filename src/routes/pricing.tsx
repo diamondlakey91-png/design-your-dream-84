@@ -229,9 +229,12 @@ function PricingPage() {
                 <div className="text-4xl font-semibold">
                   {founding.price}<span className="text-base font-normal text-muted-foreground">{founding.cadence}</span>
                 </div>
-                <Link to={founding.href} className="mt-3 inline-flex h-11 items-center gap-2 rounded-lg bg-brand px-5 text-sm font-semibold text-brand-foreground">
+                <button
+                  onClick={() => startCheckout(founding.priceId)}
+                  className="mt-3 inline-flex h-11 items-center gap-2 rounded-lg bg-brand px-5 text-sm font-semibold text-brand-foreground"
+                >
                   {founding.cta} <ArrowRight className="size-4" />
-                </Link>
+                </button>
               </div>
             </div>
             <ul className="mt-6 grid gap-2 sm:grid-cols-2">
