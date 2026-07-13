@@ -498,7 +498,8 @@ function DocRow({ doc, projectId, onDelete }: { doc: { id: string; name: string;
     overall_summary?: string;
     overall_risk?: "low"|"medium"|"high";
     sheets_detected?: string[];
-    findings?: Array<{ category: string; severity: "low"|"medium"|"high"; title: string; detail: string; code_reference?: string; sheet_reference?: string; recommendation?: string }>;
+    jurisdiction_context?: { jurisdiction?: string; applied_amendments?: string[]; source_urls?: string[] };
+    findings?: Array<{ category: string; severity: "low"|"medium"|"high"; title: string; detail: string; code_reference?: string; local_amendment?: string; sheet_reference?: string; recommendation?: string }>;
   } : null;
   const findings = pr?.findings ?? [];
   const categoryLabel: Record<string, string> = {
