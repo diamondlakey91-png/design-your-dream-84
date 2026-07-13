@@ -116,9 +116,17 @@ function Landing() {
       {/* Feature strip */}
       <section
         id="features"
-        className="border-y border-blue-500/10 bg-gradient-to-b from-white/[0.02] to-transparent"
+        className="relative border-y border-blue-500/20 bg-gradient-to-b from-blue-950/20 via-transparent to-blue-950/20"
       >
-        <div className="mx-auto grid max-w-7xl gap-px bg-blue-500/10 md:grid-cols-3">
+        <div
+          aria-hidden
+          className="pointer-events-none absolute inset-0 -z-10"
+          style={{
+            background:
+              "radial-gradient(50rem 30rem at 20% 50%, rgba(59,130,246,0.15), transparent 60%), radial-gradient(50rem 30rem at 80% 50%, rgba(139,92,246,0.10), transparent 60%)",
+          }}
+        />
+        <div className="mx-auto grid max-w-7xl gap-px bg-blue-500/15 md:grid-cols-3">
           {[
             {
               icon: ClipboardList,
@@ -139,23 +147,67 @@ function Landing() {
               body: "Every deadline surfaces on the dashboard, sorted by urgency.",
             },
           ].map((f) => (
-            <div key={f.title} className="bg-[#04070f] p-8">
-              <div className="mb-4 inline-flex size-10 items-center justify-center rounded-lg bg-blue-500/15 text-blue-400 ring-1 ring-blue-500/30">
+            <div
+              key={f.title}
+              className="group relative bg-[#04070f]/80 p-8 backdrop-blur transition hover:bg-[#050b1a]"
+            >
+              <div
+                aria-hidden
+                className="pointer-events-none absolute inset-x-0 top-0 h-px bg-gradient-to-r from-transparent via-blue-500/40 to-transparent opacity-0 transition group-hover:opacity-100"
+              />
+              <div className="mb-4 inline-flex size-10 items-center justify-center rounded-lg bg-gradient-to-br from-blue-500/25 to-blue-700/10 text-blue-300 ring-1 ring-blue-500/40 shadow-[0_0_20px_-4px_rgba(59,130,246,0.5)]">
                 <f.icon className="size-5" />
               </div>
-              <p className="font-mono text-[10px] uppercase tracking-[0.25em] text-blue-400/70">
+              <p className="font-mono text-[10px] uppercase tracking-[0.25em] text-blue-400/80">
                 {f.label}
               </p>
-              <h3 className="mt-2 text-lg font-semibold text-white">{f.title}</h3>
+              <h3 className="mt-2 bg-gradient-to-r from-white to-blue-100 bg-clip-text text-lg font-semibold text-transparent">
+                {f.title}
+              </h3>
               <p className="mt-2 text-sm text-slate-400">{f.body}</p>
             </div>
           ))}
         </div>
       </section>
 
-      <footer className="mx-auto max-w-7xl px-6 py-10">
-        <div className="flex flex-wrap items-center justify-between gap-4 font-mono text-[11px] uppercase tracking-[0.25em] text-slate-500">
-          <span>© Permivio</span>
+      {/* CTA band */}
+      <section className="relative overflow-hidden">
+        <div
+          aria-hidden
+          className="pointer-events-none absolute inset-0 -z-10"
+          style={{
+            background:
+              "radial-gradient(50rem 30rem at 50% 100%, rgba(59,130,246,0.25), transparent 60%), radial-gradient(40rem 30rem at 50% 0%, rgba(139,92,246,0.15), transparent 60%)",
+          }}
+        />
+        <div className="mx-auto max-w-4xl px-6 py-24 text-center">
+          <h2 className="bg-gradient-to-b from-white via-blue-100 to-blue-500 bg-clip-text text-3xl font-bold tracking-tight text-transparent md:text-5xl">
+            Ship permits faster.
+          </h2>
+          <p className="mx-auto mt-4 max-w-xl text-pretty text-base text-blue-200/70 md:text-lg">
+            Join builders using Permivio to move projects through review — one intelligent step at a time.
+          </p>
+          <div className="mt-8 flex flex-wrap items-center justify-center gap-3">
+            <Link
+              to="/auth"
+              className="inline-flex h-12 items-center gap-2 rounded-lg bg-gradient-to-r from-blue-500 to-blue-700 px-6 text-sm font-semibold text-white shadow-[0_10px_40px_-8px_rgba(59,130,246,0.7)]"
+            >
+              Get started free <ArrowRight className="size-4" />
+            </Link>
+          </div>
+        </div>
+      </section>
+
+      <footer className="relative border-t border-blue-500/10">
+        <div
+          aria-hidden
+          className="pointer-events-none absolute inset-x-0 top-0 h-px bg-gradient-to-r from-transparent via-blue-500/50 to-transparent"
+        />
+        <div className="mx-auto flex max-w-7xl flex-wrap items-center justify-between gap-4 px-6 py-10 font-mono text-[11px] uppercase tracking-[0.25em] text-blue-400/60">
+          <div className="flex items-center gap-2.5">
+            <PermivioMark className="h-5 w-5" />
+            <span>© Permivio</span>
+          </div>
           <span>Intelligent Permitting.</span>
         </div>
       </footer>
