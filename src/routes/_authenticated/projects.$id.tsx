@@ -26,6 +26,7 @@ import {
   batchReviewPlans,
   addPlanReviewFixesToChecklist,
   draftReviewerResponse,
+  generateRedlinedPdf,
   computeProjectHealth,
   listInspections,
   addInspection,
