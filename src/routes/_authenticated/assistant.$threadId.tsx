@@ -308,14 +308,37 @@ function ThreadView() {
           ))}
 
 
-          {send.isPending && (
-            <div className="max-w-[85%]">
-              <div className="flex gap-1.5">
-                <span className="size-2 rounded-full bg-brand animate-pulse [animation-delay:0ms]" />
-                <span className="size-2 rounded-full bg-brand animate-pulse [animation-delay:150ms]" />
-                <span className="size-2 rounded-full bg-brand animate-pulse [animation-delay:300ms]" />
+          {streaming && (
+            <>
+              <div className="flex justify-end">
+                <div className="bg-brand text-brand-foreground rounded-2xl rounded-tr-none px-4 py-2.5 max-w-[85%]">
+                  <p className="text-sm whitespace-pre-wrap">{streaming.user}</p>
+                </div>
               </div>
-            </div>
+              <div className="max-w-[92%] space-y-2">
+                {streaming.assistant ? (
+                  <div
+                    className="text-sm text-zinc-200 leading-relaxed
+                      [&_p]:my-2 [&_p:first-child]:mt-0 [&_p:last-child]:mb-0
+                      [&_ul]:my-2 [&_ul]:pl-5 [&_ul]:list-disc [&_ul]:space-y-1.5
+                      [&_ol]:my-2 [&_ol]:pl-5 [&_ol]:list-decimal [&_ol]:space-y-1.5
+                      [&_li]:marker:text-brand
+                      [&_strong]:text-white [&_strong]:font-semibold
+                      [&_code]:font-mono [&_code]:text-[12px] [&_code]:bg-zinc-800 [&_code]:px-1.5 [&_code]:py-0.5 [&_code]:rounded
+                      [&_a]:text-brand [&_a]:underline [&_a]:underline-offset-2"
+                  >
+                    <ReactMarkdown remarkPlugins={[remarkGfm]}>{streaming.assistant}</ReactMarkdown>
+                    <span className="inline-block w-1.5 h-4 bg-brand/70 align-middle ml-0.5 animate-pulse" />
+                  </div>
+                ) : (
+                  <div className="flex gap-1.5">
+                    <span className="size-2 rounded-full bg-brand animate-pulse [animation-delay:0ms]" />
+                    <span className="size-2 rounded-full bg-brand animate-pulse [animation-delay:150ms]" />
+                    <span className="size-2 rounded-full bg-brand animate-pulse [animation-delay:300ms]" />
+                  </div>
+                )}
+              </div>
+            </>
           )}
 
           {messages.length === 0 && !send.isPending && (
