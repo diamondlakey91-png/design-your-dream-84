@@ -2764,6 +2764,14 @@ const PlanReviewSchema = z.object({
     local_amendment: z.string().default(""),
     sheet_reference: z.string().default(""),
     recommendation: z.string().default(""),
+    // Reviewer self-reported certainty. Findings with low confidence are shown
+    // as "needs manual verification" rather than as hard issues, and any
+    // stamp/signature/seal claim must clear a second verification pass.
+    confidence: z.enum(["low", "medium", "high"]).default("medium"),
+    // Short verbatim visual evidence the reviewer saw (e.g. "title block bottom-right
+    // is blank" or "door labeled 24\" clear"). Used to cross-check hallucinated findings.
+    evidence_quote: z.string().default(""),
+    needs_manual_verification: z.boolean().default(false),
     // Location on the plan for visual markup (page is 1-indexed; bbox is normalized 0-1
     // with origin top-left). All optional — omit when the AI can't localize the issue.
     page: z.number().int().min(1).max(500).optional(),
@@ -2775,6 +2783,19 @@ const PlanReviewSchema = z.object({
     }).optional(),
   })).max(60).default([]),
 });
+
+// Detect "no stamp / not signed / no seal / no PE" style claims that are the
+// most common false-positives in AI plan review. We re-verify these against
+// the actual drawing before letting them ship as findings.
+function isStampSignatureClaim(text: string): boolean {
+  const t = text.toLowerCase();
+  return (
+    /(unstamp|not\s+stamp|no\s+stamp|missing\s+stamp|without\s+stamp)/.test(t) ||
+    /(unsigned|not\s+signed|no\s+signature|missing\s+signature|without\s+signature)/.test(t) ||
+    /(no\s+seal|missing\s+seal|without\s+seal|unsealed)/.test(t) ||
+    /(no\s+(pe|ra|architect|engineer)\s+(stamp|seal|signature))/.test(t)
+  );
+}
 
 // Fetch jurisdiction-specific code amendments (works for any of 20k+ US jurisdictions).
 // Returns a compact markdown context block or "" if nothing usable was found.
