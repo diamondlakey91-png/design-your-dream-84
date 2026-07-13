@@ -1507,15 +1507,48 @@ export const lookupPermitsByAddress = createServerFn({ method: "POST" })
     }
     const portal = portalHits.find((h) => /(\.gov|accela|energov|opengov|citizenserve|permitium|mygovernmentonline|viewpointcloud)/i.test(h.url)) ?? portalHits[0];
 
-    // 3. Search the web for permit records at this specific address.
-    const addressQuery = `"${addr}" permit ${jurisdictionGuess} site:.gov OR accela OR energov OR opengov OR citizenserve`;
-    const addressHits = await firecrawlSearch(fcKey, addressQuery, 6).catch(() => []);
+    // 2b. Known-jurisdiction direct search URLs. Many municipal portals (Accela,
+    // EnerGov, etc.) do not expose individual permit records to Google, so
+    // address-only web search misses active applications. For jurisdictions we
+    // know, hit the portal's own search endpoint directly.
+    const directSearchUrls = buildDirectPortalSearchUrls(jurisdictionGuess, addr);
 
-    // 4. Scrape portal landing + top address hits.
+    // 3. Search the web for permit records at this specific address.
+    // Try multiple address variants to catch differing portal formats.
+    const streetOnly = addr.replace(/,.*$/, "").trim(); // "1603 Whetstone Way"
+    const cityState = jurisdictionGuess;
+    const addressQueries = [
+      `"${addr}" permit ${cityState}`,
+      `"${streetOnly}" permit ${cityState} site:.gov`,
+      `"${streetOnly}" ${cityState} accela OR energov OR opengov OR citizenserve OR permits`,
+    ];
+    const addressHitsNested = await Promise.all(
+      addressQueries.map((q) => firecrawlSearch(fcKey, q, 5).catch(() => [])),
+    );
+    const seenUrls = new Set<string>();
+    const addressHits = addressHitsNested.flat().filter((h) => {
+      if (seenUrls.has(h.url)) return false;
+      seenUrls.add(h.url);
+      return true;
+    });
+
+    // 4. Scrape portal landing + direct portal search URLs + top address hits.
     const portalScrape = await firecrawlScrape(fcKey, portal.url).catch(() => ({ markdown: "", title: "" }));
+    const directScrapes = (
+      await Promise.all(
+        directSearchUrls.map(async (u) => {
+          try {
+            const s = await firecrawlScrape(fcKey, u);
+            return `DIRECT PORTAL SEARCH: ${u}\n${s.markdown.slice(0, 4000)}`;
+          } catch {
+            return "";
+          }
+        }),
+      )
+    ).filter(Boolean).join("\n\n---\n\n");
     const addressScrapes = (
       await Promise.all(
-        addressHits.slice(0, 3).map(async (h) => {
+        addressHits.slice(0, 4).map(async (h) => {
           try {
             const s = await firecrawlScrape(fcKey, h.url);
             return `SOURCE: ${h.url}\nTITLE: ${h.title ?? ""}\n${s.markdown.slice(0, 2500)}`;
@@ -1525,6 +1558,7 @@ export const lookupPermitsByAddress = createServerFn({ method: "POST" })
         }),
       )
     ).join("\n\n---\n\n");
+
 
     // 5. Ask AI to extract structured permit records for this address.
     const extractionPrompt = `You are Permivio's live permit lookup. Extract permit records tied to the address below from the real source text provided. Never invent data.
