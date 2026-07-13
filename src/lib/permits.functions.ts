@@ -2172,7 +2172,9 @@ export const draftClientUpdate = createServerFn({ method: "POST" })
     audience: z.string().max(120).default("Client / owner"),
   }).parse(input))
   .handler(async ({ data, context }) => {
+    requireFeature(await getEntitlement(context.supabase, context.userId), "aiCopilot");
     const ctx = await gatherProjectContext(context.supabase, data.project_id);
+
     if (!ctx.project) throw new Error("Project not found");
     const prompt = `Draft a ${data.tone} status update email for ${data.audience} on this permit project.
 
@@ -2202,7 +2204,9 @@ export const summarizeReviewerComments = createServerFn({ method: "POST" })
   .middleware([requireSupabaseAuth])
   .inputValidator((input: unknown) => z.object({ project_id: z.string().uuid() }).parse(input))
   .handler(async ({ data, context }) => {
+    requireFeature(await getEntitlement(context.supabase, context.userId), "aiCopilot");
     const { data: docs } = await context.supabase
+
       .from("project_documents")
       .select("name, ai_summary, ai_action_items, plan_review")
       .eq("project_id", data.project_id);
@@ -2237,7 +2241,9 @@ export const generateMeetingAgenda = createServerFn({ method: "POST" })
     meeting_type: z.enum(["kickoff", "weekly_status", "pre_submittal", "review_response", "inspection_prep"]).default("weekly_status"),
   }).parse(input))
   .handler(async ({ data, context }) => {
+    requireFeature(await getEntitlement(context.supabase, context.userId), "aiCopilot");
     const ctx = await gatherProjectContext(context.supabase, data.project_id);
+
     if (!ctx.project) throw new Error("Project not found");
     const prompt = `Generate a ${data.meeting_type.replace("_", " ")} meeting agenda for this permit project.
 PROJECT: ${JSON.stringify({ name: ctx.project.name, jurisdiction: ctx.project.jurisdiction, stage: ctx.project.current_stage })}
@@ -2265,7 +2271,9 @@ export const flagScheduleRisks = createServerFn({ method: "POST" })
   .middleware([requireSupabaseAuth])
   .inputValidator((input: unknown) => z.object({ project_id: z.string().uuid() }).parse(input))
   .handler(async ({ data, context }) => {
+    requireFeature(await getEntitlement(context.supabase, context.userId), "aiCopilot");
     const ctx = await gatherProjectContext(context.supabase, data.project_id);
+
     if (!ctx.project) throw new Error("Project not found");
     const today = new Date().toISOString().slice(0, 10);
     const prompt = `Identify schedule and permitting risks for this project as of ${today}.
