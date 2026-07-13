@@ -109,7 +109,7 @@ function ProjectDetail() {
       {/* Tabs */}
       <nav className="sticky top-0 z-10 bg-background/95 backdrop-blur border-b border-border">
         <div className="flex overflow-x-auto">
-          {(["overview", "checklist", "docs", "deadlines"] as Tab[]).map((t) => (
+          {(["overview", "checklist", "docs", "deadlines", "timeline"] as Tab[]).map((t) => (
             <button
               key={t}
               onClick={() => setTab(t)}
@@ -130,6 +130,7 @@ function ProjectDetail() {
         {tab === "checklist" && <ChecklistTab projectId={id} jurisdiction={project.jurisdiction} />}
         {tab === "docs" && <DocsTab projectId={id} userId={project.user_id} />}
         {tab === "deadlines" && <DeadlinesTab projectId={id} />}
+        {tab === "timeline" && <TimelineTab projectId={id} />}
       </div>
     </AppShell>
   );
