@@ -1757,8 +1757,17 @@ function LivePermitCard({
   const linkFn = useServerFn(linkPermitToProject);
   const refreshFn = useServerFn(refreshLinkedPermit);
   const unlinkFnCall = useServerFn(unlinkPermit);
+  const historyFn = useServerFn(listPermitSyncHistory);
   const [permitNumber, setPermitNumber] = useState("");
   const [jurisdictionOverride, setJurisdictionOverride] = useState(project.jurisdiction || "");
+  const [showHistory, setShowHistory] = useState(false);
+  const [expandedRow, setExpandedRow] = useState<string | null>(null);
+
+  const historyQ = useQuery({
+    queryKey: ["permit_sync_history", project.id, project.linked_permit_synced_at ?? ""],
+    queryFn: () => historyFn({ data: { project_id: project.id, limit: 25 } }),
+    enabled: showHistory && Boolean(project.linked_permit_number),
+  });
 
   const link = useMutation({
     mutationFn: () => linkFn({ data: { project_id: project.id, permit_number: permitNumber.trim(), jurisdiction: jurisdictionOverride.trim() || undefined } }),
