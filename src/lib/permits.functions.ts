@@ -1636,7 +1636,7 @@ function buildDirectPortalSearchUrls(jurisdiction: string, address: string): str
   }
   // Virginia
   if (/arlington(\s+county)?,?\s*va/.test(j)) {
-    urls.push(`https://aca-prod.accela.com/ARLINGTON/Cap/GlobalSearchResults.aspx?QueryText=${enc}`);
+    urls.push(`https://aca-prod.accela.com/ARLINGTONCO/Cap/GlobalSearchResults.aspx?QueryText=${enc}`);
     urls.push(`https://permits.arlingtonva.us/CitizenAccess/Cap/GlobalSearchResults.aspx?QueryText=${enc}`);
   }
   if (/fairfax(\s+county)?,?\s*va/.test(j)) {
