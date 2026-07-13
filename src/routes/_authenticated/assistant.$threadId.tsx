@@ -1,4 +1,4 @@
-import { createFileRoute, Link, useNavigate } from "@tanstack/react-router";
+import { createFileRoute, useNavigate } from "@tanstack/react-router";
 import { useMutation, useQuery, useQueryClient } from "@tanstack/react-query";
 import { useServerFn } from "@tanstack/react-start";
 import {
@@ -8,8 +8,9 @@ import {
   listProjects,
   setThreadProject,
   renameThread,
+  intakeGenerateChecklist,
 } from "@/lib/permits.functions";
-import { ArrowLeft, Send, Briefcase, X, Edit3 } from "lucide-react";
+import { ArrowLeft, Send, Briefcase, X, Edit3, ClipboardList, Sparkles } from "lucide-react";
 import { useEffect, useMemo, useRef, useState } from "react";
 import { toast } from "sonner";
 import ReactMarkdown from "react-markdown";
@@ -36,8 +37,10 @@ function ThreadView() {
   const [pickerOpen, setPickerOpen] = useState(false);
   const [editingTitle, setEditingTitle] = useState(false);
   const [titleDraft, setTitleDraft] = useState("");
+  const [intakeOpen, setIntakeOpen] = useState(false);
   const scrollRef = useRef<HTMLDivElement>(null);
   const textareaRef = useRef<HTMLTextAreaElement>(null);
+  const intakeFn = useServerFn(intakeGenerateChecklist);
 
   const messagesQ = useQuery({
     queryKey: ["chat-thread", threadId],
@@ -73,6 +76,21 @@ function ThreadView() {
   const rename = useMutation({
     mutationFn: (title: string) => renameFn({ data: { id: threadId, title } }),
     onSuccess: () => qc.invalidateQueries({ queryKey: ["chat-threads"] }),
+  });
+
+  const intake = useMutation({
+    mutationFn: (payload: {
+      name: string; project_type: string; location: string; jurisdiction: string;
+      scope: string; size: string; occupancy: string; work_type: string;
+    }) => intakeFn({ data: { thread_id: threadId, ...payload } }),
+    onSuccess: (res) => {
+      toast.success(`Created "${res.project.name}" with ${res.items.length} checklist items.`);
+      setIntakeOpen(false);
+      qc.invalidateQueries({ queryKey: ["chat-thread", threadId] });
+      qc.invalidateQueries({ queryKey: ["chat-threads"] });
+      qc.invalidateQueries({ queryKey: ["projects"] });
+    },
+    onError: (e) => toast.error(e instanceof Error ? e.message : "Intake failed"),
   });
 
   useEffect(() => {
@@ -163,6 +181,15 @@ function ThreadView() {
             </button>
           )}
 
+          {!activeProject && (
+            <button
+              onClick={() => setIntakeOpen((v) => !v)}
+              className="inline-flex items-center gap-1.5 rounded-full ring-1 ring-brand/40 bg-brand/10 px-2.5 py-1 text-xs text-brand hover:bg-brand/20"
+            >
+              <ClipboardList className="size-3" /> Guided intake → checklist
+            </button>
+          )}
+
           {pickerOpen && !activeProject && (
             <div className="basis-full mt-2 rounded-lg bg-zinc-900 ring-1 ring-white/10 divide-y divide-white/5 max-h-56 overflow-y-auto">
               {projects.length === 0 && <div className="p-3 text-xs text-zinc-500">No projects yet.</div>}
@@ -178,7 +205,16 @@ function ThreadView() {
               ))}
             </div>
           )}
+
+          {intakeOpen && !activeProject && (
+            <IntakePanel
+              busy={intake.isPending}
+              onCancel={() => setIntakeOpen(false)}
+              onSubmit={(payload) => intake.mutate(payload)}
+            />
+          )}
         </div>
+
 
         <div ref={scrollRef} className="flex-1 overflow-y-auto p-6 space-y-6">
           {messages.length === 0 && !send.isPending && (
@@ -276,3 +312,116 @@ function ThreadView() {
     </div>
   );
 }
+
+type IntakePayload = {
+  name: string; project_type: string; location: string; jurisdiction: string;
+  scope: string; size: string; occupancy: string; work_type: string;
+};
+
+const PROJECT_TYPES = ["Commercial", "Residential", "Mixed-use", "Industrial", "Institutional", "Tenant Improvement", "ADU", "Other"];
+const WORK_TYPES = ["New construction", "Tenant improvement", "Renovation / alteration", "Addition", "Change of use", "Demolition", "MEP-only", "Sign only"];
+
+function IntakePanel({
+  busy,
+  onCancel,
+  onSubmit,
+}: {
+  busy: boolean;
+  onCancel: () => void;
+  onSubmit: (p: IntakePayload) => void;
+}) {
+  const [form, setForm] = useState<IntakePayload>({
+    name: "",
+    project_type: "Commercial",
+    location: "",
+    jurisdiction: "",
+    scope: "",
+    size: "",
+    occupancy: "",
+    work_type: "New construction",
+  });
+  const set = <K extends keyof IntakePayload>(k: K, v: IntakePayload[K]) => setForm((f) => ({ ...f, [k]: v }));
+
+  const canSubmit =
+    form.name.trim().length > 0 &&
+    form.location.trim().length > 0 &&
+    form.scope.trim().length >= 10 &&
+    !busy;
+
+  return (
+    <div className="basis-full mt-3 rounded-xl bg-zinc-900 ring-1 ring-white/10 p-4 space-y-3">
+      <div className="flex items-center gap-2">
+        <ClipboardList className="size-4 text-brand" />
+        <h3 className="text-sm font-semibold">Project intake</h3>
+        <span className="text-[11px] text-zinc-500 font-mono">→ instant checklist</span>
+        <button onClick={onCancel} className="ml-auto size-6 grid place-items-center rounded hover:bg-white/10" aria-label="Close intake">
+          <X className="size-3.5" />
+        </button>
+      </div>
+
+      <div className="grid grid-cols-2 gap-2">
+        <Field label="Project name *">
+          <input value={form.name} onChange={(e) => set("name", e.target.value)}
+            placeholder="Sunset Retail Center" className={inputCls} />
+        </Field>
+        <Field label="Project type">
+          <select value={form.project_type} onChange={(e) => set("project_type", e.target.value)} className={inputCls}>
+            {PROJECT_TYPES.map((t) => <option key={t} value={t}>{t}</option>)}
+          </select>
+        </Field>
+        <Field label="Location (city, state) *">
+          <input value={form.location} onChange={(e) => set("location", e.target.value)}
+            placeholder="Dallas, TX" className={inputCls} />
+        </Field>
+        <Field label="Jurisdiction / department">
+          <input value={form.jurisdiction} onChange={(e) => set("jurisdiction", e.target.value)}
+            placeholder="City of Dallas — Development Services" className={inputCls} />
+        </Field>
+        <Field label="Work type">
+          <select value={form.work_type} onChange={(e) => set("work_type", e.target.value)} className={inputCls}>
+            {WORK_TYPES.map((t) => <option key={t} value={t}>{t}</option>)}
+          </select>
+        </Field>
+        <Field label="Size (sq ft / units)">
+          <input value={form.size} onChange={(e) => set("size", e.target.value)}
+            placeholder="4,800 sq ft" className={inputCls} />
+        </Field>
+        <Field label="Occupancy / use" className="col-span-2">
+          <input value={form.occupancy} onChange={(e) => set("occupancy", e.target.value)}
+            placeholder="Restaurant (Type A-2), 60 occupants" className={inputCls} />
+        </Field>
+      </div>
+
+      <Field label="Scope of work *">
+        <textarea value={form.scope} onChange={(e) => set("scope", e.target.value)}
+          rows={4}
+          placeholder="Describe what you're building: structural changes, new MEP, exterior work, signage, site work, ADA upgrades, etc."
+          className={inputCls + " resize-none"} />
+      </Field>
+
+      <div className="flex items-center justify-between pt-1">
+        <p className="text-[11px] text-zinc-500">Creates a project, attaches it to this chat, and generates a jurisdiction-aware checklist.</p>
+        <button
+          onClick={() => onSubmit(form)}
+          disabled={!canSubmit}
+          className="inline-flex items-center gap-1.5 px-3 py-1.5 rounded-lg bg-brand text-brand-foreground text-xs font-medium disabled:opacity-40"
+        >
+          <Sparkles className="size-3.5" />
+          {busy ? "Generating…" : "Generate checklist"}
+        </button>
+      </div>
+    </div>
+  );
+}
+
+const inputCls = "w-full bg-zinc-950 ring-1 ring-white/10 rounded-md px-2.5 py-1.5 text-sm placeholder:text-zinc-600 outline-none focus:ring-brand/50";
+
+function Field({ label, children, className = "" }: { label: string; children: React.ReactNode; className?: string }) {
+  return (
+    <label className={`block ${className}`}>
+      <span className="block text-[10px] font-mono uppercase tracking-widest text-zinc-500 mb-1">{label}</span>
+      {children}
+    </label>
+  );
+}
+

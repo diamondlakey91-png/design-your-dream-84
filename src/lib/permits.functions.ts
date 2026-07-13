@@ -510,6 +510,146 @@ Rules:
     return inserted;
   });
 
+// ---- Guided intake: create project + checklist from a chat thread ----
+const IntakeInput = z.object({
+  thread_id: z.string().uuid(),
+  name: z.string().min(1).max(200),
+  project_type: z.string().min(1).max(80),
+  location: z.string().min(1).max(200),
+  jurisdiction: z.string().max(200).default(""),
+  scope: z.string().min(10).max(2000),
+  size: z.string().max(120).default(""),
+  occupancy: z.string().max(120).default(""),
+  work_type: z.string().max(120).default(""),
+});
+
+export const intakeGenerateChecklist = createServerFn({ method: "POST" })
+  .middleware([requireSupabaseAuth])
+  .inputValidator((input: unknown) => IntakeInput.parse(input))
+  .handler(async ({ data, context }) => {
+    const apiKey = process.env.LOVABLE_API_KEY;
+    if (!apiKey) throw new Error("AI is not configured");
+
+    // Verify thread ownership
+    const { data: thread } = await context.supabase
+      .from("chat_threads").select("id, project_id").eq("id", data.thread_id).maybeSingle();
+    if (!thread) throw new Error("Thread not found");
+
+    // Create the project
+    const { data: project, error: perr } = await context.supabase
+      .from("projects")
+      .insert({
+        user_id: context.userId,
+        name: data.name,
+        location: data.location,
+        project_type: data.project_type,
+        jurisdiction: data.jurisdiction,
+        permit_count: 6,
+        permits_issued: 0,
+        current_stage: 0,
+        status: "Pre-Planning",
+      })
+      .select("*").single();
+    if (perr) throw new Error(perr.message);
+
+    // Attach to the thread
+    await context.supabase.from("chat_threads")
+      .update({ project_id: project.id })
+      .eq("id", data.thread_id);
+
+    await context.supabase.from("activity").insert({
+      user_id: context.userId,
+      project_id: project.id,
+      description: `Project "${project.name}" created from AI intake.`,
+    });
+
+    // Ask AI for a checklist tailored to the intake scope
+    const prompt = `Generate a permit checklist for this project based on the intake below. Return ONLY valid JSON, no prose.
+
+Project: ${data.name}
+Type: ${data.project_type}
+Work type: ${data.work_type || "unspecified"}
+Occupancy / Use: ${data.occupancy || "unspecified"}
+Size: ${data.size || "unspecified"}
+Location: ${data.location}
+Jurisdiction: ${data.jurisdiction || "unspecified"}
+Scope described by user:
+"""${data.scope}"""
+
+Return this JSON shape:
+{"items":[{"name":"Building Permit","category":"Building","required":true,"why":"..."}]}
+
+Rules:
+- 6 to 14 items, in chronological order (pre-construction → construction → occupancy).
+- category one of: Building, MEP, Fire, Health, Zoning, Sign, Right-of-Way, Grading, Demolition, Stormwater, Historic, Environmental, Occupancy.
+- required=true for clearly-required based on scope; false for conditional/only-if-triggered.
+- name uses the local term when jurisdiction is known (e.g. "LADBS Building Permit", "NYC DOB PW1 Filing").
+- why is one short clause tied to the scope (mention the trigger from the intake).`;
+
+    const raw = await callLovableAI(apiKey, [
+      { role: "system", content: SYSTEM_PROMPT },
+      { role: "user", content: prompt },
+    ]);
+    const cleaned = raw.replace(/```json|```/g, "").trim();
+    const jsonStart = cleaned.indexOf("{");
+    const jsonEnd = cleaned.lastIndexOf("}");
+    let parsed: { items: Array<z.infer<typeof ChecklistItemSchema>> };
+    try {
+      parsed = JSON.parse(cleaned.slice(jsonStart, jsonEnd + 1));
+    } catch {
+      throw new Error("AI returned unparseable checklist. Try again.");
+    }
+    const items = z.object({ items: z.array(ChecklistItemSchema).min(1).max(20) }).parse(parsed).items;
+
+    const rows = items.map((it, idx) => ({
+      user_id: context.userId,
+      project_id: project.id,
+      name: it.name,
+      category: it.category,
+      required: it.required,
+      notes: it.why ?? "",
+      sort_order: idx,
+    }));
+    const { data: inserted, error: ierr } = await context.supabase
+      .from("permit_items").insert(rows).select("*");
+    if (ierr) throw new Error(ierr.message);
+
+    // Update project.permit_count to match generated required-count
+    const requiredCount = items.filter((i) => i.required).length || items.length;
+    await context.supabase.from("projects")
+      .update({ permit_count: requiredCount })
+      .eq("id", project.id);
+
+    await context.supabase.from("activity").insert({
+      user_id: context.userId,
+      project_id: project.id,
+      description: `AI generated ${inserted.length} checklist items from intake.`,
+    });
+
+    // Post a summary message into the chat thread so the user sees the result inline
+    const summaryLines = items.map((it) => `- **${it.name}** — ${it.category}${it.required ? " · [REQUIRED]" : " · [CONDITIONAL]"}${it.why ? ` — ${it.why}` : ""}`).join("\n");
+    const summary = `Created project **${project.name}** (${data.project_type}${data.size ? `, ${data.size}` : ""}) in ${data.location}${data.jurisdiction ? ` — jurisdiction: ${data.jurisdiction}` : ""}.
+
+Generated a **${inserted.length}-item permit checklist** based on your scope:
+
+${summaryLines}
+
+Open the project to track status, upload docs, and sync live with the jurisdiction portal. Ask me follow-ups here — I'll answer in the context of this project.`;
+
+    await context.supabase.from("chat_messages").insert({
+      user_id: context.userId,
+      thread_id: data.thread_id,
+      role: "assistant",
+      content: summary,
+      parts: [{ type: "text", text: summary }],
+    });
+    await context.supabase.from("chat_threads")
+      .update({ last_message_at: new Date().toISOString(), title: data.name.slice(0, 60) })
+      .eq("id", data.thread_id);
+
+    return { project, items: inserted };
+  });
+
 // ---- Documents ----
 export const listDocuments = createServerFn({ method: "GET" })
   .middleware([requireSupabaseAuth])
