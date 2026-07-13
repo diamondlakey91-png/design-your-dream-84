@@ -380,7 +380,7 @@ function ChecklistTab({ projectId, jurisdiction }: { projectId: string; jurisdic
                 </button>
               </div>
               <div className="mt-3 flex flex-wrap gap-1.5">
-                {(["not_started", "submitted", "under_review", "approved", "issued"] as const).map((s) => (
+                {(["not_started", "submitted", "under_review", "approved", "issued", "n_a"] as const).map((s) => (
                   <button
                     key={s}
                     onClick={() => setStatus.mutate({ id: it.id, status: s })}
