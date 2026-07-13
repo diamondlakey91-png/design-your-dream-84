@@ -1466,6 +1466,9 @@ const AddressFindingSchema = z.object({
   updated_date: z.string().default(""),
   description: z.string().default(""),
   source_url: z.string().default(""),
+  match_confidence: z.enum(["high", "medium", "low"]).default("medium"),
+  match_score: z.number().min(0).max(100).default(60),
+  match_reason: z.string().default(""),
 });
 
 const AddressLookupSchema = z.object({
@@ -1475,6 +1478,13 @@ const AddressLookupSchema = z.object({
   search_url: z.string().default(""),
   findings: z.array(AddressFindingSchema).max(25),
   summary: z.string(),
+  overall_confidence: z.enum(["high", "medium", "low", "none"]).default("medium"),
+  no_match_reason: z.string().default(""),
+  sources_scanned: z.object({
+    official_portal: z.boolean().default(false),
+    direct_portal_search: z.boolean().default(false),
+    web_search: z.boolean().default(false),
+  }).default({ official_portal: false, direct_portal_search: false, web_search: false }),
 });
 
 // Direct portal search URL templates for jurisdictions where the public portal
