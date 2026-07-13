@@ -35,6 +35,7 @@ import {
   summarizeReviewerComments,
   generateMeetingAgenda,
   flagScheduleRisks,
+  generateBatchReportPdf,
 } from "@/lib/permits.functions";
 import { createBatchReportShare, listBatchReportShares, revokeBatchReportShare } from "@/lib/reportShares.functions";
 import {
@@ -521,6 +522,16 @@ function DocsTab({ projectId, userId }: { projectId: string; userId: string }) {
 function BatchReport({ report, projectId, onClose }: { report: Awaited<ReturnType<typeof batchReviewPlans>>; projectId: string; onClose: () => void }) {
   const riskColor = report.overall_risk === "high" ? "text-destructive" : report.overall_risk === "medium" ? "text-amber-600" : "text-emerald-600";
   const [shareOpen, setShareOpen] = useState(false);
+  const pdfFn = useServerFn(generateBatchReportPdf);
+  const pdf = useMutation({
+    mutationFn: () => pdfFn({ data: { project_id: projectId, report: report as never } }),
+    onSuccess: (r: unknown) => {
+      const url = (r as { url: string }).url;
+      window.open(url, "_blank", "noopener");
+      toast.success("Report PDF ready");
+    },
+    onError: (e) => toast.error(e instanceof Error ? e.message : "Failed to export PDF"),
+  });
   return (
     <div className="rounded-xl border border-brand/40 bg-brand/5 p-4 space-y-3">
       <div className="flex items-start justify-between gap-2">
@@ -533,6 +544,9 @@ function BatchReport({ report, projectId, onClose }: { report: Awaited<ReturnTyp
           </p>
         </div>
         <div className="flex items-center gap-3">
+          <button onClick={() => pdf.mutate()} disabled={pdf.isPending} className="text-[11px] font-mono uppercase tracking-wider text-brand hover:opacity-80 disabled:opacity-50">
+            {pdf.isPending ? "Exporting…" : "Export PDF"}
+          </button>
           <button onClick={() => setShareOpen(true)} className="text-[11px] font-mono uppercase tracking-wider text-brand hover:opacity-80">Share</button>
           <button onClick={onClose} className="text-[11px] font-mono uppercase tracking-wider text-muted-foreground hover:text-foreground">Close</button>
         </div>

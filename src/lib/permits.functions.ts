@@ -2832,3 +2832,182 @@ export const generateRedlinedPdf = createServerFn({ method: "POST" })
 
     return { url: outSigned.signedUrl, path: outPath, markups: drawn, pages: byPage.size };
   });
+
+/* -------------------- BATCH REPORT — one-click PDF export -------------------- */
+
+const BatchReportPdfSchema = z.object({
+  project_id: z.string().uuid(),
+  report: z.object({
+    generated_at: z.string().optional(),
+    documents_reviewed: z.number(),
+    documents_newly_reviewed: z.number().optional(),
+    documents_total: z.number().optional(),
+    documents_failed: z.array(z.object({ name: z.string() })).optional(),
+    jurisdictions: z.array(z.string()).default([]),
+    applied_amendments: z.array(z.string()).default([]),
+    plan_health_score: z.number(),
+    overall_risk: z.enum(["low", "medium", "high"]),
+    total_findings: z.number(),
+    by_severity: z.object({ high: z.number(), medium: z.number(), low: z.number() }),
+    by_category: z.record(z.string(), z.number()).default({}),
+    top_findings: z.array(z.object({
+      severity: z.enum(["low", "medium", "high"]),
+      category: z.string().optional().default(""),
+      title: z.string(),
+      detail: z.string(),
+      document_name: z.string(),
+      sheet_reference: z.string().optional().nullable(),
+      code_reference: z.string().optional().nullable(),
+      local_amendment: z.string().optional().nullable(),
+      recommendation: z.string().optional().nullable(),
+    })).default([]),
+  }),
+});
+
+export const generateBatchReportPdf = createServerFn({ method: "POST" })
+  .middleware([requireSupabaseAuth])
+  .inputValidator((input: unknown) => BatchReportPdfSchema.parse(input))
+  .handler(async ({ data, context }) => {
+    requireFeature(await getEntitlement(context.supabase, context.userId), "planReview");
+
+    const { data: project } = await context.supabase
+      .from("projects").select("id, name, jurisdiction, location, project_type")
+      .eq("id", data.project_id).maybeSingle();
+    if (!project) throw new Error("Project not found");
+
+    const { PDFDocument, StandardFonts, rgb } = await import("pdf-lib");
+    const pdf = await PDFDocument.create();
+    const font = await pdf.embedFont(StandardFonts.HelveticaBold);
+    const regular = await pdf.embedFont(StandardFonts.Helvetica);
+
+    const r = data.report;
+    const brand = rgb(0.10, 0.55, 0.90);
+    const muted = rgb(0.42, 0.42, 0.45);
+    const dark = rgb(0.10, 0.11, 0.13);
+
+    const wrap = (t: string, max: number) => {
+      const words = t.split(/\s+/); const out: string[] = []; let line = "";
+      for (const w of words) { if ((line + " " + w).length > max) { out.push(line); line = w; } else { line = line ? line + " " + w : w; } }
+      if (line) out.push(line); return out;
+    };
+
+    let page = pdf.addPage([612, 792]);
+    let y = 752;
+    const newPage = () => { page = pdf.addPage([612, 792]); y = 752; };
+    const ensure = (need: number) => { if (y - need < 60) newPage(); };
+
+    // Header
+    page.drawText("CONSOLIDATED PERMITHEALTH REPORT", { x: 40, y, size: 10, font, color: brand });
+    y -= 22;
+    page.drawText(project.name || "Project", { x: 40, y, size: 22, font, color: dark });
+    y -= 18;
+    const subtitle = [project.project_type, project.jurisdiction, project.location].filter(Boolean).join(" · ");
+    if (subtitle) { page.drawText(subtitle.slice(0, 90), { x: 40, y, size: 10, font: regular, color: muted }); y -= 14; }
+    const generated = r.generated_at ? new Date(r.generated_at).toLocaleString() : new Date().toLocaleString();
+    page.drawText(`Generated ${generated}`, { x: 40, y, size: 9, font: regular, color: muted });
+    y -= 24;
+    page.drawLine({ start: { x: 40, y }, end: { x: 572, y }, thickness: 0.5, color: rgb(0.85,0.85,0.88) });
+    y -= 22;
+
+    // Metric cards
+    const riskRgb = r.overall_risk === "high" ? rgb(0.85, 0.15, 0.15) : r.overall_risk === "medium" ? rgb(0.95, 0.55, 0.05) : rgb(0.10, 0.55, 0.35);
+    const cards: Array<{ label: string; value: string; sub: string; color?: import("pdf-lib").RGB }> = [
+      { label: "PLAN HEALTH", value: String(r.plan_health_score), sub: `${r.overall_risk.toUpperCase()} RISK`, color: riskRgb },
+      { label: "FINDINGS", value: String(r.total_findings), sub: `${r.by_severity.high} HIGH`, color: rgb(0.85,0.15,0.15) },
+      { label: "MEDIUM", value: String(r.by_severity.medium), sub: "", color: rgb(0.95,0.55,0.05) },
+      { label: "LOW", value: String(r.by_severity.low), sub: "", color: rgb(0.10,0.55,0.35) },
+    ];
+    const cardW = 128, cardH = 62, gap = 10;
+    cards.forEach((c, i) => {
+      const x = 40 + i * (cardW + gap);
+      page.drawRectangle({ x, y: y - cardH, width: cardW, height: cardH, borderColor: rgb(0.88,0.88,0.9), borderWidth: 0.5, color: rgb(0.98,0.98,0.99) });
+      page.drawText(c.label, { x: x + 8, y: y - 14, size: 8, font, color: muted });
+      page.drawText(c.value, { x: x + 8, y: y - 40, size: 24, font, color: c.color ?? dark });
+      if (c.sub) page.drawText(c.sub, { x: x + 8, y: y - 54, size: 7, font, color: muted });
+    });
+    y -= cardH + 20;
+
+    // Summary line
+    const summary = `${r.documents_reviewed} plan${r.documents_reviewed === 1 ? "" : "s"} analyzed${r.documents_newly_reviewed ? ` · ${r.documents_newly_reviewed} newly reviewed` : ""}${r.jurisdictions.length > 0 ? ` · ${r.jurisdictions.join(", ")}` : ""}`;
+    wrap(summary, 100).forEach((line) => { page.drawText(line, { x: 40, y, size: 10, font: regular, color: dark }); y -= 13; });
+    y -= 8;
+
+    // Categories
+    const catEntries = Object.entries(r.by_category || {});
+    if (catEntries.length > 0) {
+      ensure(30);
+      page.drawText("BY CATEGORY", { x: 40, y, size: 9, font, color: muted }); y -= 14;
+      let cx = 40;
+      catEntries.forEach(([k, v]) => {
+        const label = `${k.replace(/_/g, " ").toUpperCase()} · ${v}`;
+        const w = regular.widthOfTextAtSize(label, 8) + 12;
+        if (cx + w > 572) { cx = 40; y -= 16; ensure(20); }
+        page.drawRectangle({ x: cx, y: y - 4, width: w, height: 14, borderColor: rgb(0.85,0.85,0.88), borderWidth: 0.5, color: rgb(1,1,1) });
+        page.drawText(label, { x: cx + 6, y: y, size: 8, font: regular, color: dark });
+        cx += w + 6;
+      });
+      y -= 22;
+    }
+
+    if (r.documents_failed && r.documents_failed.length > 0) {
+      ensure(24);
+      page.drawText("FAILED TO REVIEW", { x: 40, y, size: 9, font, color: rgb(0.85,0.15,0.15) }); y -= 12;
+      wrap(r.documents_failed.map((f) => f.name).join(", "), 110).forEach((line) => { page.drawText(line, { x: 40, y, size: 9, font: regular, color: dark }); y -= 12; });
+      y -= 6;
+    }
+
+    // Findings
+    if (r.top_findings.length > 0) {
+      ensure(30);
+      page.drawText("TOP FINDINGS", { x: 40, y, size: 10, font, color: brand }); y -= 16;
+      r.top_findings.forEach((f, idx) => {
+        ensure(70);
+        const [sr, sg, sb] = f.severity === "high" ? [0.85,0.15,0.15] : f.severity === "medium" ? [0.95,0.55,0.05] : [0.10,0.55,0.35];
+        page.drawRectangle({ x: 40, y: y - 3, width: 18, height: 14, color: rgb(sr,sg,sb) });
+        page.drawText(String(idx + 1), { x: 44, y: y + 1, size: 9, font, color: rgb(1,1,1) });
+        page.drawText(`[${f.severity.toUpperCase()}] ${f.title}`.slice(0, 88), { x: 64, y: y + 1, size: 10, font, color: dark });
+        y -= 14;
+        const cat = (f.category || "").replace(/_/g, " ");
+        if (cat) { page.drawText(cat.toUpperCase(), { x: 64, y, size: 7, font, color: muted }); y -= 10; }
+        wrap(f.detail, 108).forEach((line) => { ensure(14); page.drawText(line, { x: 64, y, size: 9, font: regular, color: dark }); y -= 11; });
+        const meta = [f.document_name, f.sheet_reference && `Sheet ${f.sheet_reference}`, f.code_reference, f.local_amendment && `Local: ${f.local_amendment}`].filter(Boolean).join("  ·  ");
+        if (meta) { ensure(12); page.drawText(meta.slice(0, 115), { x: 64, y, size: 8, font: regular, color: muted }); y -= 10; }
+        if (f.recommendation) { wrap("→ " + f.recommendation, 110).forEach((line) => { ensure(12); page.drawText(line, { x: 64, y, size: 8, font: regular, color: rgb(0.15, 0.4, 0.15) }); y -= 10; }); }
+        y -= 8;
+      });
+    }
+
+    if (r.applied_amendments && r.applied_amendments.length > 0) {
+      ensure(24);
+      y -= 4;
+      page.drawLine({ start: { x: 40, y }, end: { x: 572, y }, thickness: 0.5, color: rgb(0.85,0.85,0.88) });
+      y -= 14;
+      page.drawText("APPLIED JURISDICTION AMENDMENTS", { x: 40, y, size: 8, font, color: muted }); y -= 12;
+      wrap(r.applied_amendments.join(" · "), 115).forEach((line) => { ensure(12); page.drawText(line, { x: 40, y, size: 8, font: regular, color: dark }); y -= 10; });
+    }
+
+    // Footer on every page
+    const pages = pdf.getPages();
+    pages.forEach((p, i) => {
+      p.drawText(`Permivio · PermitHealth Report · Page ${i + 1} of ${pages.length}`, { x: 40, y: 30, size: 8, font: regular, color: muted });
+    });
+
+    const outBytes = await pdf.save();
+    const stamp = new Date().toISOString().replace(/[:.]/g, "-");
+    const outPath = `${context.userId}/${data.project_id}/reports/permithealth-${stamp}.pdf`;
+    const { error: upErr } = await context.supabase.storage
+      .from("project-docs").upload(outPath, outBytes, { contentType: "application/pdf", upsert: true });
+    if (upErr) throw new Error(upErr.message);
+    const { data: signed, error: signErr } = await context.supabase.storage
+      .from("project-docs").createSignedUrl(outPath, 3600);
+    if (signErr || !signed?.signedUrl) throw new Error("Could not sign report PDF");
+
+    await context.supabase.from("activity").insert({
+      user_id: context.userId,
+      project_id: data.project_id,
+      description: `Exported PermitHealth report PDF — health ${r.plan_health_score}, ${r.total_findings} findings.`,
+    });
+
+    return { url: signed.signedUrl, path: outPath };
+  });
+
