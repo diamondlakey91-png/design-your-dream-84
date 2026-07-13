@@ -1924,6 +1924,85 @@ function LivePermitCard({
               </button>
             </div>
           </div>
+
+          <div className="pt-2 border-t border-border">
+            <button
+              onClick={() => setShowHistory((s) => !s)}
+              className="text-[11px] font-mono uppercase tracking-wider text-muted-foreground hover:text-foreground"
+            >
+              {showHistory ? "▾ Hide sync history" : "▸ Sync history"}
+            </button>
+            {showHistory && (
+              <div className="mt-2 space-y-1.5">
+                {historyQ.isLoading && <p className="text-xs text-muted-foreground">Loading…</p>}
+                {historyQ.data && historyQ.data.history.length === 0 && (
+                  <p className="text-xs text-muted-foreground">No syncs recorded yet.</p>
+                )}
+                {historyQ.data?.history.map((h) => {
+                  const isOpen = expandedRow === h.id;
+                  const snap = h.snapshot as LivePermitData | null;
+                  const fields = snap
+                    ? [
+                        snap.permit_type && ["Type", snap.permit_type],
+                        snap.address && ["Address", snap.address],
+                        snap.applicant && ["Applicant", snap.applicant],
+                        snap.filed_date && ["Filed", snap.filed_date],
+                        snap.issued_date && ["Issued", snap.issued_date],
+                        snap.updated_date && ["Updated", snap.updated_date],
+                        snap.expiration_date && ["Expires", snap.expiration_date],
+                        snap.next_inspection && ["Next inspection", snap.next_inspection],
+                        snap.fees_due && ["Fees due", snap.fees_due],
+                      ].filter(Boolean) as [string, string][]
+                    : [];
+                  return (
+                    <div key={h.id} className="rounded-lg bg-background ring-1 ring-border overflow-hidden">
+                      <button
+                        onClick={() => setExpandedRow(isOpen ? null : h.id)}
+                        className="w-full flex items-center justify-between gap-2 px-3 py-2 text-left hover:bg-muted/40"
+                      >
+                        <div className="min-w-0 flex items-center gap-2">
+                          <span className="font-mono text-[10px] uppercase text-muted-foreground w-4 shrink-0">{isOpen ? "▾" : "▸"}</span>
+                          <span className="text-[11px] font-mono text-muted-foreground shrink-0">
+                            {formatDistanceToNow(new Date(h.created_at), { addSuffix: true })}
+                          </span>
+                          <span className="text-[10px] font-mono uppercase text-muted-foreground shrink-0">· {h.trigger}</span>
+                          <span className={`text-[10px] font-mono uppercase tracking-widest px-1.5 py-0.5 rounded ml-1 truncate ${
+                            /issued|approved|finaled|ready/i.test(h.status) ? "bg-emerald-500/15 text-emerald-600 dark:text-emerald-400" :
+                            /review|submitted|pending|plan/i.test(h.status) ? "bg-amber-500/15 text-amber-600 dark:text-amber-400" :
+                            /expired|withdrawn|rejected/i.test(h.status) ? "bg-red-500/15 text-red-600 dark:text-red-400" :
+                            "bg-muted text-muted-foreground"
+                          }`}>{h.status || (h.found ? "Found" : "No match")}</span>
+                        </div>
+                        {h.source_url && (
+                          <a href={h.source_url} target="_blank" rel="noopener noreferrer" onClick={(e) => e.stopPropagation()} className="text-[10px] font-mono uppercase text-brand hover:opacity-80 shrink-0">Portal ↗</a>
+                        )}
+                      </button>
+                      {isOpen && (
+                        <div className="px-3 pb-3 pt-1 border-t border-border space-y-2">
+                          {h.portal_name && <p className="text-[11px] text-muted-foreground">{h.portal_name} · {h.jurisdiction}</p>}
+                          {fields.length > 0 && (
+                            <div className="grid grid-cols-2 gap-1 text-xs">
+                              {fields.map(([k, v]) => (
+                                <div key={k} className={k === "Address" || k === "Applicant" || k === "Next inspection" || k === "Fees due" ? "col-span-2" : ""}>
+                                  <span className="text-muted-foreground">{k}: </span>
+                                  <span className="font-medium">{v}</span>
+                                </div>
+                              ))}
+                            </div>
+                          )}
+                          {snap?.description && <p className="text-xs text-muted-foreground">{snap.description}</p>}
+                          <details className="text-[11px]">
+                            <summary className="cursor-pointer font-mono uppercase tracking-wider text-muted-foreground hover:text-foreground">Raw portal response</summary>
+                            <pre className="mt-1.5 p-2 rounded bg-muted text-[10px] overflow-x-auto max-h-64">{JSON.stringify(snap, null, 2)}</pre>
+                          </details>
+                        </div>
+                      )}
+                    </div>
+                  );
+                })}
+              </div>
+            )}
+          </div>
         </div>
       )}
     </section>
