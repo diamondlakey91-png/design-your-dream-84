@@ -1779,7 +1779,7 @@ function LivePermitCard({
     onError: (e) => toast.error(e instanceof Error ? e.message : "Unlink failed"),
   });
 
-  const d = project.linked_permit_data ?? null;
+  const d = (project.linked_permit_data ?? null) as LivePermitData | null;
   const linked = Boolean(project.linked_permit_number);
 
   return (
