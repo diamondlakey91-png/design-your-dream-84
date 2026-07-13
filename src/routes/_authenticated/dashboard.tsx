@@ -2,10 +2,10 @@ import { createFileRoute, Link, useNavigate } from "@tanstack/react-router";
 import { useMutation, useQuery, useQueryClient } from "@tanstack/react-query";
 import { useServerFn } from "@tanstack/react-start";
 import { AppShell } from "@/components/AppShell";
-import { listProjects, listDeadlines, createProject } from "@/lib/permits.functions";
+import { listProjects, listDeadlines, createProject, generateDailyBriefing } from "@/lib/permits.functions";
 import { supabase } from "@/integrations/supabase/client";
 import { useEffect, useMemo, useState } from "react";
-import { Plus, X, Sparkles, ArrowUpRight, CalendarClock, ClipboardCheck } from "lucide-react";
+import { Plus, X, Sparkles, ArrowUpRight, CalendarClock, ClipboardCheck, Loader2, AlertTriangle, Trophy } from "lucide-react";
 import { toast } from "sonner";
 import { format, differenceInCalendarDays, parseISO } from "date-fns";
 
