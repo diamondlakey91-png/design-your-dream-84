@@ -400,6 +400,59 @@ export type Database = {
           },
         ]
       }
+      permit_sync_history: {
+        Row: {
+          created_at: string
+          found: boolean
+          id: string
+          jurisdiction: string
+          permit_number: string
+          portal_name: string | null
+          project_id: string
+          snapshot: Json
+          source_url: string | null
+          status: string
+          trigger: string
+          user_id: string
+        }
+        Insert: {
+          created_at?: string
+          found?: boolean
+          id?: string
+          jurisdiction?: string
+          permit_number: string
+          portal_name?: string | null
+          project_id: string
+          snapshot?: Json
+          source_url?: string | null
+          status?: string
+          trigger?: string
+          user_id: string
+        }
+        Update: {
+          created_at?: string
+          found?: boolean
+          id?: string
+          jurisdiction?: string
+          permit_number?: string
+          portal_name?: string | null
+          project_id?: string
+          snapshot?: Json
+          source_url?: string | null
+          status?: string
+          trigger?: string
+          user_id?: string
+        }
+        Relationships: [
+          {
+            foreignKeyName: "permit_sync_history_project_id_fkey"
+            columns: ["project_id"]
+            isOneToOne: false
+            referencedRelation: "projects"
+            referencedColumns: ["id"]
+          },
+        ]
+      }
       project_documents: {
         Row: {
           ai_action_items: Json | null
