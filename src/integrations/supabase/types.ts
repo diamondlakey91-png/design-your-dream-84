@@ -234,58 +234,154 @@ export type Database = {
       }
       jurisdiction_profiles: {
         Row: {
+          confidence: string
           contacts: Json
+          county: string
           created_at: string
           created_by: string
           department: string
+          departments: Json
+          email: string
           fees: Json
+          gov_website: string
           id: string
+          is_demo: boolean
+          jurisdiction_type: string
+          last_verified_date: string | null
           name: string
+          office_address: string
+          office_hours: string
           overview: string
+          permit_categories: Json
           permits: Json
+          phone: string
           portal_url: string
           refreshed_at: string
+          requirements: Json
           slug: string
           source_urls: string[]
+          sources: Json
           state: string
+          submission_portals: Json
           timelines: Json
           updated_at: string
+          verification_status: string
         }
         Insert: {
+          confidence?: string
           contacts?: Json
+          county?: string
           created_at?: string
           created_by: string
           department?: string
+          departments?: Json
+          email?: string
           fees?: Json
+          gov_website?: string
           id?: string
+          is_demo?: boolean
+          jurisdiction_type?: string
+          last_verified_date?: string | null
           name: string
+          office_address?: string
+          office_hours?: string
           overview?: string
+          permit_categories?: Json
           permits?: Json
+          phone?: string
           portal_url?: string
           refreshed_at?: string
+          requirements?: Json
           slug: string
           source_urls?: string[]
+          sources?: Json
           state?: string
+          submission_portals?: Json
           timelines?: Json
           updated_at?: string
+          verification_status?: string
         }
         Update: {
+          confidence?: string
           contacts?: Json
+          county?: string
           created_at?: string
           created_by?: string
           department?: string
+          departments?: Json
+          email?: string
           fees?: Json
+          gov_website?: string
           id?: string
+          is_demo?: boolean
+          jurisdiction_type?: string
+          last_verified_date?: string | null
           name?: string
+          office_address?: string
+          office_hours?: string
           overview?: string
+          permit_categories?: Json
           permits?: Json
+          phone?: string
           portal_url?: string
           refreshed_at?: string
+          requirements?: Json
           slug?: string
           source_urls?: string[]
+          sources?: Json
           state?: string
+          submission_portals?: Json
           timelines?: Json
           updated_at?: string
+          verification_status?: string
+        }
+        Relationships: []
+      }
+      jurisdiction_requests: {
+        Row: {
+          county: string
+          created_at: string
+          id: string
+          jurisdiction_name: string
+          notes: string
+          permit_type: string
+          priority: string
+          project_address: string
+          project_type: string
+          state: string
+          status: string
+          updated_at: string
+          user_id: string
+        }
+        Insert: {
+          county?: string
+          created_at?: string
+          id?: string
+          jurisdiction_name: string
+          notes?: string
+          permit_type?: string
+          priority?: string
+          project_address?: string
+          project_type?: string
+          state?: string
+          status?: string
+          updated_at?: string
+          user_id: string
+        }
+        Update: {
+          county?: string
+          created_at?: string
+          id?: string
+          jurisdiction_name?: string
+          notes?: string
+          permit_type?: string
+          priority?: string
+          project_address?: string
+          project_type?: string
+          state?: string
+          status?: string
+          updated_at?: string
+          user_id?: string
         }
         Relationships: []
       }
@@ -668,6 +764,44 @@ export type Database = {
             columns: ["project_id"]
             isOneToOne: false
             referencedRelation: "projects"
+            referencedColumns: ["id"]
+          },
+        ]
+      }
+      saved_jurisdictions: {
+        Row: {
+          created_at: string
+          id: string
+          jurisdiction_id: string
+          notes: string
+          pinned: boolean
+          updated_at: string
+          user_id: string
+        }
+        Insert: {
+          created_at?: string
+          id?: string
+          jurisdiction_id: string
+          notes?: string
+          pinned?: boolean
+          updated_at?: string
+          user_id: string
+        }
+        Update: {
+          created_at?: string
+          id?: string
+          jurisdiction_id?: string
+          notes?: string
+          pinned?: boolean
+          updated_at?: string
+          user_id?: string
+        }
+        Relationships: [
+          {
+            foreignKeyName: "saved_jurisdictions_jurisdiction_id_fkey"
+            columns: ["jurisdiction_id"]
+            isOneToOne: false
+            referencedRelation: "jurisdiction_profiles"
             referencedColumns: ["id"]
           },
         ]
