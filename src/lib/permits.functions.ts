@@ -1860,7 +1860,8 @@ RULES
     const raw = await callLovableAI(aiKey, [
       { role: "system", content: "You extract structured permit records from live portal text. Output valid JSON only, no prose, no fences." },
       { role: "user", content: extractionPrompt },
-    ]);
+    ], "google/gemini-2.5-flash");
+
     const cleaned = raw.replace(/```json|```/g, "").trim();
     const start = cleaned.indexOf("{");
     const end = cleaned.lastIndexOf("}");
