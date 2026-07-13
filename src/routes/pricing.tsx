@@ -233,6 +233,41 @@ function PricingPage() {
           </p>
         </section>
 
+        {/* Current subscription banner */}
+        {session && isActive && subRow && (
+          <section className="mb-10">
+            <div className="flex flex-wrap items-center justify-between gap-4 rounded-xl border border-brand/30 bg-brand/5 p-5">
+              <div>
+                <div className="text-[11px] font-mono uppercase tracking-widest text-brand">
+                  Current plan
+                </div>
+                <div className="mt-1 text-lg font-semibold">
+                  {currentTier?.name ?? "Active subscription"}
+                  {cancelPending && (
+                    <span className="ml-2 text-xs font-normal text-muted-foreground">
+                      (ends {subRow.current_period_end ? new Date(subRow.current_period_end).toLocaleDateString() : "at period end"})
+                    </span>
+                  )}
+                </div>
+                <p className="mt-1 text-sm text-muted-foreground">
+                  Manage payment method, upgrade, downgrade, or cancel from the Stripe billing portal.
+                </p>
+                {portalError && <p className="mt-2 text-sm text-destructive">{portalError}</p>}
+              </div>
+              <button
+                onClick={openPortal}
+                disabled={portalLoading}
+                className="inline-flex h-11 items-center gap-2 rounded-lg border border-brand/40 bg-background px-5 text-sm font-semibold hover:bg-brand/10 disabled:opacity-60"
+              >
+                <Settings className="size-4" />
+                {portalLoading ? "Opening…" : "Manage subscription"}
+              </button>
+            </div>
+          </section>
+        )}
+
+
+
         {/* Founding Member */}
         <section className="mb-16">
           <div className="relative overflow-hidden rounded-2xl bg-gradient-to-br from-brand/15 via-brand/5 to-transparent ring-1 ring-brand/30 p-6 md:p-8">
