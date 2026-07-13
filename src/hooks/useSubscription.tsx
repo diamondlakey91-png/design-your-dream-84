@@ -1,7 +1,8 @@
 import { useEffect, useState } from "react";
 import { supabase } from "@/integrations/supabase/client";
 import { getStripeEnvironment } from "@/lib/stripe";
-import { getTier, isSubscriptionActive, tierHasFeature, type FeatureKey, type TierDef } from "@/lib/tiers";
+import { BETA_MODE, BETA_TIER, getTier, isSubscriptionActive, tierHasFeature, type FeatureKey, type TierDef } from "@/lib/tiers";
+
 
 interface SubscriptionRow {
   id: string;
