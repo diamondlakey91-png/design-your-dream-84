@@ -1979,7 +1979,7 @@ export const computeProjectHealth = createServerFn({ method: "GET" })
 // AI COPILOT — client updates, agendas, risk flags, summaries
 // ============================================================
 
-type CopilotSupabase = Parameters<Parameters<Parameters<typeof createServerFn>[0] extends never ? never : never, never>[0]> extends never ? never : never;
+
 
 async function callGeminiJSON<T>(prompt: string, system: string, schema: z.ZodType<T>): Promise<T> {
   const aiKey = process.env.LOVABLE_API_KEY;
