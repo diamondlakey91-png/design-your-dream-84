@@ -1622,7 +1622,10 @@ JURISDICTION (inferred): ${jurisdictionGuess}
 OFFICIAL PORTAL CANDIDATE (${portal.url})
 ${portalScrape.markdown.slice(0, 3500)}
 
-ADDRESS SEARCH RESULTS
+DIRECT PORTAL SEARCH RESULTS (authoritative — prefer these over web search when present)
+${directScrapes || "(none)"}
+
+ADDRESS SEARCH RESULTS (web)
 ${addressScrapes || "(none)"}
 
 Return ONLY valid JSON in this shape:
