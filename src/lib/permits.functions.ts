@@ -821,7 +821,7 @@ export const updateDocumentLinkage = createServerFn({ method: "POST" })
     }).parse(input),
   )
   .handler(async ({ data, context }) => {
-    const patch: Record<string, unknown> = {};
+    const patch: { stage?: number | null; permit_item_id?: string | null } = {};
     if (data.stage !== undefined) patch.stage = data.stage;
     if (data.permit_item_id !== undefined) patch.permit_item_id = data.permit_item_id;
     const { data: row, error } = await context.supabase
