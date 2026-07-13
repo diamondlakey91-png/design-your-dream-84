@@ -390,6 +390,10 @@ export const summarizeProjectNextSteps = createServerFn({ method: "POST" })
       .from("activity").select("description, created_at")
       .eq("project_id", data.id).order("created_at", { ascending: false }).limit(6);
 
+    const jc = p.jurisdiction
+      ? await loadJurisdictionContextBlock(context.supabase, p.jurisdiction)
+      : { block: "", hasData: false, profile: null };
+
     const userPrompt = `Summarize the concrete next steps for this project.
 
 Project: ${p.name}
@@ -400,11 +404,13 @@ Current pipeline stage: ${STAGE_NAMES[p.current_stage]} (${p.current_stage + 1} 
 Permits issued: ${p.permits_issued} of ${p.permit_count}
 Recent activity:
 ${(recent ?? []).map((a) => `- ${a.description}`).join("\n") || "- (none)"}
+${jc.block}
 
 Produce:
 1. One short sentence stating exactly where this project stands.
 2. A markdown list of the next 3–5 concrete actions the team should take THIS WEEK, given the stage and jurisdiction. Each action starts with a verb. If a jurisdiction-specific submittal is required to advance, name it.
-3. A one-line watch-out (what commonly delays this stage in this jurisdiction).
+3. A "**Timeline to next milestone**" line with a duration range. Use the JURISDICTION CONTEXT timelines when present (cite the source URL in parentheses); otherwise give a national typical range and label it "estimate".
+4. A one-line watch-out (what commonly delays this stage in this jurisdiction).
 
 No preamble, no closing pleasantries.`;
 
@@ -412,6 +418,7 @@ No preamble, no closing pleasantries.`;
       { role: "system", content: SYSTEM_PROMPT },
       { role: "user", content: userPrompt },
     ]);
+
     return { summary: reply };
   });
 
