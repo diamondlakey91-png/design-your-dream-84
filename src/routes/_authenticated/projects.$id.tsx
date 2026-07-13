@@ -39,7 +39,7 @@ import { toast } from "sonner";
 import { formatDistanceToNow, format } from "date-fns";
 import ReactMarkdown from "react-markdown";
 import remarkGfm from "remark-gfm";
-import { useState, useRef } from "react";
+import { useState, useRef, useEffect } from "react";
 import { supabase } from "@/integrations/supabase/client";
 
 export const Route = createFileRoute("/_authenticated/projects/$id")({
@@ -269,6 +269,18 @@ function ChecklistTab({ projectId, jurisdiction }: { projectId: string; jurisdic
 
   const q = useQuery({ queryKey: ["permit_items", projectId], queryFn: () => listFn({ data: { project_id: projectId } }) });
 
+  useEffect(() => {
+    const channel = supabase
+      .channel(`permit_items:${projectId}`)
+      .on(
+        "postgres_changes",
+        { event: "*", schema: "public", table: "permit_items", filter: `project_id=eq.${projectId}` },
+        () => qc.invalidateQueries({ queryKey: ["permit_items", projectId] }),
+      )
+      .subscribe();
+    return () => { supabase.removeChannel(channel); };
+  }, [projectId, qc]);
+
   const generate = useMutation({
     mutationFn: () => genFn({ data: { project_id: projectId } }),
     onSuccess: () => { qc.invalidateQueries({ queryKey: ["permit_items", projectId] }); toast.success("Checklist generated"); },
@@ -296,7 +308,12 @@ function ChecklistTab({ projectId, jurisdiction }: { projectId: string; jurisdic
     <div className="space-y-4">
       <div className="flex items-center justify-between">
         <div>
-          <p className="text-sm font-semibold">Permit checklist</p>
+          <p className="text-sm font-semibold flex items-center gap-2">
+            Permit checklist
+            <span className="inline-flex items-center gap-1 text-[9px] font-mono uppercase tracking-widest text-emerald-600 dark:text-emerald-400">
+              <span className="size-1.5 rounded-full bg-emerald-500 animate-pulse" /> Live
+            </span>
+          </p>
           <p className="text-xs text-muted-foreground">{done}/{total} approved or issued</p>
         </div>
         <button
@@ -475,6 +492,18 @@ function DeadlinesTab({ projectId }: { projectId: string }) {
   const q = useQuery({ queryKey: ["deadlines"], queryFn: () => listFn() });
   const ours = (q.data ?? []).filter((d) => d.project_id === projectId);
 
+  useEffect(() => {
+    const channel = supabase
+      .channel(`deadlines:${projectId}`)
+      .on(
+        "postgres_changes",
+        { event: "*", schema: "public", table: "deadlines", filter: `project_id=eq.${projectId}` },
+        () => qc.invalidateQueries({ queryKey: ["deadlines"] }),
+      )
+      .subscribe();
+    return () => { supabase.removeChannel(channel); };
+  }, [projectId, qc]);
+
   const add = useMutation({
     mutationFn: () => addFn({ data: { project_id: projectId, title: title.trim(), due_date: date } }),
     onSuccess: () => { qc.invalidateQueries({ queryKey: ["deadlines"] }); setTitle(""); setDate(""); toast.success("Deadline added"); },
@@ -487,7 +516,12 @@ function DeadlinesTab({ projectId }: { projectId: string }) {
 
   return (
     <div className="space-y-4">
-      <p className="text-sm font-semibold">Deadlines & reminders</p>
+      <p className="text-sm font-semibold flex items-center gap-2">
+        Deadlines & reminders
+        <span className="inline-flex items-center gap-1 text-[9px] font-mono uppercase tracking-widest text-emerald-600 dark:text-emerald-400">
+          <span className="size-1.5 rounded-full bg-emerald-500 animate-pulse" /> Live
+        </span>
+      </p>
 
       {ours.length === 0 ? (
         <div className="p-6 text-center rounded-xl border border-dashed border-border text-sm text-muted-foreground">No deadlines yet.</div>
