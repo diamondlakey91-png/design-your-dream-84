@@ -3,7 +3,6 @@ import { useMutation, useQuery, useQueryClient } from "@tanstack/react-query";
 import { useServerFn } from "@tanstack/react-start";
 import {
   listThreadMessages,
-  sendChatMessage,
   listThreads,
   listProjects,
   setThreadProject,
@@ -12,8 +11,9 @@ import {
   extractChecklistFromMessage,
   addPermitItemsBulk,
 } from "@/lib/permits.functions";
+import { supabase } from "@/integrations/supabase/client";
 import { ArrowLeft, Send, Briefcase, X, Edit3, ClipboardList, Sparkles, ListPlus, Check, Loader2 } from "lucide-react";
-import { useEffect, useMemo, useRef, useState } from "react";
+import { useCallback, useEffect, useMemo, useRef, useState } from "react";
 import { toast } from "sonner";
 import ReactMarkdown from "react-markdown";
 import remarkGfm from "remark-gfm";
