@@ -1,0 +1,1 @@
+ALTER TABLE public.project_documents ADD COLUMN IF NOT EXISTS plan_review jsonb, ADD COLUMN IF NOT EXISTS plan_reviewed_at timestamptz;
