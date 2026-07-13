@@ -269,6 +269,18 @@ function ChecklistTab({ projectId, jurisdiction }: { projectId: string; jurisdic
 
   const q = useQuery({ queryKey: ["permit_items", projectId], queryFn: () => listFn({ data: { project_id: projectId } }) });
 
+  useEffect(() => {
+    const channel = supabase
+      .channel(`permit_items:${projectId}`)
+      .on(
+        "postgres_changes",
+        { event: "*", schema: "public", table: "permit_items", filter: `project_id=eq.${projectId}` },
+        () => qc.invalidateQueries({ queryKey: ["permit_items", projectId] }),
+      )
+      .subscribe();
+    return () => { supabase.removeChannel(channel); };
+  }, [projectId, qc]);
+
   const generate = useMutation({
     mutationFn: () => genFn({ data: { project_id: projectId } }),
     onSuccess: () => { qc.invalidateQueries({ queryKey: ["permit_items", projectId] }); toast.success("Checklist generated"); },
