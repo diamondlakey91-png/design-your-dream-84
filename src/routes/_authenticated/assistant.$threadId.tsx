@@ -1,4 +1,4 @@
-import { createFileRoute, Link, useNavigate } from "@tanstack/react-router";
+import { createFileRoute, useNavigate } from "@tanstack/react-router";
 import { useMutation, useQuery, useQueryClient } from "@tanstack/react-query";
 import { useServerFn } from "@tanstack/react-start";
 import {
@@ -8,8 +8,9 @@ import {
   listProjects,
   setThreadProject,
   renameThread,
+  intakeGenerateChecklist,
 } from "@/lib/permits.functions";
-import { ArrowLeft, Send, Briefcase, X, Edit3 } from "lucide-react";
+import { ArrowLeft, Send, Briefcase, X, Edit3, ClipboardList, Sparkles } from "lucide-react";
 import { useEffect, useMemo, useRef, useState } from "react";
 import { toast } from "sonner";
 import ReactMarkdown from "react-markdown";
