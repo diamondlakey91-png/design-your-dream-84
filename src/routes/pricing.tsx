@@ -1,5 +1,9 @@
-import { createFileRoute, Link } from "@tanstack/react-router";
-import { ArrowRight, Check, Sparkles, Star } from "lucide-react";
+import { createFileRoute, Link, useNavigate } from "@tanstack/react-router";
+import { ArrowRight, Check, Sparkles, Star, X } from "lucide-react";
+import { useEffect, useState } from "react";
+import { supabase } from "@/integrations/supabase/client";
+import { StripeEmbeddedCheckout } from "@/components/StripeEmbeddedCheckout";
+import { PaymentTestModeBanner } from "@/components/PaymentTestModeBanner";
 
 export const Route = createFileRoute("/pricing")({
   head: () => ({
@@ -24,6 +28,7 @@ type Tier = {
   features: string[];
   cta: string;
   href: string;
+  priceId?: string;
   featured?: boolean;
   badge?: string;
 };
@@ -47,6 +52,7 @@ const founding: Tier = {
   ],
   cta: "Claim Founding seat",
   href: "/auth",
+  priceId: "founding_monthly",
   badge: "LIMITED",
 };
 
@@ -66,6 +72,7 @@ const tiers: Tier[] = [
     ],
     cta: "Start with Starter",
     href: "/auth",
+    priceId: "starter_monthly",
   },
   {
     name: "Professional",
@@ -84,6 +91,7 @@ const tiers: Tier[] = [
     ],
     cta: "Choose Professional",
     href: "/auth",
+    priceId: "professional_monthly",
     featured: true,
     badge: "MOST POPULAR",
   },
@@ -105,6 +113,7 @@ const tiers: Tier[] = [
     ],
     cta: "Go Business",
     href: "/auth",
+    priceId: "business_monthly",
   },
   {
     name: "Enterprise",
@@ -135,9 +144,44 @@ const services = [
 
 function PricingPage() {
   const seatsLeft = Math.max(0, FOUNDING_SEATS - FOUNDING_TAKEN);
+  const navigate = useNavigate();
+  const [session, setSession] = useState<{ userId: string; email?: string } | null>(null);
+  const [checkoutPriceId, setCheckoutPriceId] = useState<string | null>(null);
+
+  useEffect(() => {
+    supabase.auth.getSession().then(({ data }) => {
+      if (data.session?.user) {
+        setSession({ userId: data.session.user.id, email: data.session.user.email ?? undefined });
+      }
+    });
+    const { data: sub } = supabase.auth.onAuthStateChange((_e, s) => {
+      setSession(s?.user ? { userId: s.user.id, email: s.user.email ?? undefined } : null);
+    });
+    return () => sub.subscription.unsubscribe();
+  }, []);
+
+  const startCheckout = (priceId?: string) => {
+    if (!priceId) return;
+    if (!session) {
+      navigate({ to: "/auth", search: { next: `/pricing?plan=${priceId}` } as never });
+      return;
+    }
+    setCheckoutPriceId(priceId);
+  };
+
+  // Auto-open checkout when returning from auth with ?plan=
+  useEffect(() => {
+    if (!session) return;
+    const params = new URLSearchParams(window.location.search);
+    const plan = params.get("plan");
+    if (plan) setCheckoutPriceId(plan);
+  }, [session]);
+
   return (
     <div className="min-h-screen bg-background text-foreground">
+      <PaymentTestModeBanner />
       <header className="mx-auto flex max-w-6xl items-center justify-between px-6 py-6">
+
         <Link to="/" className="flex items-center gap-2">
           <div className="grid size-9 place-items-center rounded-lg bg-brand">
             <div className="size-4 rounded-sm border-2 border-ink/30" />
@@ -185,9 +229,12 @@ function PricingPage() {
                 <div className="text-4xl font-semibold">
                   {founding.price}<span className="text-base font-normal text-muted-foreground">{founding.cadence}</span>
                 </div>
-                <Link to={founding.href} className="mt-3 inline-flex h-11 items-center gap-2 rounded-lg bg-brand px-5 text-sm font-semibold text-brand-foreground">
+                <button
+                  onClick={() => startCheckout(founding.priceId)}
+                  className="mt-3 inline-flex h-11 items-center gap-2 rounded-lg bg-brand px-5 text-sm font-semibold text-brand-foreground"
+                >
                   {founding.cta} <ArrowRight className="size-4" />
-                </Link>
+                </button>
               </div>
             </div>
             <ul className="mt-6 grid gap-2 sm:grid-cols-2">
@@ -256,14 +303,14 @@ function PricingPage() {
                     {t.cta}
                   </a>
                 ) : (
-                  <Link
-                    to={t.href}
+                  <button
+                    onClick={() => startCheckout(t.priceId)}
                     className={`mt-6 inline-flex h-11 items-center justify-center gap-2 rounded-lg text-sm font-semibold ${
                       t.featured ? "bg-brand text-brand-foreground" : "bg-primary text-primary-foreground"
                     }`}
                   >
                     {t.cta}
-                  </Link>
+                  </button>
                 )}
               </div>
             ))}
@@ -366,6 +413,27 @@ function PricingPage() {
           <Link to="/" className="hover:text-foreground">Home</Link>
         </div>
       </footer>
+
+      {checkoutPriceId && (
+        <div className="fixed inset-0 z-50 bg-black/60 grid place-items-center p-4 overflow-y-auto">
+          <div className="relative w-full max-w-2xl bg-card rounded-2xl ring-1 ring-black/10 p-4 my-8">
+            <button
+              onClick={() => setCheckoutPriceId(null)}
+              className="absolute top-3 right-3 grid size-8 place-items-center rounded-lg hover:bg-muted"
+              aria-label="Close checkout"
+            >
+              <X className="size-4" />
+            </button>
+            <StripeEmbeddedCheckout
+              priceId={checkoutPriceId}
+              userId={session?.userId}
+              customerEmail={session?.email}
+              returnUrl={`${window.location.origin}/checkout/return?session_id={CHECKOUT_SESSION_ID}`}
+            />
+          </div>
+        </div>
+      )}
     </div>
   );
 }
+
