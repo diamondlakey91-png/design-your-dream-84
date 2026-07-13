@@ -1,6 +1,20 @@
 // Shared tier definitions — safe to import from client and server.
 // Keyed by Stripe price lookup_key (webhook resolves to this via lookup_key).
 
+// BETA MODE: paid plans are disabled while the app is pre-launch. Every
+// signed-in user gets full feature access free during beta (with a 7-day
+// "welcome window" surfaced in the UI). Flip this to false when going live.
+export const BETA_MODE = true;
+
+export const BETA_TIER: TierDef = {
+  key: "business_monthly",
+  name: "Beta Access",
+  rank: 99,
+  projectLimit: null,
+  features: { aiCopilot: true, planReview: true, docReader: true, liveJurisdictionSync: true },
+};
+
+
 export type TierKey = "founding_monthly" | "starter_monthly" | "professional_monthly" | "business_monthly";
 
 export interface TierDef {

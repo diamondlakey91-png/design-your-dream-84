@@ -1,7 +1,7 @@
 // Server-side entitlement checks. Used inside createServerFn handlers.
 // Reads the caller's most recent subscription row (env-scoped) and enforces
 // tier limits from src/lib/tiers.ts (a client-safe module).
-import { getTier, isSubscriptionActive, tierHasFeature, TIERS, type FeatureKey, type TierDef } from "@/lib/tiers";
+import { BETA_MODE, BETA_TIER, getTier, isSubscriptionActive, tierHasFeature, TIERS, type FeatureKey, type TierDef } from "@/lib/tiers";
 
 type SupabaseCtx = {
   from: (t: string) => {
@@ -52,6 +52,14 @@ export async function getEntitlement(
   supabase: unknown,
   userId: string,
 ): Promise<Entitlement> {
+  if (BETA_MODE) {
+    return {
+      isActive: true,
+      tier: BETA_TIER,
+      hasFeature: () => true,
+      projectLimit: null,
+    };
+  }
   // Loosely typed to avoid Database import churn.
   const sb = supabase as SupabaseCtx;
   const env = envFromSecret();
@@ -73,6 +81,7 @@ export async function getEntitlement(
     projectLimit: tier ? tier.projectLimit : 0, // no sub => 0 (blocks creation)
   };
 }
+
 
 const FEATURE_LABEL: Record<FeatureKey, string> = {
   aiCopilot: "AI Copilot",
