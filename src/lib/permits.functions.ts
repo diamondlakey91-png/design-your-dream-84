@@ -3748,7 +3748,9 @@ export const analysisToDeadlines = createServerFn({ method: "POST" })
   .handler(async ({ data, context }) => {
     const { data: a } = await context.supabase.from("permit_analyses").select("*").eq("id", data.analysis_id).maybeSingle();
     if (!a) throw new Error("Analysis not found");
-    const actions = (a.analysis?.next_actions ?? []) as Array<Record<string, string>>;
+    const aAny = a as unknown as { analysis?: { next_actions?: Array<Record<string, string>> } };
+    const actions = aAny.analysis?.next_actions ?? [];
+
     const today = new Date();
     const rows = actions.map((act, i) => {
       let due = act.suggested_due_date;
