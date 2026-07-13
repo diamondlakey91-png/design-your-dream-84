@@ -105,31 +105,99 @@ export const listDeadlines = createServerFn({ method: "GET" })
     return data ?? [];
   });
 
-// ---- Chat ----
-export const listChatMessages = createServerFn({ method: "GET" })
+// ---- Chat threads ----
+export const listThreads = createServerFn({ method: "GET" })
   .middleware([requireSupabaseAuth])
   .handler(async ({ context }) => {
     const { data, error } = await context.supabase
-      .from("chat_messages")
-      .select("*")
-      .order("created_at", { ascending: true })
+      .from("chat_threads")
+      .select("*, projects(name)")
+      .order("last_message_at", { ascending: false })
       .limit(100);
     if (error) throw new Error(error.message);
     return data ?? [];
   });
 
+export const createThread = createServerFn({ method: "POST" })
+  .middleware([requireSupabaseAuth])
+  .inputValidator((input: unknown) => z.object({
+    title: z.string().max(120).optional(),
+    project_id: z.string().uuid().nullable().optional(),
+  }).parse(input))
+  .handler(async ({ data, context }) => {
+    const { data: row, error } = await context.supabase
+      .from("chat_threads")
+      .insert({
+        user_id: context.userId,
+        title: data.title || "New chat",
+        project_id: data.project_id ?? null,
+      })
+      .select("*").single();
+    if (error) throw new Error(error.message);
+    return row;
+  });
+
+export const renameThread = createServerFn({ method: "POST" })
+  .middleware([requireSupabaseAuth])
+  .inputValidator((input: unknown) => z.object({
+    id: z.string().uuid(),
+    title: z.string().min(1).max(120),
+  }).parse(input))
+  .handler(async ({ data, context }) => {
+    const { error } = await context.supabase
+      .from("chat_threads").update({ title: data.title }).eq("id", data.id);
+    if (error) throw new Error(error.message);
+    return { ok: true };
+  });
+
+export const setThreadProject = createServerFn({ method: "POST" })
+  .middleware([requireSupabaseAuth])
+  .inputValidator((input: unknown) => z.object({
+    id: z.string().uuid(),
+    project_id: z.string().uuid().nullable(),
+  }).parse(input))
+  .handler(async ({ data, context }) => {
+    const { error } = await context.supabase
+      .from("chat_threads").update({ project_id: data.project_id }).eq("id", data.id);
+    if (error) throw new Error(error.message);
+    return { ok: true };
+  });
+
+export const deleteThread = createServerFn({ method: "POST" })
+  .middleware([requireSupabaseAuth])
+  .inputValidator((input: unknown) => z.object({ id: z.string().uuid() }).parse(input))
+  .handler(async ({ data, context }) => {
+    const { error } = await context.supabase.from("chat_threads").delete().eq("id", data.id);
+    if (error) throw new Error(error.message);
+    return { ok: true };
+  });
+
+export const listThreadMessages = createServerFn({ method: "GET" })
+  .middleware([requireSupabaseAuth])
+  .inputValidator((input: unknown) => z.object({ thread_id: z.string().uuid() }).parse(input))
+  .handler(async ({ data, context }) => {
+    const { data: rows, error } = await context.supabase
+      .from("chat_messages")
+      .select("*")
+      .eq("thread_id", data.thread_id)
+      .order("created_at", { ascending: true })
+      .limit(500);
+    if (error) throw new Error(error.message);
+    return rows ?? [];
+  });
+
 const SendChatInput = z.object({
-  content: z.string().min(1).max(2000),
-  project_id: z.string().uuid().optional().nullable(),
+  thread_id: z.string().uuid(),
+  content: z.string().min(1).max(4000),
 });
 
 const STAGE_NAMES = ["Pre-Planning", "Plans Submitted", "In Review", "Approved", "Issued"];
 
-async function callLovableAI(apiKey: string, messages: Array<{ role: string; content: string }>) {
+async function callLovableAI(apiKey: string, messages: Array<{ role: string; content: string }>, model = "google/gemini-2.5-pro") {
   const resp = await fetch("https://ai.gateway.lovable.dev/v1/chat/completions", {
     method: "POST",
     headers: { "Content-Type": "application/json", "Lovable-API-Key": apiKey },
-    body: JSON.stringify({ model: "google/gemini-2.5-pro", messages }),
+    body: JSON.stringify({ model, messages }),
   });
   if (!resp.ok) {
     const txt = await resp.text();
@@ -166,25 +234,33 @@ export const sendChatMessage = createServerFn({ method: "POST" })
     const apiKey = process.env.LOVABLE_API_KEY;
     if (!apiKey) throw new Error("AI is not configured");
 
+    // Verify thread ownership + pull project context
+    const { data: thread } = await context.supabase
+      .from("chat_threads").select("*, projects(*)").eq("id", data.thread_id).maybeSingle();
+    if (!thread) throw new Error("Thread not found");
+
     const { data: history } = await context.supabase
       .from("chat_messages")
       .select("role, content")
+      .eq("thread_id", data.thread_id)
       .order("created_at", { ascending: true })
-      .limit(30);
+      .limit(40);
 
-    // Optional project context
     let projectContext = "";
-    if (data.project_id) {
-      const { data: p } = await context.supabase
-        .from("projects").select("*").eq("id", data.project_id).maybeSingle();
-      if (p) {
-        projectContext = `\n\n[Active project context]\n- Name: ${p.name}\n- Type: ${p.project_type}\n- Location: ${p.location || "unspecified"}\n- Jurisdiction: ${p.jurisdiction || "unspecified"}\n- Current stage: ${STAGE_NAMES[p.current_stage]} (${p.current_stage + 1}/5)\n- Permits: ${p.permits_issued}/${p.permit_count} issued\nUse this context when the user's question refers to "this project", "my project", or asks about next steps.`;
-      }
+    const p = thread.projects as { name: string; project_type: string; location: string; jurisdiction: string; current_stage: number; permits_issued: number; permit_count: number } | null;
+    if (p) {
+      projectContext = `\n\n[Active project context]\n- Name: ${p.name}\n- Type: ${p.project_type}\n- Location: ${p.location || "unspecified"}\n- Jurisdiction: ${p.jurisdiction || "unspecified"}\n- Current stage: ${STAGE_NAMES[p.current_stage]} (${p.current_stage + 1}/5)\n- Permits: ${p.permits_issued}/${p.permit_count} issued\nUse this context when the user's question refers to "this project", "my project", or asks about next steps.`;
     }
 
     const { data: userMsg, error: uerr } = await context.supabase
       .from("chat_messages")
-      .insert({ user_id: context.userId, role: "user", content: data.content })
+      .insert({
+        user_id: context.userId,
+        thread_id: data.thread_id,
+        role: "user",
+        content: data.content,
+        parts: [{ type: "text", text: data.content }],
+      })
       .select("*").single();
     if (uerr) throw new Error(uerr.message);
 
@@ -198,9 +274,27 @@ export const sendChatMessage = createServerFn({ method: "POST" })
 
     const { data: assistantMsg, error: aerr } = await context.supabase
       .from("chat_messages")
-      .insert({ user_id: context.userId, role: "assistant", content: reply })
+      .insert({
+        user_id: context.userId,
+        thread_id: data.thread_id,
+        role: "assistant",
+        content: reply,
+        parts: [{ type: "text", text: reply }],
+      })
       .select("*").single();
     if (aerr) throw new Error(aerr.message);
+
+    // Auto-title on the first exchange
+    if ((history?.length ?? 0) === 0 && (thread.title === "New chat" || !thread.title)) {
+      const title = data.content.slice(0, 60).replace(/\s+/g, " ").trim();
+      await context.supabase.from("chat_threads")
+        .update({ title, last_message_at: new Date().toISOString() })
+        .eq("id", data.thread_id);
+    } else {
+      await context.supabase.from("chat_threads")
+        .update({ last_message_at: new Date().toISOString() })
+        .eq("id", data.thread_id);
+    }
 
     return { user: userMsg, assistant: assistantMsg };
   });
@@ -244,14 +338,6 @@ No preamble, no closing pleasantries.`;
       { role: "user", content: userPrompt },
     ]);
     return { summary: reply };
-  });
-
-export const clearChat = createServerFn({ method: "POST" })
-  .middleware([requireSupabaseAuth])
-  .handler(async ({ context }) => {
-    const { error } = await context.supabase.from("chat_messages").delete().eq("user_id", context.userId);
-    if (error) throw new Error(error.message);
-    return { ok: true };
   });
 
 // ---- Permit checklist ----
@@ -875,4 +961,244 @@ Return {"matches":[]} if nothing confidently matches.`;
 
     return { applied, skipped, total_findings: findings.length };
   });
+
+// ---- Inspections ----
+const INSPECTION_STATUSES = ["scheduled", "passed", "failed", "rescheduled", "canceled"] as const;
+
+export const listInspections = createServerFn({ method: "GET" })
+  .middleware([requireSupabaseAuth])
+  .inputValidator((input: unknown) => z.object({ project_id: z.string().uuid() }).parse(input))
+  .handler(async ({ data, context }) => {
+    const { data: rows, error } = await context.supabase
+      .from("inspections")
+      .select("*")
+      .eq("project_id", data.project_id)
+      .order("scheduled_date", { ascending: true, nullsFirst: false });
+    if (error) throw new Error(error.message);
+    return rows ?? [];
+  });
+
+export const addInspection = createServerFn({ method: "POST" })
+  .middleware([requireSupabaseAuth])
+  .inputValidator((input: unknown) => z.object({
+    project_id: z.string().uuid(),
+    inspection_type: z.string().min(1).max(120),
+    scheduled_date: z.string().nullable().optional(),
+    inspector: z.string().max(120).optional().default(""),
+    permit_item_id: z.string().uuid().nullable().optional(),
+  }).parse(input))
+  .handler(async ({ data, context }) => {
+    const { data: row, error } = await context.supabase
+      .from("inspections")
+      .insert({
+        user_id: context.userId,
+        project_id: data.project_id,
+        inspection_type: data.inspection_type,
+        scheduled_date: data.scheduled_date ?? null,
+        inspector: data.inspector ?? "",
+        permit_item_id: data.permit_item_id ?? null,
+        status: "scheduled",
+      })
+      .select("*").single();
+    if (error) throw new Error(error.message);
+    await context.supabase.from("activity").insert({
+      user_id: context.userId,
+      project_id: data.project_id,
+      description: `Inspection scheduled: ${data.inspection_type}${data.scheduled_date ? ` for ${data.scheduled_date}` : ""}`,
+    });
+    return row;
+  });
+
+export const updateInspection = createServerFn({ method: "POST" })
+  .middleware([requireSupabaseAuth])
+  .inputValidator((input: unknown) => z.object({
+    id: z.string().uuid(),
+    status: z.enum(INSPECTION_STATUSES).optional(),
+    scheduled_date: z.string().nullable().optional(),
+    result_date: z.string().nullable().optional(),
+    notes: z.string().max(2000).optional(),
+    inspector: z.string().max(120).optional(),
+  }).parse(input))
+  .handler(async ({ data, context }) => {
+    const patch: {
+      status?: (typeof INSPECTION_STATUSES)[number];
+      scheduled_date?: string | null;
+      result_date?: string | null;
+      notes?: string;
+      inspector?: string;
+    } = {};
+    if (data.status !== undefined) patch.status = data.status;
+    if (data.scheduled_date !== undefined) patch.scheduled_date = data.scheduled_date;
+    if (data.result_date !== undefined) patch.result_date = data.result_date;
+    if (data.notes !== undefined) patch.notes = data.notes;
+    if (data.inspector !== undefined) patch.inspector = data.inspector;
+    if (data.status === "passed" || data.status === "failed") {
+      patch.result_date = data.result_date ?? new Date().toISOString().slice(0, 10);
+    }
+    const { data: row, error } = await context.supabase
+      .from("inspections").update(patch).eq("id", data.id).select("*").single();
+    if (error) throw new Error(error.message);
+    if (data.status) {
+      await context.supabase.from("activity").insert({
+        user_id: context.userId,
+        project_id: row.project_id,
+        description: `Inspection "${row.inspection_type}" → ${data.status}`,
+      });
+    }
+    return row;
+  });
+
+export const deleteInspection = createServerFn({ method: "POST" })
+  .middleware([requireSupabaseAuth])
+  .inputValidator((input: unknown) => z.object({ id: z.string().uuid() }).parse(input))
+  .handler(async ({ data, context }) => {
+    const { error } = await context.supabase.from("inspections").delete().eq("id", data.id);
+    if (error) throw new Error(error.message);
+    return { ok: true };
+  });
+
+// ---- Jurisdiction Intelligence Library ----
+function toSlug(s: string) {
+  return s.toLowerCase().trim().replace(/[,]/g, "").replace(/[^a-z0-9]+/g, "-").replace(/(^-|-$)/g, "");
+}
+
+export const listJurisdictionProfiles = createServerFn({ method: "GET" })
+  .middleware([requireSupabaseAuth])
+  .inputValidator((input: unknown) => z.object({ q: z.string().max(120).optional().default("") }).parse(input))
+  .handler(async ({ data, context }) => {
+    let query = context.supabase
+      .from("jurisdiction_profiles")
+      .select("id, slug, name, state, department, portal_url, refreshed_at, updated_at")
+      .order("updated_at", { ascending: false })
+      .limit(50);
+    if (data.q) query = query.ilike("name", `%${data.q}%`);
+    const { data: rows, error } = await query;
+    if (error) throw new Error(error.message);
+    return rows ?? [];
+  });
+
+export const getJurisdictionProfile = createServerFn({ method: "GET" })
+  .middleware([requireSupabaseAuth])
+  .inputValidator((input: unknown) => z.object({ slug: z.string().min(1).max(160) }).parse(input))
+  .handler(async ({ data, context }) => {
+    const { data: row, error } = await context.supabase
+      .from("jurisdiction_profiles").select("*").eq("slug", data.slug).maybeSingle();
+    if (error) throw new Error(error.message);
+    return row;
+  });
+
+const ProfileExtractionSchema = z.object({
+  name: z.string(),
+  state: z.string().default(""),
+  department: z.string().default(""),
+  portal_url: z.string().default(""),
+  overview: z.string(),
+  permits: z.array(z.object({
+    name: z.string(),
+    when_required: z.string().default(""),
+    typical_reviewers: z.string().default(""),
+  })).max(20),
+  fees: z.array(z.object({
+    label: z.string(),
+    detail: z.string().default(""),
+  })).max(20),
+  timelines: z.array(z.object({
+    stage: z.string(),
+    typical_duration: z.string(),
+  })).max(20),
+  contacts: z.array(z.object({
+    role: z.string(),
+    detail: z.string(),
+  })).max(20),
+  source_urls: z.array(z.string()).max(15),
+});
+
+export const buildJurisdictionProfile = createServerFn({ method: "POST" })
+  .middleware([requireSupabaseAuth])
+  .inputValidator((input: unknown) => z.object({
+    jurisdiction: z.string().min(2).max(160),
+  }).parse(input))
+  .handler(async ({ data, context }) => {
+    const fcKey = process.env.FIRECRAWL_API_KEY;
+    const aiKey = process.env.LOVABLE_API_KEY;
+    if (!fcKey) throw new Error("Firecrawl is not configured");
+    if (!aiKey) throw new Error("AI is not configured");
+
+    const slug = toSlug(data.jurisdiction);
+    if (!slug) throw new Error("Invalid jurisdiction");
+
+    // Firecrawl search + scrape top .gov/permit pages
+    const hits = await firecrawlSearch(
+      fcKey,
+      `${data.jurisdiction} building department permits fees timeline site:.gov OR "permit fees" OR "plan review"`,
+      6,
+    );
+    const preferred = hits
+      .filter((h) => /(\.gov|accela|energov|opengov|citizenserve|permitium|mygovernmentonline)/i.test(h.url))
+      .slice(0, 3);
+    const targets = (preferred.length > 0 ? preferred : hits.slice(0, 3));
+    if (targets.length === 0) throw new Error(`No sources found for ${data.jurisdiction}.`);
+
+    const scrapes = await Promise.all(targets.map(async (h) => {
+      try {
+        const s = await firecrawlScrape(fcKey, h.url);
+        return `SOURCE: ${h.url}\nTITLE: ${h.title ?? ""}\n${s.markdown.slice(0, 3500)}`;
+      } catch {
+        return `SOURCE: ${h.url}\nTITLE: ${h.title ?? ""}\nDESC: ${h.description ?? ""}`;
+      }
+    }));
+
+    const prompt = `Build a jurisdiction intelligence profile for ${data.jurisdiction}, USA. Use ONLY facts from the sources below. If you don't know, leave the field empty; never fabricate specific fee amounts or code sections.
+
+SOURCES
+${scrapes.join("\n\n---\n\n")}
+
+Return ONLY valid JSON of this exact shape:
+{
+  "name": "City, ST",
+  "state": "ST",
+  "department": "official building/permit department name",
+  "portal_url": "canonical URL for permit search or applications",
+  "overview": "2-4 sentence plain-English overview of how this jurisdiction handles permits",
+  "permits": [{"name":"Building Permit","when_required":"...","typical_reviewers":"Plan Check, Fire, etc."}],
+  "fees": [{"label":"Building permit fee","detail":"formula or 'valuation-based; see fee schedule'"}],
+  "timelines": [{"stage":"Plan review","typical_duration":"2-6 weeks"}],
+  "contacts": [{"role":"Building Department","detail":"phone / email / address"}],
+  "source_urls": ["https://..."]
+}`;
+
+    const raw = await callLovableAI(aiKey, [
+      { role: "system", content: "You extract structured jurisdiction data. Output valid JSON only, no prose, no fences. Never fabricate specific numbers." },
+      { role: "user", content: prompt },
+    ]);
+    const cleaned = raw.replace(/```json|```/g, "").trim();
+    const s = cleaned.indexOf("{"); const e = cleaned.lastIndexOf("}");
+    let parsed: z.infer<typeof ProfileExtractionSchema>;
+    try { parsed = ProfileExtractionSchema.parse(JSON.parse(cleaned.slice(s, e + 1))); }
+    catch { throw new Error("AI returned unparseable profile. Try again."); }
+
+    const payload = {
+      slug,
+      name: parsed.name || data.jurisdiction,
+      state: parsed.state,
+      department: parsed.department,
+      portal_url: parsed.portal_url,
+      overview: parsed.overview,
+      permits: parsed.permits,
+      fees: parsed.fees,
+      timelines: parsed.timelines,
+      contacts: parsed.contacts,
+      source_urls: parsed.source_urls,
+      refreshed_at: new Date().toISOString(),
+      created_by: context.userId,
+    };
+
+    const { data: row, error } = await context.supabase
+      .from("jurisdiction_profiles")
+      .upsert(payload, { onConflict: "slug" })
+      .select("*").single();
+    if (error) throw new Error(error.message);
+    return row;
+  });
+
 

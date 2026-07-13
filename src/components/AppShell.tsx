@@ -1,5 +1,5 @@
 import { Link, useLocation, useNavigate } from "@tanstack/react-router";
-import { Home, FolderKanban, MessageSquare, LogOut } from "lucide-react";
+import { Home, FolderKanban, MessageSquare, Library, LogOut } from "lucide-react";
 import { supabase } from "@/integrations/supabase/client";
 import { useQueryClient } from "@tanstack/react-query";
 import type { ReactNode } from "react";
@@ -24,7 +24,7 @@ export function AppShell({ children }: { children: ReactNode }) {
 
       {/* Bottom nav */}
       <nav className="fixed inset-x-0 bottom-0 z-40 border-t border-border bg-card/95 backdrop-blur">
-        <div className="mx-auto flex max-w-2xl items-center justify-around px-8 py-3">
+        <div className="mx-auto flex max-w-2xl items-center justify-around px-6 py-3">
           <NavItem to="/dashboard" icon={<Home className="size-5" />} label="Sites" active={active("/dashboard")} />
           <NavItem to="/projects" icon={<FolderKanban className="size-5" />} label="Projects" active={active("/projects")} />
           <Link
@@ -34,7 +34,7 @@ export function AppShell({ children }: { children: ReactNode }) {
           >
             <MessageSquare className="size-5" />
           </Link>
-          <NavItem to="/assistant" icon={<MessageSquare className="size-5" />} label="AI" active={active("/assistant")} />
+          <NavItem to="/jurisdictions" icon={<Library className="size-5" />} label="Library" active={active("/jurisdictions")} />
           <button
             onClick={signOut}
             className="flex flex-col items-center gap-1 text-muted-foreground hover:text-foreground"
@@ -60,3 +60,4 @@ function NavItem({ to, icon, label, active }: { to: string; icon: ReactNode; lab
     </Link>
   );
 }
+

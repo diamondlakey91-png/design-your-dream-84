@@ -48,27 +48,85 @@ export type Database = {
       }
       chat_messages: {
         Row: {
+          client_message_id: string | null
           content: string
           created_at: string
           id: string
+          parts: Json | null
           role: string
+          thread_id: string
           user_id: string
         }
         Insert: {
+          client_message_id?: string | null
           content: string
           created_at?: string
           id?: string
+          parts?: Json | null
           role: string
+          thread_id: string
           user_id: string
         }
         Update: {
+          client_message_id?: string | null
           content?: string
           created_at?: string
           id?: string
+          parts?: Json | null
           role?: string
+          thread_id?: string
           user_id?: string
         }
-        Relationships: []
+        Relationships: [
+          {
+            foreignKeyName: "chat_messages_thread_id_fkey"
+            columns: ["thread_id"]
+            isOneToOne: false
+            referencedRelation: "chat_threads"
+            referencedColumns: ["id"]
+          },
+        ]
+      }
+      chat_threads: {
+        Row: {
+          created_at: string
+          id: string
+          last_message_at: string
+          model: string
+          project_id: string | null
+          title: string
+          updated_at: string
+          user_id: string
+        }
+        Insert: {
+          created_at?: string
+          id?: string
+          last_message_at?: string
+          model?: string
+          project_id?: string | null
+          title?: string
+          updated_at?: string
+          user_id: string
+        }
+        Update: {
+          created_at?: string
+          id?: string
+          last_message_at?: string
+          model?: string
+          project_id?: string | null
+          title?: string
+          updated_at?: string
+          user_id?: string
+        }
+        Relationships: [
+          {
+            foreignKeyName: "chat_threads_project_id_fkey"
+            columns: ["project_id"]
+            isOneToOne: false
+            referencedRelation: "projects"
+            referencedColumns: ["id"]
+          },
+        ]
       }
       deadlines: {
         Row: {
@@ -104,6 +162,123 @@ export type Database = {
             referencedColumns: ["id"]
           },
         ]
+      }
+      inspections: {
+        Row: {
+          created_at: string
+          id: string
+          inspection_type: string
+          inspector: string
+          notes: string
+          permit_item_id: string | null
+          project_id: string
+          result_date: string | null
+          scheduled_date: string | null
+          status: string
+          updated_at: string
+          user_id: string
+        }
+        Insert: {
+          created_at?: string
+          id?: string
+          inspection_type: string
+          inspector?: string
+          notes?: string
+          permit_item_id?: string | null
+          project_id: string
+          result_date?: string | null
+          scheduled_date?: string | null
+          status?: string
+          updated_at?: string
+          user_id: string
+        }
+        Update: {
+          created_at?: string
+          id?: string
+          inspection_type?: string
+          inspector?: string
+          notes?: string
+          permit_item_id?: string | null
+          project_id?: string
+          result_date?: string | null
+          scheduled_date?: string | null
+          status?: string
+          updated_at?: string
+          user_id?: string
+        }
+        Relationships: [
+          {
+            foreignKeyName: "inspections_permit_item_id_fkey"
+            columns: ["permit_item_id"]
+            isOneToOne: false
+            referencedRelation: "permit_items"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "inspections_project_id_fkey"
+            columns: ["project_id"]
+            isOneToOne: false
+            referencedRelation: "projects"
+            referencedColumns: ["id"]
+          },
+        ]
+      }
+      jurisdiction_profiles: {
+        Row: {
+          contacts: Json
+          created_at: string
+          created_by: string
+          department: string
+          fees: Json
+          id: string
+          name: string
+          overview: string
+          permits: Json
+          portal_url: string
+          refreshed_at: string
+          slug: string
+          source_urls: string[]
+          state: string
+          timelines: Json
+          updated_at: string
+        }
+        Insert: {
+          contacts?: Json
+          created_at?: string
+          created_by: string
+          department?: string
+          fees?: Json
+          id?: string
+          name: string
+          overview?: string
+          permits?: Json
+          portal_url?: string
+          refreshed_at?: string
+          slug: string
+          source_urls?: string[]
+          state?: string
+          timelines?: Json
+          updated_at?: string
+        }
+        Update: {
+          contacts?: Json
+          created_at?: string
+          created_by?: string
+          department?: string
+          fees?: Json
+          id?: string
+          name?: string
+          overview?: string
+          permits?: Json
+          portal_url?: string
+          refreshed_at?: string
+          slug?: string
+          source_urls?: string[]
+          state?: string
+          timelines?: Json
+          updated_at?: string
+        }
+        Relationships: []
       }
       jurisdiction_syncs: {
         Row: {
@@ -152,6 +327,8 @@ export type Database = {
       }
       permit_items: {
         Row: {
+          application_fields: Json | null
+          application_packet_doc_id: string | null
           category: string
           created_at: string
           due_date: string | null
@@ -166,6 +343,8 @@ export type Database = {
           user_id: string
         }
         Insert: {
+          application_fields?: Json | null
+          application_packet_doc_id?: string | null
           category?: string
           created_at?: string
           due_date?: string | null
@@ -180,6 +359,8 @@ export type Database = {
           user_id: string
         }
         Update: {
+          application_fields?: Json | null
+          application_packet_doc_id?: string | null
           category?: string
           created_at?: string
           due_date?: string | null
@@ -194,6 +375,13 @@ export type Database = {
           user_id?: string
         }
         Relationships: [
+          {
+            foreignKeyName: "permit_items_application_packet_doc_id_fkey"
+            columns: ["application_packet_doc_id"]
+            isOneToOne: false
+            referencedRelation: "project_documents"
+            referencedColumns: ["id"]
+          },
           {
             foreignKeyName: "permit_items_project_id_fkey"
             columns: ["project_id"]
@@ -248,6 +436,8 @@ export type Database = {
         Row: {
           created_at: string
           current_stage: number
+          estimate: Json | null
+          estimate_generated_at: string | null
           id: string
           jurisdiction: string
           location: string
@@ -262,6 +452,8 @@ export type Database = {
         Insert: {
           created_at?: string
           current_stage?: number
+          estimate?: Json | null
+          estimate_generated_at?: string | null
           id?: string
           jurisdiction?: string
           location?: string
@@ -276,6 +468,8 @@ export type Database = {
         Update: {
           created_at?: string
           current_stage?: number
+          estimate?: Json | null
+          estimate_generated_at?: string | null
           id?: string
           jurisdiction?: string
           location?: string
