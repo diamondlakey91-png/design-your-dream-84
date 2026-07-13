@@ -1,10 +1,15 @@
-import { createFileRoute, useNavigate } from "@tanstack/react-router";
+import { createFileRoute, Link, useNavigate } from "@tanstack/react-router";
 import { zodValidator, fallback } from "@tanstack/zod-adapter";
 import { z } from "zod";
 import { useEffect, useMemo, useState } from "react";
+import { useQuery } from "@tanstack/react-query";
+import { useServerFn } from "@tanstack/react-start";
 import { AppShell } from "@/components/AppShell";
-import { PORTAL_REGISTRY, PORTAL_PLATFORMS, US_STATES, findPortalDeepLinks, type PortalEntry, type PortalPlatform } from "@/lib/portalRegistry";
-import { ExternalLink, Search, Building2, FileText, MapPin, Hash, Info, Zap } from "lucide-react";
+import { PORTAL_REGISTRY, PORTAL_PLATFORMS, US_STATES, findPortalDeepLinks, buildEntryFromMapping, type PortalEntry, type PortalPlatform } from "@/lib/portalRegistry";
+import { listPortalMappings } from "@/lib/portals.functions";
+import { useIsAdmin } from "@/hooks/useIsAdmin";
+import { ExternalLink, Search, Building2, FileText, MapPin, Hash, Info, Zap, ShieldAlert } from "lucide-react";
+
 
 const portalsSearchSchema = z.object({
   q: fallback(z.string(), "").default(""),
