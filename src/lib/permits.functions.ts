@@ -638,6 +638,11 @@ export const intakeGenerateChecklist = createServerFn({ method: "POST" })
       description: `Project "${project.name}" created from AI intake.`,
     });
 
+    // Load cached jurisdiction context (grounds checklist in real permits/timelines/sources)
+    const jc = data.jurisdiction
+      ? await loadJurisdictionContextBlock(context.supabase, data.jurisdiction)
+      : { block: "", hasData: false, profile: null };
+
     // Ask AI for a checklist tailored to the intake scope
     const prompt = `Generate a permit checklist for this project based on the intake below. Return ONLY valid JSON, no prose.
 
@@ -650,6 +655,7 @@ Location: ${data.location}
 Jurisdiction: ${data.jurisdiction || "unspecified"}
 Scope described by user:
 """${data.scope}"""
+${jc.block}
 
 Return this JSON shape:
 {"items":[{"name":"Building Permit","category":"Building","required":true,"why":"..."}]}
@@ -658,13 +664,14 @@ Rules:
 - 6 to 14 items, in chronological order (pre-construction → construction → occupancy).
 - category one of: Building, MEP, Fire, Health, Zoning, Sign, Right-of-Way, Grading, Demolition, Stormwater, Historic, Environmental, Occupancy.
 - required=true for clearly-required based on scope; false for conditional/only-if-triggered.
-- name uses the local term when jurisdiction is known (e.g. "LADBS Building Permit", "NYC DOB PW1 Filing").
-- why is one short clause tied to the scope (mention the trigger from the intake).`;
+- name uses the local term when jurisdiction is known (e.g. "LADBS Building Permit", "NYC DOB PW1 Filing"). If a JURISDICTION CONTEXT block is provided above, prefer permit names listed there.
+- why is one short clause tied to the scope (mention the trigger from the intake). When a stage's typical duration is in the JURISDICTION CONTEXT, append " (~<duration>)" to why for that item.`;
 
     const raw = await callLovableAI(apiKey, [
       { role: "system", content: SYSTEM_PROMPT },
       { role: "user", content: prompt },
     ]);
+
     const cleaned = raw.replace(/```json|```/g, "").trim();
     const jsonStart = cleaned.indexOf("{");
     const jsonEnd = cleaned.lastIndexOf("}");
