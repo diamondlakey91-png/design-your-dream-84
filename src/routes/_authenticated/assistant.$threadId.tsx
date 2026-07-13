@@ -3,7 +3,6 @@ import { useMutation, useQuery, useQueryClient } from "@tanstack/react-query";
 import { useServerFn } from "@tanstack/react-start";
 import {
   listThreadMessages,
-  sendChatMessage,
   listThreads,
   listProjects,
   setThreadProject,
@@ -12,8 +11,9 @@ import {
   extractChecklistFromMessage,
   addPermitItemsBulk,
 } from "@/lib/permits.functions";
+import { supabase } from "@/integrations/supabase/client";
 import { ArrowLeft, Send, Briefcase, X, Edit3, ClipboardList, Sparkles, ListPlus, Check, Loader2 } from "lucide-react";
-import { useEffect, useMemo, useRef, useState } from "react";
+import { useCallback, useEffect, useMemo, useRef, useState } from "react";
 import { toast } from "sonner";
 import ReactMarkdown from "react-markdown";
 import remarkGfm from "remark-gfm";
@@ -30,7 +30,6 @@ function ThreadView() {
   const qc = useQueryClient();
 
   const listMsgs = useServerFn(listThreadMessages);
-  const sendFn = useServerFn(sendChatMessage);
   const listThreadsFn = useServerFn(listThreads);
   const projectsFn = useServerFn(listProjects);
   const setProjectFn = useServerFn(setThreadProject);
@@ -42,6 +41,9 @@ function ThreadView() {
   const [titleDraft, setTitleDraft] = useState("");
   const [intakeOpen, setIntakeOpen] = useState(false);
   const [extractOpen, setExtractOpen] = useState<null | { messageId: string; content: string }>(null);
+  const [streaming, setStreaming] = useState<{ user: string; assistant: string } | null>(null);
+  const [sending, setSending] = useState(false);
+  const abortRef = useRef<AbortController | null>(null);
   const scrollRef = useRef<HTMLDivElement>(null);
   const textareaRef = useRef<HTMLTextAreaElement>(null);
   const intakeFn = useServerFn(intakeGenerateChecklist);
@@ -62,16 +64,51 @@ function ThreadView() {
   const activeProject = projects.find((p) => p.id === thread?.project_id) ?? null;
   const messages = messagesQ.data ?? [];
 
-  const send = useMutation({
-    mutationFn: (content: string) => sendFn({ data: { thread_id: threadId, content } }),
-    onSuccess: () => {
-      qc.invalidateQueries({ queryKey: ["chat-thread", threadId] });
-      qc.invalidateQueries({ queryKey: ["chat-threads"] });
+  const streamSend = useCallback(async (content: string) => {
+    setSending(true);
+    setStreaming({ user: content, assistant: "" });
+    const controller = new AbortController();
+    abortRef.current = controller;
+    try {
+      const { data: sess } = await supabase.auth.getSession();
+      const token = sess.session?.access_token;
+      if (!token) throw new Error("Not signed in");
+      const resp = await fetch("/api/chat/stream", {
+        method: "POST",
+        headers: { "Content-Type": "application/json", Authorization: `Bearer ${token}` },
+        body: JSON.stringify({ thread_id: threadId, content }),
+        signal: controller.signal,
+      });
+      if (!resp.ok || !resp.body) {
+        const txt = await resp.text().catch(() => "");
+        throw new Error(txt || `Request failed (${resp.status})`);
+      }
+      const reader = resp.body.getReader();
+      const decoder = new TextDecoder();
+      let acc = "";
+      while (true) {
+        const { done, value } = await reader.read();
+        if (done) break;
+        acc += decoder.decode(value, { stream: true });
+        setStreaming({ user: content, assistant: acc });
+      }
+      await qc.invalidateQueries({ queryKey: ["chat-thread", threadId] });
+      await qc.invalidateQueries({ queryKey: ["chat-threads"] });
+      setStreaming(null);
       setInput("");
       requestAnimationFrame(() => textareaRef.current?.focus());
-    },
-    onError: (e) => toast.error(e instanceof Error ? e.message : "Send failed"),
-  });
+    } catch (e) {
+      if ((e as { name?: string })?.name !== "AbortError") {
+        toast.error(e instanceof Error ? e.message : "Send failed");
+      }
+      setStreaming(null);
+    } finally {
+      setSending(false);
+      abortRef.current = null;
+    }
+  }, [qc, threadId]);
+
+  const send = { isPending: sending };
 
   const setProject = useMutation({
     mutationFn: (project_id: string | null) => setProjectFn({ data: { id: threadId, project_id } }),
@@ -100,14 +137,14 @@ function ThreadView() {
 
   useEffect(() => {
     scrollRef.current?.scrollTo({ top: scrollRef.current.scrollHeight, behavior: "smooth" });
-  }, [messages.length, send.isPending]);
+  }, [messages.length, streaming?.assistant, sending]);
 
   useEffect(() => { textareaRef.current?.focus(); }, [threadId]);
 
   const submit = () => {
     const v = input.trim();
-    if (!v || send.isPending) return;
-    send.mutate(v);
+    if (!v || sending) return;
+    void streamSend(v);
   };
 
   const suggestions = activeProject
@@ -271,14 +308,37 @@ function ThreadView() {
           ))}
 
 
-          {send.isPending && (
-            <div className="max-w-[85%]">
-              <div className="flex gap-1.5">
-                <span className="size-2 rounded-full bg-brand animate-pulse [animation-delay:0ms]" />
-                <span className="size-2 rounded-full bg-brand animate-pulse [animation-delay:150ms]" />
-                <span className="size-2 rounded-full bg-brand animate-pulse [animation-delay:300ms]" />
+          {streaming && (
+            <>
+              <div className="flex justify-end">
+                <div className="bg-brand text-brand-foreground rounded-2xl rounded-tr-none px-4 py-2.5 max-w-[85%]">
+                  <p className="text-sm whitespace-pre-wrap">{streaming.user}</p>
+                </div>
               </div>
-            </div>
+              <div className="max-w-[92%] space-y-2">
+                {streaming.assistant ? (
+                  <div
+                    className="text-sm text-zinc-200 leading-relaxed
+                      [&_p]:my-2 [&_p:first-child]:mt-0 [&_p:last-child]:mb-0
+                      [&_ul]:my-2 [&_ul]:pl-5 [&_ul]:list-disc [&_ul]:space-y-1.5
+                      [&_ol]:my-2 [&_ol]:pl-5 [&_ol]:list-decimal [&_ol]:space-y-1.5
+                      [&_li]:marker:text-brand
+                      [&_strong]:text-white [&_strong]:font-semibold
+                      [&_code]:font-mono [&_code]:text-[12px] [&_code]:bg-zinc-800 [&_code]:px-1.5 [&_code]:py-0.5 [&_code]:rounded
+                      [&_a]:text-brand [&_a]:underline [&_a]:underline-offset-2"
+                  >
+                    <ReactMarkdown remarkPlugins={[remarkGfm]}>{streaming.assistant}</ReactMarkdown>
+                    <span className="inline-block w-1.5 h-4 bg-brand/70 align-middle ml-0.5 animate-pulse" />
+                  </div>
+                ) : (
+                  <div className="flex gap-1.5">
+                    <span className="size-2 rounded-full bg-brand animate-pulse [animation-delay:0ms]" />
+                    <span className="size-2 rounded-full bg-brand animate-pulse [animation-delay:150ms]" />
+                    <span className="size-2 rounded-full bg-brand animate-pulse [animation-delay:300ms]" />
+                  </div>
+                )}
+              </div>
+            </>
           )}
 
           {messages.length === 0 && !send.isPending && (

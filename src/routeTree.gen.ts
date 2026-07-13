@@ -20,6 +20,7 @@ import { Route as AuthenticatedDashboardRouteImport } from './routes/_authentica
 import { Route as AuthenticatedAssistantRouteImport } from './routes/_authenticated/assistant'
 import { Route as AuthenticatedProjectsIndexRouteImport } from './routes/_authenticated/projects.index'
 import { Route as ShareReportsTokenRouteImport } from './routes/share.reports.$token'
+import { Route as ApiChatStreamRouteImport } from './routes/api/chat.stream'
 import { Route as AuthenticatedProjectsIdRouteImport } from './routes/_authenticated/projects.$id'
 import { Route as AuthenticatedJurisdictionsSlugRouteImport } from './routes/_authenticated/jurisdictions.$slug'
 import { Route as AuthenticatedInspectionsIdRouteImport } from './routes/_authenticated/inspections.$id'
@@ -82,6 +83,11 @@ const ShareReportsTokenRoute = ShareReportsTokenRouteImport.update({
   path: '/share/reports/$token',
   getParentRoute: () => rootRouteImport,
 } as any)
+const ApiChatStreamRoute = ApiChatStreamRouteImport.update({
+  id: '/api/chat/stream',
+  path: '/api/chat/stream',
+  getParentRoute: () => rootRouteImport,
+} as any)
 const AuthenticatedProjectsIdRoute = AuthenticatedProjectsIdRouteImport.update({
   id: '/projects/$id',
   path: '/projects/$id',
@@ -125,6 +131,7 @@ export interface FileRoutesByFullPath {
   '/inspections/$id': typeof AuthenticatedInspectionsIdRoute
   '/jurisdictions/$slug': typeof AuthenticatedJurisdictionsSlugRoute
   '/projects/$id': typeof AuthenticatedProjectsIdRoute
+  '/api/chat/stream': typeof ApiChatStreamRoute
   '/share/reports/$token': typeof ShareReportsTokenRoute
   '/projects/': typeof AuthenticatedProjectsIndexRoute
   '/api/public/payments/webhook': typeof ApiPublicPaymentsWebhookRoute
@@ -142,6 +149,7 @@ export interface FileRoutesByTo {
   '/inspections/$id': typeof AuthenticatedInspectionsIdRoute
   '/jurisdictions/$slug': typeof AuthenticatedJurisdictionsSlugRoute
   '/projects/$id': typeof AuthenticatedProjectsIdRoute
+  '/api/chat/stream': typeof ApiChatStreamRoute
   '/share/reports/$token': typeof ShareReportsTokenRoute
   '/projects': typeof AuthenticatedProjectsIndexRoute
   '/api/public/payments/webhook': typeof ApiPublicPaymentsWebhookRoute
@@ -161,6 +169,7 @@ export interface FileRoutesById {
   '/_authenticated/inspections/$id': typeof AuthenticatedInspectionsIdRoute
   '/_authenticated/jurisdictions/$slug': typeof AuthenticatedJurisdictionsSlugRoute
   '/_authenticated/projects/$id': typeof AuthenticatedProjectsIdRoute
+  '/api/chat/stream': typeof ApiChatStreamRoute
   '/share/reports/$token': typeof ShareReportsTokenRoute
   '/_authenticated/projects/': typeof AuthenticatedProjectsIndexRoute
   '/api/public/payments/webhook': typeof ApiPublicPaymentsWebhookRoute
@@ -180,6 +189,7 @@ export interface FileRouteTypes {
     | '/inspections/$id'
     | '/jurisdictions/$slug'
     | '/projects/$id'
+    | '/api/chat/stream'
     | '/share/reports/$token'
     | '/projects/'
     | '/api/public/payments/webhook'
@@ -197,6 +207,7 @@ export interface FileRouteTypes {
     | '/inspections/$id'
     | '/jurisdictions/$slug'
     | '/projects/$id'
+    | '/api/chat/stream'
     | '/share/reports/$token'
     | '/projects'
     | '/api/public/payments/webhook'
@@ -215,6 +226,7 @@ export interface FileRouteTypes {
     | '/_authenticated/inspections/$id'
     | '/_authenticated/jurisdictions/$slug'
     | '/_authenticated/projects/$id'
+    | '/api/chat/stream'
     | '/share/reports/$token'
     | '/_authenticated/projects/'
     | '/api/public/payments/webhook'
@@ -226,6 +238,7 @@ export interface RootRouteChildren {
   AuthRoute: typeof AuthRoute
   PricingRoute: typeof PricingRoute
   CheckoutReturnRoute: typeof CheckoutReturnRoute
+  ApiChatStreamRoute: typeof ApiChatStreamRoute
   ShareReportsTokenRoute: typeof ShareReportsTokenRoute
   ApiPublicPaymentsWebhookRoute: typeof ApiPublicPaymentsWebhookRoute
 }
@@ -307,6 +320,13 @@ declare module '@tanstack/react-router' {
       path: '/share/reports/$token'
       fullPath: '/share/reports/$token'
       preLoaderRoute: typeof ShareReportsTokenRouteImport
+      parentRoute: typeof rootRouteImport
+    }
+    '/api/chat/stream': {
+      id: '/api/chat/stream'
+      path: '/api/chat/stream'
+      fullPath: '/api/chat/stream'
+      preLoaderRoute: typeof ApiChatStreamRouteImport
       parentRoute: typeof rootRouteImport
     }
     '/_authenticated/projects/$id': {
@@ -404,6 +424,7 @@ const rootRouteChildren: RootRouteChildren = {
   AuthRoute: AuthRoute,
   PricingRoute: PricingRoute,
   CheckoutReturnRoute: CheckoutReturnRoute,
+  ApiChatStreamRoute: ApiChatStreamRoute,
   ShareReportsTokenRoute: ShareReportsTokenRoute,
   ApiPublicPaymentsWebhookRoute: ApiPublicPaymentsWebhookRoute,
 }
