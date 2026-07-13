@@ -755,3 +755,124 @@ RULES
     }
   });
 
+// ---- Apply sync findings to checklist ----
+const MatchSchema = z.object({
+  item_id: z.string().uuid(),
+  finding_index: z.number().int().min(0),
+  new_status: z.enum(PERMIT_STATUSES).nullable(),
+  new_due_date: z.string().nullable(),
+  confidence: z.enum(["high", "medium", "low"]),
+  explanation: z.string().min(1).max(400),
+});
+const MatchResultSchema = z.object({ matches: z.array(MatchSchema).max(50) });
+
+export const applySyncToChecklist = createServerFn({ method: "POST" })
+  .middleware([requireSupabaseAuth])
+  .inputValidator((input: unknown) => z.object({ sync_id: z.string().uuid() }).parse(input))
+  .handler(async ({ data, context }) => {
+    const aiKey = process.env.LOVABLE_API_KEY;
+    if (!aiKey) throw new Error("AI is not configured");
+
+    const { data: sync } = await context.supabase
+      .from("jurisdiction_syncs").select("*").eq("id", data.sync_id).maybeSingle();
+    if (!sync) throw new Error("Sync not found");
+    if (sync.status !== "complete") throw new Error("Sync is not complete yet");
+    const findings = (sync.findings ?? []) as Array<{
+      permit_or_record: string; status: string;
+      applicant_or_address?: string; filed_or_updated?: string; notes?: string;
+    }>;
+    if (findings.length === 0) throw new Error("No findings to apply");
+
+    const [{ data: project }, { data: items }] = await Promise.all([
+      context.supabase.from("projects").select("*").eq("id", sync.project_id).maybeSingle(),
+      context.supabase.from("permit_items").select("*").eq("project_id", sync.project_id),
+    ]);
+    if (!project) throw new Error("Project not found");
+    if (!items || items.length === 0) throw new Error("No checklist items on this project. Generate a checklist first.");
+
+    const prompt = `Match live permit-portal findings to the project's checklist items and decide the correct new status.
+
+PROJECT
+- Name: ${project.name}
+- Address: ${project.location || "(unknown)"}
+- Jurisdiction: ${project.jurisdiction}
+
+CHECKLIST ITEMS (${items.length}) — id, category, name, current status, current due_date
+${items.map((i) => `- ${i.id} | ${i.category} | ${i.name} | ${i.status} | ${i.due_date ?? "none"}`).join("\n")}
+
+LIVE FINDINGS (index, record, status, applicant/address, date, notes)
+${findings.map((f, ix) => `[${ix}] ${f.permit_or_record} | ${f.status} | ${f.applicant_or_address ?? ""} | ${f.filed_or_updated ?? ""} | ${f.notes ?? ""}`).join("\n")}
+
+RULES
+- Only match a finding to a checklist item when the finding is clearly about the SAME permit type (building, electrical, plumbing, mechanical, certificate of occupancy, zoning, fire, health, etc.) AND — when the finding names an applicant/address — plausibly the same project. Otherwise skip.
+- Map portal statuses to allowed values: not_started | submitted | under_review | approved | issued. "Filed"/"Received"/"Submitted" → submitted. "In Review"/"Plan Check"/"Routing" → under_review. "Approved"/"Ready to Issue" → approved. "Issued"/"Finaled" → issued. Withdrawn/Expired/Denied → do NOT change status; instead include the fact in explanation and leave new_status null.
+- Never downgrade a more advanced status (e.g. do not move "issued" back to "under_review"). If the portal reflects a lower status than the checklist, leave new_status null and note the discrepancy.
+- new_due_date: only set if a real inspection/expiration/deadline date appears in the finding, formatted YYYY-MM-DD. Otherwise null.
+- confidence: high (record explicitly names this project or address), medium (permit type matches and jurisdiction matches with weak identity), low (type match only — usually skip).
+- explanation: one plain-English sentence citing the finding (e.g. "Portal shows record B-2024-01823 issued 2024-11-02 for 123 Main St").
+
+Return ONLY JSON of shape:
+{"matches":[{"item_id":"<uuid>","finding_index":0,"new_status":"issued"|null,"new_due_date":"YYYY-MM-DD"|null,"confidence":"high|medium|low","explanation":"..."}]}
+Return {"matches":[]} if nothing confidently matches.`;
+
+    const raw = await callLovableAI(aiKey, [
+      { role: "system", content: "You match permit-portal records to checklist items. Output valid JSON only." },
+      { role: "user", content: prompt },
+    ]);
+    const cleaned = raw.replace(/```json|```/g, "").trim();
+    const s = cleaned.indexOf("{"); const e = cleaned.lastIndexOf("}");
+    let parsed: z.infer<typeof MatchResultSchema>;
+    try { parsed = MatchResultSchema.parse(JSON.parse(cleaned.slice(s, e + 1))); }
+    catch { throw new Error("AI returned unparseable matches. Try again."); }
+
+    const itemById = new Map(items.map((i) => [i.id, i]));
+    const stageRank: Record<string, number> = { not_started: 0, submitted: 1, under_review: 2, approved: 3, issued: 4 };
+    const applied: Array<{ item_id: string; item_name: string; from_status: string; to_status: string | null; new_due_date: string | null; confidence: string; explanation: string; finding: string }> = [];
+    const skipped: Array<{ reason: string; explanation: string }> = [];
+
+    for (const m of parsed.matches) {
+      const item = itemById.get(m.item_id);
+      if (!item) { skipped.push({ reason: "unknown item", explanation: m.explanation }); continue; }
+      if (m.confidence === "low") { skipped.push({ reason: "low confidence", explanation: m.explanation }); continue; }
+
+      const finding = findings[m.finding_index];
+      const findingLabel = finding ? `${finding.permit_or_record} (${finding.status})` : `finding #${m.finding_index}`;
+
+      const patch: { status?: string; due_date?: string | null; notes?: string } = {};
+      let nextStatus: string | null = null;
+      if (m.new_status && stageRank[m.new_status] > stageRank[item.status]) {
+        patch.status = m.new_status;
+        nextStatus = m.new_status;
+      }
+      if (m.new_due_date) patch.due_date = m.new_due_date;
+
+      const stamp = `[Live sync ${new Date().toISOString().slice(0, 10)}] ${m.explanation} — source: ${findingLabel}${sync.portal_url ? ` · ${sync.portal_url}` : ""}`;
+      patch.notes = item.notes ? `${item.notes}\n\n${stamp}` : stamp;
+
+      if (Object.keys(patch).length === 0) { skipped.push({ reason: "no change", explanation: m.explanation }); continue; }
+
+      const { error: uerr } = await context.supabase
+        .from("permit_items").update(patch).eq("id", item.id);
+      if (uerr) { skipped.push({ reason: uerr.message, explanation: m.explanation }); continue; }
+
+      applied.push({
+        item_id: item.id,
+        item_name: item.name,
+        from_status: item.status,
+        to_status: nextStatus,
+        new_due_date: m.new_due_date,
+        confidence: m.confidence,
+        explanation: m.explanation,
+        finding: findingLabel,
+      });
+
+      await context.supabase.from("activity").insert({
+        user_id: context.userId,
+        project_id: sync.project_id,
+        description: `Live sync updated "${item.name}"${nextStatus ? ` → ${nextStatus.replace(/_/g, " ")}` : ""}${m.new_due_date ? ` (due ${m.new_due_date})` : ""}: ${m.explanation}`,
+      });
+    }
+
+    return { applied, skipped, total_findings: findings.length };
+  });
+
