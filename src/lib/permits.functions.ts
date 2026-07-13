@@ -3372,8 +3372,11 @@ export const generateBatchReportPdf = createServerFn({ method: "POST" })
     y -= 18;
     const subtitle = [project.project_type, project.jurisdiction, project.location].filter(Boolean).join(" · ");
     if (subtitle) { page.drawText(subtitle.slice(0, 90), { x: 40, y, size: 10, font: regular, color: muted }); y -= 14; }
-    const generated = r.generated_at ? new Date(r.generated_at).toLocaleString() : new Date().toLocaleString();
-    page.drawText(`Generated ${generated}`, { x: 40, y, size: 9, font: regular, color: muted });
+    const generatedAt = r.generated_at ? new Date(r.generated_at) : new Date();
+    const generated = generatedAt.toLocaleString();
+    const claims = context.claims as { email?: string; user_metadata?: { full_name?: string; name?: string } } | undefined;
+    const generatedBy = claims?.user_metadata?.full_name || claims?.user_metadata?.name || claims?.email || context.userId;
+    page.drawText(`Generated ${generated} by ${generatedBy}`.slice(0, 110), { x: 40, y, size: 9, font: regular, color: muted });
     y -= 24;
     page.drawLine({ start: { x: 40, y }, end: { x: 572, y }, thickness: 0.5, color: rgb(0.85,0.85,0.88) });
     y -= 22;
