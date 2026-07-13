@@ -27,6 +27,21 @@ export const Route = createFileRoute("/_authenticated/lookup")({
 
 type LookupResult = Awaited<ReturnType<typeof lookupPermitsByAddress>>;
 
+const KNOWN_JURISDICTIONS: string[] = [
+  "Baltimore City, MD",
+  "Baltimore County, MD",
+  "Washington, DC",
+  "New York, NY",
+  "Los Angeles, CA",
+  "Chicago, IL",
+  "San Francisco, CA",
+  "Seattle, WA",
+  "Boston, MA",
+  "Austin, TX",
+  "Miami, FL",
+  "Philadelphia, PA",
+];
+
 function LookupPage() {
   const [address, setAddress] = useState("");
   const [jurisdiction, setJurisdiction] = useState("");
@@ -73,15 +88,36 @@ function LookupPage() {
           </div>
           <div className="space-y-1.5">
             <label className="font-mono text-[10px] uppercase tracking-widest text-muted-foreground">
-              Jurisdiction (optional)
+              Jurisdiction
             </label>
-            <input
-              value={jurisdiction}
-              onChange={(e) => setJurisdiction(e.target.value)}
-              placeholder="Auto-detected if left blank (e.g. Los Angeles, CA)"
+            <select
+              value={KNOWN_JURISDICTIONS.includes(jurisdiction) ? jurisdiction : jurisdiction ? "__custom" : ""}
+              onChange={(e) => {
+                const v = e.target.value;
+                if (v === "__custom") setJurisdiction(jurisdiction || " ");
+                else setJurisdiction(v);
+              }}
               className="w-full rounded-md border border-input bg-background px-3 py-2 text-sm"
-              maxLength={200}
-            />
+            >
+              <option value="">Auto-detect from address</option>
+              {KNOWN_JURISDICTIONS.map((j) => (
+                <option key={j} value={j}>{j}</option>
+              ))}
+              <option value="__custom">Custom…</option>
+            </select>
+            {(jurisdiction && !KNOWN_JURISDICTIONS.includes(jurisdiction)) && (
+              <input
+                value={jurisdiction.trim()}
+                onChange={(e) => setJurisdiction(e.target.value)}
+                placeholder="e.g. Cambridge, MA"
+                className="w-full rounded-md border border-input bg-background px-3 py-2 text-sm"
+                maxLength={200}
+                autoFocus
+              />
+            )}
+            <p className="font-mono text-[10px] text-muted-foreground">
+              Override auto-detection when the address city differs from the permitting authority.
+            </p>
           </div>
           <button
             type="submit"
