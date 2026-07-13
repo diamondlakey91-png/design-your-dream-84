@@ -44,7 +44,14 @@ function Dashboard() {
     .sort((a, b) => a.days - b.days)
     .slice(0, 5);
 
-  const insight = pickInsight(projects, urgent);
+  const briefingFn = useServerFn(generateDailyBriefing);
+  const briefingQ = useQuery({
+    queryKey: ["daily-briefing"],
+    queryFn: () => briefingFn(),
+    enabled: projects.length > 0,
+    staleTime: 1000 * 60 * 30,
+    refetchOnWindowFocus: false,
+  });
 
   return (
     <AppShell>
