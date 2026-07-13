@@ -517,8 +517,9 @@ function DocsTab({ projectId, userId }: { projectId: string; userId: string }) {
   );
 }
 
-function BatchReport({ report, onClose }: { report: Awaited<ReturnType<typeof batchReviewPlans>>; onClose: () => void }) {
+function BatchReport({ report, projectId, onClose }: { report: Awaited<ReturnType<typeof batchReviewPlans>>; projectId: string; onClose: () => void }) {
   const riskColor = report.overall_risk === "high" ? "text-destructive" : report.overall_risk === "medium" ? "text-amber-600" : "text-emerald-600";
+  const [shareOpen, setShareOpen] = useState(false);
   return (
     <div className="rounded-xl border border-brand/40 bg-brand/5 p-4 space-y-3">
       <div className="flex items-start justify-between gap-2">
@@ -530,8 +531,12 @@ function BatchReport({ report, onClose }: { report: Awaited<ReturnType<typeof ba
             {report.jurisdictions.length > 0 ? ` · ${report.jurisdictions.join(", ")}` : ""}
           </p>
         </div>
-        <button onClick={onClose} className="text-[11px] font-mono uppercase tracking-wider text-muted-foreground hover:text-foreground">Close</button>
+        <div className="flex items-center gap-3">
+          <button onClick={() => setShareOpen(true)} className="text-[11px] font-mono uppercase tracking-wider text-brand hover:opacity-80">Share</button>
+          <button onClick={onClose} className="text-[11px] font-mono uppercase tracking-wider text-muted-foreground hover:text-foreground">Close</button>
+        </div>
       </div>
+      {shareOpen && <ShareReportDialog projectId={projectId} report={report} onClose={() => setShareOpen(false)} />}
 
       <div className="grid grid-cols-2 sm:grid-cols-4 gap-2">
         <div className="rounded-lg border border-border bg-background p-2">
