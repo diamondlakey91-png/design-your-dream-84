@@ -1,10 +1,21 @@
-import { createFileRoute } from "@tanstack/react-router";
-import { useMemo, useState } from "react";
+import { createFileRoute, useNavigate } from "@tanstack/react-router";
+import { zodValidator, fallback } from "@tanstack/zod-adapter";
+import { z } from "zod";
+import { useEffect, useMemo, useState } from "react";
 import { AppShell } from "@/components/AppShell";
-import { PORTAL_REGISTRY, PORTAL_PLATFORMS, US_STATES, type PortalEntry, type PortalPlatform } from "@/lib/portalRegistry";
-import { ExternalLink, Search, Building2, FileText, MapPin, Hash, Info } from "lucide-react";
+import { PORTAL_REGISTRY, PORTAL_PLATFORMS, US_STATES, findPortalDeepLinks, type PortalEntry, type PortalPlatform } from "@/lib/portalRegistry";
+import { ExternalLink, Search, Building2, FileText, MapPin, Hash, Info, Zap } from "lucide-react";
+
+const portalsSearchSchema = z.object({
+  q: fallback(z.string(), "").default(""),
+  state: fallback(z.string(), "").default(""),
+  platform: fallback(z.string(), "").default(""),
+  address: fallback(z.string(), "").default(""),
+  permit: fallback(z.string(), "").default(""),
+});
 
 export const Route = createFileRoute("/_authenticated/portals")({
+  validateSearch: zodValidator(portalsSearchSchema),
   component: PortalsPage,
 });
 
@@ -21,11 +32,27 @@ const PLATFORM_STYLES: Record<PortalPlatform, string> = {
 };
 
 function PortalsPage() {
-  const [query, setQuery] = useState("");
-  const [state, setState] = useState<string>("");
-  const [platform, setPlatform] = useState<PortalPlatform | "">("");
-  const [address, setAddress] = useState("");
-  const [permitNo, setPermitNo] = useState("");
+  const sp = Route.useSearch();
+  const navigate = useNavigate({ from: "/_authenticated/portals" });
+  const [query, setQuery] = useState(sp.q);
+  const [state, setState] = useState<string>(sp.state);
+  const [platform, setPlatform] = useState<PortalPlatform | "">((sp.platform as PortalPlatform) || "");
+  const [address, setAddress] = useState(sp.address);
+  const [permitNo, setPermitNo] = useState(sp.permit);
+
+  // Keep local state in sync when the URL changes (back/forward, deep link).
+  useEffect(() => { setQuery(sp.q); setState(sp.state); setPlatform((sp.platform as PortalPlatform) || ""); setAddress(sp.address); setPermitNo(sp.permit); }, [sp.q, sp.state, sp.platform, sp.address, sp.permit]);
+
+  // Push local state into URL (debounced) so the page is shareable.
+  useEffect(() => {
+    const t = setTimeout(() => {
+      navigate({
+        search: { q: query, state, platform: platform || "", address, permit: permitNo },
+        replace: true,
+      });
+    }, 250);
+    return () => clearTimeout(t);
+  }, [query, state, platform, address, permitNo, navigate]);
 
   const availableStates = useMemo(() => {
     const s = new Set(PORTAL_REGISTRY.map((p) => p.state));
@@ -47,6 +74,19 @@ function PortalsPage() {
     for (const p of PORTAL_REGISTRY) m.set(p.platform, (m.get(p.platform) ?? 0) + 1);
     return m;
   }, []);
+
+  // Suggested direct deep links based on the query + permit#/address.
+  const suggested = useMemo(() => {
+    if (!query.trim() || (!permitNo.trim() && !address.trim())) return [];
+    const jurisdictionHint = state ? `${query.trim()}, ${state}` : query.trim();
+    return findPortalDeepLinks(jurisdictionHint, {
+      permitNumber: permitNo.trim() || undefined,
+      address: address.trim() || undefined,
+      limit: 4,
+    });
+  }, [query, state, permitNo, address]);
+
+
 
   return (
     <AppShell>
