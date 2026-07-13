@@ -20,6 +20,7 @@ import {
   listActivity,
   syncJurisdiction,
   listJurisdictionSyncs,
+  applySyncToChecklist,
 } from "@/lib/permits.functions";
 import {
   ArrowLeft,
