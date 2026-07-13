@@ -12,6 +12,7 @@ import { Route as rootRouteImport } from './routes/__root'
 import { Route as AuthRouteImport } from './routes/auth'
 import { Route as AuthenticatedRouteRouteImport } from './routes/_authenticated/route'
 import { Route as IndexRouteImport } from './routes/index'
+import { Route as AuthenticatedJurisdictionsRouteImport } from './routes/_authenticated/jurisdictions'
 import { Route as AuthenticatedDashboardRouteImport } from './routes/_authenticated/dashboard'
 import { Route as AuthenticatedAssistantRouteImport } from './routes/_authenticated/assistant'
 import { Route as AuthenticatedProjectsIndexRouteImport } from './routes/_authenticated/projects.index'
@@ -32,6 +33,12 @@ const IndexRoute = IndexRouteImport.update({
   path: '/',
   getParentRoute: () => rootRouteImport,
 } as any)
+const AuthenticatedJurisdictionsRoute =
+  AuthenticatedJurisdictionsRouteImport.update({
+    id: '/jurisdictions',
+    path: '/jurisdictions',
+    getParentRoute: () => AuthenticatedRouteRoute,
+  } as any)
 const AuthenticatedDashboardRoute = AuthenticatedDashboardRouteImport.update({
   id: '/dashboard',
   path: '/dashboard',
@@ -65,6 +72,7 @@ export interface FileRoutesByFullPath {
   '/auth': typeof AuthRoute
   '/assistant': typeof AuthenticatedAssistantRouteWithChildren
   '/dashboard': typeof AuthenticatedDashboardRoute
+  '/jurisdictions': typeof AuthenticatedJurisdictionsRoute
   '/assistant/$threadId': typeof AuthenticatedAssistantThreadIdRoute
   '/projects/$id': typeof AuthenticatedProjectsIdRoute
   '/projects/': typeof AuthenticatedProjectsIndexRoute
@@ -74,6 +82,7 @@ export interface FileRoutesByTo {
   '/auth': typeof AuthRoute
   '/assistant': typeof AuthenticatedAssistantRouteWithChildren
   '/dashboard': typeof AuthenticatedDashboardRoute
+  '/jurisdictions': typeof AuthenticatedJurisdictionsRoute
   '/assistant/$threadId': typeof AuthenticatedAssistantThreadIdRoute
   '/projects/$id': typeof AuthenticatedProjectsIdRoute
   '/projects': typeof AuthenticatedProjectsIndexRoute
@@ -85,6 +94,7 @@ export interface FileRoutesById {
   '/auth': typeof AuthRoute
   '/_authenticated/assistant': typeof AuthenticatedAssistantRouteWithChildren
   '/_authenticated/dashboard': typeof AuthenticatedDashboardRoute
+  '/_authenticated/jurisdictions': typeof AuthenticatedJurisdictionsRoute
   '/_authenticated/assistant/$threadId': typeof AuthenticatedAssistantThreadIdRoute
   '/_authenticated/projects/$id': typeof AuthenticatedProjectsIdRoute
   '/_authenticated/projects/': typeof AuthenticatedProjectsIndexRoute
@@ -96,6 +106,7 @@ export interface FileRouteTypes {
     | '/auth'
     | '/assistant'
     | '/dashboard'
+    | '/jurisdictions'
     | '/assistant/$threadId'
     | '/projects/$id'
     | '/projects/'
@@ -105,6 +116,7 @@ export interface FileRouteTypes {
     | '/auth'
     | '/assistant'
     | '/dashboard'
+    | '/jurisdictions'
     | '/assistant/$threadId'
     | '/projects/$id'
     | '/projects'
@@ -115,6 +127,7 @@ export interface FileRouteTypes {
     | '/auth'
     | '/_authenticated/assistant'
     | '/_authenticated/dashboard'
+    | '/_authenticated/jurisdictions'
     | '/_authenticated/assistant/$threadId'
     | '/_authenticated/projects/$id'
     | '/_authenticated/projects/'
@@ -148,6 +161,13 @@ declare module '@tanstack/react-router' {
       fullPath: '/'
       preLoaderRoute: typeof IndexRouteImport
       parentRoute: typeof rootRouteImport
+    }
+    '/_authenticated/jurisdictions': {
+      id: '/_authenticated/jurisdictions'
+      path: '/jurisdictions'
+      fullPath: '/jurisdictions'
+      preLoaderRoute: typeof AuthenticatedJurisdictionsRouteImport
+      parentRoute: typeof AuthenticatedRouteRoute
     }
     '/_authenticated/dashboard': {
       id: '/_authenticated/dashboard'
@@ -204,6 +224,7 @@ const AuthenticatedAssistantRouteWithChildren =
 interface AuthenticatedRouteRouteChildren {
   AuthenticatedAssistantRoute: typeof AuthenticatedAssistantRouteWithChildren
   AuthenticatedDashboardRoute: typeof AuthenticatedDashboardRoute
+  AuthenticatedJurisdictionsRoute: typeof AuthenticatedJurisdictionsRoute
   AuthenticatedProjectsIdRoute: typeof AuthenticatedProjectsIdRoute
   AuthenticatedProjectsIndexRoute: typeof AuthenticatedProjectsIndexRoute
 }
@@ -211,6 +232,7 @@ interface AuthenticatedRouteRouteChildren {
 const AuthenticatedRouteRouteChildren: AuthenticatedRouteRouteChildren = {
   AuthenticatedAssistantRoute: AuthenticatedAssistantRouteWithChildren,
   AuthenticatedDashboardRoute: AuthenticatedDashboardRoute,
+  AuthenticatedJurisdictionsRoute: AuthenticatedJurisdictionsRoute,
   AuthenticatedProjectsIdRoute: AuthenticatedProjectsIdRoute,
   AuthenticatedProjectsIndexRoute: AuthenticatedProjectsIndexRoute,
 }
