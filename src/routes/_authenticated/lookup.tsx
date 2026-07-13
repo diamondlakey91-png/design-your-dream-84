@@ -4,7 +4,7 @@ import { useMutation } from "@tanstack/react-query";
 import { useState } from "react";
 import { AppShell } from "@/components/AppShell";
 import { lookupPermitsByAddress } from "@/lib/permits.functions";
-import { MapPin, Search, ExternalLink, Building2, Loader2, AlertCircle } from "lucide-react";
+import { MapPin, Search, ExternalLink, Building2, Loader2, AlertCircle, ShieldCheck, ShieldAlert, ShieldQuestion, Info } from "lucide-react";
 
 export const Route = createFileRoute("/_authenticated/lookup")({
   component: LookupPage,
