@@ -106,23 +106,15 @@ function Dashboard() {
             </div>
           </div>
 
-          {/* AI insight */}
-          <div className="relative overflow-hidden rounded-3xl border border-[oklch(0.68_0.19_305/0.25)] bg-linear-to-br from-[oklch(0.68_0.19_305/0.08)] to-transparent p-6">
-            <div className="mb-4 flex items-center gap-2">
-              <div className="rounded-lg bg-[oklch(0.68_0.19_305/0.15)] p-1.5 text-[oklch(0.78_0.15_305)]">
-                <Sparkles className="size-4" />
-              </div>
-              <span className="text-sm font-semibold text-foreground/90">Permivio AI Insight</span>
-            </div>
-            <p className="text-sm leading-relaxed text-muted-foreground">{insight}</p>
-            <Link
-              to="/assistant"
-              className="mt-4 flex w-full items-center justify-center gap-1.5 rounded-xl border border-[oklch(0.68_0.19_305/0.25)] bg-[oklch(0.68_0.19_305/0.10)] py-2 text-xs font-semibold text-[oklch(0.85_0.09_305)] transition-colors hover:bg-[oklch(0.68_0.19_305/0.18)]"
-            >
-              Ask the assistant <ArrowUpRight className="size-3.5" />
-            </Link>
+          {/* AI Daily Briefing */}
+          <DailyBriefingCard
+            loading={briefingQ.isLoading || briefingQ.isFetching}
+            data={briefingQ.data}
+            error={briefingQ.error as Error | null}
+            onRefresh={() => briefingQ.refetch()}
+            hasProjects={projects.length > 0}
+          />
           </div>
-        </div>
 
         {/* RIGHT column: Cycles + stats */}
         <div className="col-span-12 space-y-6 lg:col-span-8">
