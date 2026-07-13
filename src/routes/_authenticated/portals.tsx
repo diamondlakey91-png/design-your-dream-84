@@ -45,8 +45,29 @@ function PortalsPage() {
   const [address, setAddress] = useState(sp.address);
   const [permitNo, setPermitNo] = useState(sp.permit);
 
+  const adminQ = useIsAdmin();
+  const listFn = useServerFn(listPortalMappings);
+  const mappingsQ = useQuery({
+    queryKey: ["portal-mappings"],
+    queryFn: () => listFn(),
+    staleTime: 60_000,
+  });
+
+  // Merge: DB entries override built-ins by (jurisdiction+state+platform).
+  const allEntries = useMemo<PortalEntry[]>(() => {
+    const dbEntries = (mappingsQ.data ?? [])
+      .filter((m) => m.is_active)
+      .map((m) => buildEntryFromMapping(m));
+    const key = (e: PortalEntry) => `${e.jurisdiction.toLowerCase()}|${e.state}|${e.platform}`;
+    const byKey = new Map<string, PortalEntry>();
+    for (const e of PORTAL_REGISTRY) byKey.set(key(e), e);
+    for (const e of dbEntries) byKey.set(key(e), e);
+    return Array.from(byKey.values());
+  }, [mappingsQ.data]);
+
   // Keep local state in sync when the URL changes (back/forward, deep link).
   useEffect(() => { setQuery(sp.q); setState(sp.state); setPlatform((sp.platform as PortalPlatform) || ""); setAddress(sp.address); setPermitNo(sp.permit); }, [sp.q, sp.state, sp.platform, sp.address, sp.permit]);
+
 
   // Push local state into URL (debounced) so the page is shareable.
   useEffect(() => {
