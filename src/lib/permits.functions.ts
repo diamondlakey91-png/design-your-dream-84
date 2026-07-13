@@ -4249,7 +4249,7 @@ export const updateSavedJurisdiction = createServerFn({ method: "POST" })
     notes: z.string().max(4000).optional(),
   }).parse(input))
   .handler(async ({ data, context }) => {
-    const patch: Record<string, unknown> = {};
+    const patch: { pinned?: boolean; notes?: string } = {};
     if (typeof data.pinned === "boolean") patch.pinned = data.pinned;
     if (typeof data.notes === "string") patch.notes = data.notes;
     if (Object.keys(patch).length === 0) return { ok: true };
@@ -4257,6 +4257,7 @@ export const updateSavedJurisdiction = createServerFn({ method: "POST" })
       .from("saved_jurisdictions").update(patch)
       .eq("user_id", context.userId).eq("jurisdiction_id", data.jurisdiction_id);
     if (error) throw new Error(error.message);
+
     return { ok: true };
   });
 
