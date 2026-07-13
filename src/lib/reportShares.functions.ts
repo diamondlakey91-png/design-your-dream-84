@@ -26,7 +26,7 @@ export const createBatchReportShare = createServerFn({ method: "POST" })
   .inputValidator((input: unknown) =>
     z.object({
       project_id: z.string().uuid(),
-      report: z.record(z.string(), z.unknown()),
+      report: z.unknown(),
       password: z.string().min(4).max(200).optional(),
       expires_in_days: z.number().int().min(1).max(365).optional(),
     }).parse(input),
