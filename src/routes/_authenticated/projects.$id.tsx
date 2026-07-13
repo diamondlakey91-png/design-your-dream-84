@@ -18,6 +18,8 @@ import {
   deleteDeadline,
   listDeadlines,
   listActivity,
+  syncJurisdiction,
+  listJurisdictionSyncs,
 } from "@/lib/permits.functions";
 import {
   ArrowLeft,
