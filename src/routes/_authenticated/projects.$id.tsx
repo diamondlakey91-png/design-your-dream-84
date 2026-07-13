@@ -328,7 +328,7 @@ function ChecklistTab({ projectId, jurisdiction }: { projectId: string; jurisdic
 
   const items = q.data ?? [];
   const total = items.length;
-  const done = items.filter((i) => i.status === "issued" || i.status === "approved").length;
+  const done = items.filter((i) => i.status === "issued" || i.status === "approved" || i.status === "n_a").length;
 
   return (
     <div className="space-y-4">
