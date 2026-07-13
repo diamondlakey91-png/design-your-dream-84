@@ -312,3 +312,116 @@ function ThreadView() {
     </div>
   );
 }
+
+type IntakePayload = {
+  name: string; project_type: string; location: string; jurisdiction: string;
+  scope: string; size: string; occupancy: string; work_type: string;
+};
+
+const PROJECT_TYPES = ["Commercial", "Residential", "Mixed-use", "Industrial", "Institutional", "Tenant Improvement", "ADU", "Other"];
+const WORK_TYPES = ["New construction", "Tenant improvement", "Renovation / alteration", "Addition", "Change of use", "Demolition", "MEP-only", "Sign only"];
+
+function IntakePanel({
+  busy,
+  onCancel,
+  onSubmit,
+}: {
+  busy: boolean;
+  onCancel: () => void;
+  onSubmit: (p: IntakePayload) => void;
+}) {
+  const [form, setForm] = useState<IntakePayload>({
+    name: "",
+    project_type: "Commercial",
+    location: "",
+    jurisdiction: "",
+    scope: "",
+    size: "",
+    occupancy: "",
+    work_type: "New construction",
+  });
+  const set = <K extends keyof IntakePayload>(k: K, v: IntakePayload[K]) => setForm((f) => ({ ...f, [k]: v }));
+
+  const canSubmit =
+    form.name.trim().length > 0 &&
+    form.location.trim().length > 0 &&
+    form.scope.trim().length >= 10 &&
+    !busy;
+
+  return (
+    <div className="basis-full mt-3 rounded-xl bg-zinc-900 ring-1 ring-white/10 p-4 space-y-3">
+      <div className="flex items-center gap-2">
+        <ClipboardList className="size-4 text-brand" />
+        <h3 className="text-sm font-semibold">Project intake</h3>
+        <span className="text-[11px] text-zinc-500 font-mono">→ instant checklist</span>
+        <button onClick={onCancel} className="ml-auto size-6 grid place-items-center rounded hover:bg-white/10" aria-label="Close intake">
+          <X className="size-3.5" />
+        </button>
+      </div>
+
+      <div className="grid grid-cols-2 gap-2">
+        <Field label="Project name *">
+          <input value={form.name} onChange={(e) => set("name", e.target.value)}
+            placeholder="Sunset Retail Center" className={inputCls} />
+        </Field>
+        <Field label="Project type">
+          <select value={form.project_type} onChange={(e) => set("project_type", e.target.value)} className={inputCls}>
+            {PROJECT_TYPES.map((t) => <option key={t} value={t}>{t}</option>)}
+          </select>
+        </Field>
+        <Field label="Location (city, state) *">
+          <input value={form.location} onChange={(e) => set("location", e.target.value)}
+            placeholder="Dallas, TX" className={inputCls} />
+        </Field>
+        <Field label="Jurisdiction / department">
+          <input value={form.jurisdiction} onChange={(e) => set("jurisdiction", e.target.value)}
+            placeholder="City of Dallas — Development Services" className={inputCls} />
+        </Field>
+        <Field label="Work type">
+          <select value={form.work_type} onChange={(e) => set("work_type", e.target.value)} className={inputCls}>
+            {WORK_TYPES.map((t) => <option key={t} value={t}>{t}</option>)}
+          </select>
+        </Field>
+        <Field label="Size (sq ft / units)">
+          <input value={form.size} onChange={(e) => set("size", e.target.value)}
+            placeholder="4,800 sq ft" className={inputCls} />
+        </Field>
+        <Field label="Occupancy / use" className="col-span-2">
+          <input value={form.occupancy} onChange={(e) => set("occupancy", e.target.value)}
+            placeholder="Restaurant (Type A-2), 60 occupants" className={inputCls} />
+        </Field>
+      </div>
+
+      <Field label="Scope of work *">
+        <textarea value={form.scope} onChange={(e) => set("scope", e.target.value)}
+          rows={4}
+          placeholder="Describe what you're building: structural changes, new MEP, exterior work, signage, site work, ADA upgrades, etc."
+          className={inputCls + " resize-none"} />
+      </Field>
+
+      <div className="flex items-center justify-between pt-1">
+        <p className="text-[11px] text-zinc-500">Creates a project, attaches it to this chat, and generates a jurisdiction-aware checklist.</p>
+        <button
+          onClick={() => onSubmit(form)}
+          disabled={!canSubmit}
+          className="inline-flex items-center gap-1.5 px-3 py-1.5 rounded-lg bg-brand text-brand-foreground text-xs font-medium disabled:opacity-40"
+        >
+          <Sparkles className="size-3.5" />
+          {busy ? "Generating…" : "Generate checklist"}
+        </button>
+      </div>
+    </div>
+  );
+}
+
+const inputCls = "w-full bg-zinc-950 ring-1 ring-white/10 rounded-md px-2.5 py-1.5 text-sm placeholder:text-zinc-600 outline-none focus:ring-brand/50";
+
+function Field({ label, children, className = "" }: { label: string; children: React.ReactNode; className?: string }) {
+  return (
+    <label className={`block ${className}`}>
+      <span className="block text-[10px] font-mono uppercase tracking-widest text-zinc-500 mb-1">{label}</span>
+      {children}
+    </label>
+  );
+}
+
