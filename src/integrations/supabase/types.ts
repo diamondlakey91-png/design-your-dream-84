@@ -464,6 +464,10 @@ export type Database = {
           estimate_generated_at: string | null
           id: string
           jurisdiction: string
+          linked_permit_data: Json | null
+          linked_permit_number: string | null
+          linked_permit_synced_at: string | null
+          linked_permit_url: string | null
           location: string
           name: string
           permit_count: number
@@ -480,6 +484,10 @@ export type Database = {
           estimate_generated_at?: string | null
           id?: string
           jurisdiction?: string
+          linked_permit_data?: Json | null
+          linked_permit_number?: string | null
+          linked_permit_synced_at?: string | null
+          linked_permit_url?: string | null
           location?: string
           name: string
           permit_count?: number
@@ -496,6 +504,10 @@ export type Database = {
           estimate_generated_at?: string | null
           id?: string
           jurisdiction?: string
+          linked_permit_data?: Json | null
+          linked_permit_number?: string | null
+          linked_permit_synced_at?: string | null
+          linked_permit_url?: string | null
           location?: string
           name?: string
           permit_count?: number
