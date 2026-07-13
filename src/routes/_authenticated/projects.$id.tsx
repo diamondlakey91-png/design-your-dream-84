@@ -21,6 +21,11 @@ import {
   syncJurisdiction,
   listJurisdictionSyncs,
   applySyncToChecklist,
+  analyzeDocument,
+  computeProjectHealth,
+  listInspections,
+  addInspection,
+  deleteInspection,
 } from "@/lib/permits.functions";
 import {
   ArrowLeft,
