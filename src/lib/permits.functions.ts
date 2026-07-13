@@ -1794,7 +1794,262 @@ RULES
     };
   });
 
-// ---- AI Document Reader ----
+// ---- Permit-number lookup + live tracking ----
+
+// Build direct portal URLs for searching by permit / record number.
+// Most Accela agencies accept the record # in QueryText; EnerGov uses searchText.
+function buildDirectPortalUrlsForPermitNumber(jurisdiction: string, permitNumber: string): string[] {
+  const j = jurisdiction.toLowerCase();
+  const enc = encodeURIComponent(permitNumber.trim());
+  const urls: string[] = [];
+
+  const accela = (agency: string) =>
+    `https://aca-prod.accela.com/${agency}/Cap/GlobalSearchResults.aspx?QueryText=${enc}`;
+  const energov = (host: string) =>
+    `https://${host}/EnerGov_Prod/SelfService#/search?searchText=${enc}`;
+
+  if (/baltimore(\s+city)?,\s*md/.test(j)) urls.push(`https://cels.baltimorehousing.org/CitizenAccess/Cap/GlobalSearchResults.aspx?QueryText=${enc}`);
+  if (/baltimore\s+county,\s*md/.test(j)) urls.push(`https://permits.baltimorecountymd.gov/CitizenAccess/Cap/GlobalSearchResults.aspx?QueryText=${enc}`);
+  if (/washington,?\s*dc|district of columbia/.test(j)) urls.push(`https://eservices.dcra.dc.gov/DCRAPermitApplicationSearch/Search/Permit?permitNumber=${enc}`);
+  if (/new york,?\s*ny|nyc/.test(j)) urls.push(`https://a810-bisweb.nyc.gov/bisweb/JobsQueryByNumberServlet?passjobnumber=${enc}`);
+  if (/los angeles,?\s*ca/.test(j)) urls.push(`https://www.ladbsservices2.lacity.org/OnlineServices/PermitReport/PermitReportPermitNumber?permitnumber=${enc}`);
+  if (/chicago,?\s*il/.test(j)) urls.push(`https://webapps1.chicago.gov/buildingrecords/?pmt=${enc}`);
+  if (/san francisco,?\s*ca/.test(j)) urls.push(`https://dbiweb02.sfgov.org/dbipts/default.aspx?page=PermitDetails&PermitNumber=${enc}`);
+  if (/seattle,?\s*wa/.test(j)) urls.push(`https://cosaccela.seattle.gov/portal/Cap/GlobalSearchResults.aspx?QueryText=${enc}`);
+  if (/boston,?\s*ma/.test(j)) urls.push(`https://www.boston.gov/permits?search=${enc}`);
+  if (/austin,?\s*tx/.test(j)) urls.push(`https://abc.austintexas.gov/web/permit/public-search-other?reset=true&t_selected_search=CAP&t_CAP_NUMBER=${enc}`);
+  if (/miami,?\s*fl/.test(j)) urls.push(`https://apps.miamigov.com/eBuilding/PermitSearch.aspx?permit=${enc}`);
+  if (/philadelphia,?\s*pa/.test(j)) urls.push(`https://eclipse.phila.gov/phillylmsprod/int/lms/Login.aspx#permit=${enc}`);
+  if (/arlington(\s+county)?,?\s*va/.test(j)) { urls.push(accela("ARLINGTON")); urls.push(`https://permits.arlingtonva.us/CitizenAccess/Cap/GlobalSearchResults.aspx?QueryText=${enc}`); }
+  if (/fairfax(\s+county)?,?\s*va/.test(j)) urls.push(accela("FFXC"));
+  if (/loudoun(\s+county)?,?\s*va/.test(j)) urls.push(accela("LOUDOUN"));
+  if (/prince\s+william(\s+county)?,?\s*va/.test(j)) urls.push(`https://eservices.pwcgov.org/BuildingDevelopment/Cap/GlobalSearchResults.aspx?QueryText=${enc}`);
+  if (/alexandria,?\s*va/.test(j)) urls.push(accela("ALEXANDRIA"));
+  if (/richmond,?\s*va/.test(j)) urls.push(energov("energov.richmondgov.com"));
+  if (/virginia\s+beach,?\s*va/.test(j)) urls.push(energov("energov.vbgov.com"));
+  if (/houston,?\s*tx/.test(j)) urls.push(`https://ipermits.houstontx.gov/publicsearch/PermitSearch?SearchText=${enc}`);
+  if (/dallas,?\s*tx/.test(j)) urls.push(`https://developdallas.dallascityhall.com/publicsearch/PermitSearch?SearchText=${enc}`);
+  if (/phoenix,?\s*az/.test(j)) urls.push(`https://apps-secure.phoenix.gov/PDD/Search/Permits?permit=${enc}`);
+  if (/san\s+diego,?\s*ca/.test(j)) urls.push(accela("SANDIEGO"));
+  if (/denver,?\s*co/.test(j)) urls.push(accela("denver"));
+  if (/atlanta,?\s*ga/.test(j)) urls.push(accela("ATLANTA_GA"));
+  if (/minneapolis,?\s*mn/.test(j)) urls.push(accela("MINNEAPOLIS"));
+  if (/nashville,?\s*tn|davidson\s+county,?\s*tn/.test(j)) urls.push(`https://epermits.nashville.gov/CitizenAccess/Cap/GlobalSearchResults.aspx?QueryText=${enc}`);
+  if (/charlotte,?\s*nc|mecklenburg,?\s*nc/.test(j)) urls.push(accela("CLTNC"));
+  if (/raleigh,?\s*nc/.test(j)) urls.push(accela("RALEIGH"));
+
+  // Generic Accela fallback for any jurisdiction not hardcoded.
+  if (urls.length === 0) {
+    const slug = jurisdiction.toLowerCase().replace(/,.*$/, "").replace(/\bcounty\b/g, "").replace(/[^a-z0-9]+/g, "").slice(0, 24);
+    if (slug) urls.push(accela(slug.toUpperCase()));
+  }
+  return urls;
+}
+
+const PermitNumberLookupInput = z.object({
+  jurisdiction: z.string().trim().min(2).max(200),
+  permit_number: z.string().trim().min(2).max(80),
+});
+
+const PermitNumberSchema = z.object({
+  permit_number: z.string().default(""),
+  permit_type: z.string().default(""),
+  status: z.string().default("Unknown"),
+  address: z.string().default(""),
+  applicant: z.string().default(""),
+  filed_date: z.string().default(""),
+  updated_date: z.string().default(""),
+  issued_date: z.string().default(""),
+  expiration_date: z.string().default(""),
+  next_inspection: z.string().default(""),
+  description: z.string().default(""),
+  fees_due: z.string().default(""),
+  reviewers: z.array(z.object({ discipline: z.string(), status: z.string(), name: z.string().default("") })).max(20).default([]),
+  timeline: z.array(z.object({ date: z.string(), event: z.string() })).max(30).default([]),
+  source_url: z.string().default(""),
+  portal_name: z.string().default(""),
+  jurisdiction: z.string().default(""),
+  found: z.boolean().default(false),
+  no_match_reason: z.string().default(""),
+});
+
+async function scrapePermitByNumber(fcKey: string, aiKey: string, jurisdiction: string, permitNumber: string) {
+  const urls = buildDirectPortalUrlsForPermitNumber(jurisdiction, permitNumber);
+  const scrapes = (await Promise.all(
+    urls.map(async (u) => {
+      try {
+        const s = await firecrawlScrape(fcKey, u);
+        return `PORTAL URL: ${u}\n${(s.markdown || "").slice(0, 5000)}`;
+      } catch { return ""; }
+    })
+  )).filter(Boolean).join("\n\n---\n\n");
+
+  // Also do a targeted web search in case the direct URLs miss.
+  const webHits = await firecrawlSearch(fcKey, `"${permitNumber}" ${jurisdiction} permit site:.gov OR accela OR energov`, 5).catch(() => []);
+  const webScrapes = (await Promise.all(
+    webHits.slice(0, 3).map(async (h) => {
+      try {
+        const s = await firecrawlScrape(fcKey, h.url);
+        return `WEB: ${h.url}\n${(s.markdown || "").slice(0, 2500)}`;
+      } catch { return `WEB: ${h.url}\nTITLE: ${h.title ?? ""}\nDESC: ${h.description ?? ""}`; }
+    })
+  )).join("\n\n---\n\n");
+
+  const prompt = `Extract the live status of a specific permit from the source text. Never invent data.
+
+JURISDICTION: ${jurisdiction}
+PERMIT NUMBER: ${permitNumber}
+
+DIRECT PORTAL SOURCES (authoritative):
+${scrapes || "(none)"}
+
+WEB SOURCES:
+${webScrapes || "(none)"}
+
+Return ONLY JSON:
+{
+  "permit_number": "as listed (should match query)",
+  "permit_type": "e.g. Building, Electrical, MEP, Grading, CofO",
+  "status": "Issued | Under Review | Submitted | Approved | Finaled | Expired | Withdrawn | Plan Review | Ready to Issue | Unknown",
+  "address": "as listed",
+  "applicant": "if listed",
+  "filed_date": "YYYY-MM-DD or as listed",
+  "updated_date": "YYYY-MM-DD or as listed",
+  "issued_date": "YYYY-MM-DD or empty",
+  "expiration_date": "YYYY-MM-DD or empty",
+  "next_inspection": "if listed, else empty",
+  "description": "1 short clause",
+  "fees_due": "if listed, else empty",
+  "reviewers": [{"discipline": "Fire / Zoning / Structural", "status": "Approved | Pending | Rejected", "name": ""}],
+  "timeline": [{"date": "YYYY-MM-DD", "event": "what happened"}],
+  "source_url": "canonical URL from sources above",
+  "portal_name": "portal or department name",
+  "jurisdiction": "${jurisdiction}",
+  "found": true or false,
+  "no_match_reason": "1 sentence if not found; empty otherwise"
+}`;
+
+  const raw = await callLovableAI(aiKey, [
+    { role: "system", content: "You extract structured live permit status from real portal text. Output valid JSON only, no prose, no fences." },
+    { role: "user", content: prompt },
+  ]);
+  const cleaned = raw.replace(/```json|```/g, "").trim();
+  const start = cleaned.indexOf("{");
+  const end = cleaned.lastIndexOf("}");
+  const parsed = PermitNumberSchema.parse(JSON.parse(cleaned.slice(start, end + 1)));
+  return { parsed, sourceUrls: urls };
+}
+
+export const lookupPermitByNumber = createServerFn({ method: "POST" })
+  .middleware([requireSupabaseAuth])
+  .inputValidator((input: unknown) => PermitNumberLookupInput.parse(input))
+  .handler(async ({ data }) => {
+    const fcKey = process.env.FIRECRAWL_API_KEY;
+    const aiKey = process.env.LOVABLE_API_KEY;
+    if (!fcKey) throw new Error("Firecrawl is not configured");
+    if (!aiKey) throw new Error("AI is not configured");
+    const { parsed, sourceUrls } = await scrapePermitByNumber(fcKey, aiKey, data.jurisdiction, data.permit_number);
+    return { ...parsed, tried_urls: sourceUrls, searched_at: new Date().toISOString() };
+  });
+
+export const linkPermitToProject = createServerFn({ method: "POST" })
+  .middleware([requireSupabaseAuth])
+  .inputValidator((input: unknown) =>
+    z.object({
+      project_id: z.string().uuid(),
+      permit_number: z.string().trim().min(2).max(80),
+      jurisdiction: z.string().trim().min(2).max(200).optional(),
+    }).parse(input),
+  )
+  .handler(async ({ data, context }) => {
+    const fcKey = process.env.FIRECRAWL_API_KEY;
+    const aiKey = process.env.LOVABLE_API_KEY;
+    if (!fcKey) throw new Error("Firecrawl is not configured");
+    if (!aiKey) throw new Error("AI is not configured");
+
+    const { data: proj, error: pErr } = await context.supabase
+      .from("projects").select("id, jurisdiction, name").eq("id", data.project_id).maybeSingle();
+    if (pErr || !proj) throw new Error("Project not found");
+    const juris = (data.jurisdiction || proj.jurisdiction || "").trim();
+    if (!juris) throw new Error("Project has no jurisdiction. Set one first.");
+
+    const { parsed } = await scrapePermitByNumber(fcKey, aiKey, juris, data.permit_number);
+
+    const { error: uErr } = await context.supabase
+      .from("projects")
+      .update({
+        linked_permit_number: data.permit_number,
+        linked_permit_url: parsed.source_url || null,
+        linked_permit_data: parsed,
+        linked_permit_synced_at: new Date().toISOString(),
+      })
+      .eq("id", data.project_id);
+    if (uErr) throw new Error(uErr.message);
+
+    await context.supabase.from("activity").insert({
+      user_id: context.userId,
+      project_id: data.project_id,
+      description: parsed.found
+        ? `Linked live permit ${data.permit_number} (${parsed.status}) from ${parsed.portal_name || juris}.`
+        : `Linked permit ${data.permit_number} but no live record found yet.`,
+    });
+
+    return { linked: parsed };
+  });
+
+export const refreshLinkedPermit = createServerFn({ method: "POST" })
+  .middleware([requireSupabaseAuth])
+  .inputValidator((input: unknown) => z.object({ project_id: z.string().uuid() }).parse(input))
+  .handler(async ({ data, context }) => {
+    const fcKey = process.env.FIRECRAWL_API_KEY;
+    const aiKey = process.env.LOVABLE_API_KEY;
+    if (!fcKey) throw new Error("Firecrawl is not configured");
+    if (!aiKey) throw new Error("AI is not configured");
+
+    const { data: proj, error: pErr } = await context.supabase
+      .from("projects").select("id, jurisdiction, linked_permit_number").eq("id", data.project_id).maybeSingle();
+    if (pErr || !proj) throw new Error("Project not found");
+    if (!proj.linked_permit_number) throw new Error("No permit is linked to this project.");
+    const juris = proj.jurisdiction || "";
+    if (!juris) throw new Error("Project has no jurisdiction.");
+
+    const { parsed } = await scrapePermitByNumber(fcKey, aiKey, juris, proj.linked_permit_number);
+    const { error: uErr } = await context.supabase
+      .from("projects")
+      .update({
+        linked_permit_url: parsed.source_url || null,
+        linked_permit_data: parsed,
+        linked_permit_synced_at: new Date().toISOString(),
+      })
+      .eq("id", data.project_id);
+    if (uErr) throw new Error(uErr.message);
+
+    await context.supabase.from("activity").insert({
+      user_id: context.userId,
+      project_id: data.project_id,
+      description: `Refreshed live permit ${proj.linked_permit_number} — status ${parsed.status}.`,
+    });
+    return { linked: parsed };
+  });
+
+export const unlinkPermit = createServerFn({ method: "POST" })
+  .middleware([requireSupabaseAuth])
+  .inputValidator((input: unknown) => z.object({ project_id: z.string().uuid() }).parse(input))
+  .handler(async ({ data, context }) => {
+    const { error } = await context.supabase
+      .from("projects")
+      .update({
+        linked_permit_number: null,
+        linked_permit_url: null,
+        linked_permit_data: null,
+        linked_permit_synced_at: null,
+      })
+      .eq("id", data.project_id);
+    if (error) throw new Error(error.message);
+    return { ok: true };
+  });
+
+
 const DocAnalysisSchema = z.object({
   summary: z.string(),
   document_type: z.string().default(""),
