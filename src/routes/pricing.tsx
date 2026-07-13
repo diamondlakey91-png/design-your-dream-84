@@ -113,6 +113,7 @@ const tiers: Tier[] = [
     ],
     cta: "Go Business",
     href: "/auth",
+    priceId: "business_monthly",
   },
   {
     name: "Enterprise",
