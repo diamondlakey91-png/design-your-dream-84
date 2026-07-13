@@ -650,10 +650,12 @@ export type Database = {
           id: string
           mime_type: string
           name: string
+          permit_item_id: string | null
           plan_review: Json | null
           plan_reviewed_at: string | null
           project_id: string
           size_bytes: number
+          stage: number | null
           storage_path: string
           user_id: string
         }
@@ -665,10 +667,12 @@ export type Database = {
           id?: string
           mime_type?: string
           name: string
+          permit_item_id?: string | null
           plan_review?: Json | null
           plan_reviewed_at?: string | null
           project_id: string
           size_bytes?: number
+          stage?: number | null
           storage_path: string
           user_id: string
         }
@@ -680,14 +684,23 @@ export type Database = {
           id?: string
           mime_type?: string
           name?: string
+          permit_item_id?: string | null
           plan_review?: Json | null
           plan_reviewed_at?: string | null
           project_id?: string
           size_bytes?: number
+          stage?: number | null
           storage_path?: string
           user_id?: string
         }
         Relationships: [
+          {
+            foreignKeyName: "project_documents_permit_item_id_fkey"
+            columns: ["permit_item_id"]
+            isOneToOne: false
+            referencedRelation: "permit_items"
+            referencedColumns: ["id"]
+          },
           {
             foreignKeyName: "project_documents_project_id_fkey"
             columns: ["project_id"]
