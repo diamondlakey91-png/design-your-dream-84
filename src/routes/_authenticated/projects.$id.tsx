@@ -170,6 +170,7 @@ function OverviewTab({
 
   return (
     <>
+      <HealthScoreCard projectId={project.id} />
       <section>
         <p className="font-mono text-[10px] uppercase tracking-widest text-muted-foreground mb-3">PERMIT_PIPELINE</p>
         <div className="flex gap-1 mb-4">
