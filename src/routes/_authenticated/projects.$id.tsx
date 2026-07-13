@@ -1244,22 +1244,22 @@ function AiCopilotPanel({ projectId }: { projectId: string }) {
           </div>
           {review.data && (
             <div className="p-3 rounded-lg bg-background ring-1 ring-black/5 space-y-3 text-sm">
-              {review.data.top_themes.length > 0 && (
+              {(review.data.top_themes ?? []).length > 0 && (
                 <div>
                   <div className="text-xs font-mono uppercase tracking-wider text-muted-foreground mb-1">Top themes</div>
-                  <ul className="list-disc pl-5 space-y-0.5">{review.data.top_themes.map((t, i) => <li key={i}>{t}</li>)}</ul>
+                  <ul className="list-disc pl-5 space-y-0.5">{(review.data.top_themes ?? []).map((t, i) => <li key={i}>{t}</li>)}</ul>
                 </div>
               )}
-              {review.data.by_discipline.map((d, i) => (
+              {(review.data.by_discipline ?? []).map((d, i) => (
                 <div key={i}>
                   <div className="text-xs font-mono uppercase tracking-wider text-muted-foreground mb-1">{d.discipline}</div>
-                  <ul className="list-disc pl-5 space-y-0.5">{d.items.map((it, j) => <li key={j}>{it}</li>)}</ul>
+                  <ul className="list-disc pl-5 space-y-0.5">{(d.items ?? []).map((it, j) => <li key={j}>{it}</li>)}</ul>
                 </div>
               ))}
-              {review.data.suggested_response_order.length > 0 && (
+              {(review.data.suggested_response_order ?? []).length > 0 && (
                 <div>
                   <div className="text-xs font-mono uppercase tracking-wider text-muted-foreground mb-1">Suggested response order</div>
-                  <ol className="list-decimal pl-5 space-y-0.5">{review.data.suggested_response_order.map((t, i) => <li key={i}>{t}</li>)}</ol>
+                  <ol className="list-decimal pl-5 space-y-0.5">{(review.data.suggested_response_order ?? []).map((t, i) => <li key={i}>{t}</li>)}</ol>
                 </div>
               )}
             </div>
@@ -1281,11 +1281,11 @@ function AiCopilotPanel({ projectId }: { projectId: string }) {
           {agenda.data && (
             <div className="p-3 rounded-lg bg-background ring-1 ring-black/5 space-y-2 text-sm">
               <div className="font-semibold">{agenda.data.title} <span className="text-xs text-muted-foreground font-normal">· {agenda.data.duration_minutes} min</span></div>
-              {agenda.data.attendees_suggested.length > 0 && (
-                <div className="text-xs text-muted-foreground">Attendees: {agenda.data.attendees_suggested.join(", ")}</div>
+              {(agenda.data.attendees_suggested ?? []).length > 0 && (
+                <div className="text-xs text-muted-foreground">Attendees: {(agenda.data.attendees_suggested ?? []).join(", ")}</div>
               )}
               <ol className="space-y-1.5 mt-2">
-                {agenda.data.agenda.map((a, i) => (
+                {(agenda.data.agenda ?? []).map((a, i) => (
                   <li key={i} className="flex gap-3">
                     <span className="font-mono text-xs text-muted-foreground w-10 shrink-0 pt-0.5">{a.minutes}m</span>
                     <div>
@@ -1295,10 +1295,10 @@ function AiCopilotPanel({ projectId }: { projectId: string }) {
                   </li>
                 ))}
               </ol>
-              {agenda.data.decisions_needed.length > 0 && (
+              {(agenda.data.decisions_needed ?? []).length > 0 && (
                 <div className="pt-2">
                   <div className="text-xs font-mono uppercase tracking-wider text-muted-foreground mb-1">Decisions needed</div>
-                  <ul className="list-disc pl-5 space-y-0.5">{agenda.data.decisions_needed.map((d, i) => <li key={i}>{d}</li>)}</ul>
+                  <ul className="list-disc pl-5 space-y-0.5">{(agenda.data.decisions_needed ?? []).map((d, i) => <li key={i}>{d}</li>)}</ul>
                 </div>
               )}
             </div>
@@ -1320,11 +1320,11 @@ function AiCopilotPanel({ projectId }: { projectId: string }) {
                 <span className="text-xs font-mono uppercase tracking-wider text-muted-foreground">Overall risk</span>
                 <span className={`text-xs font-mono uppercase tracking-wider px-2 py-0.5 rounded ${risk.data.overall_risk === "high" ? "bg-red-500/15 text-red-600" : risk.data.overall_risk === "medium" ? "bg-amber-500/15 text-amber-700" : "bg-emerald-500/15 text-emerald-700"}`}>{risk.data.overall_risk}</span>
               </div>
-              {risk.data.risks.length === 0 ? (
+              {(risk.data.risks ?? []).length === 0 ? (
                 <div className="text-xs text-muted-foreground">No risks detected from current data.</div>
               ) : (
                 <ul className="space-y-2">
-                  {risk.data.risks.map((r, i) => (
+                  {(risk.data.risks ?? []).map((r, i) => (
                     <li key={i} className="p-2 rounded bg-card ring-1 ring-black/5">
                       <div className="flex items-center gap-2">
                         <span className={`text-[10px] font-mono uppercase tracking-wider px-1.5 py-0.5 rounded ${r.severity === "high" ? "bg-red-500/15 text-red-600" : r.severity === "medium" ? "bg-amber-500/15 text-amber-700" : "bg-emerald-500/15 text-emerald-700"}`}>{r.severity}</span>
