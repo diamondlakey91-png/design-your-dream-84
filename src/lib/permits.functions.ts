@@ -1636,7 +1636,7 @@ function buildDirectPortalSearchUrls(jurisdiction: string, address: string): str
   }
   // Virginia
   if (/arlington(\s+county)?,?\s*va/.test(j)) {
-    urls.push(`https://aca-prod.accela.com/ARLINGTON/Cap/GlobalSearchResults.aspx?QueryText=${enc}`);
+    urls.push(`https://aca-prod.accela.com/ARLINGTONCO/Cap/GlobalSearchResults.aspx?QueryText=${enc}`);
     urls.push(`https://permits.arlingtonva.us/CitizenAccess/Cap/GlobalSearchResults.aspx?QueryText=${enc}`);
   }
   if (/fairfax(\s+county)?,?\s*va/.test(j)) {
@@ -2120,19 +2120,21 @@ export const lookupPermitsByAddress = createServerFn({ method: "POST" })
       jurisdictionGuess = inferred.trim().split("\n")[0].slice(0, 120);
     }
 
-    // 2. Find the official permit portal for this jurisdiction.
-    const portalQuery = `${jurisdictionGuess} building permit search portal site:.gov OR Accela OR energov OR opengov OR citizenserve`;
-    const portalHits = await firecrawlSearch(fcKey, portalQuery, 5);
-    if (portalHits.length === 0) {
-      throw new Error(`No official permit portal found for "${jurisdictionGuess}". Try entering the jurisdiction manually.`);
-    }
-    const portal = portalHits.find((h) => /(\.gov|accela|energov|opengov|citizenserve|permitium|mygovernmentonline|viewpointcloud)/i.test(h.url)) ?? portalHits[0];
-
     // 2b. Known-jurisdiction direct search URLs. Many municipal portals (Accela,
     // EnerGov, etc.) do not expose individual permit records to Google, so
     // address-only web search misses active applications. For jurisdictions we
     // know, hit the portal's own search endpoint directly.
     const directSearchUrls = buildDirectPortalSearchUrls(jurisdictionGuess, addr);
+
+    // 2. Find the official permit portal for this jurisdiction (best-effort).
+    const portalQuery = `${jurisdictionGuess} building permit search portal site:.gov OR Accela OR energov OR opengov OR citizenserve`;
+    const portalHits = await firecrawlSearch(fcKey, portalQuery, 5).catch(() => []);
+    const portal = portalHits.length
+      ? (portalHits.find((h) => /(\.gov|accela|energov|opengov|citizenserve|permitium|mygovernmentonline|viewpointcloud)/i.test(h.url)) ?? portalHits[0])
+      : { url: directSearchUrls[0] || "", title: jurisdictionGuess, description: "" };
+    if (!portal.url && directSearchUrls.length === 0) {
+      throw new Error(`No official permit portal found for "${jurisdictionGuess}". Try entering the jurisdiction manually.`);
+    }
 
     // 3. Search the web for permit records at this specific address.
     // Try multiple address variants to catch differing portal formats.
@@ -2154,7 +2156,7 @@ export const lookupPermitsByAddress = createServerFn({ method: "POST" })
     });
 
     // 4. Scrape portal landing + direct portal search URLs + top address hits.
-    const portalScrape = await firecrawlScrape(fcKey, portal.url).catch(() => ({ markdown: "", title: "" }));
+    const portalScrape = portal.url ? await firecrawlScrape(fcKey, portal.url).catch(() => ({ markdown: "", title: "" })) : { markdown: "", title: "" };
     const directScrapes = (
       await Promise.all(
         directSearchUrls.slice(0, 4).map(async (u: string) => {
@@ -2251,9 +2253,19 @@ RULES
     const end = cleaned.lastIndexOf("}");
     let parsed: z.infer<typeof AddressLookupSchema>;
     try {
+      if (start < 0 || end < 0) throw new Error("No JSON in AI response");
       parsed = AddressLookupSchema.parse(JSON.parse(cleaned.slice(start, end + 1)));
-    } catch {
-      throw new Error("AI returned unparseable lookup result. Try again or refine the address.");
+    } catch (err) {
+      parsed = AddressLookupSchema.parse({
+        jurisdiction: jurisdictionGuess,
+        portal_name: portal.title || portal.url || jurisdictionGuess,
+        portal_url: portal.url || directSearchUrls[0] || "",
+        search_url: directSearchUrls[0] || "",
+        findings: [],
+        summary: "Live extraction did not return a parseable result. Use the direct portal link below to search this address.",
+        overall_confidence: "none" as const,
+        no_match_reason: `AI response could not be parsed (${err instanceof Error ? err.message : "unknown"}). The portal may require an interactive session.`,
+      });
     }
 
     return {
@@ -2301,7 +2313,7 @@ function buildDirectPortalUrlsForPermitNumber(jurisdiction: string, permitNumber
   if (/austin,?\s*tx/.test(j)) urls.push(`https://abc.austintexas.gov/web/permit/public-search-other?reset=true&t_selected_search=CAP&t_CAP_NUMBER=${enc}`);
   if (/miami,?\s*fl/.test(j)) urls.push(`https://apps.miamigov.com/eBuilding/PermitSearch.aspx?permit=${enc}`);
   if (/philadelphia,?\s*pa/.test(j)) urls.push(`https://eclipse.phila.gov/phillylmsprod/int/lms/Login.aspx#permit=${enc}`);
-  if (/arlington(\s+county)?,?\s*va/.test(j)) { urls.push(accela("ARLINGTON")); urls.push(`https://permits.arlingtonva.us/CitizenAccess/Cap/GlobalSearchResults.aspx?QueryText=${enc}`); }
+  if (/arlington(\s+county)?,?\s*va/.test(j)) { urls.push(accela("ARLINGTONCO")); urls.push(`https://permits.arlingtonva.us/CitizenAccess/Cap/GlobalSearchResults.aspx?QueryText=${enc}`); }
   if (/fairfax(\s+county)?,?\s*va/.test(j)) urls.push(accela("FFXC"));
   if (/loudoun(\s+county)?,?\s*va/.test(j)) urls.push(accela("LOUDOUN"));
   if (/prince\s+william(\s+county)?,?\s*va/.test(j)) urls.push(`https://eservices.pwcgov.org/BuildingDevelopment/Cap/GlobalSearchResults.aspx?QueryText=${enc}`);
@@ -2410,15 +2422,31 @@ Return ONLY JSON:
   "no_match_reason": "1 sentence if not found; empty otherwise"
 }`;
 
-  const raw = await callLovableAI(aiKey, [
-    { role: "system", content: "You extract structured live permit status from real portal text. Output valid JSON only, no prose, no fences." },
-    { role: "user", content: prompt },
-  ], "google/gemini-2.5-flash");
+  let parsed: z.infer<typeof PermitNumberSchema>;
+  try {
+    const raw = await callLovableAI(aiKey, [
+      { role: "system", content: "You extract structured live permit status from real portal text. Output valid JSON only, no prose, no fences." },
+      { role: "user", content: prompt },
+    ], "google/gemini-2.5-flash");
 
-  const cleaned = raw.replace(/```json|```/g, "").trim();
-  const start = cleaned.indexOf("{");
-  const end = cleaned.lastIndexOf("}");
-  const parsed = PermitNumberSchema.parse(JSON.parse(cleaned.slice(start, end + 1)));
+    const cleaned = raw.replace(/```json|```/g, "").trim();
+    const start = cleaned.indexOf("{");
+    const end = cleaned.lastIndexOf("}");
+    if (start < 0 || end < 0) throw new Error("No JSON in AI response");
+    parsed = PermitNumberSchema.parse(JSON.parse(cleaned.slice(start, end + 1)));
+  } catch (err) {
+    // Never hard-fail the lookup — return a structured "not found" record so the UI can show the tried URLs.
+    parsed = PermitNumberSchema.parse({
+      permit_number: permitNumber,
+      jurisdiction,
+      found: false,
+      status: "Unknown",
+      no_match_reason: scrapes || webScrapes
+        ? `Could not parse portal response: ${err instanceof Error ? err.message : String(err)}`
+        : "No accessible portal returned data for this permit. Try the direct portal link below.",
+      source_url: urls[0] || "",
+    });
+  }
   return { parsed, sourceUrls: urls };
 }
 
