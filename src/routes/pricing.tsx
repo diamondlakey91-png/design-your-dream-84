@@ -144,9 +144,44 @@ const services = [
 
 function PricingPage() {
   const seatsLeft = Math.max(0, FOUNDING_SEATS - FOUNDING_TAKEN);
+  const navigate = useNavigate();
+  const [session, setSession] = useState<{ userId: string; email?: string } | null>(null);
+  const [checkoutPriceId, setCheckoutPriceId] = useState<string | null>(null);
+
+  useEffect(() => {
+    supabase.auth.getSession().then(({ data }) => {
+      if (data.session?.user) {
+        setSession({ userId: data.session.user.id, email: data.session.user.email ?? undefined });
+      }
+    });
+    const { data: sub } = supabase.auth.onAuthStateChange((_e, s) => {
+      setSession(s?.user ? { userId: s.user.id, email: s.user.email ?? undefined } : null);
+    });
+    return () => sub.subscription.unsubscribe();
+  }, []);
+
+  const startCheckout = (priceId?: string) => {
+    if (!priceId) return;
+    if (!session) {
+      navigate({ to: "/auth", search: { next: `/pricing?plan=${priceId}` } as never });
+      return;
+    }
+    setCheckoutPriceId(priceId);
+  };
+
+  // Auto-open checkout when returning from auth with ?plan=
+  useEffect(() => {
+    if (!session) return;
+    const params = new URLSearchParams(window.location.search);
+    const plan = params.get("plan");
+    if (plan) setCheckoutPriceId(plan);
+  }, [session]);
+
   return (
     <div className="min-h-screen bg-background text-foreground">
+      <PaymentTestModeBanner />
       <header className="mx-auto flex max-w-6xl items-center justify-between px-6 py-6">
+
         <Link to="/" className="flex items-center gap-2">
           <div className="grid size-9 place-items-center rounded-lg bg-brand">
             <div className="size-4 rounded-sm border-2 border-ink/30" />
