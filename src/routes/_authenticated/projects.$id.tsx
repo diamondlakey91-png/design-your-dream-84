@@ -56,7 +56,7 @@ export const Route = createFileRoute("/_authenticated/projects/$id")({
   component: ProjectDetail,
 });
 
-type Tab = "overview" | "checklist" | "docs" | "deadlines" | "timeline";
+type Tab = "overview" | "checklist" | "docs" | "deadlines" | "inspections" | "timeline";
 
 const STATUS_LABEL: Record<string, string> = {
   not_started: "Not started",
