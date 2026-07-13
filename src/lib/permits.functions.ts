@@ -2156,7 +2156,7 @@ export const lookupPermitsByAddress = createServerFn({ method: "POST" })
     });
 
     // 4. Scrape portal landing + direct portal search URLs + top address hits.
-    const portalScrape = await firecrawlScrape(fcKey, portal.url).catch(() => ({ markdown: "", title: "" }));
+    const portalScrape = portal.url ? await firecrawlScrape(fcKey, portal.url).catch(() => ({ markdown: "", title: "" })) : { markdown: "", title: "" };
     const directScrapes = (
       await Promise.all(
         directSearchUrls.slice(0, 4).map(async (u: string) => {
