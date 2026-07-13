@@ -204,6 +204,11 @@ function OverviewTab({
       {/* Live jurisdiction tracking */}
       <LiveJurisdictionSync projectId={project.id} jurisdiction={project.jurisdiction} />
 
+      {/* AI Copilot */}
+      <AiCopilotPanel projectId={project.id} />
+
+
+
 
       <section>
         <div className="flex items-center justify-between mb-3">
