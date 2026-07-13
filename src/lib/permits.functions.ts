@@ -1449,3 +1449,144 @@ export const addPermitItemsBulk = createServerFn({ method: "POST" })
     return { inserted };
   });
 
+
+// ---- Address-based live permit lookup (any jurisdiction, no project required) ----
+const AddressLookupInput = z.object({
+  address: z.string().trim().min(3).max(300),
+  jurisdiction: z.string().trim().max(200).optional().default(""),
+});
+
+const AddressFindingSchema = z.object({
+  permit_number: z.string().default(""),
+  permit_type: z.string().default(""),
+  status: z.string().default("Unknown"),
+  address: z.string().default(""),
+  applicant: z.string().default(""),
+  filed_date: z.string().default(""),
+  updated_date: z.string().default(""),
+  description: z.string().default(""),
+  source_url: z.string().default(""),
+});
+
+const AddressLookupSchema = z.object({
+  jurisdiction: z.string(),
+  portal_name: z.string(),
+  portal_url: z.string(),
+  search_url: z.string().default(""),
+  findings: z.array(AddressFindingSchema).max(25),
+  summary: z.string(),
+});
+
+export const lookupPermitsByAddress = createServerFn({ method: "POST" })
+  .middleware([requireSupabaseAuth])
+  .inputValidator((input: unknown) => AddressLookupInput.parse(input))
+  .handler(async ({ data }) => {
+    const fcKey = process.env.FIRECRAWL_API_KEY;
+    const aiKey = process.env.LOVABLE_API_KEY;
+    if (!fcKey) throw new Error("Firecrawl is not configured");
+    if (!aiKey) throw new Error("AI is not configured");
+
+    const addr = data.address;
+    const juris = data.jurisdiction;
+
+    // 1. If no jurisdiction, ask AI to infer city/county/state from the address.
+    let jurisdictionGuess = juris;
+    if (!jurisdictionGuess) {
+      const inferred = await callLovableAI(aiKey, [
+        { role: "system", content: "You extract US permit jurisdictions from addresses. Reply with ONLY the jurisdiction in the form 'City, ST' or 'County, ST'. No prose." },
+        { role: "user", content: `Address: ${addr}\nJurisdiction:` },
+      ]);
+      jurisdictionGuess = inferred.trim().split("\n")[0].slice(0, 120);
+    }
+
+    // 2. Find the official permit portal for this jurisdiction.
+    const portalQuery = `${jurisdictionGuess} building permit search portal site:.gov OR Accela OR energov OR opengov OR citizenserve`;
+    const portalHits = await firecrawlSearch(fcKey, portalQuery, 5);
+    if (portalHits.length === 0) {
+      throw new Error(`No official permit portal found for "${jurisdictionGuess}". Try entering the jurisdiction manually.`);
+    }
+    const portal = portalHits.find((h) => /(\.gov|accela|energov|opengov|citizenserve|permitium|mygovernmentonline|viewpointcloud)/i.test(h.url)) ?? portalHits[0];
+
+    // 3. Search the web for permit records at this specific address.
+    const addressQuery = `"${addr}" permit ${jurisdictionGuess} site:.gov OR accela OR energov OR opengov OR citizenserve`;
+    const addressHits = await firecrawlSearch(fcKey, addressQuery, 6).catch(() => []);
+
+    // 4. Scrape portal landing + top address hits.
+    const portalScrape = await firecrawlScrape(fcKey, portal.url).catch(() => ({ markdown: "", title: "" }));
+    const addressScrapes = (
+      await Promise.all(
+        addressHits.slice(0, 3).map(async (h) => {
+          try {
+            const s = await firecrawlScrape(fcKey, h.url);
+            return `SOURCE: ${h.url}\nTITLE: ${h.title ?? ""}\n${s.markdown.slice(0, 2500)}`;
+          } catch {
+            return `SOURCE: ${h.url}\nTITLE: ${h.title ?? ""}\nDESC: ${h.description ?? ""}`;
+          }
+        }),
+      )
+    ).join("\n\n---\n\n");
+
+    // 5. Ask AI to extract structured permit records for this address.
+    const extractionPrompt = `You are Permivio's live permit lookup. Extract permit records tied to the address below from the real source text provided. Never invent data.
+
+ADDRESS: ${addr}
+JURISDICTION (inferred): ${jurisdictionGuess}
+
+OFFICIAL PORTAL CANDIDATE (${portal.url})
+${portalScrape.markdown.slice(0, 3500)}
+
+ADDRESS SEARCH RESULTS
+${addressScrapes || "(none)"}
+
+Return ONLY valid JSON in this shape:
+{
+  "jurisdiction": "City, ST (or County, ST)",
+  "portal_name": "official department / portal name",
+  "portal_url": "canonical portal URL",
+  "search_url": "direct URL to search permits by address on this portal, if present in the sources; else empty",
+  "findings": [
+    {
+      "permit_number": "record #",
+      "permit_type": "e.g. Building, Electrical, MEP, Certificate of Occupancy",
+      "status": "Issued | Under Review | Submitted | Approved | Finaled | Expired | Withdrawn | Unknown",
+      "address": "as listed",
+      "applicant": "if listed",
+      "filed_date": "YYYY-MM-DD or as listed",
+      "updated_date": "YYYY-MM-DD or as listed",
+      "description": "1 short clause",
+      "source_url": "URL from the sources above"
+    }
+  ],
+  "summary": "2-4 sentence plain-English summary. If no records at this exact address were found in source text, say so honestly and direct the user to search_url."
+}
+
+RULES
+- Only include a finding if the source text clearly shows a permit tied to this address (or a very close match). Otherwise return findings: [].
+- Never fabricate a permit number, status, or date.
+- portal_url and any source_url must be real URLs from the source text above.`;
+
+    const raw = await callLovableAI(aiKey, [
+      { role: "system", content: "You extract structured permit records from live portal text. Output valid JSON only, no prose, no fences." },
+      { role: "user", content: extractionPrompt },
+    ]);
+    const cleaned = raw.replace(/```json|```/g, "").trim();
+    const start = cleaned.indexOf("{");
+    const end = cleaned.lastIndexOf("}");
+    let parsed: z.infer<typeof AddressLookupSchema>;
+    try {
+      parsed = AddressLookupSchema.parse(JSON.parse(cleaned.slice(start, end + 1)));
+    } catch {
+      throw new Error("AI returned unparseable lookup result. Try again or refine the address.");
+    }
+
+    return {
+      address: addr,
+      jurisdiction: parsed.jurisdiction || jurisdictionGuess,
+      portal_name: parsed.portal_name || portal.title || portal.url,
+      portal_url: parsed.portal_url || portal.url,
+      search_url: parsed.search_url,
+      findings: parsed.findings,
+      summary: parsed.summary,
+      searched_at: new Date().toISOString(),
+    };
+  });

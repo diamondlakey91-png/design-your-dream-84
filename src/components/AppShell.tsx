@@ -1,5 +1,5 @@
 import { Link, useLocation, useNavigate } from "@tanstack/react-router";
-import { Home, FolderKanban, MessageSquare, Library, LogOut } from "lucide-react";
+import { Home, MessageSquare, Library, LogOut, MapPin } from "lucide-react";
 import { supabase } from "@/integrations/supabase/client";
 import { useQueryClient } from "@tanstack/react-query";
 import type { ReactNode } from "react";
@@ -26,7 +26,7 @@ export function AppShell({ children }: { children: ReactNode }) {
       <nav className="fixed inset-x-0 bottom-0 z-40 border-t border-border bg-card/95 backdrop-blur">
         <div className="mx-auto flex max-w-2xl items-center justify-around px-6 py-3">
           <NavItem to="/dashboard" icon={<Home className="size-5" />} label="Sites" active={active("/dashboard")} />
-          <NavItem to="/projects" icon={<FolderKanban className="size-5" />} label="Projects" active={active("/projects")} />
+          <NavItem to="/lookup" icon={<MapPin className="size-5" />} label="Lookup" active={active("/lookup")} />
           <Link
             to="/assistant"
             className="grid size-14 -mt-8 place-items-center rounded-full bg-brand text-brand-foreground shadow-lg ring-4 ring-background"
