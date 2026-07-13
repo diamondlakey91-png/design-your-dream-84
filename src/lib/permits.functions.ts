@@ -1020,10 +1020,18 @@ export const updateInspection = createServerFn({ method: "POST" })
     inspector: z.string().max(120).optional(),
   }).parse(input))
   .handler(async ({ data, context }) => {
-    const patch: Record<string, unknown> = {};
-    for (const k of ["status", "scheduled_date", "result_date", "notes", "inspector"] as const) {
-      if (data[k] !== undefined) patch[k] = data[k];
-    }
+    const patch: {
+      status?: (typeof INSPECTION_STATUSES)[number];
+      scheduled_date?: string | null;
+      result_date?: string | null;
+      notes?: string;
+      inspector?: string;
+    } = {};
+    if (data.status !== undefined) patch.status = data.status;
+    if (data.scheduled_date !== undefined) patch.scheduled_date = data.scheduled_date;
+    if (data.result_date !== undefined) patch.result_date = data.result_date;
+    if (data.notes !== undefined) patch.notes = data.notes;
+    if (data.inspector !== undefined) patch.inspector = data.inspector;
     if (data.status === "passed" || data.status === "failed") {
       patch.result_date = data.result_date ?? new Date().toISOString().slice(0, 10);
     }
