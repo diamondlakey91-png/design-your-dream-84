@@ -2764,6 +2764,14 @@ const PlanReviewSchema = z.object({
     local_amendment: z.string().default(""),
     sheet_reference: z.string().default(""),
     recommendation: z.string().default(""),
+    // Reviewer self-reported certainty. Findings with low confidence are shown
+    // as "needs manual verification" rather than as hard issues, and any
+    // stamp/signature/seal claim must clear a second verification pass.
+    confidence: z.enum(["low", "medium", "high"]).default("medium"),
+    // Short verbatim visual evidence the reviewer saw (e.g. "title block bottom-right
+    // is blank" or "door labeled 24\" clear"). Used to cross-check hallucinated findings.
+    evidence_quote: z.string().default(""),
+    needs_manual_verification: z.boolean().default(false),
     // Location on the plan for visual markup (page is 1-indexed; bbox is normalized 0-1
     // with origin top-left). All optional — omit when the AI can't localize the issue.
     page: z.number().int().min(1).max(500).optional(),
@@ -2775,6 +2783,19 @@ const PlanReviewSchema = z.object({
     }).optional(),
   })).max(60).default([]),
 });
+
+// Detect "no stamp / not signed / no seal / no PE" style claims that are the
+// most common false-positives in AI plan review. We re-verify these against
+// the actual drawing before letting them ship as findings.
+function isStampSignatureClaim(text: string): boolean {
+  const t = text.toLowerCase();
+  return (
+    /(unstamp|not\s+stamp|no\s+stamp|missing\s+stamp|without\s+stamp)/.test(t) ||
+    /(unsigned|not\s+signed|no\s+signature|missing\s+signature|without\s+signature)/.test(t) ||
+    /(no\s+seal|missing\s+seal|without\s+seal|unsealed)/.test(t) ||
+    /(no\s+(pe|ra|architect|engineer)\s+(stamp|seal|signature))/.test(t)
+  );
+}
 
 // Fetch jurisdiction-specific code amendments (works for any of 20k+ US jurisdictions).
 // Returns a compact markdown context block or "" if nothing usable was found.
@@ -2870,7 +2891,19 @@ ${jurisBlock ? `JURISDICTION-SPECIFIC CONTEXT (authoritative — prefer over mod
 1. missing_exits — insufficient exits, exit access travel distance, dead-end corridors, exit width, exit signage/illumination (IBC Ch.10 + local amendments).
 2. ada — accessibility: door clearances, ramp slopes, restroom fixture clearances, accessible route, parking, reach ranges, signage (ADA 2010 / ICC A117.1 + state accessibility code, e.g. CBC 11B in CA, TAS in TX, MAAB in MA, NYC Ch.11).
 3. fire_code — fire separation, occupancy separation, sprinkler/alarm coverage, fire-rated assemblies, hydrant/FDC access (IBC Ch.7-9, IFC + local fire amendments).
-4. permitting_mistake — missing sheets, incomplete title block, missing code analysis, unstamped drawings, missing energy compliance (IECC or state equivalent — e.g. Title 24 CA, Stretch Code MA), zoning setbacks, jurisdiction-specific submittal requirements.
+4. permitting_mistake — missing sheets, incomplete title block, missing code analysis, missing energy compliance (IECC or state equivalent — e.g. Title 24 CA, Stretch Code MA), zoning setbacks, jurisdiction-specific submittal requirements.
+
+ACCURACY RULES — READ CAREFULLY:
+- Only flag issues you can VISUALLY CONFIRM on the drawing. If you are not certain, either omit the finding or mark it "confidence: low" with "needs_manual_verification: true".
+- Every finding MUST include an "evidence_quote": a short verbatim description of what you actually see (e.g. "title block bottom-right shows no seal impression", or "corridor labeled 36\\" with 2 doors swinging in"). Findings without evidence will be discarded.
+- STAMPS / SIGNATURES / SEALS: These live in the title block (usually bottom-right or right edge of each sheet), and are often faint, scanned, digital (DocuSign/Bluebeam), or partially cropped. Before flagging a sheet as unstamped/unsigned:
+    (a) Scan the ENTIRE title block area of that sheet, not just the center.
+    (b) Look for: embossed round PE/RA seals, digital signature blocks, "Digitally signed by…" text, DocuSign markers, initials, dates near a signature line, scanned-in wet signatures (often light/gray), or state-license numbers next to a name.
+    (c) If ANY of the above is present or plausibly present, DO NOT flag it as unstamped. Prefer a false negative over a false positive on this specific issue.
+    (d) If you do flag it, set confidence to at most "medium", set needs_manual_verification: true, and quote exactly what you looked at ("bottom-right title block on sheet E.6 is blank between the border and the sheet number").
+- Do the same conservative check for "missing code analysis", "missing energy compliance", or "missing sheet index" — these frequently exist on cover/general sheets you may have skimmed past.
+- Never fabricate specific code sections or local amendment numbers — leave those fields blank if unsure.
+- If the document is not a plan set (e.g. a single detail, a photo, a spec cover), return findings: [] and explain in overall_summary.
 
 Return ONLY valid JSON in this exact shape (no fences, no prose):
 {
@@ -2886,8 +2919,11 @@ Return ONLY valid JSON in this exact shape (no fences, no prose):
     {
       "category": "missing_exits" | "ada" | "fire_code" | "permitting_mistake" | "other",
       "severity": "low" | "medium" | "high",
+      "confidence": "low" | "medium" | "high",
+      "needs_manual_verification": false,
       "title": "short label (<80 chars)",
       "detail": "what is wrong and where (<240 chars)",
+      "evidence_quote": "verbatim visual evidence (<200 chars)",
       "code_reference": "model code, e.g. IBC 1006.2.1 or ADA 404.2.3",
       "local_amendment": "jurisdiction-specific amendment/section if applicable, else ''",
       "sheet_reference": "e.g. A2.1 or 'not shown'",
@@ -2898,11 +2934,9 @@ Return ONLY valid JSON in this exact shape (no fences, no prose):
   ]
 }
 
-Rules: only flag issues you can actually see or reasonably infer from the plan. If the plan appears compliant in a category, omit it. Never fabricate specific code sections or local amendment numbers — leave those fields blank if unsure. If the document is not a plan set, return findings: [] and explain in overall_summary.
-
 LOCATION (VERY IMPORTANT for markup): for every finding you visually identify on a sheet, include:
 - "page": the 1-indexed page number of the PDF (or 1 for a single image) that contains the issue.
-- "bbox": normalized box coordinates {x, y, w, h} in [0,1], where (0,0) is the TOP-LEFT of that page/image, x+w and y+h must stay <= 1, and the box tightly frames the problem region (e.g. the missing exit, the non-compliant door, the fire-rated wall). Do not include a bbox that fills the whole page; leave bbox off entirely if you can't localize the issue.`;
+- "bbox": normalized box coordinates {x, y, w, h} in [0,1], where (0,0) is the TOP-LEFT of that page/image, x+w and y+h must stay <= 1, and the box tightly frames the problem region. Do not include a bbox that fills the whole page; leave bbox off entirely if you can't localize the issue.`;
 
   const contentParts: unknown[] = [{ type: "text", text: instruction }];
   if (isImage) {
@@ -2923,7 +2957,7 @@ LOCATION (VERY IMPORTANT for markup): for every finding you visually identify on
     body: JSON.stringify({
       model: "google/gemini-2.5-pro",
       messages: [
-        { role: "system", content: "You are a senior plan reviewer. Output valid JSON only, no prose, no code fences." },
+        { role: "system", content: "You are a senior plan reviewer. Output valid JSON only, no prose, no code fences. Prefer false negatives over false positives — omit any finding you cannot visually confirm." },
         { role: "user", content: contentParts },
       ],
     }),
@@ -2945,6 +2979,104 @@ LOCATION (VERY IMPORTANT for markup): for every finding you visually identify on
   } catch {
     throw new Error("AI returned an unreadable review. Try again.");
   }
+
+  // ---- Cross-validation pass: verify stamp/signature/seal claims ----
+  // These are the highest false-positive category. For each such finding, run
+  // a focused second call scoped to the title-block area on the cited sheet,
+  // and drop or soft-flag the finding based on what the model actually sees.
+  const stampClaims = parsed.findings
+    .map((f, idx) => ({ idx, f }))
+    .filter(({ f }) =>
+      isStampSignatureClaim(`${f.title} ${f.detail} ${f.recommendation}`),
+    );
+
+  if (stampClaims.length > 0) {
+    const verifyInstruction = `You are re-verifying ONE narrow claim about a construction drawing: whether a licensed design professional's STAMP, SEAL, SIGNATURE, or DIGITAL SIGNATURE is present.
+
+CLAIMS TO VERIFY (each references a specific sheet in the attached document):
+${stampClaims.map(({ f }, i) => `${i + 1}. Sheet ${f.sheet_reference || "unspecified"} — claim: "${f.title}". Detail: ${f.detail}`).join("\n")}
+
+Instructions:
+- Look at the TITLE BLOCK of each referenced sheet (usually bottom-right, sometimes right edge or bottom strip).
+- Consider ALL of these as valid evidence of stamp/signature/seal: embossed round PE/RA seals; state-license numbers next to a name; wet signatures (often gray/faint on scans); "Digitally signed by…" text; DocuSign / Bluebeam / Adobe digital signature marks; initials + date on a signature line; typed name over a signature line with license#.
+- If ANY such evidence is present or plausibly present, the claim is INVALID — the sheet IS stamped/signed.
+
+Return ONLY JSON:
+{
+  "verifications": [
+    { "index": 1, "verdict": "confirmed" | "invalid" | "uncertain", "evidence": "verbatim description of what you see in the title block (<220 chars)" }
+  ]
+}
+"confirmed" = the sheet really has no stamp/signature/seal.
+"invalid"   = a stamp/signature/seal IS present; drop the finding.
+"uncertain" = you cannot tell — leave the finding but mark for manual review.`;
+
+    const verifyParts: unknown[] = [{ type: "text", text: verifyInstruction }];
+    if (isImage) {
+      verifyParts.push({ type: "image_url", image_url: { url: signed.signedUrl } });
+    } else {
+      // Re-attach the PDF (already downloaded above; do again for a clean base64).
+      const fileResp = await fetch(signed.signedUrl);
+      if (fileResp.ok) {
+        const buf = new Uint8Array(await fileResp.arrayBuffer());
+        let bin = "";
+        for (let i = 0; i < buf.length; i += 0x8000) bin += String.fromCharCode(...buf.subarray(i, i + 0x8000));
+        const b64 = btoa(bin);
+        verifyParts.push({ type: "file", file: { filename: doc.name, file_data: `data:${mime};base64,${b64}` } });
+      }
+    }
+
+    try {
+      const vResp = await fetch("https://ai.gateway.lovable.dev/v1/chat/completions", {
+        method: "POST",
+        headers: { "Content-Type": "application/json", "Lovable-API-Key": aiKey },
+        body: JSON.stringify({
+          model: "google/gemini-2.5-pro",
+          messages: [
+            { role: "system", content: "You verify stamp/signature/seal claims on construction drawings. Prefer 'invalid' when evidence is present or plausible. Output JSON only." },
+            { role: "user", content: verifyParts },
+          ],
+        }),
+      });
+      if (vResp.ok) {
+        const vJson = (await vResp.json()) as { choices?: Array<{ message?: { content?: string } }> };
+        const vRaw = (vJson.choices?.[0]?.message?.content ?? "").replace(/```json|```/g, "").trim();
+        const vs = vRaw.indexOf("{");
+        const ve = vRaw.lastIndexOf("}");
+        if (vs >= 0 && ve > vs) {
+          const vParsed = JSON.parse(vRaw.slice(vs, ve + 1)) as {
+            verifications?: Array<{ index?: number; verdict?: string; evidence?: string }>;
+          };
+          const dropIdx = new Set<number>();
+          for (const v of vParsed.verifications ?? []) {
+            const target = stampClaims[(v.index ?? 0) - 1];
+            if (!target) continue;
+            if (v.verdict === "invalid") {
+              dropIdx.add(target.idx);
+            } else if (v.verdict === "uncertain") {
+              parsed.findings[target.idx].confidence = "low";
+              parsed.findings[target.idx].needs_manual_verification = true;
+              if (v.evidence) parsed.findings[target.idx].evidence_quote = v.evidence;
+            } else if (v.verdict === "confirmed") {
+              parsed.findings[target.idx].confidence = "high";
+              if (v.evidence) parsed.findings[target.idx].evidence_quote = v.evidence;
+            }
+          }
+          if (dropIdx.size > 0) {
+            parsed.findings = parsed.findings.filter((_, i) => !dropIdx.has(i));
+          }
+        }
+      }
+    } catch {
+      // Verification is best-effort; if it fails, downgrade the claims to needs-manual-review
+      // rather than shipping a possibly-wrong finding at high severity.
+      for (const { idx } of stampClaims) {
+        parsed.findings[idx].confidence = "low";
+        parsed.findings[idx].needs_manual_verification = true;
+      }
+    }
+  }
+
 
   const { data: updated, error: uErr } = await supabase
     .from("project_documents")
