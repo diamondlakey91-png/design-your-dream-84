@@ -30,8 +30,12 @@ function ProjectDetail() {
     queryFn: () => getFn({ data: { id } }),
   });
 
-  const advance = useMutation({
-    mutationFn: () => advanceFn({ data: { id } }),
+  const summary = useMutation({
+    mutationFn: () => summarizeFn({ data: { id } }),
+    onError: (e) => toast.error(e instanceof Error ? e.message : "Failed"),
+  });
+
+
     onSuccess: () => {
       queryClient.invalidateQueries({ queryKey: ["project", id] });
       queryClient.invalidateQueries({ queryKey: ["projects"] });
