@@ -23,6 +23,8 @@ import {
   applySyncToChecklist,
   analyzeDocument,
   reviewPlan,
+  addPlanReviewFixesToChecklist,
+  draftReviewerResponse,
   computeProjectHealth,
   listInspections,
   addInspection,
