@@ -211,6 +211,9 @@ function OverviewTab({
       </section>
 
       {/* Live jurisdiction tracking */}
+      <LivePermitCard project={project} onChange={onChange} />
+
+      {/* Live jurisdiction tracking */}
       <LiveJurisdictionSync projectId={project.id} jurisdiction={project.jurisdiction} />
 
       {/* AI Copilot */}
