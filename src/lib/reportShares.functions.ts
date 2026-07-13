@@ -35,7 +35,7 @@ export const createBatchReportShare = createServerFn({ method: "POST" })
     // Verify caller owns the project (RLS also enforces this).
     const { data: project, error: pErr } = await context.supabase
       .from("projects")
-      .select("id, name, jurisdiction, address, project_type")
+      .select("id, name, jurisdiction, location, project_type")
       .eq("id", data.project_id)
       .maybeSingle();
     if (pErr) throw new Error(pErr.message);
@@ -52,11 +52,11 @@ export const createBatchReportShare = createServerFn({ method: "POST" })
         project_id: data.project_id,
         user_id: context.userId,
         token,
-        report: data.report,
+        report: data.report as never,
         project_snapshot: {
           name: project.name,
           jurisdiction: project.jurisdiction,
-          address: project.address,
+          location: project.location,
           project_type: project.project_type,
         },
         password_hash: data.password ? hashPassword(data.password) : null,
