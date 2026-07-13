@@ -495,6 +495,23 @@ function DocRow({ doc, projectId, onDelete }: { doc: { id: string; name: string;
     onSuccess: () => { qc.invalidateQueries({ queryKey: ["docs", projectId] }); qc.invalidateQueries({ queryKey: ["activity", projectId] }); setReviewOpen(true); toast.success("Plan review complete"); },
     onError: (e) => toast.error(e instanceof Error ? e.message : "Plan review failed"),
   });
+  const addFixesFn = useServerFn(addPlanReviewFixesToChecklist);
+  const draftFn = useServerFn(draftReviewerResponse);
+  const [letter, setLetter] = useState<string | null>(null);
+  const addFixes = useMutation({
+    mutationFn: () => addFixesFn({ data: { document_id: doc.id } }),
+    onSuccess: (r) => {
+      qc.invalidateQueries({ queryKey: ["items", projectId] });
+      qc.invalidateQueries({ queryKey: ["activity", projectId] });
+      toast.success(`Added ${r.inserted_count} fix${r.inserted_count === 1 ? "" : "es"} to checklist`);
+    },
+    onError: (e) => toast.error(e instanceof Error ? e.message : "Failed to add fixes"),
+  });
+  const draft = useMutation({
+    mutationFn: () => draftFn({ data: { document_id: doc.id } }),
+    onSuccess: (r) => { setLetter(r.letter); toast.success("Response letter drafted"); },
+    onError: (e) => toast.error(e instanceof Error ? e.message : "Failed to draft response"),
+  });
   const items = Array.isArray(doc.ai_action_items) ? doc.ai_action_items as Array<{ reviewer?: string; discipline?: string; request: string; reference?: string }> : [];
   const pr = (doc.plan_review && typeof doc.plan_review === "object") ? doc.plan_review as {
     overall_summary?: string;
