@@ -35,6 +35,7 @@ import {
   summarizeReviewerComments,
   generateMeetingAgenda,
   flagScheduleRisks,
+  generateBatchReportPdf,
 } from "@/lib/permits.functions";
 import { createBatchReportShare, listBatchReportShares, revokeBatchReportShare } from "@/lib/reportShares.functions";
 import {
