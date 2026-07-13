@@ -345,7 +345,7 @@ export const sendChatMessage = createServerFn({ method: "POST" })
       { role: "user", content: data.content },
     ];
 
-    const reply = await callLovableAI(apiKey, messages);
+    const reply = await callLovableAI(apiKey, messages, "google/gemini-2.5-flash");
 
     const { data: assistantMsg, error: aerr } = await context.supabase
       .from("chat_messages")
