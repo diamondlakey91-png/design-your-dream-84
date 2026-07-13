@@ -2253,9 +2253,19 @@ RULES
     const end = cleaned.lastIndexOf("}");
     let parsed: z.infer<typeof AddressLookupSchema>;
     try {
+      if (start < 0 || end < 0) throw new Error("No JSON in AI response");
       parsed = AddressLookupSchema.parse(JSON.parse(cleaned.slice(start, end + 1)));
-    } catch {
-      throw new Error("AI returned unparseable lookup result. Try again or refine the address.");
+    } catch (err) {
+      parsed = AddressLookupSchema.parse({
+        jurisdiction: jurisdictionGuess,
+        portal_name: portal.title || portal.url || jurisdictionGuess,
+        portal_url: portal.url || directSearchUrls[0] || "",
+        search_url: directSearchUrls[0] || "",
+        findings: [],
+        summary: "Live extraction did not return a parseable result. Use the direct portal link below to search this address.",
+        overall_confidence: "none" as const,
+        no_match_reason: `AI response could not be parsed (${err instanceof Error ? err.message : "unknown"}). The portal may require an interactive session.`,
+      });
     }
 
     return {
