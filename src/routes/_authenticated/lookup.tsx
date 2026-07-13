@@ -69,7 +69,7 @@ function LookupPage() {
   const onSubmit = (e: React.FormEvent) => {
     e.preventDefault();
     if (!address.trim()) return;
-    setResult(null);
+    setResult(null); setUtility(null);
     mutation.mutate({ address: address.trim(), jurisdiction: jurisdiction.trim() });
   };
 
