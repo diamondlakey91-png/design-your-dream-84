@@ -85,6 +85,12 @@ function LookupPage() {
           <p className="text-sm text-muted-foreground">
             Enter any US address. Permivio finds the jurisdiction's official permit portal and pulls live records tied to that address.
           </p>
+          <a
+            href="/portals"
+            className="inline-flex items-center gap-1.5 text-xs text-brand hover:underline"
+          >
+            <Building2 className="size-3.5" /> Browse the nationwide portal directory →
+          </a>
         </header>
 
         <form onSubmit={onSubmit} className="space-y-3 rounded-xl border border-border bg-card p-4">
