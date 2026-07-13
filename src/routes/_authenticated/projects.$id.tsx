@@ -14,6 +14,7 @@ import {
   listDocuments,
   registerDocument,
   deleteDocument,
+  updateDocumentLinkage,
   addDeadline,
   deleteDeadline,
   listDeadlines,
