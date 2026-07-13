@@ -45,7 +45,10 @@ export const createProject = createServerFn({ method: "POST" })
   .middleware([requireSupabaseAuth])
   .inputValidator((input: unknown) => CreateProjectInput.parse(input))
   .handler(async ({ data, context }) => {
+    const ent = await getEntitlement(context.supabase, context.userId);
+    await requireProjectQuota(context.supabase, context.userId, ent);
     const { data: row, error } = await context.supabase
+
       .from("projects")
       .insert({
         user_id: context.userId,
