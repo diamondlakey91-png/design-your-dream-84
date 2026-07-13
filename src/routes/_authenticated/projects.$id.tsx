@@ -634,6 +634,15 @@ function DocRow({ doc, projectId, onDelete }: { doc: { id: string; name: string;
     onSuccess: (r) => { setLetter(r.letter); toast.success("Response letter drafted"); },
     onError: (e) => toast.error(e instanceof Error ? e.message : "Failed to draft response"),
   });
+  const redlineFn = useServerFn(generateRedlinedPdf);
+  const redline = useMutation({
+    mutationFn: () => redlineFn({ data: { id: doc.id } }),
+    onSuccess: (r) => {
+      toast.success(`Redlined PDF ready — ${r.markups} markup${r.markups === 1 ? "" : "s"}`);
+      window.open(r.url, "_blank", "noopener,noreferrer");
+    },
+    onError: (e) => toast.error(e instanceof Error ? e.message : "Failed to generate redlined PDF"),
+  });
   const items = Array.isArray(doc.ai_action_items) ? doc.ai_action_items as Array<{ reviewer?: string; discipline?: string; request: string; reference?: string }> : [];
   const pr = (doc.plan_review && typeof doc.plan_review === "object") ? doc.plan_review as {
     overall_summary?: string;
