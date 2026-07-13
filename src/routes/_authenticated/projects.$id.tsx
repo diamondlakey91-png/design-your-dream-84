@@ -62,6 +62,7 @@ import {
   Circle,
   Loader2,
   Milestone,
+  Paperclip,
 } from "lucide-react";
 import { STAGES } from "@/lib/permits";
 import { toast } from "sonner";
