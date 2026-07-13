@@ -939,12 +939,26 @@ function DocRow({ doc, projectId, onDelete }: { doc: { id: string; name: string;
                         {f.local_amendment && (
                           <span className="text-[10px] font-mono text-brand">Local: {f.local_amendment}</span>
                         )}
+                        {f.confidence && (
+                          <span className={`text-[10px] font-mono uppercase tracking-wider px-1.5 py-0.5 rounded ${f.confidence === "high" ? "bg-brand/10 text-brand" : f.confidence === "low" ? "bg-amber-500/15 text-amber-600" : "bg-muted text-muted-foreground"}`}>
+                            {f.confidence} conf
+                          </span>
+                        )}
+                        {f.needs_manual_verification && (
+                          <span className="text-[10px] font-mono uppercase tracking-wider px-1.5 py-0.5 rounded bg-amber-500/15 text-amber-600">
+                            verify manually
+                          </span>
+                        )}
                       </div>
                       <p className="text-sm font-medium mt-1">{f.title}</p>
                       <p className="text-sm text-foreground/80 mt-0.5">{f.detail}</p>
+                      {f.evidence_quote && (
+                        <p className="text-xs text-muted-foreground mt-1 italic">"{f.evidence_quote}"</p>
+                      )}
                       {f.recommendation && (
                         <p className="text-xs text-muted-foreground mt-1"><span className="uppercase font-mono tracking-wider">Fix:</span> {f.recommendation}</p>
                       )}
+
                     </li>
                   ))}
                 </ul>
