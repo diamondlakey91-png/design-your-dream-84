@@ -1773,7 +1773,7 @@ export const lookupPermitsByAddress = createServerFn({ method: "POST" })
     const portalScrape = await firecrawlScrape(fcKey, portal.url).catch(() => ({ markdown: "", title: "" }));
     const directScrapes = (
       await Promise.all(
-        directSearchUrls.map(async (u: string) => {
+        directSearchUrls.slice(0, 4).map(async (u: string) => {
           try {
             const s = await firecrawlScrape(fcKey, u);
             return `DIRECT PORTAL SEARCH: ${u}\n${s.markdown.slice(0, 4000)}`;
@@ -1785,7 +1785,7 @@ export const lookupPermitsByAddress = createServerFn({ method: "POST" })
     ).filter(Boolean).join("\n\n---\n\n");
     const addressScrapes = (
       await Promise.all(
-        addressHits.slice(0, 4).map(async (h) => {
+        addressHits.slice(0, 3).map(async (h) => {
           try {
             const s = await firecrawlScrape(fcKey, h.url);
             return `SOURCE: ${h.url}\nTITLE: ${h.title ?? ""}\n${s.markdown.slice(0, 2500)}`;
@@ -1795,6 +1795,7 @@ export const lookupPermitsByAddress = createServerFn({ method: "POST" })
         }),
       )
     ).join("\n\n---\n\n");
+
 
 
     // 5. Ask AI to extract structured permit records for this address.
