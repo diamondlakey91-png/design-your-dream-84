@@ -1,9 +1,13 @@
 import { createFileRoute, Link, useNavigate } from "@tanstack/react-router";
-import { ArrowRight, Check, Sparkles, Star, X } from "lucide-react";
+import { ArrowRight, Check, Sparkles, Star, X, Settings } from "lucide-react";
 import { useEffect, useState } from "react";
 import { supabase } from "@/integrations/supabase/client";
 import { StripeEmbeddedCheckout } from "@/components/StripeEmbeddedCheckout";
 import { PaymentTestModeBanner } from "@/components/PaymentTestModeBanner";
+import { useSubscription } from "@/hooks/useSubscription";
+import { createPortalSession } from "@/lib/payments.functions";
+import { getStripeEnvironment } from "@/lib/stripe";
+
 
 export const Route = createFileRoute("/pricing")({
   head: () => ({
@@ -147,6 +151,26 @@ function PricingPage() {
   const navigate = useNavigate();
   const [session, setSession] = useState<{ userId: string; email?: string } | null>(null);
   const [checkoutPriceId, setCheckoutPriceId] = useState<string | null>(null);
+  const [portalLoading, setPortalLoading] = useState(false);
+  const [portalError, setPortalError] = useState<string | null>(null);
+  const { row: subRow, tier: currentTier, isActive, cancelPending } = useSubscription();
+
+  const openPortal = async () => {
+    setPortalError(null);
+    setPortalLoading(true);
+    try {
+      let env: "sandbox" | "live";
+      try { env = getStripeEnvironment(); } catch { env = "sandbox"; }
+      const result = await createPortalSession({ data: { returnUrl: window.location.href, environment: env } });
+      if ("error" in result) throw new Error(result.error);
+      window.open(result.url, "_blank", "noopener,noreferrer");
+    } catch (e) {
+      setPortalError(e instanceof Error ? e.message : "Could not open billing portal");
+    } finally {
+      setPortalLoading(false);
+    }
+  };
+
 
   useEffect(() => {
     supabase.auth.getSession().then(({ data }) => {
