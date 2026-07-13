@@ -2070,6 +2070,19 @@ export const linkPermitToProject = createServerFn({ method: "POST" })
       .eq("id", data.project_id);
     if (uErr) throw new Error(uErr.message);
 
+    await context.supabase.from("permit_sync_history").insert({
+      user_id: context.userId,
+      project_id: data.project_id,
+      permit_number: data.permit_number,
+      jurisdiction: juris,
+      status: parsed.status || "",
+      found: !!parsed.found,
+      source_url: parsed.source_url || null,
+      portal_name: parsed.portal_name || null,
+      snapshot: parsed,
+      trigger: "link",
+    });
+
     await context.supabase.from("activity").insert({
       user_id: context.userId,
       project_id: data.project_id,
@@ -2108,12 +2121,41 @@ export const refreshLinkedPermit = createServerFn({ method: "POST" })
       .eq("id", data.project_id);
     if (uErr) throw new Error(uErr.message);
 
+    await context.supabase.from("permit_sync_history").insert({
+      user_id: context.userId,
+      project_id: data.project_id,
+      permit_number: proj.linked_permit_number,
+      jurisdiction: juris,
+      status: parsed.status || "",
+      found: !!parsed.found,
+      source_url: parsed.source_url || null,
+      portal_name: parsed.portal_name || null,
+      snapshot: parsed,
+      trigger: "refresh",
+    });
+
     await context.supabase.from("activity").insert({
       user_id: context.userId,
       project_id: data.project_id,
       description: `Refreshed live permit ${proj.linked_permit_number} — status ${parsed.status}.`,
     });
     return { linked: parsed };
+  });
+
+export const listPermitSyncHistory = createServerFn({ method: "POST" })
+  .middleware([requireSupabaseAuth])
+  .inputValidator((input: unknown) =>
+    z.object({ project_id: z.string().uuid(), limit: z.number().int().min(1).max(100).default(25) }).parse(input),
+  )
+  .handler(async ({ data, context }) => {
+    const { data: rows, error } = await context.supabase
+      .from("permit_sync_history")
+      .select("id, permit_number, jurisdiction, status, found, source_url, portal_name, snapshot, trigger, created_at")
+      .eq("project_id", data.project_id)
+      .order("created_at", { ascending: false })
+      .limit(data.limit);
+    if (error) throw new Error(error.message);
+    return { history: rows ?? [] };
   });
 
 export const unlinkPermit = createServerFn({ method: "POST" })
