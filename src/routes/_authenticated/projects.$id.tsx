@@ -501,7 +501,7 @@ function DocRow({ doc, projectId, onDelete }: { doc: { id: string; name: string;
   const addFixes = useMutation({
     mutationFn: () => addFixesFn({ data: { document_id: doc.id } }),
     onSuccess: (r) => {
-      qc.invalidateQueries({ queryKey: ["items", projectId] });
+      qc.invalidateQueries({ queryKey: ["permit_items", projectId] });
       qc.invalidateQueries({ queryKey: ["activity", projectId] });
       toast.success(`Added ${r.inserted_count} fix${r.inserted_count === 1 ? "" : "es"} to checklist`);
     },
