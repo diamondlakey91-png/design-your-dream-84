@@ -23,6 +23,8 @@ import {
   applySyncToChecklist,
   analyzeDocument,
   reviewPlan,
+  addPlanReviewFixesToChecklist,
+  draftReviewerResponse,
   computeProjectHealth,
   listInspections,
   addInspection,
@@ -493,6 +495,23 @@ function DocRow({ doc, projectId, onDelete }: { doc: { id: string; name: string;
     onSuccess: () => { qc.invalidateQueries({ queryKey: ["docs", projectId] }); qc.invalidateQueries({ queryKey: ["activity", projectId] }); setReviewOpen(true); toast.success("Plan review complete"); },
     onError: (e) => toast.error(e instanceof Error ? e.message : "Plan review failed"),
   });
+  const addFixesFn = useServerFn(addPlanReviewFixesToChecklist);
+  const draftFn = useServerFn(draftReviewerResponse);
+  const [letter, setLetter] = useState<string | null>(null);
+  const addFixes = useMutation({
+    mutationFn: () => addFixesFn({ data: { document_id: doc.id } }),
+    onSuccess: (r) => {
+      qc.invalidateQueries({ queryKey: ["permit_items", projectId] });
+      qc.invalidateQueries({ queryKey: ["activity", projectId] });
+      toast.success(`Added ${r.inserted_count} fix${r.inserted_count === 1 ? "" : "es"} to checklist`);
+    },
+    onError: (e) => toast.error(e instanceof Error ? e.message : "Failed to add fixes"),
+  });
+  const draft = useMutation({
+    mutationFn: () => draftFn({ data: { document_id: doc.id } }),
+    onSuccess: (r) => { setLetter(r.letter); toast.success("Response letter drafted"); },
+    onError: (e) => toast.error(e instanceof Error ? e.message : "Failed to draft response"),
+  });
   const items = Array.isArray(doc.ai_action_items) ? doc.ai_action_items as Array<{ reviewer?: string; discipline?: string; request: string; reference?: string }> : [];
   const pr = (doc.plan_review && typeof doc.plan_review === "object") ? doc.plan_review as {
     overall_summary?: string;
@@ -649,6 +668,56 @@ function DocRow({ doc, projectId, onDelete }: { doc: { id: string; name: string;
                     </li>
                   ))}
                 </ul>
+              )}
+              {findings.length > 0 && (
+                <div className="pt-2 border-t border-border/50 space-y-2">
+                  <div className="flex flex-wrap gap-2">
+                    <button
+                      onClick={() => addFixes.mutate()}
+                      disabled={addFixes.isPending}
+                      className="text-[10px] font-mono uppercase tracking-wider px-2 py-1 rounded bg-brand/15 text-brand hover:bg-brand/25 disabled:opacity-50"
+                    >
+                      {addFixes.isPending ? "Adding…" : `Add ${findings.length} fix${findings.length === 1 ? "" : "es"} to checklist`}
+                    </button>
+                    <button
+                      onClick={() => draft.mutate()}
+                      disabled={draft.isPending}
+                      className="text-[10px] font-mono uppercase tracking-wider px-2 py-1 rounded bg-brand/15 text-brand hover:bg-brand/25 disabled:opacity-50"
+                    >
+                      {draft.isPending ? "Drafting…" : "Draft reviewer response"}
+                    </button>
+                  </div>
+                  {letter && (
+                    <div className="p-3 rounded-lg bg-muted/40 ring-1 ring-black/5 space-y-2">
+                      <div className="flex items-center justify-between gap-2">
+                        <p className="text-[10px] font-mono uppercase tracking-wider text-muted-foreground">Draft response letter</p>
+                        <div className="flex gap-2">
+                          <button
+                            onClick={() => { navigator.clipboard.writeText(letter); toast.success("Copied"); }}
+                            className="text-[10px] font-mono uppercase tracking-wider text-brand hover:opacity-80"
+                          >Copy</button>
+                          <button
+                            onClick={() => {
+                              const blob = new Blob([letter], { type: "text/plain" });
+                              const url = URL.createObjectURL(blob);
+                              const a = document.createElement("a");
+                              a.href = url;
+                              a.download = `${doc.name.replace(/\.[^.]+$/, "")}-response.txt`;
+                              a.click();
+                              URL.revokeObjectURL(url);
+                            }}
+                            className="text-[10px] font-mono uppercase tracking-wider text-brand hover:opacity-80"
+                          >Download</button>
+                          <button
+                            onClick={() => setLetter(null)}
+                            className="text-[10px] font-mono uppercase tracking-wider text-muted-foreground hover:opacity-80"
+                          >Close</button>
+                        </div>
+                      </div>
+                      <pre className="text-xs text-foreground whitespace-pre-wrap font-sans leading-relaxed max-h-96 overflow-auto">{letter}</pre>
+                    </div>
+                  )}
+                </div>
               )}
             </div>
           )}
