@@ -1786,7 +1786,7 @@ export const computeProjectHealth = createServerFn({ method: "GET" })
     const [proj, items, dls, insp] = await Promise.all([
       context.supabase.from("projects").select("current_stage, permit_count, permits_issued").eq("id", data.project_id).maybeSingle(),
       context.supabase.from("permit_items").select("status, required").eq("project_id", data.project_id),
-      context.supabase.from("deadlines").select("due_date, completed").eq("project_id", data.project_id),
+      context.supabase.from("deadlines").select("due_date").eq("project_id", data.project_id),
       context.supabase.from("inspections").select("status").eq("project_id", data.project_id),
     ]);
     const project = proj.data;
@@ -1795,9 +1795,9 @@ export const computeProjectHealth = createServerFn({ method: "GET" })
     const inspections = insp.data ?? [];
 
     const today = new Date(); today.setHours(0, 0, 0, 0);
-    const overdue = deadlines.filter((d) => !d.completed && d.due_date && new Date(d.due_date) < today).length;
+    const overdue = deadlines.filter((d) => d.due_date && new Date(d.due_date) < today).length;
     const upcoming7 = deadlines.filter((d) => {
-      if (d.completed || !d.due_date) return false;
+      if (!d.due_date) return false;
       const diff = (new Date(d.due_date).getTime() - today.getTime()) / 86400000;
       return diff >= 0 && diff <= 7;
     }).length;
