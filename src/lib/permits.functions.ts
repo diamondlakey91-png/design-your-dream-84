@@ -1466,6 +1466,9 @@ const AddressFindingSchema = z.object({
   updated_date: z.string().default(""),
   description: z.string().default(""),
   source_url: z.string().default(""),
+  match_confidence: z.enum(["high", "medium", "low"]).default("medium"),
+  match_score: z.number().min(0).max(100).default(60),
+  match_reason: z.string().default(""),
 });
 
 const AddressLookupSchema = z.object({
@@ -1475,6 +1478,13 @@ const AddressLookupSchema = z.object({
   search_url: z.string().default(""),
   findings: z.array(AddressFindingSchema).max(25),
   summary: z.string(),
+  overall_confidence: z.enum(["high", "medium", "low", "none"]).default("medium"),
+  no_match_reason: z.string().default(""),
+  sources_scanned: z.object({
+    official_portal: z.boolean().default(false),
+    direct_portal_search: z.boolean().default(false),
+    web_search: z.boolean().default(false),
+  }).default({ official_portal: false, direct_portal_search: false, web_search: false }),
 });
 
 // Direct portal search URL templates for jurisdictions where the public portal
@@ -1644,16 +1654,33 @@ Return ONLY valid JSON in this shape:
       "filed_date": "YYYY-MM-DD or as listed",
       "updated_date": "YYYY-MM-DD or as listed",
       "description": "1 short clause",
-      "source_url": "URL from the sources above"
+      "source_url": "URL from the sources above",
+      "match_confidence": "high | medium | low",
+      "match_score": 0-100,
+      "match_reason": "1 sentence: exactly why this record matches (or partially matches) the queried address. Cite the field that matched: full street number + name, street only, block range, parcel/APN, unit, etc."
     }
   ],
-  "summary": "2-4 sentence plain-English summary. If no records at this exact address were found in source text, say so honestly and direct the user to search_url."
+  "summary": "2-4 sentence plain-English summary explaining what was found and how well it matches.",
+  "overall_confidence": "high | medium | low | none",
+  "no_match_reason": "If findings is empty OR overall_confidence is low/none, explain in 1-2 sentences WHY (e.g. 'Portal returned zero rows for this street number', 'Only nearby addresses on the same block appeared', 'Portal requires interactive session Firecrawl cannot render'). Empty string if high/medium confidence.",
+  "sources_scanned": {
+    "official_portal": ${portalScrape.markdown ? "true" : "false"},
+    "direct_portal_search": ${directScrapes ? "true" : "false"},
+    "web_search": ${addressScrapes ? "true" : "false"}
+  }
 }
+
+MATCH SCORING RULES
+- high (85-100): permit's address string contains the exact street number AND street name from the query.
+- medium (55-84): street name matches and street number is within the same block range (e.g. 1601-1699), OR parcel/APN matches, OR record explicitly names the property.
+- low (1-54): only the street name matches (different number), or the source is a summary/news article referencing the address without a portal record.
+- Never include a finding with match_score < 25. Drop it and mention in no_match_reason instead.
 
 RULES
 - Only include a finding if the source text clearly shows a permit tied to this address (or a very close match). Otherwise return findings: [].
 - Never fabricate a permit number, status, or date.
-- portal_url and any source_url must be real URLs from the source text above.`;
+- portal_url and any source_url must be real URLs from the source text above.
+- Always populate match_reason with a specific, verifiable justification — never generic ("looks similar").`;
 
     const raw = await callLovableAI(aiKey, [
       { role: "system", content: "You extract structured permit records from live portal text. Output valid JSON only, no prose, no fences." },
@@ -1677,6 +1704,13 @@ RULES
       search_url: parsed.search_url || directSearchUrls[0] || "",
       findings: parsed.findings,
       summary: parsed.summary,
+      overall_confidence: parsed.overall_confidence,
+      no_match_reason: parsed.no_match_reason,
+      sources_scanned: {
+        official_portal: Boolean(portalScrape.markdown),
+        direct_portal_search: Boolean(directScrapes),
+        web_search: Boolean(addressScrapes),
+      },
       searched_at: new Date().toISOString(),
     };
   });
