@@ -2410,15 +2410,31 @@ Return ONLY JSON:
   "no_match_reason": "1 sentence if not found; empty otherwise"
 }`;
 
-  const raw = await callLovableAI(aiKey, [
-    { role: "system", content: "You extract structured live permit status from real portal text. Output valid JSON only, no prose, no fences." },
-    { role: "user", content: prompt },
-  ], "google/gemini-2.5-flash");
+  let parsed: z.infer<typeof PermitNumberSchema>;
+  try {
+    const raw = await callLovableAI(aiKey, [
+      { role: "system", content: "You extract structured live permit status from real portal text. Output valid JSON only, no prose, no fences." },
+      { role: "user", content: prompt },
+    ], "google/gemini-2.5-flash");
 
-  const cleaned = raw.replace(/```json|```/g, "").trim();
-  const start = cleaned.indexOf("{");
-  const end = cleaned.lastIndexOf("}");
-  const parsed = PermitNumberSchema.parse(JSON.parse(cleaned.slice(start, end + 1)));
+    const cleaned = raw.replace(/```json|```/g, "").trim();
+    const start = cleaned.indexOf("{");
+    const end = cleaned.lastIndexOf("}");
+    if (start < 0 || end < 0) throw new Error("No JSON in AI response");
+    parsed = PermitNumberSchema.parse(JSON.parse(cleaned.slice(start, end + 1)));
+  } catch (err) {
+    // Never hard-fail the lookup — return a structured "not found" record so the UI can show the tried URLs.
+    parsed = PermitNumberSchema.parse({
+      permit_number: permitNumber,
+      jurisdiction,
+      found: false,
+      status: "Unknown",
+      no_match_reason: scrapes || webScrapes
+        ? `Could not parse portal response: ${err instanceof Error ? err.message : String(err)}`
+        : "No accessible portal returned data for this permit. Try the direct portal link below.",
+      source_url: urls[0] || "",
+    });
+  }
   return { parsed, sourceUrls: urls };
 }
 
