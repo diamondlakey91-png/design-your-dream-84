@@ -36,6 +36,9 @@ import {
   generateMeetingAgenda,
   flagScheduleRisks,
   generateBatchReportPdf,
+  linkPermitToProject,
+  refreshLinkedPermit,
+  unlinkPermit,
 } from "@/lib/permits.functions";
 import { createBatchReportShare, listBatchReportShares, revokeBatchReportShare } from "@/lib/reportShares.functions";
 import {
