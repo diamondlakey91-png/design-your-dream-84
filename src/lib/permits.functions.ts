@@ -1589,7 +1589,7 @@ export const lookupPermitsByAddress = createServerFn({ method: "POST" })
     const portalScrape = await firecrawlScrape(fcKey, portal.url).catch(() => ({ markdown: "", title: "" }));
     const directScrapes = (
       await Promise.all(
-        directSearchUrls.map(async (u) => {
+        directSearchUrls.map(async (u: string) => {
           try {
             const s = await firecrawlScrape(fcKey, u);
             return `DIRECT PORTAL SEARCH: ${u}\n${s.markdown.slice(0, 4000)}`;
