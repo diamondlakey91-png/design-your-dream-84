@@ -1845,16 +1845,65 @@ const PlanReviewSchema = z.object({
   overall_summary: z.string().default(""),
   overall_risk: z.enum(["low", "medium", "high"]).default("medium"),
   sheets_detected: z.array(z.string()).max(50).default([]),
+  jurisdiction_context: z.object({
+    jurisdiction: z.string().default(""),
+    applied_amendments: z.array(z.string()).max(30).default([]),
+    source_urls: z.array(z.string()).max(15).default([]),
+  }).default({ jurisdiction: "", applied_amendments: [], source_urls: [] }),
   findings: z.array(z.object({
     category: z.enum(["missing_exits", "ada", "fire_code", "permitting_mistake", "other"]),
     severity: z.enum(["low", "medium", "high"]).default("medium"),
     title: z.string(),
     detail: z.string(),
     code_reference: z.string().default(""),
+    local_amendment: z.string().default(""),
     sheet_reference: z.string().default(""),
     recommendation: z.string().default(""),
   })).max(60).default([]),
 });
+
+// Fetch jurisdiction-specific code amendments (works for any of 20k+ US jurisdictions).
+// Returns a compact markdown context block or "" if nothing usable was found.
+async function fetchJurisdictionAmendments(
+  fcKey: string | undefined,
+  jurisdiction: string,
+): Promise<{ context: string; sources: string[] }> {
+  if (!fcKey || !jurisdiction || jurisdiction === "the local jurisdiction") {
+    return { context: "", sources: [] };
+  }
+  const queries = [
+    `"${jurisdiction}" building code local amendments site:.gov`,
+    `"${jurisdiction}" fire code amendments OR ordinance site:.gov`,
+    `"${jurisdiction}" accessibility OR ADA amendments code site:.gov`,
+  ];
+  const searches = await Promise.all(
+    queries.map((q) => firecrawlSearch(fcKey, q, 3).catch(() => [])),
+  );
+  const seen = new Set<string>();
+  const candidates: Array<{ url: string; title?: string; description?: string }> = [];
+  for (const hits of searches) {
+    for (const h of hits) {
+      if (seen.has(h.url)) continue;
+      seen.add(h.url);
+      if (/(\.gov|municode|ecode360|codepublishing|amlegal|generalcode)/i.test(h.url)) {
+        candidates.push(h);
+      }
+    }
+  }
+  const targets = candidates.slice(0, 3);
+  if (targets.length === 0) return { context: "", sources: [] };
+
+  const scrapes = await Promise.all(targets.map(async (h) => {
+    try {
+      const s = await firecrawlScrape(fcKey, h.url);
+      return `SOURCE: ${h.url}\nTITLE: ${h.title ?? ""}\n${s.markdown.slice(0, 2800)}`;
+    } catch {
+      return `SOURCE: ${h.url}\nTITLE: ${h.title ?? ""}\nDESC: ${h.description ?? ""}`;
+    }
+  }));
+  return { context: scrapes.join("\n\n---\n\n"), sources: targets.map((t) => t.url) };
+}
+
 
 export const reviewPlan = createServerFn({ method: "POST" })
   .middleware([requireSupabaseAuth])
@@ -1864,6 +1913,7 @@ export const reviewPlan = createServerFn({ method: "POST" })
 
     const aiKey = process.env.LOVABLE_API_KEY;
     if (!aiKey) throw new Error("AI is not configured");
+    const fcKey = process.env.FIRECRAWL_API_KEY;
 
     const { data: doc } = await context.supabase
       .from("project_documents").select("*").eq("id", data.id).maybeSingle();
@@ -1885,33 +1935,58 @@ export const reviewPlan = createServerFn({ method: "POST" })
     const juris = project?.jurisdiction || "the local jurisdiction";
     const ptype = project?.project_type || "the project";
 
-    const instruction = `You are a licensed plan reviewer analyzing construction drawings for ${ptype} in ${juris}. Review the attached plan set for common issues a jurisdiction plan checker would flag.
+    // Pull cached jurisdiction profile (if the user has built one) for extra context.
+    let profileContext = "";
+    if (project?.jurisdiction) {
+      const { data: prof } = await context.supabase
+        .from("jurisdiction_profiles")
+        .select("name, state, department, overview, permits, fees, timelines, source_urls")
+        .eq("slug", toSlug(project.jurisdiction))
+        .maybeSingle();
+      if (prof) {
+        profileContext = `CACHED JURISDICTION PROFILE\n${JSON.stringify(prof).slice(0, 2500)}`;
+      }
+    }
 
-Focus on FOUR categories:
-1. missing_exits — insufficient number of exits, exit access travel distance, dead-end corridors, exit width, exit signage/illumination gaps (IBC Ch.10).
-2. ada — accessibility issues: door clearances, ramp slopes, restroom fixture clearances, accessible route, parking, reach ranges, signage (ADA 2010 / ICC A117.1).
-3. fire_code — fire separation, occupancy separation, sprinkler/alarm coverage, fire-rated assemblies, hydrant/FDC access (IBC Ch.7-9, IFC).
-4. permitting_mistake — missing sheets, incomplete title block, missing code analysis, unstamped drawings, missing energy compliance, zoning setbacks — items that cause a jurisdiction to reject the submittal.
+    // Live-fetch jurisdiction-specific code amendments (works for any US jurisdiction).
+    const { context: amendmentsContext, sources: amendmentSources } =
+      await fetchJurisdictionAmendments(fcKey, juris);
+
+    const jurisBlock = [profileContext, amendmentsContext].filter(Boolean).join("\n\n===\n\n");
+
+    const instruction = `You are a licensed plan reviewer analyzing construction drawings for ${ptype} in ${juris}. Review the attached plan set for issues that THIS jurisdiction's plan checker would flag — using the jurisdiction's LOCAL amendments to the model codes wherever provided below, not just the base IBC/IFC/ADA.
+
+${jurisBlock ? `JURISDICTION-SPECIFIC CONTEXT (authoritative — prefer over model-code defaults when they conflict):\n${jurisBlock}\n\n` : `No cached jurisdictional data was available. Apply the currently adopted code cycle for ${juris} (state-adopted IBC/IFC/IECC + any local amendments you are confident about). If unsure which cycle applies, cite the model code and note "verify local amendment".\n\n`}Focus on FOUR categories:
+1. missing_exits — insufficient exits, exit access travel distance, dead-end corridors, exit width, exit signage/illumination (IBC Ch.10 + local amendments).
+2. ada — accessibility: door clearances, ramp slopes, restroom fixture clearances, accessible route, parking, reach ranges, signage (ADA 2010 / ICC A117.1 + state accessibility code, e.g. CBC 11B in CA, TAS in TX, MAAB in MA, NYC Ch.11).
+3. fire_code — fire separation, occupancy separation, sprinkler/alarm coverage, fire-rated assemblies, hydrant/FDC access (IBC Ch.7-9, IFC + local fire amendments).
+4. permitting_mistake — missing sheets, incomplete title block, missing code analysis, unstamped drawings, missing energy compliance (IECC or state equivalent — e.g. Title 24 CA, Stretch Code MA), zoning setbacks, jurisdiction-specific submittal requirements.
 
 Return ONLY valid JSON in this exact shape (no fences, no prose):
 {
-  "overall_summary": "3-5 sentence assessment",
+  "overall_summary": "3-5 sentence assessment referencing the jurisdiction",
   "overall_risk": "low" | "medium" | "high",
   "sheets_detected": ["A0.0", "A1.1", ...],
+  "jurisdiction_context": {
+    "jurisdiction": "${juris}",
+    "applied_amendments": ["short label of each local amendment or code cycle you applied"],
+    "source_urls": ${JSON.stringify(amendmentSources)}
+  },
   "findings": [
     {
       "category": "missing_exits" | "ada" | "fire_code" | "permitting_mistake" | "other",
       "severity": "low" | "medium" | "high",
       "title": "short label (<80 chars)",
       "detail": "what is wrong and where (<240 chars)",
-      "code_reference": "e.g. IBC 1006.2.1 or ADA 404.2.3",
+      "code_reference": "model code, e.g. IBC 1006.2.1 or ADA 404.2.3",
+      "local_amendment": "jurisdiction-specific amendment/section if applicable, else ''",
       "sheet_reference": "e.g. A2.1 or 'not shown'",
       "recommendation": "concrete fix (<200 chars)"
     }
   ]
 }
 
-Rules: only flag issues you can actually see or reasonably infer from the plan. If the plan appears compliant in a category, omit it. Never fabricate code sections — leave blank if unsure. If the document is not a plan set, return findings: [] and set overall_summary to explain.`;
+Rules: only flag issues you can actually see or reasonably infer from the plan. If the plan appears compliant in a category, omit it. Never fabricate specific code sections or local amendment numbers — leave those fields blank if unsure. If the document is not a plan set, return findings: [] and explain in overall_summary.`;
 
     const contentParts: unknown[] = [{ type: "text", text: instruction }];
     if (isImage) {
@@ -1930,6 +2005,7 @@ Rules: only flag issues you can actually see or reasonably infer from the plan. 
         file: { filename: doc.name, file_data: `data:${mime};base64,${b64}` },
       });
     }
+
 
     const resp = await fetch("https://ai.gateway.lovable.dev/v1/chat/completions", {
       method: "POST",
