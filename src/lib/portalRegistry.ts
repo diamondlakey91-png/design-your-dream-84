@@ -423,3 +423,95 @@ export const PORTAL_PLATFORMS: PortalPlatform[] = [
 export const US_STATES: string[] = [
   "AL","AK","AZ","AR","CA","CO","CT","DC","DE","FL","GA","HI","ID","IL","IN","IA","KS","KY","LA","ME","MD","MA","MI","MN","MS","MO","MT","NE","NV","NH","NJ","NM","NY","NC","ND","OH","OK","OR","PA","RI","SC","SD","TN","TX","UT","VT","VA","WA","WV","WI","WY",
 ];
+
+// ---------------------------------------------------------------------------
+// Portal matching + deep-link helpers.
+//
+// Given a jurisdiction string (from a project, chat, or lookup) plus optional
+// address / permit number, find the best matching portal entries and produce
+// direct deep links that land on the correct pre-filled search page.
+// ---------------------------------------------------------------------------
+
+const STATE_NAME_TO_CODE: Record<string, string> = {
+  alabama:"AL", alaska:"AK", arizona:"AZ", arkansas:"AR", california:"CA", colorado:"CO",
+  connecticut:"CT", delaware:"DE", florida:"FL", georgia:"GA", hawaii:"HI", idaho:"ID",
+  illinois:"IL", indiana:"IN", iowa:"IA", kansas:"KS", kentucky:"KY", louisiana:"LA",
+  maine:"ME", maryland:"MD", massachusetts:"MA", michigan:"MI", minnesota:"MN",
+  mississippi:"MS", missouri:"MO", montana:"MT", nebraska:"NE", nevada:"NV",
+  "new hampshire":"NH", "new jersey":"NJ", "new mexico":"NM", "new york":"NY",
+  "north carolina":"NC", "north dakota":"ND", ohio:"OH", oklahoma:"OK", oregon:"OR",
+  pennsylvania:"PA", "rhode island":"RI", "south carolina":"SC", "south dakota":"SD",
+  tennessee:"TN", texas:"TX", utah:"UT", vermont:"VT", virginia:"VA", washington:"WA",
+  "west virginia":"WV", wisconsin:"WI", wyoming:"WY", "district of columbia":"DC",
+};
+
+function normalize(s: string): string {
+  return s.toLowerCase()
+    .replace(/\bcounty\b|\bcity of\b|\btown of\b|\bvillage of\b|\bborough of\b/g, "")
+    .replace(/[^\w\s]/g, " ")
+    .replace(/\s+/g, " ")
+    .trim();
+}
+
+/** Parse a free-form jurisdiction string like "Arlington County, VA" into
+ * a normalized name + best-guess two-letter state code. */
+export function parseJurisdiction(input: string): { name: string; state: string | null } {
+  const raw = (input || "").trim();
+  if (!raw) return { name: "", state: null };
+  const m = raw.match(/,\s*([A-Za-z .]{2,20})\s*$/);
+  let state: string | null = null;
+  let bare = raw;
+  if (m) {
+    const tail = m[1].trim();
+    if (/^[A-Za-z]{2}$/.test(tail)) state = tail.toUpperCase();
+    else state = STATE_NAME_TO_CODE[tail.toLowerCase()] ?? null;
+    bare = raw.slice(0, m.index).trim();
+  }
+  return { name: normalize(bare), state };
+}
+
+export type PortalMatch = {
+  entry: PortalEntry;
+  score: number;
+  /** Direct deep link that lands on the correct pre-filled search page (permit# preferred over address). */
+  deepLink: string;
+  linkKind: "permit" | "address" | "home";
+};
+
+/** Rank the registry against a jurisdiction + optional address/permit, and
+ * return the top-N matches with their best available deep link. */
+export function findPortalDeepLinks(
+  jurisdiction: string,
+  opts: { permitNumber?: string; address?: string; limit?: number } = {},
+): PortalMatch[] {
+  const { permitNumber, address } = opts;
+  const limit = opts.limit ?? 6;
+  const { name, state } = parseJurisdiction(jurisdiction);
+  if (!name && !state) return [];
+
+  const nameTokens = name.split(" ").filter((t) => t.length >= 3);
+
+  const scored: PortalMatch[] = [];
+  for (const entry of PORTAL_REGISTRY) {
+    const entryName = normalize(entry.jurisdiction);
+    let score = 0;
+    if (state && entry.state === state) score += 3;
+    if (name && (entryName === name || entryName.includes(name) || name.includes(entryName))) {
+      score += 6;
+    } else {
+      const overlap = nameTokens.filter((t) => entryName.includes(t)).length;
+      if (overlap > 0) score += overlap * 2;
+    }
+    if (score <= 0) continue;
+
+    const permitUrl = permitNumber && entry.permitSearch ? entry.permitSearch(permitNumber) : null;
+    const addrUrl = address && entry.addressSearch ? entry.addressSearch(address) : null;
+    const deepLink = permitUrl ?? addrUrl ?? entry.url;
+    const linkKind: PortalMatch["linkKind"] = permitUrl ? "permit" : addrUrl ? "address" : "home";
+    scored.push({ entry, score, deepLink, linkKind });
+  }
+
+  scored.sort((a, b) => b.score - a.score);
+  return scored.slice(0, limit);
+}
+
