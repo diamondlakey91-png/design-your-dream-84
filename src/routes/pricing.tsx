@@ -1,9 +1,13 @@
 import { createFileRoute, Link, useNavigate } from "@tanstack/react-router";
-import { ArrowRight, Check, Sparkles, Star, X } from "lucide-react";
+import { ArrowRight, Check, Sparkles, Star, X, Settings } from "lucide-react";
 import { useEffect, useState } from "react";
 import { supabase } from "@/integrations/supabase/client";
 import { StripeEmbeddedCheckout } from "@/components/StripeEmbeddedCheckout";
 import { PaymentTestModeBanner } from "@/components/PaymentTestModeBanner";
+import { useSubscription } from "@/hooks/useSubscription";
+import { createPortalSession } from "@/lib/payments.functions";
+import { getStripeEnvironment } from "@/lib/stripe";
+
 
 export const Route = createFileRoute("/pricing")({
   head: () => ({
@@ -147,6 +151,26 @@ function PricingPage() {
   const navigate = useNavigate();
   const [session, setSession] = useState<{ userId: string; email?: string } | null>(null);
   const [checkoutPriceId, setCheckoutPriceId] = useState<string | null>(null);
+  const [portalLoading, setPortalLoading] = useState(false);
+  const [portalError, setPortalError] = useState<string | null>(null);
+  const { row: subRow, tier: currentTier, isActive, cancelPending } = useSubscription();
+
+  const openPortal = async () => {
+    setPortalError(null);
+    setPortalLoading(true);
+    try {
+      let env: "sandbox" | "live";
+      try { env = getStripeEnvironment(); } catch { env = "sandbox"; }
+      const result = await createPortalSession({ data: { returnUrl: window.location.href, environment: env } });
+      if ("error" in result) throw new Error(result.error);
+      window.open(result.url, "_blank", "noopener,noreferrer");
+    } catch (e) {
+      setPortalError(e instanceof Error ? e.message : "Could not open billing portal");
+    } finally {
+      setPortalLoading(false);
+    }
+  };
+
 
   useEffect(() => {
     supabase.auth.getSession().then(({ data }) => {
@@ -208,6 +232,41 @@ function PricingPage() {
             Every plan includes the AI Assistant and permit roadmap out of the box.
           </p>
         </section>
+
+        {/* Current subscription banner */}
+        {session && isActive && subRow && (
+          <section className="mb-10">
+            <div className="flex flex-wrap items-center justify-between gap-4 rounded-xl border border-brand/30 bg-brand/5 p-5">
+              <div>
+                <div className="text-[11px] font-mono uppercase tracking-widest text-brand">
+                  Current plan
+                </div>
+                <div className="mt-1 text-lg font-semibold">
+                  {currentTier?.name ?? "Active subscription"}
+                  {cancelPending && (
+                    <span className="ml-2 text-xs font-normal text-muted-foreground">
+                      (ends {subRow.current_period_end ? new Date(subRow.current_period_end).toLocaleDateString() : "at period end"})
+                    </span>
+                  )}
+                </div>
+                <p className="mt-1 text-sm text-muted-foreground">
+                  Manage payment method, upgrade, downgrade, or cancel from the Stripe billing portal.
+                </p>
+                {portalError && <p className="mt-2 text-sm text-destructive">{portalError}</p>}
+              </div>
+              <button
+                onClick={openPortal}
+                disabled={portalLoading}
+                className="inline-flex h-11 items-center gap-2 rounded-lg border border-brand/40 bg-background px-5 text-sm font-semibold hover:bg-brand/10 disabled:opacity-60"
+              >
+                <Settings className="size-4" />
+                {portalLoading ? "Opening…" : "Manage subscription"}
+              </button>
+            </div>
+          </section>
+        )}
+
+
 
         {/* Founding Member */}
         <section className="mb-16">
