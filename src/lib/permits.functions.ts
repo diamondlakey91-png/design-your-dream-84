@@ -1905,11 +1905,10 @@ async function fetchJurisdictionAmendments(
 }
 
 
-type SupabaseCtx = Parameters<Parameters<typeof requireSupabaseAuth.server>[0]>[0] extends never ? never : never; // placeholder
-
 // Internal: run plan review for one document. Reused by reviewPlan + batchReviewPlans.
 async function runPlanReviewForDocument(
-  supabase: Awaited<ReturnType<typeof (async () => { const m = await import("@supabase/supabase-js"); return m.createClient("","") })>>,
+  // eslint-disable-next-line @typescript-eslint/no-explicit-any
+  supabase: any,
   userId: string,
   docId: string,
 ) {
