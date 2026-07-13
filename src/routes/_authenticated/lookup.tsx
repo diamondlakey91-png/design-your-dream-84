@@ -149,6 +149,8 @@ function LookupPage() {
         </form>
 
         {result && <Results result={result} />}
+        {utility && <UtilityPanel utility={utility} />}
+
       </div>
     </AppShell>
   );
