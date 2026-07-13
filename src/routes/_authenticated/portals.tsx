@@ -181,7 +181,42 @@ function PortalsPage() {
           </p>
         </div>
 
-        {/* Results */}
+        {/* Suggested direct deep links (top matches for the current query + permit#/address) */}
+        {suggested.length > 0 && (
+          <div className="rounded-lg border border-brand/40 bg-brand/5 p-3 space-y-2">
+            <div className="flex items-center gap-2 text-xs font-mono uppercase tracking-widest text-brand">
+              <Zap className="size-3.5" /> Direct deep links {permitNo.trim() ? `for permit #${permitNo.trim()}` : `for "${query.trim()}"`}
+            </div>
+            <div className="grid gap-1.5">
+              {suggested.map((m, i) => (
+                <a
+                  key={`${m.entry.jurisdiction}-${i}`}
+                  href={m.deepLink}
+                  target="_blank"
+                  rel="noopener noreferrer"
+                  className="flex items-center justify-between gap-3 rounded-md border border-border bg-background px-3 py-2 text-sm hover:border-brand"
+                >
+                  <div className="min-w-0 flex-1">
+                    <div className="flex items-center gap-2 flex-wrap">
+                      <span className="font-medium truncate">{m.entry.jurisdiction}</span>
+                      <span className="rounded bg-card border border-border px-1.5 py-0.5 text-[10px] font-mono text-muted-foreground">{m.entry.state}</span>
+                      <span className={`rounded-full border px-2 py-0.5 text-[10px] font-medium ${PLATFORM_STYLES[m.entry.platform]}`}>{m.entry.platform}</span>
+                      <span className="text-[10px] font-mono uppercase tracking-wider text-brand">
+                        {m.linkKind === "permit" ? "permit# prefilled" : m.linkKind === "address" ? "address prefilled" : "portal home"}
+                      </span>
+                    </div>
+                  </div>
+                  <ExternalLink className="size-4 text-brand shrink-0" />
+                </a>
+              ))}
+            </div>
+            <p className="text-[11px] text-muted-foreground">
+              This page is shareable — the URL contains your search and prefill values.
+            </p>
+          </div>
+        )}
+
+
         <div className="space-y-2 pb-8">
           <div className="text-xs font-mono uppercase tracking-widest text-muted-foreground">
             {results.length} portal{results.length === 1 ? "" : "s"}
