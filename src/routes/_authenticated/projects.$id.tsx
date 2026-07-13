@@ -791,6 +791,48 @@ function LiveJurisdictionSync({ projectId, jurisdiction }: { projectId: string; 
             </ul>
           )}
 
+          {latest.status === "complete" && latest.findings?.length > 0 && (
+            <div className="mt-4 pt-4 border-t border-black/5">
+              <div className="flex items-center justify-between gap-2">
+                <p className="text-[11px] font-mono uppercase tracking-wider text-muted-foreground">
+                  Auto-match to checklist
+                </p>
+                <button
+                  onClick={() => apply.mutate(latest.id)}
+                  disabled={apply.isPending}
+                  className="inline-flex items-center gap-1.5 text-[11px] font-mono uppercase tracking-wider text-brand hover:opacity-80 disabled:opacity-50"
+                >
+                  {apply.isPending ? <RefreshCw className="size-3 animate-spin" /> : <Sparkles className="size-3" />}
+                  {apply.isPending ? "Matching…" : "Apply to checklist"}
+                </button>
+              </div>
+              {applyReport && (
+                <div className="mt-3 space-y-2">
+                  {applyReport.applied.length === 0 && (
+                    <p className="text-xs text-muted-foreground">
+                      No confident matches to apply. {applyReport.skipped.length > 0 ? `${applyReport.skipped.length} finding${applyReport.skipped.length === 1 ? "" : "s"} skipped (low confidence or no change).` : ""}
+                    </p>
+                  )}
+                  {applyReport.applied.map((a, i) => (
+                    <div key={i} className="p-2.5 rounded-lg bg-emerald-500/5 ring-1 ring-emerald-500/20">
+                      <div className="flex items-start justify-between gap-2">
+                        <p className="text-sm font-medium">{a.item_name}</p>
+                        <span className="shrink-0 text-[10px] font-mono uppercase px-1.5 py-0.5 rounded bg-emerald-500/15 text-emerald-700 dark:text-emerald-400">{a.confidence}</span>
+                      </div>
+                      <p className="mt-1 text-[11px] font-mono text-muted-foreground">
+                        {a.from_status.replace(/_/g, " ")}
+                        {a.to_status ? ` → ${a.to_status.replace(/_/g, " ")}` : " (status kept)"}
+                        {a.new_due_date ? ` · due ${a.new_due_date}` : ""}
+                      </p>
+                      <p className="mt-1 text-xs text-foreground/80">{a.explanation}</p>
+                      <p className="mt-1 text-[10px] font-mono text-muted-foreground">source: {a.finding}</p>
+                    </div>
+                  ))}
+                </div>
+              )}
+            </div>
+          )}
+
           <p className="mt-3 text-[10px] font-mono uppercase text-muted-foreground">
             Updated {formatDistanceToNow(new Date(latest.updated_at), { addSuffix: true })}
           </p>
