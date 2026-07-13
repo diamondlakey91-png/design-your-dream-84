@@ -163,7 +163,7 @@ function ProjectDetail() {
 function OverviewTab({
   project, stage, activity, onChange,
 }: {
-  project: { id: string; name: string; project_type: string; location: string; jurisdiction: string; current_stage: number; permit_count: number; permits_issued: number };
+  project: { id: string; name: string; project_type: string; location: string; jurisdiction: string; current_stage: number; permit_count: number; permits_issued: number; linked_permit_number?: string | null; linked_permit_url?: string | null; linked_permit_data?: LivePermitData | null; linked_permit_synced_at?: string | null };
   stage: number;
   activity: Array<{ id: string; description: string; created_at: string }>;
   onChange: () => void;
