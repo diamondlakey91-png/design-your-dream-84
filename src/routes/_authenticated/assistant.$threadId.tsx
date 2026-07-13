@@ -241,7 +241,7 @@ function ThreadView() {
                   <p className="text-sm whitespace-pre-wrap">{m.content}</p>
                 </div>
               ) : (
-                <div className="max-w-[92%]">
+                <div className="max-w-[92%] space-y-2">
                   <div
                     className="text-sm text-zinc-200 leading-relaxed
                       [&_p]:my-2 [&_p:first-child]:mt-0 [&_p:last-child]:mb-0
@@ -257,10 +257,19 @@ function ThreadView() {
                   >
                     <ReactMarkdown remarkPlugins={[remarkGfm]}>{m.content}</ReactMarkdown>
                   </div>
+                  {activeProject && (
+                    <button
+                      onClick={() => setExtractOpen({ messageId: m.id, content: m.content })}
+                      className="inline-flex items-center gap-1.5 rounded-full ring-1 ring-brand/40 bg-brand/10 hover:bg-brand/20 px-2.5 py-1 text-[11px] text-brand"
+                    >
+                      <ListPlus className="size-3" /> Add to checklist
+                    </button>
+                  )}
                 </div>
               )}
             </div>
           ))}
+
 
           {send.isPending && (
             <div className="max-w-[85%]">
