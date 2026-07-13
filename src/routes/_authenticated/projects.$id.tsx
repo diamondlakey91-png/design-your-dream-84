@@ -698,6 +698,23 @@ function LiveJurisdictionSync({ projectId, jurisdiction }: { projectId: string; 
     onError: (e) => toast.error(e instanceof Error ? e.message : "Sync failed"),
   });
 
+  const applyFn = useServerFn(applySyncToChecklist);
+  const [applyReport, setApplyReport] = useState<{
+    applied: Array<{ item_name: string; from_status: string; to_status: string | null; new_due_date: string | null; confidence: string; explanation: string; finding: string }>;
+    skipped: Array<{ reason: string; explanation: string }>;
+    total_findings: number;
+  } | null>(null);
+  const apply = useMutation({
+    mutationFn: (syncId: string) => applyFn({ data: { sync_id: syncId } }) as unknown as Promise<NonNullable<typeof applyReport>>,
+    onSuccess: (res) => {
+      setApplyReport(res);
+      qc.invalidateQueries({ queryKey: ["permit_items", projectId] });
+      qc.invalidateQueries({ queryKey: ["activity", projectId] });
+      toast.success(res.applied.length ? `Applied ${res.applied.length} update${res.applied.length === 1 ? "" : "s"} to checklist` : "No confident matches to apply");
+    },
+    onError: (e) => toast.error(e instanceof Error ? e.message : "Apply failed"),
+  });
+
   const latest = q.data?.[0];
   const inflight = sync.isPending || (latest && (latest.status === "searching" || latest.status === "scraping"));
 
