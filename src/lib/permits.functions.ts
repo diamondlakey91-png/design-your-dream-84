@@ -4544,3 +4544,70 @@ export const seedDemoJurisdictions = createServerFn({ method: "POST" })
     if (error) throw new Error(error.message);
     return { count: rows.length };
   });
+
+// ============================================================
+// AI DAILY BRIEFING — portfolio-wide morning brief
+// ============================================================
+const DailyBriefingSchema = z.object({
+  headline: z.string(),
+  summary: z.string(),
+  focus_today: z.array(z.object({
+    project: z.string(),
+    action: z.string(),
+    why: z.string(),
+  })),
+  risks: z.array(z.string()),
+  wins: z.array(z.string()),
+});
+
+export const generateDailyBriefing = createServerFn({ method: "POST" })
+  .middleware([requireSupabaseAuth])
+  .handler(async ({ context }) => {
+    const [projs, dls, acts, insp] = await Promise.all([
+      context.supabase.from("projects").select("id, name, jurisdiction, project_type, status, current_stage, permit_count, permits_issued").eq("user_id", context.userId),
+      context.supabase.from("deadlines").select("title, due_date, project_id").order("due_date", { ascending: true }).limit(30),
+      context.supabase.from("activity").select("message, created_at, project_id").order("created_at", { ascending: false }).limit(20),
+      context.supabase.from("inspections").select("type, status, scheduled_date, project_id").order("scheduled_date", { ascending: true }).limit(20),
+    ]);
+    const projects = projs.data ?? [];
+    if (projects.length === 0) {
+      return {
+        headline: "No projects yet",
+        summary: "Create your first project to unlock daily briefings.",
+        focus_today: [],
+        risks: [],
+        wins: [],
+        generated_at: new Date().toISOString(),
+      };
+    }
+    const pMap = new Map(projects.map((p) => [p.id, p.name]));
+    const today = new Date(); today.setHours(0, 0, 0, 0);
+    const compactDl = (dls.data ?? []).map((d) => ({
+      project: pMap.get(d.project_id) ?? "?",
+      title: d.title,
+      due: d.due_date,
+      days: d.due_date ? Math.round((new Date(d.due_date).getTime() - today.getTime()) / 86400000) : null,
+    }));
+    const compactAct = (acts.data ?? []).map((a) => ({ project: pMap.get(a.project_id) ?? "?", msg: a.message }));
+    const compactInsp = (insp.data ?? []).map((i) => ({ project: pMap.get(i.project_id) ?? "?", type: i.type, status: i.status, when: i.scheduled_date }));
+
+    const prompt = `You are the user's chief-of-staff for commercial permitting. Produce a concise morning briefing.
+Today: ${new Date().toISOString().slice(0, 10)}
+
+PROJECTS (${projects.length}):
+${JSON.stringify(projects, null, 2)}
+
+UPCOMING/RECENT DEADLINES:
+${JSON.stringify(compactDl, null, 2)}
+
+RECENT ACTIVITY:
+${JSON.stringify(compactAct, null, 2)}
+
+INSPECTIONS:
+${JSON.stringify(compactInsp, null, 2)}
+
+Return ONLY JSON with keys: headline (one line, punchy), summary (2-3 sentences), focus_today (up to 3 items: {project, action, why}), risks (up to 3 short strings), wins (up to 2 short strings). Prioritize overdue and this-week deadlines, failed inspections, and projects with no recent activity.`;
+
+    const brief = await callGeminiJSON(prompt, "You are a decisive commercial permitting chief-of-staff. Return JSON only.", DailyBriefingSchema);
+    return { ...brief, generated_at: new Date().toISOString() };
+  });
