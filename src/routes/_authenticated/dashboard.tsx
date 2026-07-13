@@ -372,7 +372,7 @@ function computePortfolio(
 
 function pickInsight(
   projects: { name: string; status: string; current_stage: number }[],
-  urgent: { days: number; title: string; projects?: { name?: string } }[],
+  urgent: { days: number; title: string; projects?: { name?: string } | null }[],
 ): string {
   const overdue = urgent.find((u) => u.days < 0);
   if (overdue) {
