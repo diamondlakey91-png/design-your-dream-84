@@ -323,9 +323,182 @@ function ThreadView() {
           </p>
         </div>
       </div>
+
+      {extractOpen && activeProject && (
+        <ExtractChecklistModal
+          projectId={activeProject.id}
+          projectName={activeProject.name}
+          content={extractOpen.content}
+          onClose={() => setExtractOpen(null)}
+          onAdded={() => {
+            setExtractOpen(null);
+            qc.invalidateQueries({ queryKey: ["permit-items", activeProject.id] });
+            qc.invalidateQueries({ queryKey: ["project", activeProject.id] });
+          }}
+        />
+      )}
     </div>
   );
 }
+
+function ExtractChecklistModal({
+  projectId,
+  projectName,
+  content,
+  onClose,
+  onAdded,
+}: {
+  projectId: string;
+  projectName: string;
+  content: string;
+  onClose: () => void;
+  onAdded: () => void;
+}) {
+  const extractFn = useServerFn(extractChecklistFromMessage);
+  const addFn = useServerFn(addPermitItemsBulk);
+  const [selected, setSelected] = useState<Set<number>>(new Set());
+
+  const extractQ = useQuery({
+    queryKey: ["extract-checklist", projectId, content.slice(0, 100)],
+    queryFn: () => extractFn({ data: { project_id: projectId, content } }),
+    staleTime: 5 * 60 * 1000,
+  });
+
+  useEffect(() => {
+    if (extractQ.data?.items) {
+      setSelected(new Set(extractQ.data.items.map((_, i) => i)));
+    }
+  }, [extractQ.data]);
+
+  const items = extractQ.data?.items ?? [];
+
+  const add = useMutation({
+    mutationFn: () =>
+      addFn({
+        data: {
+          project_id: projectId,
+          items: items.filter((_, i) => selected.has(i)),
+        },
+      }),
+    onSuccess: (res) => {
+      toast.success(`Added ${res.inserted.length} item${res.inserted.length === 1 ? "" : "s"} to ${projectName}.`);
+      onAdded();
+    },
+    onError: (e) => toast.error(e instanceof Error ? e.message : "Failed to add items"),
+  });
+
+  const toggle = (i: number) => {
+    setSelected((prev) => {
+      const next = new Set(prev);
+      if (next.has(i)) next.delete(i);
+      else next.add(i);
+      return next;
+    });
+  };
+
+  return (
+    <div className="fixed inset-0 z-50 bg-black/70 backdrop-blur-sm grid place-items-center p-4" onClick={onClose}>
+      <div
+        onClick={(e) => e.stopPropagation()}
+        className="w-full max-w-lg rounded-2xl bg-zinc-900 ring-1 ring-white/10 shadow-2xl overflow-hidden flex flex-col max-h-[85dvh]"
+      >
+        <div className="px-5 py-4 border-b border-white/5 flex items-center gap-2">
+          <ListPlus className="size-4 text-brand" />
+          <div className="flex-1 min-w-0">
+            <h3 className="text-sm font-semibold text-white">Add to checklist</h3>
+            <p className="text-[11px] text-zinc-500 truncate">→ {projectName}</p>
+          </div>
+          <button onClick={onClose} className="size-7 grid place-items-center rounded hover:bg-white/10" aria-label="Close">
+            <X className="size-4" />
+          </button>
+        </div>
+
+        <div className="flex-1 overflow-y-auto p-4">
+          {extractQ.isLoading && (
+            <div className="flex items-center gap-2 text-sm text-zinc-400 py-8 justify-center">
+              <Loader2 className="size-4 animate-spin" /> Extracting permit items…
+            </div>
+          )}
+          {extractQ.isError && (
+            <p className="text-sm text-red-400 py-4">
+              {extractQ.error instanceof Error ? extractQ.error.message : "Failed to extract."}
+            </p>
+          )}
+          {extractQ.data && items.length === 0 && (
+            <p className="text-sm text-zinc-400 py-6 text-center">
+              No new permit items detected in this reply (or all already exist in your checklist).
+            </p>
+          )}
+          {items.length > 0 && (
+            <ul className="space-y-2">
+              {items.map((it, i) => {
+                const isOn = selected.has(i);
+                return (
+                  <li key={i}>
+                    <button
+                      onClick={() => toggle(i)}
+                      className={`w-full text-left rounded-lg ring-1 p-3 transition ${
+                        isOn ? "bg-brand/10 ring-brand/50" : "bg-zinc-950 ring-white/10 hover:ring-white/20"
+                      }`}
+                    >
+                      <div className="flex items-start gap-3">
+                        <span
+                          className={`mt-0.5 size-4 rounded grid place-items-center flex-shrink-0 ${
+                            isOn ? "bg-brand text-brand-foreground" : "ring-1 ring-white/20"
+                          }`}
+                        >
+                          {isOn && <Check className="size-3" />}
+                        </span>
+                        <div className="flex-1 min-w-0">
+                          <div className="flex items-center gap-2 flex-wrap">
+                            <span className="text-sm font-medium text-white">{it.name}</span>
+                            <span className="text-[10px] font-mono uppercase tracking-wider text-zinc-500">
+                              {it.category}
+                            </span>
+                            {it.required ? (
+                              <span className="text-[10px] font-mono uppercase text-brand">required</span>
+                            ) : (
+                              <span className="text-[10px] font-mono uppercase text-zinc-500">conditional</span>
+                            )}
+                          </div>
+                          {it.why && <p className="mt-1 text-xs text-zinc-400">{it.why}</p>}
+                        </div>
+                      </div>
+                    </button>
+                  </li>
+                );
+              })}
+            </ul>
+          )}
+        </div>
+
+        <div className="px-5 py-3 border-t border-white/5 flex items-center justify-between gap-3">
+          <span className="text-[11px] text-zinc-500">
+            {items.length > 0 ? `${selected.size} of ${items.length} selected` : ""}
+          </span>
+          <div className="flex items-center gap-2">
+            <button
+              onClick={onClose}
+              className="px-3 py-1.5 rounded-lg text-xs text-zinc-300 hover:bg-white/5"
+            >
+              Cancel
+            </button>
+            <button
+              onClick={() => add.mutate()}
+              disabled={selected.size === 0 || add.isPending || extractQ.isLoading}
+              className="inline-flex items-center gap-1.5 px-3 py-1.5 rounded-lg bg-brand text-brand-foreground text-xs font-medium disabled:opacity-40"
+            >
+              {add.isPending ? <Loader2 className="size-3.5 animate-spin" /> : <Check className="size-3.5" />}
+              Confirm & add
+            </button>
+          </div>
+        </div>
+      </div>
+    </div>
+  );
+}
+
+
 
 type IntakePayload = {
   name: string; project_type: string; location: string; jurisdiction: string;
