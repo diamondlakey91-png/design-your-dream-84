@@ -2056,6 +2056,157 @@ Rules: only flag issues you can actually see or reasonably infer from the plan. 
     return { document: updated, review: parsed };
   });
 
+// ============= Plan Review → Fix List / Reviewer Response =============
+type PlanReviewFinding = {
+  category: string;
+  severity: "low" | "medium" | "high";
+  title: string;
+  detail: string;
+  code_reference?: string;
+  local_amendment?: string;
+  sheet_reference?: string;
+  recommendation?: string;
+};
+
+const categoryToChecklist: Record<string, string> = {
+  missing_exits: "Life Safety",
+  ada: "Accessibility",
+  fire_code: "Fire Code",
+  permitting_mistake: "Submittal",
+  other: "Plan Review",
+};
+
+// Turn plan-review findings into checklist items appended to the project.
+export const addPlanReviewFixesToChecklist = createServerFn({ method: "POST" })
+  .middleware([requireSupabaseAuth])
+  .inputValidator((input: unknown) => z.object({ document_id: z.string().uuid() }).parse(input))
+  .handler(async ({ data, context }) => {
+    const { data: doc } = await context.supabase
+      .from("project_documents")
+      .select("id, name, project_id, plan_review")
+      .eq("id", data.document_id).maybeSingle();
+    if (!doc) throw new Error("Document not found");
+    const pr = doc.plan_review as { findings?: PlanReviewFinding[] } | null;
+    const findings = pr?.findings ?? [];
+    if (findings.length === 0) throw new Error("No findings to convert");
+
+    const { data: existing } = await context.supabase
+      .from("permit_items").select("sort_order").eq("project_id", doc.project_id);
+    const startOrder = (existing ?? []).reduce((m, r) => Math.max(m, r.sort_order ?? 0), 0) + 1;
+
+    const rows = findings.map((f, idx) => {
+      const refs = [f.code_reference, f.local_amendment && `Local: ${f.local_amendment}`, f.sheet_reference && `Sheet ${f.sheet_reference}`]
+        .filter(Boolean).join(" · ");
+      const notes = [
+        f.detail,
+        f.recommendation ? `Fix: ${f.recommendation}` : "",
+        refs,
+        `From plan review of "${doc.name}"`,
+      ].filter(Boolean).join("\n");
+      return {
+        user_id: context.userId,
+        project_id: doc.project_id,
+        name: `[${f.severity.toUpperCase()}] ${f.title}`,
+        category: categoryToChecklist[f.category] || "Plan Review",
+        required: f.severity !== "low",
+        notes,
+        sort_order: startOrder + idx,
+      };
+    });
+
+    const { data: inserted, error } = await context.supabase
+      .from("permit_items").insert(rows).select("*");
+    if (error) throw new Error(error.message);
+
+    await context.supabase.from("activity").insert({
+      user_id: context.userId,
+      project_id: doc.project_id,
+      description: `Added ${inserted.length} fix${inserted.length === 1 ? "" : "es"} to checklist from plan review.`,
+    });
+    return { inserted_count: inserted.length };
+  });
+
+// AI-drafted reviewer response letter addressing each finding.
+export const draftReviewerResponse = createServerFn({ method: "POST" })
+  .middleware([requireSupabaseAuth])
+  .inputValidator((input: unknown) => z.object({ document_id: z.string().uuid() }).parse(input))
+  .handler(async ({ data, context }) => {
+    const aiKey = process.env.LOVABLE_API_KEY;
+    if (!aiKey) throw new Error("AI is not configured");
+
+    const { data: doc } = await context.supabase
+      .from("project_documents")
+      .select("id, name, project_id, plan_review")
+      .eq("id", data.document_id).maybeSingle();
+    if (!doc) throw new Error("Document not found");
+    const pr = doc.plan_review as {
+      overall_summary?: string;
+      jurisdiction_context?: { jurisdiction?: string };
+      findings?: PlanReviewFinding[];
+    } | null;
+    const findings = pr?.findings ?? [];
+    if (findings.length === 0) throw new Error("No findings to draft against");
+
+    const { data: project } = await context.supabase
+      .from("projects").select("name, jurisdiction, project_type, location")
+      .eq("id", doc.project_id).maybeSingle();
+
+    const juris = pr?.jurisdiction_context?.jurisdiction || project?.jurisdiction || "the local jurisdiction";
+
+    const findingsBlock = findings.map((f, i) => `#${i + 1} [${f.severity.toUpperCase()} · ${f.category}] ${f.title}
+Issue: ${f.detail}
+Code: ${f.code_reference || "—"}${f.local_amendment ? ` (Local: ${f.local_amendment})` : ""}
+Sheet: ${f.sheet_reference || "—"}
+Proposed fix: ${f.recommendation || "—"}`).join("\n\n");
+
+    const prompt = `You are drafting a formal comment-response letter from the design team back to the ${juris} plan reviewer for project "${project?.name ?? ""}"${project?.location ? ` at ${project.location}` : ""}.
+
+For EACH finding below, write a concise, professional response in this exact format:
+
+Comment #N — <short restatement of the reviewer's concern>
+Response: <2-4 sentences: acknowledge, explain what was corrected, cite the sheet or detail that now addresses it, reference the applicable code section>.
+
+Rules:
+- Be direct and respectful. No filler.
+- Cite specific sheet numbers and code sections when provided.
+- If the fix is a design change, describe the change; if it's a clarification, state it plainly.
+- Do not invent sheet numbers or code sections that weren't given.
+- Start with a one-paragraph cover note addressed to the plan reviewer, then the numbered responses.
+- End with a single-line sign-off placeholder.
+
+FINDINGS:
+${findingsBlock}`;
+
+    const resp = await fetch("https://ai.gateway.lovable.dev/v1/chat/completions", {
+      method: "POST",
+      headers: { "Content-Type": "application/json", "Lovable-API-Key": aiKey },
+      body: JSON.stringify({
+        model: "google/gemini-2.5-pro",
+        messages: [
+          { role: "system", content: "You are a licensed architect drafting formal plan-review comment responses. Output plain text only." },
+          { role: "user", content: prompt },
+        ],
+      }),
+    });
+    if (!resp.ok) {
+      const t = await resp.text();
+      if (resp.status === 429) throw new Error("Too many requests — try again shortly.");
+      if (resp.status === 402) throw new Error("AI credits exhausted. Please top up.");
+      throw new Error(`AI error: ${t.slice(0, 200)}`);
+    }
+    const j = (await resp.json()) as { choices?: Array<{ message?: { content?: string } }> };
+    const letter = (j.choices?.[0]?.message?.content ?? "").trim();
+    if (!letter) throw new Error("AI returned an empty response");
+
+    await context.supabase.from("activity").insert({
+      user_id: context.userId,
+      project_id: doc.project_id,
+      description: `Drafted reviewer response letter for "${doc.name}" (${findings.length} comment${findings.length === 1 ? "" : "s"}).`,
+    });
+
+    return { letter, finding_count: findings.length };
+  });
+
 // ---- Inspection Mode fields ----
 export const updateInspectionFields = createServerFn({ method: "POST" })
   .middleware([requireSupabaseAuth])
