@@ -1986,12 +1986,18 @@ Return ONLY valid JSON in this exact shape (no fences, no prose):
       "code_reference": "model code, e.g. IBC 1006.2.1 or ADA 404.2.3",
       "local_amendment": "jurisdiction-specific amendment/section if applicable, else ''",
       "sheet_reference": "e.g. A2.1 or 'not shown'",
-      "recommendation": "concrete fix (<200 chars)"
+      "recommendation": "concrete fix (<200 chars)",
+      "page": 1,
+      "bbox": { "x": 0.12, "y": 0.34, "w": 0.18, "h": 0.09 }
     }
   ]
 }
 
-Rules: only flag issues you can actually see or reasonably infer from the plan. If the plan appears compliant in a category, omit it. Never fabricate specific code sections or local amendment numbers — leave those fields blank if unsure. If the document is not a plan set, return findings: [] and explain in overall_summary.`;
+Rules: only flag issues you can actually see or reasonably infer from the plan. If the plan appears compliant in a category, omit it. Never fabricate specific code sections or local amendment numbers — leave those fields blank if unsure. If the document is not a plan set, return findings: [] and explain in overall_summary.
+
+LOCATION (VERY IMPORTANT for markup): for every finding you visually identify on a sheet, include:
+- "page": the 1-indexed page number of the PDF (or 1 for a single image) that contains the issue.
+- "bbox": normalized box coordinates {x, y, w, h} in [0,1], where (0,0) is the TOP-LEFT of that page/image, x+w and y+h must stay <= 1, and the box tightly frames the problem region (e.g. the missing exit, the non-compliant door, the fire-rated wall). Do not include a bbox that fills the whole page; leave bbox off entirely if you can't localize the issue.`;
 
   const contentParts: unknown[] = [{ type: "text", text: instruction }];
   if (isImage) {
