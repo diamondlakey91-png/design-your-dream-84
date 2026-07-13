@@ -1737,7 +1737,7 @@ export const reviewPlan = createServerFn({ method: "POST" })
     if (!doc) throw new Error("Document not found");
 
     const { data: project } = await context.supabase
-      .from("projects").select("name, jurisdiction, project_type, address")
+      .from("projects").select("name, jurisdiction, project_type, location")
       .eq("id", doc.project_id).maybeSingle();
 
     const { data: signed, error: sErr } = await context.supabase
