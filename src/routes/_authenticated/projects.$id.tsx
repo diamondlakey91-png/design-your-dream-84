@@ -79,6 +79,7 @@ const STATUS_LABEL: Record<string, string> = {
   under_review: "Under review",
   approved: "Approved",
   issued: "Issued",
+  n_a: "N/A",
 };
 const STATUS_COLOR: Record<string, string> = {
   not_started: "bg-muted text-muted-foreground",
@@ -86,6 +87,7 @@ const STATUS_COLOR: Record<string, string> = {
   under_review: "bg-amber-500/15 text-amber-800 dark:text-amber-300",
   approved: "bg-emerald-500/15 text-emerald-700 dark:text-emerald-300",
   issued: "bg-brand/20 text-brand",
+  n_a: "bg-zinc-500/15 text-zinc-600 dark:text-zinc-400 line-through",
 };
 
 function ProjectDetail() {
@@ -326,7 +328,7 @@ function ChecklistTab({ projectId, jurisdiction }: { projectId: string; jurisdic
 
   const items = q.data ?? [];
   const total = items.length;
-  const done = items.filter((i) => i.status === "issued" || i.status === "approved").length;
+  const done = items.filter((i) => i.status === "issued" || i.status === "approved" || i.status === "n_a").length;
 
   return (
     <div className="space-y-4">
@@ -378,7 +380,7 @@ function ChecklistTab({ projectId, jurisdiction }: { projectId: string; jurisdic
                 </button>
               </div>
               <div className="mt-3 flex flex-wrap gap-1.5">
-                {(["not_started", "submitted", "under_review", "approved", "issued"] as const).map((s) => (
+                {(["not_started", "submitted", "under_review", "approved", "issued", "n_a"] as const).map((s) => (
                   <button
                     key={s}
                     onClick={() => setStatus.mutate({ id: it.id, status: s })}
