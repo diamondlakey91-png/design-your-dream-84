@@ -112,7 +112,7 @@ export const PORTAL_REGISTRY: PortalEntry[] = [
   A("Raleigh", "NC", "RALEIGH"),
   A("Durham", "NC", "DURHAM"),
   A("Greensboro", "NC", "GREENSBORO"),
-  A("Prince George's County", "MD", "PGC"),
+  
   A("Howard County", "MD", "HOWARD"),
   A("Anne Arundel County", "MD", "AACOUNTY"),
   A("San Antonio", "TX", "SANANTONIO_TX"),
@@ -301,6 +301,13 @@ export const PORTAL_REGISTRY: PortalEntry[] = [
     jurisdiction: "Sugar Land", state: "TX", platform: "Momentum",
     url: "https://permits.sugarlandtx.gov/publicsearch/PermitSearch",
     addressSearch: (a) => `https://permits.sugarlandtx.gov/publicsearch/PermitSearch?SearchText=${enc(a)}`,
+  },
+  {
+    jurisdiction: "Prince George's County", state: "MD", platform: "Momentum",
+    url: "https://momentumhome.princegeorgescountymd.gov/",
+    addressSearch: (a) => `https://momentumhome.princegeorgescountymd.gov/publicsearch/PermitSearch?SearchText=${enc(a)}`,
+    permitSearch: (n) => `https://momentumhome.princegeorgescountymd.gov/publicsearch/PermitSearch?SearchText=${encodeURIComponent(n.trim())}`,
+    notes: "CentralSquare Momentum — DPIE permits, licenses & inspections",
   },
 
   // ================= OpenGov Permitting & Licensing (formerly ViewPoint Cloud) =================
