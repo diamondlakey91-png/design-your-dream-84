@@ -3,6 +3,7 @@ import { Home, MessageSquare, Library, LogOut, MapPin } from "lucide-react";
 import { supabase } from "@/integrations/supabase/client";
 import { useQueryClient } from "@tanstack/react-query";
 import type { ReactNode } from "react";
+import { WelcomeBanner } from "@/components/WelcomeBanner";
 
 export function AppShell({ children }: { children: ReactNode }) {
   const location = useLocation();
@@ -20,7 +21,11 @@ export function AppShell({ children }: { children: ReactNode }) {
 
   return (
     <div className="min-h-dvh bg-background pb-24">
+      <div className="mx-auto max-w-2xl px-4 pt-4">
+        <WelcomeBanner />
+      </div>
       <div className="mx-auto max-w-2xl">{children}</div>
+
 
       {/* Bottom nav */}
       <nav className="fixed inset-x-0 bottom-0 z-40 border-t border-border bg-card/95 backdrop-blur">
