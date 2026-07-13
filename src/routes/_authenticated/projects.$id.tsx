@@ -308,7 +308,12 @@ function ChecklistTab({ projectId, jurisdiction }: { projectId: string; jurisdic
     <div className="space-y-4">
       <div className="flex items-center justify-between">
         <div>
-          <p className="text-sm font-semibold">Permit checklist</p>
+          <p className="text-sm font-semibold flex items-center gap-2">
+            Permit checklist
+            <span className="inline-flex items-center gap-1 text-[9px] font-mono uppercase tracking-widest text-emerald-600 dark:text-emerald-400">
+              <span className="size-1.5 rounded-full bg-emerald-500 animate-pulse" /> Live
+            </span>
+          </p>
           <p className="text-xs text-muted-foreground">{done}/{total} approved or issued</p>
         </div>
         <button
