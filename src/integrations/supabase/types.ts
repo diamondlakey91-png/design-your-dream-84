@@ -507,6 +507,62 @@ export type Database = {
         }
         Relationships: []
       }
+      report_shares: {
+        Row: {
+          created_at: string
+          expires_at: string | null
+          id: string
+          last_viewed_at: string | null
+          password_hash: string | null
+          project_id: string
+          project_snapshot: Json
+          report: Json
+          revoked_at: string | null
+          token: string
+          updated_at: string
+          user_id: string
+          view_count: number
+        }
+        Insert: {
+          created_at?: string
+          expires_at?: string | null
+          id?: string
+          last_viewed_at?: string | null
+          password_hash?: string | null
+          project_id: string
+          project_snapshot?: Json
+          report: Json
+          revoked_at?: string | null
+          token: string
+          updated_at?: string
+          user_id: string
+          view_count?: number
+        }
+        Update: {
+          created_at?: string
+          expires_at?: string | null
+          id?: string
+          last_viewed_at?: string | null
+          password_hash?: string | null
+          project_id?: string
+          project_snapshot?: Json
+          report?: Json
+          revoked_at?: string | null
+          token?: string
+          updated_at?: string
+          user_id?: string
+          view_count?: number
+        }
+        Relationships: [
+          {
+            foreignKeyName: "report_shares_project_id_fkey"
+            columns: ["project_id"]
+            isOneToOne: false
+            referencedRelation: "projects"
+            referencedColumns: ["id"]
+          },
+        ]
+      }
       subscriptions: {
         Row: {
           cancel_at_period_end: boolean | null
