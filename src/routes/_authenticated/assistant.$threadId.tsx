@@ -181,6 +181,15 @@ function ThreadView() {
             </button>
           )}
 
+          {!activeProject && (
+            <button
+              onClick={() => setIntakeOpen((v) => !v)}
+              className="inline-flex items-center gap-1.5 rounded-full ring-1 ring-brand/40 bg-brand/10 px-2.5 py-1 text-xs text-brand hover:bg-brand/20"
+            >
+              <ClipboardList className="size-3" /> Guided intake → checklist
+            </button>
+          )}
+
           {pickerOpen && !activeProject && (
             <div className="basis-full mt-2 rounded-lg bg-zinc-900 ring-1 ring-white/10 divide-y divide-white/5 max-h-56 overflow-y-auto">
               {projects.length === 0 && <div className="p-3 text-xs text-zinc-500">No projects yet.</div>}
@@ -196,7 +205,16 @@ function ThreadView() {
               ))}
             </div>
           )}
+
+          {intakeOpen && !activeProject && (
+            <IntakePanel
+              busy={intake.isPending}
+              onCancel={() => setIntakeOpen(false)}
+              onSubmit={(payload) => intake.mutate(payload)}
+            />
+          )}
         </div>
+
 
         <div ref={scrollRef} className="flex-1 overflow-y-auto p-6 space-y-6">
           {messages.length === 0 && !send.isPending && (
