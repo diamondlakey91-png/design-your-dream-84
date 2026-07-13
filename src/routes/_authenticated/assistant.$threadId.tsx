@@ -78,6 +78,21 @@ function ThreadView() {
     onSuccess: () => qc.invalidateQueries({ queryKey: ["chat-threads"] }),
   });
 
+  const intake = useMutation({
+    mutationFn: (payload: {
+      name: string; project_type: string; location: string; jurisdiction: string;
+      scope: string; size: string; occupancy: string; work_type: string;
+    }) => intakeFn({ data: { thread_id: threadId, ...payload } }),
+    onSuccess: (res) => {
+      toast.success(`Created "${res.project.name}" with ${res.items.length} checklist items.`);
+      setIntakeOpen(false);
+      qc.invalidateQueries({ queryKey: ["chat-thread", threadId] });
+      qc.invalidateQueries({ queryKey: ["chat-threads"] });
+      qc.invalidateQueries({ queryKey: ["projects"] });
+    },
+    onError: (e) => toast.error(e instanceof Error ? e.message : "Intake failed"),
+  });
+
   useEffect(() => {
     scrollRef.current?.scrollTo({ top: scrollRef.current.scrollHeight, behavior: "smooth" });
   }, [messages.length, send.isPending]);
