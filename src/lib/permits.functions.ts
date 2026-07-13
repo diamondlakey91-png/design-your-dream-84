@@ -1859,6 +1859,15 @@ const PlanReviewSchema = z.object({
     local_amendment: z.string().default(""),
     sheet_reference: z.string().default(""),
     recommendation: z.string().default(""),
+    // Location on the plan for visual markup (page is 1-indexed; bbox is normalized 0-1
+    // with origin top-left). All optional — omit when the AI can't localize the issue.
+    page: z.number().int().min(1).max(500).optional(),
+    bbox: z.object({
+      x: z.number().min(0).max(1),
+      y: z.number().min(0).max(1),
+      w: z.number().min(0).max(1),
+      h: z.number().min(0).max(1),
+    }).optional(),
   })).max(60).default([]),
 });
 
