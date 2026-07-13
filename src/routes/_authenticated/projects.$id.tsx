@@ -186,20 +186,9 @@ function OverviewTab({
         )}
       </section>
 
-      {/* Live jurisdiction tracking placeholder */}
-      <section>
-        <div className="p-4 bg-card ring-1 ring-black/5 rounded-xl">
-          <div className="flex items-start gap-3">
-            <Radio className="size-4 mt-0.5 text-brand" />
-            <div className="flex-1">
-              <p className="text-sm font-semibold">Live jurisdiction sync — coming soon</p>
-              <p className="text-xs text-muted-foreground mt-1">
-                Direct integrations with 20,000+ municipal permit portals (Accela, Tyler EnerGov, ePermitHub, city direct feeds) require per-jurisdiction contracts and legal review. Track status manually in the meantime; the assistant will flag when auto-sync is available for {project.jurisdiction || "your jurisdiction"}.
-              </p>
-            </div>
-          </div>
-        </div>
-      </section>
+      {/* Live jurisdiction tracking */}
+      <LiveJurisdictionSync projectId={project.id} jurisdiction={project.jurisdiction} />
+
 
       <section>
         <div className="flex items-center justify-between mb-3">
