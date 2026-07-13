@@ -437,7 +437,7 @@ export const listPermitItems = createServerFn({ method: "GET" })
     return rows ?? [];
   });
 
-const PERMIT_STATUSES = ["not_started", "submitted", "under_review", "approved", "issued"] as const;
+const PERMIT_STATUSES = ["not_started", "submitted", "under_review", "approved", "issued", "n_a"] as const;
 
 export const updatePermitItem = createServerFn({ method: "POST" })
   .middleware([requireSupabaseAuth])
