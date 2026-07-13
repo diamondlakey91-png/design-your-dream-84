@@ -1318,18 +1318,28 @@ function toSlug(s: string) {
 
 export const listJurisdictionProfiles = createServerFn({ method: "GET" })
   .middleware([requireSupabaseAuth])
-  .inputValidator((input: unknown) => z.object({ q: z.string().max(120).optional().default("") }).parse(input))
+  .inputValidator((input: unknown) => z.object({
+    q: z.string().max(120).optional().default(""),
+    state: z.string().max(4).optional().default(""),
+    jurisdiction_type: z.string().max(40).optional().default(""),
+    verified_only: z.boolean().optional().default(false),
+  }).parse(input))
   .handler(async ({ data, context }) => {
     let query = context.supabase
       .from("jurisdiction_profiles")
-      .select("id, slug, name, state, department, portal_url, refreshed_at, updated_at")
+      .select("id, slug, name, state, county, jurisdiction_type, department, portal_url, gov_website, verification_status, last_verified_date, confidence, is_demo, permit_categories, refreshed_at, updated_at")
+      .order("is_demo", { ascending: false })
       .order("updated_at", { ascending: false })
-      .limit(50);
-    if (data.q) query = query.ilike("name", `%${data.q}%`);
+      .limit(100);
+    if (data.q) query = query.or(`name.ilike.%${data.q}%,county.ilike.%${data.q}%,department.ilike.%${data.q}%`);
+    if (data.state) query = query.eq("state", data.state.toUpperCase());
+    if (data.jurisdiction_type) query = query.eq("jurisdiction_type", data.jurisdiction_type);
+    if (data.verified_only) query = query.in("verification_status", ["verified", "recently_verified"]);
     const { data: rows, error } = await query;
     if (error) throw new Error(error.message);
     return rows ?? [];
   });
+
 
 export const getJurisdictionProfile = createServerFn({ method: "GET" })
   .middleware([requireSupabaseAuth])
