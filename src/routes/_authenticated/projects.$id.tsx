@@ -817,6 +817,13 @@ function DocRow({ doc, projectId, onDelete }: { doc: { id: string; name: string;
                     >
                       {draft.isPending ? "Drafting…" : "Draft reviewer response"}
                     </button>
+                    <button
+                      onClick={() => redline.mutate()}
+                      disabled={redline.isPending}
+                      className="text-[10px] font-mono uppercase tracking-wider px-2 py-1 rounded bg-destructive/15 text-destructive hover:bg-destructive/25 disabled:opacity-50"
+                    >
+                      {redline.isPending ? "Generating…" : "Download redlined PDF"}
+                    </button>
                   </div>
                   {letter && (
                     <div className="p-3 rounded-lg bg-muted/40 ring-1 ring-black/5 space-y-2">
