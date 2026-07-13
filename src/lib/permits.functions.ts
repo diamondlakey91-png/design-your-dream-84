@@ -962,3 +962,235 @@ Return {"matches":[]} if nothing confidently matches.`;
     return { applied, skipped, total_findings: findings.length };
   });
 
+// ---- Inspections ----
+const INSPECTION_STATUSES = ["scheduled", "passed", "failed", "rescheduled", "canceled"] as const;
+
+export const listInspections = createServerFn({ method: "GET" })
+  .middleware([requireSupabaseAuth])
+  .inputValidator((input: unknown) => z.object({ project_id: z.string().uuid() }).parse(input))
+  .handler(async ({ data, context }) => {
+    const { data: rows, error } = await context.supabase
+      .from("inspections")
+      .select("*")
+      .eq("project_id", data.project_id)
+      .order("scheduled_date", { ascending: true, nullsFirst: false });
+    if (error) throw new Error(error.message);
+    return rows ?? [];
+  });
+
+export const addInspection = createServerFn({ method: "POST" })
+  .middleware([requireSupabaseAuth])
+  .inputValidator((input: unknown) => z.object({
+    project_id: z.string().uuid(),
+    inspection_type: z.string().min(1).max(120),
+    scheduled_date: z.string().nullable().optional(),
+    inspector: z.string().max(120).optional().default(""),
+    permit_item_id: z.string().uuid().nullable().optional(),
+  }).parse(input))
+  .handler(async ({ data, context }) => {
+    const { data: row, error } = await context.supabase
+      .from("inspections")
+      .insert({
+        user_id: context.userId,
+        project_id: data.project_id,
+        inspection_type: data.inspection_type,
+        scheduled_date: data.scheduled_date ?? null,
+        inspector: data.inspector ?? "",
+        permit_item_id: data.permit_item_id ?? null,
+        status: "scheduled",
+      })
+      .select("*").single();
+    if (error) throw new Error(error.message);
+    await context.supabase.from("activity").insert({
+      user_id: context.userId,
+      project_id: data.project_id,
+      description: `Inspection scheduled: ${data.inspection_type}${data.scheduled_date ? ` for ${data.scheduled_date}` : ""}`,
+    });
+    return row;
+  });
+
+export const updateInspection = createServerFn({ method: "POST" })
+  .middleware([requireSupabaseAuth])
+  .inputValidator((input: unknown) => z.object({
+    id: z.string().uuid(),
+    status: z.enum(INSPECTION_STATUSES).optional(),
+    scheduled_date: z.string().nullable().optional(),
+    result_date: z.string().nullable().optional(),
+    notes: z.string().max(2000).optional(),
+    inspector: z.string().max(120).optional(),
+  }).parse(input))
+  .handler(async ({ data, context }) => {
+    const patch: Record<string, unknown> = {};
+    for (const k of ["status", "scheduled_date", "result_date", "notes", "inspector"] as const) {
+      if (data[k] !== undefined) patch[k] = data[k];
+    }
+    if (data.status === "passed" || data.status === "failed") {
+      patch.result_date = data.result_date ?? new Date().toISOString().slice(0, 10);
+    }
+    const { data: row, error } = await context.supabase
+      .from("inspections").update(patch).eq("id", data.id).select("*").single();
+    if (error) throw new Error(error.message);
+    if (data.status) {
+      await context.supabase.from("activity").insert({
+        user_id: context.userId,
+        project_id: row.project_id,
+        description: `Inspection "${row.inspection_type}" → ${data.status}`,
+      });
+    }
+    return row;
+  });
+
+export const deleteInspection = createServerFn({ method: "POST" })
+  .middleware([requireSupabaseAuth])
+  .inputValidator((input: unknown) => z.object({ id: z.string().uuid() }).parse(input))
+  .handler(async ({ data, context }) => {
+    const { error } = await context.supabase.from("inspections").delete().eq("id", data.id);
+    if (error) throw new Error(error.message);
+    return { ok: true };
+  });
+
+// ---- Jurisdiction Intelligence Library ----
+function toSlug(s: string) {
+  return s.toLowerCase().trim().replace(/[,]/g, "").replace(/[^a-z0-9]+/g, "-").replace(/(^-|-$)/g, "");
+}
+
+export const listJurisdictionProfiles = createServerFn({ method: "GET" })
+  .middleware([requireSupabaseAuth])
+  .inputValidator((input: unknown) => z.object({ q: z.string().max(120).optional().default("") }).parse(input))
+  .handler(async ({ data, context }) => {
+    let query = context.supabase
+      .from("jurisdiction_profiles")
+      .select("id, slug, name, state, department, portal_url, refreshed_at, updated_at")
+      .order("updated_at", { ascending: false })
+      .limit(50);
+    if (data.q) query = query.ilike("name", `%${data.q}%`);
+    const { data: rows, error } = await query;
+    if (error) throw new Error(error.message);
+    return rows ?? [];
+  });
+
+export const getJurisdictionProfile = createServerFn({ method: "GET" })
+  .middleware([requireSupabaseAuth])
+  .inputValidator((input: unknown) => z.object({ slug: z.string().min(1).max(160) }).parse(input))
+  .handler(async ({ data, context }) => {
+    const { data: row, error } = await context.supabase
+      .from("jurisdiction_profiles").select("*").eq("slug", data.slug).maybeSingle();
+    if (error) throw new Error(error.message);
+    return row;
+  });
+
+const ProfileExtractionSchema = z.object({
+  name: z.string(),
+  state: z.string().default(""),
+  department: z.string().default(""),
+  portal_url: z.string().default(""),
+  overview: z.string(),
+  permits: z.array(z.object({
+    name: z.string(),
+    when_required: z.string().default(""),
+    typical_reviewers: z.string().default(""),
+  })).max(20),
+  fees: z.array(z.object({
+    label: z.string(),
+    detail: z.string().default(""),
+  })).max(20),
+  timelines: z.array(z.object({
+    stage: z.string(),
+    typical_duration: z.string(),
+  })).max(20),
+  contacts: z.array(z.object({
+    role: z.string(),
+    detail: z.string(),
+  })).max(20),
+  source_urls: z.array(z.string()).max(15),
+});
+
+export const buildJurisdictionProfile = createServerFn({ method: "POST" })
+  .middleware([requireSupabaseAuth])
+  .inputValidator((input: unknown) => z.object({
+    jurisdiction: z.string().min(2).max(160),
+  }).parse(input))
+  .handler(async ({ data, context }) => {
+    const fcKey = process.env.FIRECRAWL_API_KEY;
+    const aiKey = process.env.LOVABLE_API_KEY;
+    if (!fcKey) throw new Error("Firecrawl is not configured");
+    if (!aiKey) throw new Error("AI is not configured");
+
+    const slug = toSlug(data.jurisdiction);
+    if (!slug) throw new Error("Invalid jurisdiction");
+
+    // Firecrawl search + scrape top .gov/permit pages
+    const hits = await firecrawlSearch(
+      fcKey,
+      `${data.jurisdiction} building department permits fees timeline site:.gov OR "permit fees" OR "plan review"`,
+      6,
+    );
+    const preferred = hits
+      .filter((h) => /(\.gov|accela|energov|opengov|citizenserve|permitium|mygovernmentonline)/i.test(h.url))
+      .slice(0, 3);
+    const targets = (preferred.length > 0 ? preferred : hits.slice(0, 3));
+    if (targets.length === 0) throw new Error(`No sources found for ${data.jurisdiction}.`);
+
+    const scrapes = await Promise.all(targets.map(async (h) => {
+      try {
+        const s = await firecrawlScrape(fcKey, h.url);
+        return `SOURCE: ${h.url}\nTITLE: ${h.title ?? ""}\n${s.markdown.slice(0, 3500)}`;
+      } catch {
+        return `SOURCE: ${h.url}\nTITLE: ${h.title ?? ""}\nDESC: ${h.description ?? ""}`;
+      }
+    }));
+
+    const prompt = `Build a jurisdiction intelligence profile for ${data.jurisdiction}, USA. Use ONLY facts from the sources below. If you don't know, leave the field empty; never fabricate specific fee amounts or code sections.
+
+SOURCES
+${scrapes.join("\n\n---\n\n")}
+
+Return ONLY valid JSON of this exact shape:
+{
+  "name": "City, ST",
+  "state": "ST",
+  "department": "official building/permit department name",
+  "portal_url": "canonical URL for permit search or applications",
+  "overview": "2-4 sentence plain-English overview of how this jurisdiction handles permits",
+  "permits": [{"name":"Building Permit","when_required":"...","typical_reviewers":"Plan Check, Fire, etc."}],
+  "fees": [{"label":"Building permit fee","detail":"formula or 'valuation-based; see fee schedule'"}],
+  "timelines": [{"stage":"Plan review","typical_duration":"2-6 weeks"}],
+  "contacts": [{"role":"Building Department","detail":"phone / email / address"}],
+  "source_urls": ["https://..."]
+}`;
+
+    const raw = await callLovableAI(aiKey, [
+      { role: "system", content: "You extract structured jurisdiction data. Output valid JSON only, no prose, no fences. Never fabricate specific numbers." },
+      { role: "user", content: prompt },
+    ]);
+    const cleaned = raw.replace(/```json|```/g, "").trim();
+    const s = cleaned.indexOf("{"); const e = cleaned.lastIndexOf("}");
+    let parsed: z.infer<typeof ProfileExtractionSchema>;
+    try { parsed = ProfileExtractionSchema.parse(JSON.parse(cleaned.slice(s, e + 1))); }
+    catch { throw new Error("AI returned unparseable profile. Try again."); }
+
+    const payload = {
+      slug,
+      name: parsed.name || data.jurisdiction,
+      state: parsed.state,
+      department: parsed.department,
+      portal_url: parsed.portal_url,
+      overview: parsed.overview,
+      permits: parsed.permits,
+      fees: parsed.fees,
+      timelines: parsed.timelines,
+      contacts: parsed.contacts,
+      source_urls: parsed.source_urls,
+      refreshed_at: new Date().toISOString(),
+      created_by: context.userId,
+    };
+
+    const { data: row, error } = await context.supabase
+      .from("jurisdiction_profiles")
+      .upsert(payload, { onConflict: "slug" })
+      .select("*").single();
+    if (error) throw new Error(error.message);
+    return row;
+  });
+
+
