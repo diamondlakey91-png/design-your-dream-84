@@ -285,11 +285,12 @@ function SideLink({ href, label, active = false }: { href: string; label: string
 }
 
 type Row = {
-  id: string; slug: string; name: string; state: string; county?: string;
-  jurisdiction_type?: string; department?: string; portal_url?: string;
-  verification_status?: string; last_verified_date?: string | null;
-  is_demo?: boolean; permit_categories?: unknown[];
+  id: string; slug: string; name: string; state: string; county?: string | null;
+  jurisdiction_type?: string | null; department?: string | null; portal_url?: string | null;
+  verification_status?: string | null; last_verified_date?: string | null;
+  is_demo?: boolean | null; permit_categories?: unknown;
 };
+
 
 function JurisdictionCard({ row, saved, onToggleSave, pinned = false }: {
   row: Row; saved: boolean; onToggleSave: () => void; pinned?: boolean;
