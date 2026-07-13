@@ -24,6 +24,7 @@ import { Route as ApiChatStreamRouteImport } from './routes/api/chat.stream'
 import { Route as AuthenticatedProjectsIdRouteImport } from './routes/_authenticated/projects.$id'
 import { Route as AuthenticatedJurisdictionsSlugRouteImport } from './routes/_authenticated/jurisdictions.$slug'
 import { Route as AuthenticatedInspectionsIdRouteImport } from './routes/_authenticated/inspections.$id'
+import { Route as AuthenticatedAssistantAnalysisRouteImport } from './routes/_authenticated/assistant.analysis'
 import { Route as AuthenticatedAssistantThreadIdRouteImport } from './routes/_authenticated/assistant.$threadId'
 import { Route as ApiPublicPaymentsWebhookRouteImport } from './routes/api/public/payments/webhook'
 
@@ -105,6 +106,12 @@ const AuthenticatedInspectionsIdRoute =
     path: '/inspections/$id',
     getParentRoute: () => AuthenticatedRouteRoute,
   } as any)
+const AuthenticatedAssistantAnalysisRoute =
+  AuthenticatedAssistantAnalysisRouteImport.update({
+    id: '/analysis',
+    path: '/analysis',
+    getParentRoute: () => AuthenticatedAssistantRoute,
+  } as any)
 const AuthenticatedAssistantThreadIdRoute =
   AuthenticatedAssistantThreadIdRouteImport.update({
     id: '/$threadId',
@@ -128,6 +135,7 @@ export interface FileRoutesByFullPath {
   '/lookup': typeof AuthenticatedLookupRoute
   '/checkout/return': typeof CheckoutReturnRoute
   '/assistant/$threadId': typeof AuthenticatedAssistantThreadIdRoute
+  '/assistant/analysis': typeof AuthenticatedAssistantAnalysisRoute
   '/inspections/$id': typeof AuthenticatedInspectionsIdRoute
   '/jurisdictions/$slug': typeof AuthenticatedJurisdictionsSlugRoute
   '/projects/$id': typeof AuthenticatedProjectsIdRoute
@@ -146,6 +154,7 @@ export interface FileRoutesByTo {
   '/lookup': typeof AuthenticatedLookupRoute
   '/checkout/return': typeof CheckoutReturnRoute
   '/assistant/$threadId': typeof AuthenticatedAssistantThreadIdRoute
+  '/assistant/analysis': typeof AuthenticatedAssistantAnalysisRoute
   '/inspections/$id': typeof AuthenticatedInspectionsIdRoute
   '/jurisdictions/$slug': typeof AuthenticatedJurisdictionsSlugRoute
   '/projects/$id': typeof AuthenticatedProjectsIdRoute
@@ -166,6 +175,7 @@ export interface FileRoutesById {
   '/_authenticated/lookup': typeof AuthenticatedLookupRoute
   '/checkout/return': typeof CheckoutReturnRoute
   '/_authenticated/assistant/$threadId': typeof AuthenticatedAssistantThreadIdRoute
+  '/_authenticated/assistant/analysis': typeof AuthenticatedAssistantAnalysisRoute
   '/_authenticated/inspections/$id': typeof AuthenticatedInspectionsIdRoute
   '/_authenticated/jurisdictions/$slug': typeof AuthenticatedJurisdictionsSlugRoute
   '/_authenticated/projects/$id': typeof AuthenticatedProjectsIdRoute
@@ -186,6 +196,7 @@ export interface FileRouteTypes {
     | '/lookup'
     | '/checkout/return'
     | '/assistant/$threadId'
+    | '/assistant/analysis'
     | '/inspections/$id'
     | '/jurisdictions/$slug'
     | '/projects/$id'
@@ -204,6 +215,7 @@ export interface FileRouteTypes {
     | '/lookup'
     | '/checkout/return'
     | '/assistant/$threadId'
+    | '/assistant/analysis'
     | '/inspections/$id'
     | '/jurisdictions/$slug'
     | '/projects/$id'
@@ -223,6 +235,7 @@ export interface FileRouteTypes {
     | '/_authenticated/lookup'
     | '/checkout/return'
     | '/_authenticated/assistant/$threadId'
+    | '/_authenticated/assistant/analysis'
     | '/_authenticated/inspections/$id'
     | '/_authenticated/jurisdictions/$slug'
     | '/_authenticated/projects/$id'
@@ -350,6 +363,13 @@ declare module '@tanstack/react-router' {
       preLoaderRoute: typeof AuthenticatedInspectionsIdRouteImport
       parentRoute: typeof AuthenticatedRouteRoute
     }
+    '/_authenticated/assistant/analysis': {
+      id: '/_authenticated/assistant/analysis'
+      path: '/analysis'
+      fullPath: '/assistant/analysis'
+      preLoaderRoute: typeof AuthenticatedAssistantAnalysisRouteImport
+      parentRoute: typeof AuthenticatedAssistantRoute
+    }
     '/_authenticated/assistant/$threadId': {
       id: '/_authenticated/assistant/$threadId'
       path: '/$threadId'
@@ -369,11 +389,13 @@ declare module '@tanstack/react-router' {
 
 interface AuthenticatedAssistantRouteChildren {
   AuthenticatedAssistantThreadIdRoute: typeof AuthenticatedAssistantThreadIdRoute
+  AuthenticatedAssistantAnalysisRoute: typeof AuthenticatedAssistantAnalysisRoute
 }
 
 const AuthenticatedAssistantRouteChildren: AuthenticatedAssistantRouteChildren =
   {
     AuthenticatedAssistantThreadIdRoute: AuthenticatedAssistantThreadIdRoute,
+    AuthenticatedAssistantAnalysisRoute: AuthenticatedAssistantAnalysisRoute,
   }
 
 const AuthenticatedAssistantRouteWithChildren =
