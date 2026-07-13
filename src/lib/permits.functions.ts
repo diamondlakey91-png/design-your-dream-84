@@ -4566,8 +4566,8 @@ export const generateDailyBriefing = createServerFn({ method: "POST" })
     const [projs, dls, acts, insp] = await Promise.all([
       context.supabase.from("projects").select("id, name, jurisdiction, project_type, status, current_stage, permit_count, permits_issued").eq("user_id", context.userId),
       context.supabase.from("deadlines").select("title, due_date, project_id").order("due_date", { ascending: true }).limit(30),
-      context.supabase.from("activity").select("message, created_at, project_id").order("created_at", { ascending: false }).limit(20),
-      context.supabase.from("inspections").select("type, status, scheduled_date, project_id").order("scheduled_date", { ascending: true }).limit(20),
+      context.supabase.from("activity").select("description, created_at, project_id").order("created_at", { ascending: false }).limit(20),
+      context.supabase.from("inspections").select("inspection_type, status, scheduled_date, project_id").order("scheduled_date", { ascending: true }).limit(20),
     ]);
     const projects = projs.data ?? [];
     if (projects.length === 0) {
