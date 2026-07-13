@@ -28,6 +28,7 @@ type Tier = {
   features: string[];
   cta: string;
   href: string;
+  priceId?: string;
   featured?: boolean;
   badge?: string;
 };
