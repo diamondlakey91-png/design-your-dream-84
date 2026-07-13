@@ -626,8 +626,9 @@ function ShareReportDialog({ projectId, report, onClose }: { projectId: string; 
       password: password.trim() ? password.trim() : undefined,
       expires_in_days: expiresDays ? Number(expiresDays) : undefined,
     }}),
-    onSuccess: async (r) => {
-      const url = `${window.location.origin}${r.path}`;
+    onSuccess: async (r: unknown) => {
+      const path = (r as { path: string }).path;
+      const url = `${window.location.origin}${path}`;
       try { await navigator.clipboard.writeText(url); toast.success("Share link copied to clipboard"); }
       catch { toast.success("Share link created"); }
       setPassword("");
