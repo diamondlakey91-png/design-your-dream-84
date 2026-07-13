@@ -179,6 +179,119 @@ function Dashboard() {
 
 /* ---------- pieces ---------- */
 
+type BriefingData = {
+  headline: string;
+  summary: string;
+  focus_today: Array<{ project: string; action: string; why: string }>;
+  risks: string[];
+  wins: string[];
+  generated_at?: string;
+};
+
+function DailyBriefingCard({
+  loading, data, error, onRefresh, hasProjects,
+}: {
+  loading: boolean;
+  data: BriefingData | undefined;
+  error: Error | null;
+  onRefresh: () => void;
+  hasProjects: boolean;
+}) {
+  return (
+    <div className="relative overflow-hidden rounded-3xl border border-[oklch(0.68_0.19_305/0.25)] bg-linear-to-br from-[oklch(0.68_0.19_305/0.08)] to-transparent p-6">
+      <div
+        aria-hidden
+        className="absolute -left-16 -bottom-16 size-40 rounded-full blur-3xl"
+        style={{ background: "oklch(0.68 0.19 305 / 0.18)" }}
+      />
+      <div className="relative">
+        <div className="mb-3 flex items-center justify-between gap-2">
+          <div className="flex items-center gap-2">
+            <div className="rounded-lg bg-[oklch(0.68_0.19_305/0.15)] p-1.5 text-[oklch(0.78_0.15_305)]">
+              <Sparkles className="size-4" />
+            </div>
+            <span className="text-sm font-semibold text-foreground/90">Daily Briefing</span>
+          </div>
+          <button
+            onClick={onRefresh}
+            disabled={loading || !hasProjects}
+            className="rounded-md px-2 py-1 font-mono text-[10px] uppercase tracking-widest text-muted-foreground transition-colors hover:bg-white/5 hover:text-foreground disabled:opacity-50"
+          >
+            {loading ? "…" : "Refresh"}
+          </button>
+        </div>
+
+        {!hasProjects ? (
+          <p className="text-sm text-muted-foreground">Add a project to unlock your morning brief.</p>
+        ) : loading && !data ? (
+          <div className="flex items-center gap-2 text-sm text-muted-foreground">
+            <Loader2 className="size-4 animate-spin" /> Compiling your brief…
+          </div>
+        ) : error ? (
+          <p className="text-sm text-[oklch(0.78_0.20_27)]">Briefing failed. {error.message}</p>
+        ) : data ? (
+          <div className="space-y-4">
+            <div>
+              <p className="text-sm font-semibold text-foreground">{data.headline}</p>
+              <p className="mt-1 text-xs leading-relaxed text-muted-foreground">{data.summary}</p>
+            </div>
+
+            {data.focus_today.length > 0 && (
+              <div className="space-y-2">
+                <p className="font-mono text-[10px] uppercase tracking-widest text-muted-foreground">Focus today</p>
+                {data.focus_today.slice(0, 3).map((f, i) => (
+                  <div key={i} className="rounded-xl border border-border/60 bg-black/20 p-3">
+                    <div className="mb-0.5 flex items-center gap-2">
+                      <span className="size-1.5 rounded-full bg-primary shadow-[0_0_6px_oklch(0.66_0.19_258/0.8)]" />
+                      <span className="truncate text-xs font-semibold text-foreground">{f.project}</span>
+                    </div>
+                    <p className="text-xs text-foreground/90">{f.action}</p>
+                    <p className="mt-0.5 text-[11px] text-muted-foreground">{f.why}</p>
+                  </div>
+                ))}
+              </div>
+            )}
+
+            {data.risks.length > 0 && (
+              <div>
+                <div className="mb-1.5 flex items-center gap-1.5 font-mono text-[10px] uppercase tracking-widest text-[oklch(0.85_0.16_72)]">
+                  <AlertTriangle className="size-3" /> Risks
+                </div>
+                <ul className="space-y-1 text-xs text-muted-foreground">
+                  {data.risks.slice(0, 3).map((r, i) => (
+                    <li key={i} className="flex gap-2"><span className="text-[oklch(0.85_0.16_72)]">›</span>{r}</li>
+                  ))}
+                </ul>
+              </div>
+            )}
+
+            {data.wins.length > 0 && (
+              <div>
+                <div className="mb-1.5 flex items-center gap-1.5 font-mono text-[10px] uppercase tracking-widest text-[oklch(0.82_0.16_155)]">
+                  <Trophy className="size-3" /> Wins
+                </div>
+                <ul className="space-y-1 text-xs text-muted-foreground">
+                  {data.wins.slice(0, 2).map((w, i) => (
+                    <li key={i} className="flex gap-2"><span className="text-[oklch(0.82_0.16_155)]">›</span>{w}</li>
+                  ))}
+                </ul>
+              </div>
+            )}
+
+            <Link
+              to="/assistant"
+              className="mt-1 flex w-full items-center justify-center gap-1.5 rounded-xl border border-[oklch(0.68_0.19_305/0.25)] bg-[oklch(0.68_0.19_305/0.10)] py-2 text-xs font-semibold text-[oklch(0.85_0.09_305)] transition-colors hover:bg-[oklch(0.68_0.19_305/0.18)]"
+            >
+              Ask the assistant <ArrowUpRight className="size-3.5" />
+            </Link>
+          </div>
+        ) : null}
+      </div>
+    </div>
+  );
+}
+
+
 function HealthRing({ value }: { value: number }) {
   const R = 58;
   const C = 2 * Math.PI * R;
