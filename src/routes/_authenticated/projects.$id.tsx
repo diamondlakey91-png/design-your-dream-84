@@ -458,26 +458,84 @@ function DocsTab({ projectId, userId }: { projectId: string; userId: string }) {
       ) : (
         <ul className="space-y-2">
           {docs.map((d) => (
-            <li key={d.id} className="p-3 bg-card ring-1 ring-black/5 rounded-xl flex items-center gap-3">
-              <FileText className="size-5 text-brand shrink-0" />
-              <div className="flex-1 min-w-0">
-                {d.url ? (
-                  <a href={d.url} target="_blank" rel="noreferrer" className="text-sm font-medium hover:text-brand truncate block">{d.name}</a>
-                ) : (
-                  <span className="text-sm font-medium truncate block">{d.name}</span>
-                )}
-                <p className="text-[11px] font-mono uppercase text-muted-foreground">
-                  {(d.size_bytes / 1024).toFixed(1)} KB · {formatDistanceToNow(new Date(d.created_at), { addSuffix: true })}
-                </p>
-              </div>
-              <button onClick={() => del.mutate(d.id)} className="text-muted-foreground hover:text-destructive" aria-label="Delete">
-                <Trash2 className="size-4" />
-              </button>
-            </li>
+            <DocRow key={d.id} doc={d} projectId={projectId} onDelete={() => del.mutate(d.id)} />
           ))}
         </ul>
       )}
     </div>
+  );
+}
+
+function DocRow({ doc, projectId, onDelete }: { doc: { id: string; name: string; url: string | null; size_bytes: number; created_at: string; mime_type: string; ai_summary?: string | null; ai_action_items?: unknown; analyzed_at?: string | null }; projectId: string; onDelete: () => void }) {
+  const analyzeFn = useServerFn(analyzeDocument);
+  const qc = useQueryClient();
+  const [open, setOpen] = useState(false);
+  const canAnalyze = (doc.mime_type || "").startsWith("image/") || (doc.mime_type || "") === "application/pdf" || doc.name.toLowerCase().endsWith(".pdf");
+  const analyze = useMutation({
+    mutationFn: () => analyzeFn({ data: { id: doc.id } }),
+    onSuccess: () => { qc.invalidateQueries({ queryKey: ["docs", projectId] }); qc.invalidateQueries({ queryKey: ["activity", projectId] }); setOpen(true); toast.success("AI analysis complete"); },
+    onError: (e) => toast.error(e instanceof Error ? e.message : "Analysis failed"),
+  });
+  const items = Array.isArray(doc.ai_action_items) ? doc.ai_action_items as Array<{ reviewer?: string; discipline?: string; request: string; reference?: string }> : [];
+  return (
+    <li className="p-3 bg-card ring-1 ring-black/5 rounded-xl">
+      <div className="flex items-center gap-3">
+        <FileText className="size-5 text-brand shrink-0" />
+        <div className="flex-1 min-w-0">
+          {doc.url ? (
+            <a href={doc.url} target="_blank" rel="noreferrer" className="text-sm font-medium hover:text-brand truncate block">{doc.name}</a>
+          ) : (
+            <span className="text-sm font-medium truncate block">{doc.name}</span>
+          )}
+          <p className="text-[11px] font-mono uppercase text-muted-foreground">
+            {(doc.size_bytes / 1024).toFixed(1)} KB · {formatDistanceToNow(new Date(doc.created_at), { addSuffix: true })}
+            {doc.analyzed_at && <> · <span className="text-brand">AI analyzed</span></>}
+          </p>
+        </div>
+        {canAnalyze && (
+          <button
+            onClick={() => analyze.mutate()}
+            disabled={analyze.isPending}
+            className="text-[10px] font-mono uppercase tracking-wider px-2 py-1 rounded bg-brand/15 text-brand hover:bg-brand/25 disabled:opacity-50"
+          >
+            {analyze.isPending ? "Reading…" : doc.analyzed_at ? "Re-analyze" : "Analyze"}
+          </button>
+        )}
+        <button onClick={onDelete} className="text-muted-foreground hover:text-destructive" aria-label="Delete">
+          <Trash2 className="size-4" />
+        </button>
+      </div>
+      {doc.ai_summary && (
+        <div className="mt-3 pl-8">
+          <button onClick={() => setOpen((v) => !v)} className="text-[11px] font-mono uppercase tracking-wider text-brand hover:opacity-80">
+            {open ? "Hide" : "Show"} AI reading ({items.length} action{items.length === 1 ? "" : "s"})
+          </button>
+          {open && (
+            <div className="mt-2 p-3 rounded-lg bg-background ring-1 ring-black/5 space-y-2">
+              <p className="text-sm text-foreground leading-relaxed">{doc.ai_summary}</p>
+              {items.length > 0 && (
+                <ul className="space-y-1.5">
+                  {items.map((it, i) => (
+                    <li key={i} className="text-sm flex gap-2">
+                      <span className="text-brand mt-1">•</span>
+                      <span>
+                        {(it.reviewer || it.discipline) && (
+                          <span className="text-[10px] font-mono uppercase tracking-wider text-muted-foreground mr-1.5">
+                            [{it.discipline || it.reviewer}]
+                          </span>
+                        )}
+                        {it.request}
+                        {it.reference && <span className="text-muted-foreground text-xs"> — {it.reference}</span>}
+                      </span>
+                    </li>
+                  ))}
+                </ul>
+              )}
+            </div>
+          )}
+        </div>
+      )}
+    </li>
   );
 }
 
