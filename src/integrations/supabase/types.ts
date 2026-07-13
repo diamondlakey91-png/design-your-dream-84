@@ -165,13 +165,16 @@ export type Database = {
       }
       inspections: {
         Row: {
+          checklist: Json | null
           created_at: string
           id: string
           inspection_type: string
           inspector: string
           notes: string
           permit_item_id: string | null
+          photos: Json | null
           project_id: string
+          result: string | null
           result_date: string | null
           scheduled_date: string | null
           status: string
@@ -179,13 +182,16 @@ export type Database = {
           user_id: string
         }
         Insert: {
+          checklist?: Json | null
           created_at?: string
           id?: string
           inspection_type: string
           inspector?: string
           notes?: string
           permit_item_id?: string | null
+          photos?: Json | null
           project_id: string
+          result?: string | null
           result_date?: string | null
           scheduled_date?: string | null
           status?: string
@@ -193,13 +199,16 @@ export type Database = {
           user_id: string
         }
         Update: {
+          checklist?: Json | null
           created_at?: string
           id?: string
           inspection_type?: string
           inspector?: string
           notes?: string
           permit_item_id?: string | null
+          photos?: Json | null
           project_id?: string
+          result?: string | null
           result_date?: string | null
           scheduled_date?: string | null
           status?: string
@@ -393,6 +402,9 @@ export type Database = {
       }
       project_documents: {
         Row: {
+          ai_action_items: Json | null
+          ai_summary: string | null
+          analyzed_at: string | null
           created_at: string
           id: string
           mime_type: string
@@ -403,6 +415,9 @@ export type Database = {
           user_id: string
         }
         Insert: {
+          ai_action_items?: Json | null
+          ai_summary?: string | null
+          analyzed_at?: string | null
           created_at?: string
           id?: string
           mime_type?: string
@@ -413,6 +428,9 @@ export type Database = {
           user_id: string
         }
         Update: {
+          ai_action_items?: Json | null
+          ai_summary?: string | null
+          analyzed_at?: string | null
           created_at?: string
           id?: string
           mime_type?: string
