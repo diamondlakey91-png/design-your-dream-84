@@ -1750,7 +1750,7 @@ function LivePermitCard({
   project,
   onChange,
 }: {
-  project: { id: string; jurisdiction: string; linked_permit_number?: string | null; linked_permit_url?: string | null; linked_permit_data?: LivePermitData | null; linked_permit_synced_at?: string | null };
+  project: { id: string; jurisdiction: string; linked_permit_number?: string | null; linked_permit_url?: string | null; linked_permit_data?: unknown; linked_permit_synced_at?: string | null };
   onChange: () => void;
 }) {
   const linkFn = useServerFn(linkPermitToProject);
