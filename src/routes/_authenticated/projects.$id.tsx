@@ -57,6 +57,10 @@ import {
   CalendarClock,
   Radio,
   Info,
+  CheckCircle2,
+  Circle,
+  Loader2,
+  Milestone,
 } from "lucide-react";
 import { STAGES } from "@/lib/permits";
 import { toast } from "sonner";
@@ -192,30 +196,13 @@ function OverviewTab({
   return (
     <>
       <HealthScoreCard projectId={project.id} />
-      <section>
-        <p className="font-mono text-[10px] uppercase tracking-widest text-muted-foreground mb-3">PERMIT_PIPELINE</p>
-        <div className="flex gap-1 mb-4">
-          {STAGES.map((_, i) => (
-            <div key={i} className={`h-1.5 flex-1 rounded-full ${i < stage ? "bg-brand" : i === stage ? "bg-brand/40" : "bg-muted"}`} />
-          ))}
-        </div>
-        <div className="grid grid-cols-5 gap-1 text-center">
-          {STAGES.map((s, i) => (
-            <div key={s} className={`text-[9px] font-mono uppercase tracking-tight leading-tight ${i <= stage ? "text-foreground" : "text-muted-foreground"}`}>
-              {s.replace(" ", "\n")}
-            </div>
-          ))}
-        </div>
-        {stage < 4 && (
-          <button
-            onClick={() => advance.mutate()}
-            disabled={advance.isPending}
-            className="mt-5 w-full inline-flex h-11 items-center justify-center gap-2 rounded-lg bg-primary text-primary-foreground text-sm font-semibold disabled:opacity-50"
-          >
-            {advance.isPending ? "Advancing…" : <>Advance to {STAGES[stage + 1]} <ArrowRight className="size-4" /></>}
-          </button>
-        )}
-      </section>
+      <PermitRoadmap
+        projectId={project.id}
+        stage={stage}
+        onAdvance={() => advance.mutate()}
+        advancing={advance.isPending}
+      />
+
 
       {/* Live jurisdiction tracking */}
       <LivePermitCard project={project} onChange={onChange} />
