@@ -2,11 +2,14 @@ import { createFileRoute, Link, useNavigate } from "@tanstack/react-router";
 import { useMutation, useQuery, useQueryClient } from "@tanstack/react-query";
 import { useServerFn } from "@tanstack/react-start";
 import { AppShell } from "@/components/AppShell";
-import { getProject, advanceStage } from "@/lib/permits.functions";
-import { ArrowLeft, MapPin, Building2, Landmark, ArrowRight } from "lucide-react";
+import { getProject, advanceStage, summarizeProjectNextSteps } from "@/lib/permits.functions";
+import { ArrowLeft, MapPin, Building2, Landmark, ArrowRight, Sparkles, RefreshCw } from "lucide-react";
 import { STAGES } from "@/lib/permits";
 import { toast } from "sonner";
 import { formatDistanceToNow } from "date-fns";
+import ReactMarkdown from "react-markdown";
+import remarkGfm from "remark-gfm";
+
 
 export const Route = createFileRoute("/_authenticated/projects/$id")({
   head: () => ({ meta: [{ title: "Project — Permivio" }, { name: "robots", content: "noindex" }] }),
