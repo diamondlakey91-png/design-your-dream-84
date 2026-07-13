@@ -3701,9 +3701,11 @@ export const analysisToChecklist = createServerFn({ method: "POST" })
   .handler(async ({ data, context }) => {
     const { data: a } = await context.supabase.from("permit_analyses").select("*").eq("id", data.analysis_id).maybeSingle();
     if (!a) throw new Error("Analysis not found");
-    const permits = (a.analysis?.permits ?? []) as Array<Record<string, string>>;
-    const documents = (a.analysis?.documents ?? []) as Array<Record<string, unknown>>;
-    const rows: Array<Record<string, unknown>> = [];
+    const aAny = a as unknown as { analysis?: { permits?: Array<Record<string, string>>; documents?: Array<Record<string, unknown>> }; title?: string };
+    const permits = aAny.analysis?.permits ?? [];
+    const documents = aAny.analysis?.documents ?? [];
+    const rows: Array<{ user_id: string; project_id: string; name: string; category: string; status: string; required: boolean; notes: string; sort_order: number }> = [];
+
     permits.forEach((p, i) => {
       rows.push({
         user_id: context.userId,
