@@ -21,7 +21,9 @@ function ProjectDetail() {
   const navigate = useNavigate();
   const getFn = useServerFn(getProject);
   const advanceFn = useServerFn(advanceStage);
+  const summarizeFn = useServerFn(summarizeProjectNextSteps);
   const queryClient = useQueryClient();
+
 
   const q = useQuery({
     queryKey: ["project", id],
