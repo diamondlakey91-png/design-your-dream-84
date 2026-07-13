@@ -12,6 +12,7 @@ import { Route as rootRouteImport } from './routes/__root'
 import { Route as AuthRouteImport } from './routes/auth'
 import { Route as AuthenticatedRouteRouteImport } from './routes/_authenticated/route'
 import { Route as IndexRouteImport } from './routes/index'
+import { Route as AuthenticatedLookupRouteImport } from './routes/_authenticated/lookup'
 import { Route as AuthenticatedJurisdictionsRouteImport } from './routes/_authenticated/jurisdictions'
 import { Route as AuthenticatedDashboardRouteImport } from './routes/_authenticated/dashboard'
 import { Route as AuthenticatedAssistantRouteImport } from './routes/_authenticated/assistant'
@@ -33,6 +34,11 @@ const IndexRoute = IndexRouteImport.update({
   id: '/',
   path: '/',
   getParentRoute: () => rootRouteImport,
+} as any)
+const AuthenticatedLookupRoute = AuthenticatedLookupRouteImport.update({
+  id: '/lookup',
+  path: '/lookup',
+  getParentRoute: () => AuthenticatedRouteRoute,
 } as any)
 const AuthenticatedJurisdictionsRoute =
   AuthenticatedJurisdictionsRouteImport.update({
@@ -80,6 +86,7 @@ export interface FileRoutesByFullPath {
   '/assistant': typeof AuthenticatedAssistantRouteWithChildren
   '/dashboard': typeof AuthenticatedDashboardRoute
   '/jurisdictions': typeof AuthenticatedJurisdictionsRouteWithChildren
+  '/lookup': typeof AuthenticatedLookupRoute
   '/assistant/$threadId': typeof AuthenticatedAssistantThreadIdRoute
   '/jurisdictions/$slug': typeof AuthenticatedJurisdictionsSlugRoute
   '/projects/$id': typeof AuthenticatedProjectsIdRoute
@@ -91,6 +98,7 @@ export interface FileRoutesByTo {
   '/assistant': typeof AuthenticatedAssistantRouteWithChildren
   '/dashboard': typeof AuthenticatedDashboardRoute
   '/jurisdictions': typeof AuthenticatedJurisdictionsRouteWithChildren
+  '/lookup': typeof AuthenticatedLookupRoute
   '/assistant/$threadId': typeof AuthenticatedAssistantThreadIdRoute
   '/jurisdictions/$slug': typeof AuthenticatedJurisdictionsSlugRoute
   '/projects/$id': typeof AuthenticatedProjectsIdRoute
@@ -104,6 +112,7 @@ export interface FileRoutesById {
   '/_authenticated/assistant': typeof AuthenticatedAssistantRouteWithChildren
   '/_authenticated/dashboard': typeof AuthenticatedDashboardRoute
   '/_authenticated/jurisdictions': typeof AuthenticatedJurisdictionsRouteWithChildren
+  '/_authenticated/lookup': typeof AuthenticatedLookupRoute
   '/_authenticated/assistant/$threadId': typeof AuthenticatedAssistantThreadIdRoute
   '/_authenticated/jurisdictions/$slug': typeof AuthenticatedJurisdictionsSlugRoute
   '/_authenticated/projects/$id': typeof AuthenticatedProjectsIdRoute
@@ -117,6 +126,7 @@ export interface FileRouteTypes {
     | '/assistant'
     | '/dashboard'
     | '/jurisdictions'
+    | '/lookup'
     | '/assistant/$threadId'
     | '/jurisdictions/$slug'
     | '/projects/$id'
@@ -128,6 +138,7 @@ export interface FileRouteTypes {
     | '/assistant'
     | '/dashboard'
     | '/jurisdictions'
+    | '/lookup'
     | '/assistant/$threadId'
     | '/jurisdictions/$slug'
     | '/projects/$id'
@@ -140,6 +151,7 @@ export interface FileRouteTypes {
     | '/_authenticated/assistant'
     | '/_authenticated/dashboard'
     | '/_authenticated/jurisdictions'
+    | '/_authenticated/lookup'
     | '/_authenticated/assistant/$threadId'
     | '/_authenticated/jurisdictions/$slug'
     | '/_authenticated/projects/$id'
@@ -174,6 +186,13 @@ declare module '@tanstack/react-router' {
       fullPath: '/'
       preLoaderRoute: typeof IndexRouteImport
       parentRoute: typeof rootRouteImport
+    }
+    '/_authenticated/lookup': {
+      id: '/_authenticated/lookup'
+      path: '/lookup'
+      fullPath: '/lookup'
+      preLoaderRoute: typeof AuthenticatedLookupRouteImport
+      parentRoute: typeof AuthenticatedRouteRoute
     }
     '/_authenticated/jurisdictions': {
       id: '/_authenticated/jurisdictions'
@@ -259,6 +278,7 @@ interface AuthenticatedRouteRouteChildren {
   AuthenticatedAssistantRoute: typeof AuthenticatedAssistantRouteWithChildren
   AuthenticatedDashboardRoute: typeof AuthenticatedDashboardRoute
   AuthenticatedJurisdictionsRoute: typeof AuthenticatedJurisdictionsRouteWithChildren
+  AuthenticatedLookupRoute: typeof AuthenticatedLookupRoute
   AuthenticatedProjectsIdRoute: typeof AuthenticatedProjectsIdRoute
   AuthenticatedProjectsIndexRoute: typeof AuthenticatedProjectsIndexRoute
 }
@@ -267,6 +287,7 @@ const AuthenticatedRouteRouteChildren: AuthenticatedRouteRouteChildren = {
   AuthenticatedAssistantRoute: AuthenticatedAssistantRouteWithChildren,
   AuthenticatedDashboardRoute: AuthenticatedDashboardRoute,
   AuthenticatedJurisdictionsRoute: AuthenticatedJurisdictionsRouteWithChildren,
+  AuthenticatedLookupRoute: AuthenticatedLookupRoute,
   AuthenticatedProjectsIdRoute: AuthenticatedProjectsIdRoute,
   AuthenticatedProjectsIndexRoute: AuthenticatedProjectsIndexRoute,
 }
