@@ -41,9 +41,11 @@ function ThreadView() {
   const [editingTitle, setEditingTitle] = useState(false);
   const [titleDraft, setTitleDraft] = useState("");
   const [intakeOpen, setIntakeOpen] = useState(false);
+  const [extractOpen, setExtractOpen] = useState<null | { messageId: string; content: string }>(null);
   const scrollRef = useRef<HTMLDivElement>(null);
   const textareaRef = useRef<HTMLTextAreaElement>(null);
   const intakeFn = useServerFn(intakeGenerateChecklist);
+
 
   const messagesQ = useQuery({
     queryKey: ["chat-thread", threadId],
