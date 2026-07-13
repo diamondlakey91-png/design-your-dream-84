@@ -413,6 +413,27 @@ function PricingPage() {
           <Link to="/" className="hover:text-foreground">Home</Link>
         </div>
       </footer>
+
+      {checkoutPriceId && (
+        <div className="fixed inset-0 z-50 bg-black/60 grid place-items-center p-4 overflow-y-auto">
+          <div className="relative w-full max-w-2xl bg-card rounded-2xl ring-1 ring-black/10 p-4 my-8">
+            <button
+              onClick={() => setCheckoutPriceId(null)}
+              className="absolute top-3 right-3 grid size-8 place-items-center rounded-lg hover:bg-muted"
+              aria-label="Close checkout"
+            >
+              <X className="size-4" />
+            </button>
+            <StripeEmbeddedCheckout
+              priceId={checkoutPriceId}
+              userId={session?.userId}
+              customerEmail={session?.email}
+              returnUrl={`${window.location.origin}/checkout/return?session_id={CHECKOUT_SESSION_ID}`}
+            />
+          </div>
+        </div>
+      )}
     </div>
   );
 }
+
