@@ -2980,6 +2980,104 @@ LOCATION (VERY IMPORTANT for markup): for every finding you visually identify on
     throw new Error("AI returned an unreadable review. Try again.");
   }
 
+  // ---- Cross-validation pass: verify stamp/signature/seal claims ----
+  // These are the highest false-positive category. For each such finding, run
+  // a focused second call scoped to the title-block area on the cited sheet,
+  // and drop or soft-flag the finding based on what the model actually sees.
+  const stampClaims = parsed.findings
+    .map((f, idx) => ({ idx, f }))
+    .filter(({ f }) =>
+      isStampSignatureClaim(`${f.title} ${f.detail} ${f.recommendation}`),
+    );
+
+  if (stampClaims.length > 0) {
+    const verifyInstruction = `You are re-verifying ONE narrow claim about a construction drawing: whether a licensed design professional's STAMP, SEAL, SIGNATURE, or DIGITAL SIGNATURE is present.
+
+CLAIMS TO VERIFY (each references a specific sheet in the attached document):
+${stampClaims.map(({ f }, i) => `${i + 1}. Sheet ${f.sheet_reference || "unspecified"} — claim: "${f.title}". Detail: ${f.detail}`).join("\n")}
+
+Instructions:
+- Look at the TITLE BLOCK of each referenced sheet (usually bottom-right, sometimes right edge or bottom strip).
+- Consider ALL of these as valid evidence of stamp/signature/seal: embossed round PE/RA seals; state-license numbers next to a name; wet signatures (often gray/faint on scans); "Digitally signed by…" text; DocuSign / Bluebeam / Adobe digital signature marks; initials + date on a signature line; typed name over a signature line with license#.
+- If ANY such evidence is present or plausibly present, the claim is INVALID — the sheet IS stamped/signed.
+
+Return ONLY JSON:
+{
+  "verifications": [
+    { "index": 1, "verdict": "confirmed" | "invalid" | "uncertain", "evidence": "verbatim description of what you see in the title block (<220 chars)" }
+  ]
+}
+"confirmed" = the sheet really has no stamp/signature/seal.
+"invalid"   = a stamp/signature/seal IS present; drop the finding.
+"uncertain" = you cannot tell — leave the finding but mark for manual review.`;
+
+    const verifyParts: unknown[] = [{ type: "text", text: verifyInstruction }];
+    if (isImage) {
+      verifyParts.push({ type: "image_url", image_url: { url: signed.signedUrl } });
+    } else {
+      // Re-attach the PDF (already downloaded above; do again for a clean base64).
+      const fileResp = await fetch(signed.signedUrl);
+      if (fileResp.ok) {
+        const buf = new Uint8Array(await fileResp.arrayBuffer());
+        let bin = "";
+        for (let i = 0; i < buf.length; i += 0x8000) bin += String.fromCharCode(...buf.subarray(i, i + 0x8000));
+        const b64 = btoa(bin);
+        verifyParts.push({ type: "file", file: { filename: doc.name, file_data: `data:${mime};base64,${b64}` } });
+      }
+    }
+
+    try {
+      const vResp = await fetch("https://ai.gateway.lovable.dev/v1/chat/completions", {
+        method: "POST",
+        headers: { "Content-Type": "application/json", "Lovable-API-Key": aiKey },
+        body: JSON.stringify({
+          model: "google/gemini-2.5-pro",
+          messages: [
+            { role: "system", content: "You verify stamp/signature/seal claims on construction drawings. Prefer 'invalid' when evidence is present or plausible. Output JSON only." },
+            { role: "user", content: verifyParts },
+          ],
+        }),
+      });
+      if (vResp.ok) {
+        const vJson = (await vResp.json()) as { choices?: Array<{ message?: { content?: string } }> };
+        const vRaw = (vJson.choices?.[0]?.message?.content ?? "").replace(/```json|```/g, "").trim();
+        const vs = vRaw.indexOf("{");
+        const ve = vRaw.lastIndexOf("}");
+        if (vs >= 0 && ve > vs) {
+          const vParsed = JSON.parse(vRaw.slice(vs, ve + 1)) as {
+            verifications?: Array<{ index?: number; verdict?: string; evidence?: string }>;
+          };
+          const dropIdx = new Set<number>();
+          for (const v of vParsed.verifications ?? []) {
+            const target = stampClaims[(v.index ?? 0) - 1];
+            if (!target) continue;
+            if (v.verdict === "invalid") {
+              dropIdx.add(target.idx);
+            } else if (v.verdict === "uncertain") {
+              parsed.findings[target.idx].confidence = "low";
+              parsed.findings[target.idx].needs_manual_verification = true;
+              if (v.evidence) parsed.findings[target.idx].evidence_quote = v.evidence;
+            } else if (v.verdict === "confirmed") {
+              parsed.findings[target.idx].confidence = "high";
+              if (v.evidence) parsed.findings[target.idx].evidence_quote = v.evidence;
+            }
+          }
+          if (dropIdx.size > 0) {
+            parsed.findings = parsed.findings.filter((_, i) => !dropIdx.has(i));
+          }
+        }
+      }
+    } catch {
+      // Verification is best-effort; if it fails, downgrade the claims to needs-manual-review
+      // rather than shipping a possibly-wrong finding at high severity.
+      for (const { idx } of stampClaims) {
+        parsed.findings[idx].confidence = "low";
+        parsed.findings[idx].needs_manual_verification = true;
+      }
+    }
+  }
+
+
   const { data: updated, error: uErr } = await supabase
     .from("project_documents")
     .update({ plan_review: parsed, plan_reviewed_at: new Date().toISOString() })
