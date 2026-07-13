@@ -1477,6 +1477,59 @@ const AddressLookupSchema = z.object({
   summary: z.string(),
 });
 
+// Direct portal search URL templates for jurisdictions where the public portal
+// is not well-indexed by Google (Accela, EnerGov, etc). Extend as needed —
+// each entry returns URLs we can hand to Firecrawl to scrape address-scoped
+// search results directly from the source of truth.
+function buildDirectPortalSearchUrls(jurisdiction: string, address: string): string[] {
+  const j = jurisdiction.toLowerCase();
+  const streetOnly = address.replace(/,.*$/, "").trim();
+  const enc = encodeURIComponent(streetOnly);
+  const urls: string[] = [];
+
+  if (/baltimore(\s+city)?,\s*md/.test(j)) {
+    // Baltimore City ePermits — Accela Citizen Access global search
+    urls.push(`https://cels.baltimorehousing.org/CitizenAccess/Cap/GlobalSearchResults.aspx?QueryText=${enc}`);
+  }
+  if (/baltimore\s+county,\s*md/.test(j)) {
+    urls.push(`https://permits.baltimorecountymd.gov/CitizenAccess/Cap/GlobalSearchResults.aspx?QueryText=${enc}`);
+  }
+  if (/washington,?\s*dc|district of columbia/.test(j)) {
+    urls.push(`https://eservices.dcra.dc.gov/DCRAPermitApplicationSearch/Search/Permit?address=${enc}`);
+  }
+  if (/new york,?\s*ny|nyc/.test(j)) {
+    urls.push(`https://a810-bisweb.nyc.gov/bisweb/PropertyProfileOverviewServlet?requestid=1&allbin=&houseno=${enc}`);
+  }
+  if (/los angeles,?\s*ca/.test(j)) {
+    urls.push(`https://www.ladbsservices2.lacity.org/OnlineServices/PermitReport/PermitReportAddress?address=${enc}`);
+  }
+  if (/chicago,?\s*il/.test(j)) {
+    urls.push(`https://webapps1.chicago.gov/buildingrecords/?addr=${enc}`);
+  }
+  if (/san francisco,?\s*ca/.test(j)) {
+    urls.push(`https://dbiweb02.sfgov.org/dbipts/default.aspx?page=AddressLookup&Address=${enc}`);
+  }
+  if (/seattle,?\s*wa/.test(j)) {
+    urls.push(`https://cosaccela.seattle.gov/portal/Cap/GlobalSearchResults.aspx?QueryText=${enc}`);
+  }
+  if (/boston,?\s*ma/.test(j)) {
+    urls.push(`https://www.boston.gov/permits?search=${enc}`);
+  }
+  if (/austin,?\s*tx/.test(j)) {
+    urls.push(`https://abc.austintexas.gov/web/permit/public-search-other?reset=true&t_selected_search=CAP&t_selected_property=STREET_NUMBER&t_selected_permit_type=BP&t_STREET_NUMBER=${enc}`);
+  }
+  if (/miami,?\s*fl/.test(j)) {
+    urls.push(`https://apps.miamigov.com/eBuilding/PropertySearch.aspx?address=${enc}`);
+  }
+  if (/philadelphia,?\s*pa/.test(j)) {
+    urls.push(`https://eclipse.phila.gov/phillylmsprod/int/lms/Login.aspx#address=${enc}`);
+  }
+
+  return urls;
+}
+
+
+
 export const lookupPermitsByAddress = createServerFn({ method: "POST" })
   .middleware([requireSupabaseAuth])
   .inputValidator((input: unknown) => AddressLookupInput.parse(input))
