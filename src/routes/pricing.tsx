@@ -52,6 +52,7 @@ const founding: Tier = {
   ],
   cta: "Claim Founding seat",
   href: "/auth",
+  priceId: "founding_monthly",
   badge: "LIMITED",
 };
 
