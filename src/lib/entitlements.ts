@@ -1,7 +1,7 @@
 // Server-side entitlement checks. Used inside createServerFn handlers.
 // Reads the caller's most recent subscription row (env-scoped) and enforces
 // tier limits from src/lib/tiers.ts (a client-safe module).
-import { getTier, isSubscriptionActive, tierHasFeature, TIERS, type FeatureKey, type TierDef } from "@/lib/tiers";
+import { BETA_MODE, BETA_TIER, getTier, isSubscriptionActive, tierHasFeature, TIERS, type FeatureKey, type TierDef } from "@/lib/tiers";
 
 type SupabaseCtx = {
   from: (t: string) => {
