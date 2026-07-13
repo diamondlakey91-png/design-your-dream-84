@@ -512,6 +512,11 @@ export const addDeadline = createServerFn({ method: "POST" })
       })
       .select("*").single();
     if (error) throw new Error(error.message);
+    await context.supabase.from("activity").insert({
+      user_id: context.userId,
+      project_id: data.project_id,
+      description: `Deadline added: ${data.title} (due ${data.due_date})`,
+    });
     return row;
   });
 
@@ -519,8 +524,32 @@ export const deleteDeadline = createServerFn({ method: "POST" })
   .middleware([requireSupabaseAuth])
   .inputValidator((input: unknown) => z.object({ id: z.string().uuid() }).parse(input))
   .handler(async ({ data, context }) => {
+    const { data: row } = await context.supabase
+      .from("deadlines").select("title, project_id").eq("id", data.id).maybeSingle();
     const { error } = await context.supabase.from("deadlines").delete().eq("id", data.id);
     if (error) throw new Error(error.message);
+    if (row?.project_id) {
+      await context.supabase.from("activity").insert({
+        user_id: context.userId,
+        project_id: row.project_id,
+        description: `Deadline removed: ${row.title}`,
+      });
+    }
     return { ok: true };
+  });
+
+// ---- Activity timeline ----
+export const listActivity = createServerFn({ method: "GET" })
+  .middleware([requireSupabaseAuth])
+  .inputValidator((input: unknown) => z.object({ project_id: z.string().uuid(), limit: z.number().int().min(1).max(200).default(50) }).parse(input))
+  .handler(async ({ data, context }) => {
+    const { data: rows, error } = await context.supabase
+      .from("activity")
+      .select("*")
+      .eq("project_id", data.project_id)
+      .order("created_at", { ascending: false })
+      .limit(data.limit);
+    if (error) throw new Error(error.message);
+    return rows ?? [];
   });
 
