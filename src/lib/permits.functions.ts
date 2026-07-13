@@ -3737,7 +3737,7 @@ export const analysisToChecklist = createServerFn({ method: "POST" })
     await context.supabase.from("activity").insert({
       user_id: context.userId,
       project_id: data.project_id,
-      description: `Imported ${rows.length} items from permit analysis "${a.title}".`,
+      description: `Imported ${rows.length} items from permit analysis "${aAny.title ?? ""}".`,
     });
     return { count: rows.length };
   });
