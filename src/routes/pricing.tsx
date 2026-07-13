@@ -303,14 +303,14 @@ function PricingPage() {
                     {t.cta}
                   </a>
                 ) : (
-                  <Link
-                    to={t.href}
+                  <button
+                    onClick={() => startCheckout(t.priceId)}
                     className={`mt-6 inline-flex h-11 items-center justify-center gap-2 rounded-lg text-sm font-semibold ${
                       t.featured ? "bg-brand text-brand-foreground" : "bg-primary text-primary-foreground"
                     }`}
                   >
                     {t.cta}
-                  </Link>
+                  </button>
                 )}
               </div>
             ))}
