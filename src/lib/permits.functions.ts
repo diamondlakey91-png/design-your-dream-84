@@ -230,15 +230,16 @@ type JProfileRow = {
 };
 
 async function loadJurisdictionContextBlock(
-  supabase: { from: (t: string) => { select: (c: string) => { eq: (col: string, v: string) => { maybeSingle: () => Promise<{ data: JProfileRow | null }> } } } },
+  supabase: { from: (t: string) => unknown },
   jurisdiction: string,
 ): Promise<{ block: string; hasData: boolean; profile: JProfileRow | null }> {
   const slug = slugifyJurisdiction(jurisdiction);
   if (!slug) return { block: "", hasData: false, profile: null };
-  const { data: profile } = await supabase
-    .from("jurisdiction_profiles")
+  // eslint-disable-next-line @typescript-eslint/no-explicit-any
+  const q: any = (supabase as any).from("jurisdiction_profiles")
     .select("name, state, department, portal_url, overview, permits, fees, timelines, source_urls, refreshed_at")
     .eq("slug", slug).maybeSingle();
+  const { data: profile } = (await q) as { data: JProfileRow | null };
   if (!profile) {
     return {
       block: `\n\n[JURISDICTION CONTEXT for "${jurisdiction}"]\nNo cached jurisdiction profile on file. Use general knowledge for ${jurisdiction} and clearly say when a specific fee, code section, or review duration is not verified. Tell the user they can run "Live Jurisdiction Refresh" from the project page to pull authoritative data.`,
