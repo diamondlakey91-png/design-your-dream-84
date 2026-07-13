@@ -40,31 +40,34 @@ async function resolveOrCreateCustomer(
 }
 
 export const createCheckoutSession = createServerFn({ method: "POST" })
+  .middleware([requireSupabaseAuth])
   .inputValidator((data: {
     priceId: string;
     quantity?: number;
-    customerEmail?: string;
-    userId?: string;
     returnUrl: string;
     environment: StripeEnv;
   }) => {
     if (!/^[a-zA-Z0-9_-]+$/.test(data.priceId)) throw new Error("Invalid priceId");
     return data;
   })
-  .handler(async ({ data }): Promise<CheckoutSessionResult> => {
+  .handler(async ({ data, context }): Promise<CheckoutSessionResult> => {
     try {
+      // Use the authenticated user's identity — never trust client-supplied
+      // userId/email. Otherwise anyone could attribute a paid subscription
+      // to an arbitrary victim account via metadata.userId.
+      const authUserId = context.userId;
+      const authEmail = (context.claims as { email?: string } | undefined)?.email;
+
       const stripe = createStripeClient(data.environment);
       const prices = await stripe.prices.list({ lookup_keys: [data.priceId] });
       if (!prices.data.length) throw new Error("Price not found");
       const stripePrice = prices.data[0];
       const isRecurring = stripePrice.type === "recurring";
 
-      const customerId = (data.customerEmail || data.userId)
-        ? await resolveOrCreateCustomer(stripe, {
-            email: data.customerEmail,
-            userId: data.userId,
-          })
-        : undefined;
+      const customerId = await resolveOrCreateCustomer(stripe, {
+        email: authEmail,
+        userId: authUserId,
+      });
 
       let productDescription: string | undefined;
       if (!isRecurring) {
@@ -80,12 +83,10 @@ export const createCheckoutSession = createServerFn({ method: "POST" })
         mode: isRecurring ? "subscription" : "payment",
         ui_mode: "embedded_page",
         return_url: data.returnUrl,
-        ...(customerId && { customer: customerId }),
+        customer: customerId,
         ...(!isRecurring && { payment_intent_data: { description: productDescription } }),
-        ...(data.userId && {
-          metadata: { userId: data.userId },
-          ...(isRecurring && { subscription_data: { metadata: { userId: data.userId } } }),
-        }),
+        metadata: { userId: authUserId },
+        ...(isRecurring && { subscription_data: { metadata: { userId: authUserId } } }),
       });
 
       return { clientSecret: session.client_secret ?? "" };
