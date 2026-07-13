@@ -885,12 +885,22 @@ export const listJurisdictionSyncs = createServerFn({ method: "GET" })
 
 type FirecrawlSearchResult = { url: string; title?: string; description?: string };
 
+async function fetchWithTimeout(input: string, init: RequestInit, timeoutMs: number): Promise<Response> {
+  const ctrl = new AbortController();
+  const t = setTimeout(() => ctrl.abort(), timeoutMs);
+  try {
+    return await fetch(input, { ...init, signal: ctrl.signal });
+  } finally {
+    clearTimeout(t);
+  }
+}
+
 async function firecrawlSearch(apiKey: string, query: string, limit = 5): Promise<FirecrawlSearchResult[]> {
-  const resp = await fetch("https://api.firecrawl.dev/v2/search", {
+  const resp = await fetchWithTimeout("https://api.firecrawl.dev/v2/search", {
     method: "POST",
     headers: { "Content-Type": "application/json", Authorization: `Bearer ${apiKey}` },
     body: JSON.stringify({ query, limit }),
-  });
+  }, 20000);
   if (!resp.ok) throw new Error(`Firecrawl search failed [${resp.status}]: ${(await resp.text()).slice(0, 200)}`);
   const j = (await resp.json()) as { data?: { web?: FirecrawlSearchResult[] } | FirecrawlSearchResult[] };
   const raw = Array.isArray(j.data) ? j.data : j.data?.web ?? [];
@@ -898,15 +908,16 @@ async function firecrawlSearch(apiKey: string, query: string, limit = 5): Promis
 }
 
 async function firecrawlScrape(apiKey: string, url: string): Promise<{ markdown: string; title: string }> {
-  const resp = await fetch("https://api.firecrawl.dev/v2/scrape", {
+  const resp = await fetchWithTimeout("https://api.firecrawl.dev/v2/scrape", {
     method: "POST",
     headers: { "Content-Type": "application/json", Authorization: `Bearer ${apiKey}` },
-    body: JSON.stringify({ url, formats: ["markdown"], onlyMainContent: true }),
-  });
+    body: JSON.stringify({ url, formats: ["markdown"], onlyMainContent: true, timeout: 15000 }),
+  }, 20000);
   if (!resp.ok) throw new Error(`Firecrawl scrape failed [${resp.status}]: ${(await resp.text()).slice(0, 200)}`);
   const j = (await resp.json()) as { data?: { markdown?: string; metadata?: { title?: string } } };
   return { markdown: j.data?.markdown ?? "", title: j.data?.metadata?.title ?? "" };
 }
+
 
 const FindingSchema = z.object({
   permit_or_record: z.string(),
@@ -1762,7 +1773,7 @@ export const lookupPermitsByAddress = createServerFn({ method: "POST" })
     const portalScrape = await firecrawlScrape(fcKey, portal.url).catch(() => ({ markdown: "", title: "" }));
     const directScrapes = (
       await Promise.all(
-        directSearchUrls.map(async (u: string) => {
+        directSearchUrls.slice(0, 4).map(async (u: string) => {
           try {
             const s = await firecrawlScrape(fcKey, u);
             return `DIRECT PORTAL SEARCH: ${u}\n${s.markdown.slice(0, 4000)}`;
@@ -1774,7 +1785,7 @@ export const lookupPermitsByAddress = createServerFn({ method: "POST" })
     ).filter(Boolean).join("\n\n---\n\n");
     const addressScrapes = (
       await Promise.all(
-        addressHits.slice(0, 4).map(async (h) => {
+        addressHits.slice(0, 3).map(async (h) => {
           try {
             const s = await firecrawlScrape(fcKey, h.url);
             return `SOURCE: ${h.url}\nTITLE: ${h.title ?? ""}\n${s.markdown.slice(0, 2500)}`;
@@ -1784,6 +1795,7 @@ export const lookupPermitsByAddress = createServerFn({ method: "POST" })
         }),
       )
     ).join("\n\n---\n\n");
+
 
 
     // 5. Ask AI to extract structured permit records for this address.
@@ -1848,7 +1860,8 @@ RULES
     const raw = await callLovableAI(aiKey, [
       { role: "system", content: "You extract structured permit records from live portal text. Output valid JSON only, no prose, no fences." },
       { role: "user", content: extractionPrompt },
-    ]);
+    ], "google/gemini-2.5-flash");
+
     const cleaned = raw.replace(/```json|```/g, "").trim();
     const start = cleaned.indexOf("{");
     const end = cleaned.lastIndexOf("}");
@@ -2016,7 +2029,8 @@ Return ONLY JSON:
   const raw = await callLovableAI(aiKey, [
     { role: "system", content: "You extract structured live permit status from real portal text. Output valid JSON only, no prose, no fences." },
     { role: "user", content: prompt },
-  ]);
+  ], "google/gemini-2.5-flash");
+
   const cleaned = raw.replace(/```json|```/g, "").trim();
   const start = cleaned.indexOf("{");
   const end = cleaned.lastIndexOf("}");
