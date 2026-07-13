@@ -1941,6 +1941,14 @@ function LivePermitCard({
             </div>
           </div>
 
+          <PortalDeepLinks
+            jurisdiction={project.jurisdiction}
+            permitNumber={project.linked_permit_number ?? ""}
+            address={d?.address ?? ""}
+          />
+
+
+
           <div className="pt-2 border-t border-border">
             <button
               onClick={() => setShowHistory((s) => !s)}
