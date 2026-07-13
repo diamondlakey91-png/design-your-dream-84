@@ -784,6 +784,8 @@ export const registerDocument = createServerFn({ method: "POST" })
       storage_path: z.string().min(1).max(500),
       mime_type: z.string().max(120).default(""),
       size_bytes: z.number().int().min(0).default(0),
+      stage: z.number().int().min(0).max(4).nullable().optional(),
+      permit_item_id: z.string().uuid().nullable().optional(),
     }).parse(input),
   )
   .handler(async ({ data, context }) => {
@@ -796,16 +798,41 @@ export const registerDocument = createServerFn({ method: "POST" })
         storage_path: data.storage_path,
         mime_type: data.mime_type,
         size_bytes: data.size_bytes,
+        stage: data.stage ?? null,
+        permit_item_id: data.permit_item_id ?? null,
       })
       .select("*").single();
     if (error) throw new Error(error.message);
     await context.supabase.from("activity").insert({
       user_id: context.userId,
       project_id: data.project_id,
-      description: `Uploaded document: ${data.name}`,
+      description: `Uploaded document: ${data.name}${typeof data.stage === "number" ? ` (Stage ${data.stage + 1})` : ""}`,
     });
     return row;
   });
+
+export const updateDocumentLinkage = createServerFn({ method: "POST" })
+  .middleware([requireSupabaseAuth])
+  .inputValidator((input: unknown) =>
+    z.object({
+      id: z.string().uuid(),
+      stage: z.number().int().min(0).max(4).nullable().optional(),
+      permit_item_id: z.string().uuid().nullable().optional(),
+    }).parse(input),
+  )
+  .handler(async ({ data, context }) => {
+    const patch: Record<string, unknown> = {};
+    if (data.stage !== undefined) patch.stage = data.stage;
+    if (data.permit_item_id !== undefined) patch.permit_item_id = data.permit_item_id;
+    const { data: row, error } = await context.supabase
+      .from("project_documents")
+      .update(patch)
+      .eq("id", data.id)
+      .select("*").single();
+    if (error) throw new Error(error.message);
+    return row;
+  });
+
 
 export const deleteDocument = createServerFn({ method: "POST" })
   .middleware([requireSupabaseAuth])
