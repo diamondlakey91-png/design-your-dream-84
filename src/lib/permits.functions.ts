@@ -2301,7 +2301,7 @@ function buildDirectPortalUrlsForPermitNumber(jurisdiction: string, permitNumber
   if (/austin,?\s*tx/.test(j)) urls.push(`https://abc.austintexas.gov/web/permit/public-search-other?reset=true&t_selected_search=CAP&t_CAP_NUMBER=${enc}`);
   if (/miami,?\s*fl/.test(j)) urls.push(`https://apps.miamigov.com/eBuilding/PermitSearch.aspx?permit=${enc}`);
   if (/philadelphia,?\s*pa/.test(j)) urls.push(`https://eclipse.phila.gov/phillylmsprod/int/lms/Login.aspx#permit=${enc}`);
-  if (/arlington(\s+county)?,?\s*va/.test(j)) { urls.push(accela("ARLINGTON")); urls.push(`https://permits.arlingtonva.us/CitizenAccess/Cap/GlobalSearchResults.aspx?QueryText=${enc}`); }
+  if (/arlington(\s+county)?,?\s*va/.test(j)) { urls.push(accela("ARLINGTONCO")); urls.push(`https://permits.arlingtonva.us/CitizenAccess/Cap/GlobalSearchResults.aspx?QueryText=${enc}`); }
   if (/fairfax(\s+county)?,?\s*va/.test(j)) urls.push(accela("FFXC"));
   if (/loudoun(\s+county)?,?\s*va/.test(j)) urls.push(accela("LOUDOUN"));
   if (/prince\s+william(\s+county)?,?\s*va/.test(j)) urls.push(`https://eservices.pwcgov.org/BuildingDevelopment/Cap/GlobalSearchResults.aspx?QueryText=${enc}`);
