@@ -1,10 +1,21 @@
-import { createFileRoute } from "@tanstack/react-router";
-import { useMemo, useState } from "react";
+import { createFileRoute, useNavigate } from "@tanstack/react-router";
+import { zodValidator, fallback } from "@tanstack/zod-adapter";
+import { z } from "zod";
+import { useEffect, useMemo, useState } from "react";
 import { AppShell } from "@/components/AppShell";
-import { PORTAL_REGISTRY, PORTAL_PLATFORMS, US_STATES, type PortalEntry, type PortalPlatform } from "@/lib/portalRegistry";
-import { ExternalLink, Search, Building2, FileText, MapPin, Hash, Info } from "lucide-react";
+import { PORTAL_REGISTRY, PORTAL_PLATFORMS, US_STATES, findPortalDeepLinks, type PortalEntry, type PortalPlatform } from "@/lib/portalRegistry";
+import { ExternalLink, Search, Building2, FileText, MapPin, Hash, Info, Zap } from "lucide-react";
+
+const portalsSearchSchema = z.object({
+  q: fallback(z.string(), "").default(""),
+  state: fallback(z.string(), "").default(""),
+  platform: fallback(z.string(), "").default(""),
+  address: fallback(z.string(), "").default(""),
+  permit: fallback(z.string(), "").default(""),
+});
 
 export const Route = createFileRoute("/_authenticated/portals")({
+  validateSearch: zodValidator(portalsSearchSchema),
   component: PortalsPage,
 });
 
@@ -21,11 +32,27 @@ const PLATFORM_STYLES: Record<PortalPlatform, string> = {
 };
 
 function PortalsPage() {
-  const [query, setQuery] = useState("");
-  const [state, setState] = useState<string>("");
-  const [platform, setPlatform] = useState<PortalPlatform | "">("");
-  const [address, setAddress] = useState("");
-  const [permitNo, setPermitNo] = useState("");
+  const sp = Route.useSearch();
+  const navigate = useNavigate({ from: "/_authenticated/portals" });
+  const [query, setQuery] = useState(sp.q);
+  const [state, setState] = useState<string>(sp.state);
+  const [platform, setPlatform] = useState<PortalPlatform | "">((sp.platform as PortalPlatform) || "");
+  const [address, setAddress] = useState(sp.address);
+  const [permitNo, setPermitNo] = useState(sp.permit);
+
+  // Keep local state in sync when the URL changes (back/forward, deep link).
+  useEffect(() => { setQuery(sp.q); setState(sp.state); setPlatform((sp.platform as PortalPlatform) || ""); setAddress(sp.address); setPermitNo(sp.permit); }, [sp.q, sp.state, sp.platform, sp.address, sp.permit]);
+
+  // Push local state into URL (debounced) so the page is shareable.
+  useEffect(() => {
+    const t = setTimeout(() => {
+      navigate({
+        search: { q: query, state, platform: platform || "", address, permit: permitNo },
+        replace: true,
+      });
+    }, 250);
+    return () => clearTimeout(t);
+  }, [query, state, platform, address, permitNo, navigate]);
 
   const availableStates = useMemo(() => {
     const s = new Set(PORTAL_REGISTRY.map((p) => p.state));
@@ -47,6 +74,19 @@ function PortalsPage() {
     for (const p of PORTAL_REGISTRY) m.set(p.platform, (m.get(p.platform) ?? 0) + 1);
     return m;
   }, []);
+
+  // Suggested direct deep links based on the query + permit#/address.
+  const suggested = useMemo(() => {
+    if (!query.trim() || (!permitNo.trim() && !address.trim())) return [];
+    const jurisdictionHint = state ? `${query.trim()}, ${state}` : query.trim();
+    return findPortalDeepLinks(jurisdictionHint, {
+      permitNumber: permitNo.trim() || undefined,
+      address: address.trim() || undefined,
+      limit: 4,
+    });
+  }, [query, state, permitNo, address]);
+
+
 
   return (
     <AppShell>
@@ -141,7 +181,42 @@ function PortalsPage() {
           </p>
         </div>
 
-        {/* Results */}
+        {/* Suggested direct deep links (top matches for the current query + permit#/address) */}
+        {suggested.length > 0 && (
+          <div className="rounded-lg border border-brand/40 bg-brand/5 p-3 space-y-2">
+            <div className="flex items-center gap-2 text-xs font-mono uppercase tracking-widest text-brand">
+              <Zap className="size-3.5" /> Direct deep links {permitNo.trim() ? `for permit #${permitNo.trim()}` : `for "${query.trim()}"`}
+            </div>
+            <div className="grid gap-1.5">
+              {suggested.map((m, i) => (
+                <a
+                  key={`${m.entry.jurisdiction}-${i}`}
+                  href={m.deepLink}
+                  target="_blank"
+                  rel="noopener noreferrer"
+                  className="flex items-center justify-between gap-3 rounded-md border border-border bg-background px-3 py-2 text-sm hover:border-brand"
+                >
+                  <div className="min-w-0 flex-1">
+                    <div className="flex items-center gap-2 flex-wrap">
+                      <span className="font-medium truncate">{m.entry.jurisdiction}</span>
+                      <span className="rounded bg-card border border-border px-1.5 py-0.5 text-[10px] font-mono text-muted-foreground">{m.entry.state}</span>
+                      <span className={`rounded-full border px-2 py-0.5 text-[10px] font-medium ${PLATFORM_STYLES[m.entry.platform]}`}>{m.entry.platform}</span>
+                      <span className="text-[10px] font-mono uppercase tracking-wider text-brand">
+                        {m.linkKind === "permit" ? "permit# prefilled" : m.linkKind === "address" ? "address prefilled" : "portal home"}
+                      </span>
+                    </div>
+                  </div>
+                  <ExternalLink className="size-4 text-brand shrink-0" />
+                </a>
+              ))}
+            </div>
+            <p className="text-[11px] text-muted-foreground">
+              This page is shareable — the URL contains your search and prefill values.
+            </p>
+          </div>
+        )}
+
+
         <div className="space-y-2 pb-8">
           <div className="text-xs font-mono uppercase tracking-widest text-muted-foreground">
             {results.length} portal{results.length === 1 ? "" : "s"}
