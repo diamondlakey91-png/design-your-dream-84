@@ -546,11 +546,25 @@ Return this JSON shape:
 {"items":[{"name":"Building Permit","category":"Building","required":true,"why":"..."}]}
 
 Rules:
-- 6 to 12 items, in chronological order (pre-construction → construction → occupancy).
+- 6 to 14 items, in chronological order (pre-construction → construction → final inspections → occupancy).
 - category is one of: Building, MEP, Fire, Health, Zoning, Sign, Right-of-Way, Grading, Demolition, Stormwater, Historic, Environmental, Occupancy.
 - required=true for likely-required, false for conditional.
 - name is the specific permit/approval name; where jurisdiction is known, use the local term (e.g. "LADBS Building Permit", "NYC DOB PW1 Filing").
-- why is one short clause explaining trigger.`;
+- why is one short clause explaining trigger.
+
+PROJECT-TYPE RULES (critical — tailor the list to "${p.project_type}"):
+- Tenant Fit-Out / Tenant Improvement / TI: focus on interior alterations — Zoning Use Approval, Building (Alteration/TI), MEP (Mech/Elec/Plumb) sub-permits, Fire (sprinkler/alarm modification, hood suppression if applicable), Health (if food service), Sign. Usually NO grading, stormwater, or site work. If restaurant/food service, include Health Dept plan review + Hood/Grease permits.
+- New Build / Ground-Up Construction: include site work — Zoning/Site Plan, Grading, Stormwater/SWPPP, Erosion Control, Right-of-Way, Utility connections (water/sewer/gas/electric), Building (New), full MEP, Fire (sprinkler/alarm new), Elevator (if applicable), Landscape, Final CofO.
+- Shell / Core-and-Shell: Building (Shell), MEP rough-in, Fire base system, Zoning/Site, Grading/Stormwater — but NO interior finish or occupancy-load-specific items; note tenant CofO will be separate.
+- Renovation / Alteration (existing structure, no new occupancy): Building (Alteration), targeted MEP, Fire (as impacted), Historic review if in a district. Skip grading/site unless footprint changes.
+- Change of Use: Zoning Use Approval FIRST, then Building (Change of Occupancy), Fire re-evaluation for new occupancy classification, Health (if food), plus a new Certificate of Occupancy reflecting the new use.
+- Demolition: Demolition permit, Asbestos/Lead survey (Environmental), Right-of-Way (dumpster/protection), Utility disconnects, Erosion Control.
+- Addition: Zoning (setback/FAR check), Building (Addition), MEP tie-in, Grading/Stormwater if footprint expands, Fire.
+
+MANDATORY FINAL ITEM (unless project type is Demolition or Shell-only):
+- The LAST item MUST be a Certificate of Occupancy (or Temporary CofO where applicable). Name it precisely for the jurisdiction (e.g. "Arlington County Certificate of Occupancy", "NYC DOB Certificate of Occupancy (CO)", "LADBS Certificate of Occupancy"). category = "Occupancy". required = true. why = "Issued only after all final inspections pass; required before legal occupancy."
+- For Shell projects: end with "Shell Building Final" (Occupancy category) and note tenant CofO is separate.
+- For Demolition: end with "Final Demolition Inspection & Site Closeout" instead of CofO.`;
 
     const raw = await callLovableAI(apiKey, [
       { role: "system", content: SYSTEM_PROMPT },
