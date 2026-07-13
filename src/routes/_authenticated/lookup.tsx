@@ -27,6 +27,21 @@ export const Route = createFileRoute("/_authenticated/lookup")({
 
 type LookupResult = Awaited<ReturnType<typeof lookupPermitsByAddress>>;
 
+const KNOWN_JURISDICTIONS: string[] = [
+  "Baltimore City, MD",
+  "Baltimore County, MD",
+  "Washington, DC",
+  "New York, NY",
+  "Los Angeles, CA",
+  "Chicago, IL",
+  "San Francisco, CA",
+  "Seattle, WA",
+  "Boston, MA",
+  "Austin, TX",
+  "Miami, FL",
+  "Philadelphia, PA",
+];
+
 function LookupPage() {
   const [address, setAddress] = useState("");
   const [jurisdiction, setJurisdiction] = useState("");
