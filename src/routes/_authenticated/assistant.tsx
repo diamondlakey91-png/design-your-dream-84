@@ -56,6 +56,15 @@ function AssistantIndex() {
         </header>
 
         <div className="p-6 space-y-6">
+          <Link
+            to="/assistant/analysis"
+            className="block rounded-2xl p-5 bg-gradient-to-br from-sky-500/15 via-violet-500/10 to-transparent ring-1 ring-white/10 hover:ring-sky-400/40 transition"
+          >
+            <div className="text-[11px] font-mono uppercase tracking-widest text-sky-300/80">New</div>
+            <div className="text-base font-semibold mt-1">Structured permit analysis →</div>
+            <p className="text-xs text-zinc-400 mt-1">Enter a project and get a full roadmap: permits, agencies, sequence, inspections, risks, and next actions.</p>
+          </Link>
+
           {projects.length > 0 && (
             <section>
               <h2 className="text-[11px] font-mono uppercase tracking-widest text-zinc-500 mb-2">Start with a project</h2>
