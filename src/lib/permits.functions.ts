@@ -1727,7 +1727,14 @@ export const updateInspectionFields = createServerFn({ method: "POST" })
     status: z.enum(["scheduled", "passed", "failed", "rescheduled", "canceled"]).optional(),
   }).parse(input))
   .handler(async ({ data, context }) => {
-    const patch: Record<string, unknown> = {};
+    const patch: {
+      checklist?: typeof data.checklist;
+      photos?: typeof data.photos;
+      notes?: string;
+      result?: string;
+      status?: typeof data.status;
+      result_date?: string;
+    } = {};
     if (data.checklist !== undefined) patch.checklist = data.checklist;
     if (data.photos !== undefined) patch.photos = data.photos;
     if (data.notes !== undefined) patch.notes = data.notes;
@@ -1739,6 +1746,7 @@ export const updateInspectionFields = createServerFn({ method: "POST" })
       }
     }
     const { data: row, error } = await context.supabase
+      // @ts-expect-error jsonb columns typed loosely
       .from("inspections").update(patch).eq("id", data.id).select("*").single();
     if (error) throw new Error(error.message);
     if (data.status) {
