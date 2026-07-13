@@ -9,12 +9,15 @@ import {
   setThreadProject,
   renameThread,
   intakeGenerateChecklist,
+  extractChecklistFromMessage,
+  addPermitItemsBulk,
 } from "@/lib/permits.functions";
-import { ArrowLeft, Send, Briefcase, X, Edit3, ClipboardList, Sparkles } from "lucide-react";
+import { ArrowLeft, Send, Briefcase, X, Edit3, ClipboardList, Sparkles, ListPlus, Check, Loader2 } from "lucide-react";
 import { useEffect, useMemo, useRef, useState } from "react";
 import { toast } from "sonner";
 import ReactMarkdown from "react-markdown";
 import remarkGfm from "remark-gfm";
+
 
 export const Route = createFileRoute("/_authenticated/assistant/$threadId")({
   head: () => ({ meta: [{ title: "Chat — Permivio" }, { name: "robots", content: "noindex" }] }),
