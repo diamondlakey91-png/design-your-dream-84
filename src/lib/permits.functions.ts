@@ -1674,7 +1674,7 @@ RULES
       jurisdiction: parsed.jurisdiction || jurisdictionGuess,
       portal_name: parsed.portal_name || portal.title || portal.url,
       portal_url: parsed.portal_url || portal.url,
-      search_url: parsed.search_url,
+      search_url: parsed.search_url || directSearchUrls[0] || "",
       findings: parsed.findings,
       summary: parsed.summary,
       searched_at: new Date().toISOString(),
