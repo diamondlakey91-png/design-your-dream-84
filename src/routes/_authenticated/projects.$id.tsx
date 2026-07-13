@@ -686,7 +686,7 @@ function ShareReportDialog({ projectId, report, onClose }: { projectId: string; 
             <p className="text-xs text-muted-foreground">No share links yet.</p>
           ) : (
             <ul className="space-y-1.5 max-h-56 overflow-y-auto">
-              {(list.data ?? []).map((s) => {
+              {((list.data ?? []) as Array<{ id: string; path: string; token: string; expires_at: string | null; revoked_at: string | null; password_protected: boolean; view_count: number }>).map((s) => {
                 const url = `${typeof window !== "undefined" ? window.location.origin : ""}${s.path}`;
                 const revoked = !!s.revoked_at;
                 const expired = s.expires_at && new Date(s.expires_at).getTime() < Date.now();
