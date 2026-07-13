@@ -467,17 +467,43 @@ function DocsTab({ projectId, userId }: { projectId: string; userId: string }) {
   );
 }
 
-function DocRow({ doc, projectId, onDelete }: { doc: { id: string; name: string; url: string | null; size_bytes: number; created_at: string; mime_type: string; ai_summary?: string | null; ai_action_items?: unknown; analyzed_at?: string | null }; projectId: string; onDelete: () => void }) {
+function DocRow({ doc, projectId, onDelete }: { doc: { id: string; name: string; url: string | null; size_bytes: number; created_at: string; mime_type: string; ai_summary?: string | null; ai_action_items?: unknown; analyzed_at?: string | null; plan_review?: unknown; plan_reviewed_at?: string | null }; projectId: string; onDelete: () => void }) {
   const analyzeFn = useServerFn(analyzeDocument);
+  const reviewFn = useServerFn(reviewPlan);
   const qc = useQueryClient();
   const [open, setOpen] = useState(false);
+  const [reviewOpen, setReviewOpen] = useState(false);
   const canAnalyze = (doc.mime_type || "").startsWith("image/") || (doc.mime_type || "") === "application/pdf" || doc.name.toLowerCase().endsWith(".pdf");
   const analyze = useMutation({
     mutationFn: () => analyzeFn({ data: { id: doc.id } }),
     onSuccess: () => { qc.invalidateQueries({ queryKey: ["docs", projectId] }); qc.invalidateQueries({ queryKey: ["activity", projectId] }); setOpen(true); toast.success("AI analysis complete"); },
     onError: (e) => toast.error(e instanceof Error ? e.message : "Analysis failed"),
   });
+  const review = useMutation({
+    mutationFn: () => reviewFn({ data: { id: doc.id } }),
+    onSuccess: () => { qc.invalidateQueries({ queryKey: ["docs", projectId] }); qc.invalidateQueries({ queryKey: ["activity", projectId] }); setReviewOpen(true); toast.success("Plan review complete"); },
+    onError: (e) => toast.error(e instanceof Error ? e.message : "Plan review failed"),
+  });
   const items = Array.isArray(doc.ai_action_items) ? doc.ai_action_items as Array<{ reviewer?: string; discipline?: string; request: string; reference?: string }> : [];
+  const pr = (doc.plan_review && typeof doc.plan_review === "object") ? doc.plan_review as {
+    overall_summary?: string;
+    overall_risk?: "low"|"medium"|"high";
+    sheets_detected?: string[];
+    findings?: Array<{ category: string; severity: "low"|"medium"|"high"; title: string; detail: string; code_reference?: string; sheet_reference?: string; recommendation?: string }>;
+  } : null;
+  const findings = pr?.findings ?? [];
+  const categoryLabel: Record<string, string> = {
+    missing_exits: "Missing Exits",
+    ada: "ADA",
+    fire_code: "Fire Code",
+    permitting_mistake: "Permitting",
+    other: "Other",
+  };
+  const sevClass: Record<string, string> = {
+    high: "bg-destructive/15 text-destructive",
+    medium: "bg-brand/15 text-brand",
+    low: "bg-muted text-muted-foreground",
+  };
   return (
     <li className="p-3 bg-card ring-1 ring-black/5 rounded-xl">
       <div className="flex items-center gap-3">
@@ -491,16 +517,27 @@ function DocRow({ doc, projectId, onDelete }: { doc: { id: string; name: string;
           <p className="text-[11px] font-mono uppercase text-muted-foreground">
             {(doc.size_bytes / 1024).toFixed(1)} KB · {formatDistanceToNow(new Date(doc.created_at), { addSuffix: true })}
             {doc.analyzed_at && <> · <span className="text-brand">AI analyzed</span></>}
+            {doc.plan_reviewed_at && <> · <span className="text-brand">Plan reviewed</span></>}
           </p>
         </div>
         {canAnalyze && (
-          <button
-            onClick={() => analyze.mutate()}
-            disabled={analyze.isPending}
-            className="text-[10px] font-mono uppercase tracking-wider px-2 py-1 rounded bg-brand/15 text-brand hover:bg-brand/25 disabled:opacity-50"
-          >
-            {analyze.isPending ? "Reading…" : doc.analyzed_at ? "Re-analyze" : "Analyze"}
-          </button>
+          <>
+            <button
+              onClick={() => analyze.mutate()}
+              disabled={analyze.isPending}
+              className="text-[10px] font-mono uppercase tracking-wider px-2 py-1 rounded bg-brand/15 text-brand hover:bg-brand/25 disabled:opacity-50"
+            >
+              {analyze.isPending ? "Reading…" : doc.analyzed_at ? "Re-analyze" : "Analyze"}
+            </button>
+            <button
+              onClick={() => review.mutate()}
+              disabled={review.isPending}
+              className="text-[10px] font-mono uppercase tracking-wider px-2 py-1 rounded bg-destructive/10 text-destructive hover:bg-destructive/20 disabled:opacity-50"
+              title="AI Plan Review: exits, ADA, fire code, permitting mistakes"
+            >
+              {review.isPending ? "Reviewing…" : doc.plan_reviewed_at ? "Re-review plan" : "Plan Review"}
+            </button>
+          </>
         )}
         <button onClick={onDelete} className="text-muted-foreground hover:text-destructive" aria-label="Delete">
           <Trash2 className="size-4" />
@@ -528,6 +565,53 @@ function DocRow({ doc, projectId, onDelete }: { doc: { id: string; name: string;
                         {it.request}
                         {it.reference && <span className="text-muted-foreground text-xs"> — {it.reference}</span>}
                       </span>
+                    </li>
+                  ))}
+                </ul>
+              )}
+            </div>
+          )}
+        </div>
+      )}
+      {pr && (
+        <div className="mt-2 pl-8">
+          <button onClick={() => setReviewOpen((v) => !v)} className="text-[11px] font-mono uppercase tracking-wider text-destructive hover:opacity-80">
+            {reviewOpen ? "Hide" : "Show"} plan review ({findings.length} finding{findings.length === 1 ? "" : "s"}
+            {pr.overall_risk ? ` · ${pr.overall_risk} risk` : ""})
+          </button>
+          {reviewOpen && (
+            <div className="mt-2 p-3 rounded-lg bg-background ring-1 ring-black/5 space-y-3">
+              {pr.overall_summary && <p className="text-sm text-foreground leading-relaxed">{pr.overall_summary}</p>}
+              {pr.sheets_detected && pr.sheets_detected.length > 0 && (
+                <p className="text-[11px] font-mono uppercase text-muted-foreground">
+                  Sheets: {pr.sheets_detected.join(", ")}
+                </p>
+              )}
+              {findings.length === 0 ? (
+                <p className="text-sm text-muted-foreground">No issues flagged.</p>
+              ) : (
+                <ul className="space-y-2">
+                  {findings.map((f, i) => (
+                    <li key={i} className="p-2 rounded-md ring-1 ring-black/5">
+                      <div className="flex items-center gap-2 flex-wrap">
+                        <span className={`text-[10px] font-mono uppercase tracking-wider px-1.5 py-0.5 rounded ${sevClass[f.severity] || sevClass.medium}`}>
+                          {f.severity}
+                        </span>
+                        <span className="text-[10px] font-mono uppercase tracking-wider text-muted-foreground">
+                          {categoryLabel[f.category] || f.category}
+                        </span>
+                        {f.sheet_reference && (
+                          <span className="text-[10px] font-mono text-muted-foreground">Sheet {f.sheet_reference}</span>
+                        )}
+                        {f.code_reference && (
+                          <span className="text-[10px] font-mono text-muted-foreground">{f.code_reference}</span>
+                        )}
+                      </div>
+                      <p className="text-sm font-medium mt-1">{f.title}</p>
+                      <p className="text-sm text-foreground/80 mt-0.5">{f.detail}</p>
+                      {f.recommendation && (
+                        <p className="text-xs text-muted-foreground mt-1"><span className="uppercase font-mono tracking-wider">Fix:</span> {f.recommendation}</p>
+                      )}
                     </li>
                   ))}
                 </ul>
