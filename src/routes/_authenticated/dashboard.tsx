@@ -360,46 +360,77 @@ function ProjectRow({ project }: { project: {
     project.status?.toLowerCase().includes("review") ? "bg-primary" :
     project.status?.toLowerCase().includes("hold") ? "bg-[oklch(0.85_0.16_72)]" :
     "bg-muted-foreground";
+  const queryClient = useQueryClient();
+  const deleteFn = useServerFn(deleteProject);
+  const deleteMut = useMutation({
+    mutationFn: () => deleteFn({ data: { id: project.id } }),
+    onSuccess: () => {
+      toast.success(`Deleted "${project.name}"`);
+      queryClient.invalidateQueries({ queryKey: ["projects"] });
+      queryClient.invalidateQueries({ queryKey: ["deadlines"] });
+    },
+    onError: (e: Error) => toast.error(e.message || "Failed to delete project"),
+  });
+  const handleDelete = (e: React.MouseEvent) => {
+    e.preventDefault();
+    e.stopPropagation();
+    if (deleteMut.isPending) return;
+    if (window.confirm(`Delete "${project.name}"? This removes all its checklist items, deadlines, docs, and history. This cannot be undone.`)) {
+      deleteMut.mutate();
+    }
+  };
   return (
-    <Link
-      to="/projects/$id"
-      params={{ id: project.id }}
-      className="group grid grid-cols-[minmax(0,1fr)_auto] items-center gap-4 px-6 py-5 transition-colors hover:bg-white/[0.02] sm:px-7"
-    >
-      <div className="flex min-w-0 items-center gap-4">
-        <div className="grid size-12 shrink-0 place-items-center rounded-2xl border border-border bg-secondary text-lg font-bold text-muted-foreground">
-          {initial}
-        </div>
-        <div className="min-w-0">
-          <h4 className="truncate text-sm font-semibold text-foreground">{project.name}</h4>
-          <p className="truncate text-xs text-muted-foreground">
-            {STAGES[stageIdx]} · {project.permits_issued}/{project.permit_count} permits{project.jurisdiction ? ` · ${project.jurisdiction}` : ""}
-          </p>
-        </div>
-      </div>
-      <div className="flex items-center gap-6">
-        <div className="hidden text-right sm:block">
-          <p className="mb-1 font-mono text-[10px] uppercase tracking-tight text-muted-foreground">Status</p>
-          <div className="flex items-center justify-end gap-2">
-            <span className={`size-1.5 rounded-full ${dotClass}`} />
-            <span className="text-xs font-medium text-foreground">{project.status}</span>
+    <div className="group relative">
+      <Link
+        to="/projects/$id"
+        params={{ id: project.id }}
+        className="grid grid-cols-[minmax(0,1fr)_auto] items-center gap-4 px-6 py-5 transition-colors hover:bg-white/[0.02] sm:px-7"
+      >
+        <div className="flex min-w-0 items-center gap-4">
+          <div className="grid size-12 shrink-0 place-items-center rounded-2xl border border-border bg-secondary text-lg font-bold text-muted-foreground">
+            {initial}
+          </div>
+          <div className="min-w-0">
+            <h4 className="truncate text-sm font-semibold text-foreground">{project.name}</h4>
+            <p className="truncate text-xs text-muted-foreground">
+              {STAGES[stageIdx]} · {project.permits_issued}/{project.permit_count} permits{project.jurisdiction ? ` · ${project.jurisdiction}` : ""}
+            </p>
           </div>
         </div>
-        <div className="hidden h-2 w-24 overflow-hidden rounded-full bg-secondary sm:block md:w-32">
-          <div
-            className="h-full rounded-full"
-            style={{
-              width: `${pct}%`,
-              background: "linear-gradient(90deg, oklch(0.66 0.19 258), oklch(0.68 0.19 305))",
-            }}
-          />
+        <div className="flex items-center gap-6 pr-10">
+          <div className="hidden text-right sm:block">
+            <p className="mb-1 font-mono text-[10px] uppercase tracking-tight text-muted-foreground">Status</p>
+            <div className="flex items-center justify-end gap-2">
+              <span className={`size-1.5 rounded-full ${dotClass}`} />
+              <span className="text-xs font-medium text-foreground">{project.status}</span>
+            </div>
+          </div>
+          <div className="hidden h-2 w-24 overflow-hidden rounded-full bg-secondary sm:block md:w-32">
+            <div
+              className="h-full rounded-full"
+              style={{
+                width: `${pct}%`,
+                background: "linear-gradient(90deg, oklch(0.66 0.19 258), oklch(0.68 0.19 305))",
+              }}
+            />
+          </div>
+          <div className="min-w-[3rem] text-right">
+            <p className="font-mono text-[10px] uppercase tracking-tight text-muted-foreground">Stage</p>
+            <p className="font-mono text-sm text-foreground tabular-nums">{stageIdx + 1}/{stagesLen}</p>
+          </div>
         </div>
-        <div className="min-w-[3rem] text-right">
-          <p className="font-mono text-[10px] uppercase tracking-tight text-muted-foreground">Stage</p>
-          <p className="font-mono text-sm text-foreground tabular-nums">{stageIdx + 1}/{stagesLen}</p>
-        </div>
-      </div>
-    </Link>
+      </Link>
+      <button
+        type="button"
+        onClick={handleDelete}
+        disabled={deleteMut.isPending}
+        aria-label={`Delete project ${project.name}`}
+        title="Delete project"
+        className="absolute right-3 top-1/2 -translate-y-1/2 grid size-8 place-items-center rounded-lg border border-border bg-background/60 text-muted-foreground opacity-0 transition hover:border-[oklch(0.78_0.20_27)] hover:text-[oklch(0.78_0.20_27)] group-hover:opacity-100 focus:opacity-100 disabled:opacity-50"
+      >
+        {deleteMut.isPending ? <Loader2 className="size-3.5 animate-spin" /> : <Trash2 className="size-3.5" />}
+      </button>
+    </div>
   );
 }
 
