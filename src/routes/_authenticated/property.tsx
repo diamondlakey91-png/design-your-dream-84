@@ -5,7 +5,7 @@ import { useEffect, useRef, useState } from "react";
 import { AppShell } from "@/components/AppShell";
 import { analyzeProperty, type PropertyIntel, type ConfidenceTag } from "@/lib/property.functions";
 import {
-  MapPin, Search, Loader2, Building2, Landmark, Flame, Stethoscope, Truck, TreePine, Droplets, Zap,
+  MapPin, Search, Loader2, Building2, Landmark, Flame, Truck, TreePine, Droplets, Zap,
   Cable, CloudRain, ShieldCheck, ShieldAlert, ShieldQuestion, ExternalLink, FileText, ArrowRight, Sparkles,
 } from "lucide-react";
 
