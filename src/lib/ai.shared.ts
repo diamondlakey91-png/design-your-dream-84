@@ -164,8 +164,10 @@ export async function callGeminiJSON<T>(prompt: string, system: string, schema: 
     headers: { "Content-Type": "application/json", "Lovable-API-Key": aiKey },
     body: JSON.stringify({
       model: "google/gemini-2.5-pro",
+      max_tokens: 8192,
+      response_format: { type: "json_object" },
       messages: [
-        { role: "system", content: system },
+        { role: "system", content: system + "\n\nRespond ONLY with a single valid JSON value. No prose, no markdown fences." },
         { role: "user", content: prompt },
       ],
     }),
@@ -176,14 +178,34 @@ export async function callGeminiJSON<T>(prompt: string, system: string, schema: 
     if (resp.status === 402) throw new Error("AI credits exhausted. Please top up.");
     throw new Error(`AI error: ${t.slice(0, 200)}`);
   }
-  const j = (await resp.json()) as { choices?: Array<{ message?: { content?: string } }> };
+  const j = (await resp.json()) as { choices?: Array<{ message?: { content?: string }; finish_reason?: string }> };
   const raw = (j.choices?.[0]?.message?.content ?? "").trim().replace(/```json|```/g, "").trim();
-  const s = raw.indexOf("{");
-  const e = raw.lastIndexOf("}");
+  // Find the outermost JSON value (object or array)
+  const firstObj = raw.indexOf("{");
+  const firstArr = raw.indexOf("[");
+  const start =
+    firstObj === -1 ? firstArr :
+    firstArr === -1 ? firstObj :
+    Math.min(firstObj, firstArr);
+  const isArray = start !== -1 && raw[start] === "[";
+  const end = isArray ? raw.lastIndexOf("]") : raw.lastIndexOf("}");
+  const slice = start !== -1 && end !== -1 ? raw.slice(start, end + 1) : raw;
+  const tryParse = (s: string) => JSON.parse(s);
   try {
-    return schema.parse(JSON.parse(raw.slice(s, e + 1)));
+    return schema.parse(tryParse(slice));
   } catch {
-    throw new Error("AI returned an unreadable response. Try again.");
+    // Repair common issues: trailing commas, control chars
+    const repaired = slice
+      .replace(/,\s*}/g, "}")
+      .replace(/,\s*]/g, "]")
+      // eslint-disable-next-line no-control-regex
+      .replace(/[\x00-\x1F\x7F]/g, " ");
+    try {
+      return schema.parse(tryParse(repaired));
+    } catch (err) {
+      console.error("callGeminiJSON parse failed", { finish_reason: j.choices?.[0]?.finish_reason, preview: raw.slice(0, 500), err });
+      throw new Error("AI returned an unreadable response. Try again.");
+    }
   }
 }
 
