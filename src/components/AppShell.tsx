@@ -1,5 +1,5 @@
 import { Link, useLocation, useNavigate } from "@tanstack/react-router";
-import { Home, MessageSquare, Library, LogOut, MapPin } from "lucide-react";
+import { Home, MessageSquare, Library, LogOut, MapPin, Building2 } from "lucide-react";
 import { supabase } from "@/integrations/supabase/client";
 import { useQueryClient } from "@tanstack/react-query";
 import type { ReactNode } from "react";
