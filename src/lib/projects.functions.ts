@@ -89,7 +89,7 @@ export const deleteProject = createServerFn({ method: "POST" })
       "jurisdiction_syncs", "permit_sync_history", "report_shares",
     ] as const;
     for (const t of tables) {
-      await context.supabase.from(t).delete().eq("project_id", data.id);
+      await (context.supabase as any).from(t).delete().eq("project_id", data.id);
     }
 
     const { error } = await context.supabase.from("projects").delete().eq("id", data.id);
