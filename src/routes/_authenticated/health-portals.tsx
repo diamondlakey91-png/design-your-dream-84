@@ -39,7 +39,7 @@ const AGENCY_TYPE_STYLES: Record<HealthAgencyType, string> = {
 
 function HealthPortalsPage() {
   const sp = Route.useSearch();
-  const navigate = useNavigate({ from: "/_authenticated/health-portals" });
+  const navigate = useNavigate({ from: "/health-portals" });
   const [query, setQuery] = useState(sp.q);
   const [state, setState] = useState<string>(sp.state);
   const [agencyType, setAgencyType] = useState<HealthAgencyType | "">((sp.agencyType as HealthAgencyType) || "");

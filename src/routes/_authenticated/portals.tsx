@@ -38,7 +38,7 @@ const PLATFORM_STYLES: Record<PortalPlatform, string> = {
 
 function PortalsPage() {
   const sp = Route.useSearch();
-  const navigate = useNavigate({ from: "/_authenticated/portals" });
+  const navigate = useNavigate({ from: "/portals" });
   const [query, setQuery] = useState(sp.q);
   const [state, setState] = useState<string>(sp.state);
   const [platform, setPlatform] = useState<PortalPlatform | "">((sp.platform as PortalPlatform) || "");
