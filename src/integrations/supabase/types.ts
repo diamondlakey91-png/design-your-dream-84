@@ -641,57 +641,6 @@ export type Database = {
         }
         Relationships: []
       }
-      health_environmental_portals: {
-        Row: {
-          address_search_template: string | null
-          agency_type: string
-          created_at: string
-          created_by: string | null
-          id: string
-          is_active: boolean
-          jurisdiction: string
-          notes: string | null
-          permit_search_template: string | null
-          plan_review_url: string | null
-          service_types: string[]
-          state: string
-          updated_at: string
-          url: string
-        }
-        Insert: {
-          address_search_template?: string | null
-          agency_type: string
-          created_at?: string
-          created_by?: string | null
-          id?: string
-          is_active?: boolean
-          jurisdiction: string
-          notes?: string | null
-          permit_search_template?: string | null
-          plan_review_url?: string | null
-          service_types?: string[]
-          state: string
-          updated_at?: string
-          url: string
-        }
-        Update: {
-          address_search_template?: string | null
-          agency_type?: string
-          created_at?: string
-          created_by?: string | null
-          id?: string
-          is_active?: boolean
-          jurisdiction?: string
-          notes?: string | null
-          permit_search_template?: string | null
-          plan_review_url?: string | null
-          service_types?: string[]
-          state?: string
-          updated_at?: string
-          url?: string
-        }
-        Relationships: []
-      }
       project_documents: {
         Row: {
           ai_action_items: Json | null
