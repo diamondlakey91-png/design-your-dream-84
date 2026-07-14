@@ -47,13 +47,14 @@ async function ensureAdmin(context: { supabase: any; userId: string }) {
 export const listHealthPortalMappings = createServerFn({ method: "GET" })
   .middleware([requireSupabaseAuth])
   .handler(async ({ context }) => {
-    const { data, error } = await context.supabase
+    const { data, error } = await (context.supabase as any)
       .from("health_environmental_portals")
       .select("*")
       .order("state", { ascending: true })
       .order("jurisdiction", { ascending: true });
     if (error) throw new Error(error.message);
     return (data ?? []) as HealthPortalMappingRow[];
+
   });
 
 /** Create or update a health/environmental portal mapping (admin only). */
