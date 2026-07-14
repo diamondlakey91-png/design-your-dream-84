@@ -6,6 +6,9 @@ import { toast } from "sonner";
 import { ArrowLeft } from "lucide-react";
 
 export const Route = createFileRoute("/auth")({
+  validateSearch: (s: Record<string, unknown>) => ({
+    next: typeof s.next === "string" ? s.next : "",
+  }),
   head: () => ({
     meta: [
       { title: "Sign in — Permivio" },
@@ -16,23 +19,39 @@ export const Route = createFileRoute("/auth")({
   component: AuthPage,
 });
 
+function safeNext(next: string): string | null {
+  if (!next || !next.startsWith("/") || next.startsWith("//")) return null;
+  return next;
+}
+
 function AuthPage() {
   const navigate = useNavigate();
+  const { next } = Route.useSearch();
+  const returnTo = safeNext(next);
   const [mode, setMode] = useState<"sign-in" | "sign-up">("sign-in");
   const [email, setEmail] = useState("");
   const [password, setPassword] = useState("");
   const [busy, setBusy] = useState(false);
 
+  const goAfterAuth = () => {
+    if (returnTo) window.location.href = returnTo;
+    else navigate({ to: "/dashboard" });
+  };
+
   useEffect(() => {
     supabase.auth.getSession().then(({ data }) => {
-      if (data.session) navigate({ to: "/dashboard" });
+      if (data.session) goAfterAuth();
     });
-  }, [navigate]);
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, []);
 
   const handleGoogle = async () => {
     setBusy(true);
+    const redirectUri = returnTo
+      ? `${window.location.origin}${returnTo}`
+      : window.location.origin;
     const result = await lovable.auth.signInWithOAuth("google", {
-      redirect_uri: window.location.origin,
+      redirect_uri: redirectUri,
     });
     if (result.error) {
       toast.error(result.error.message ?? "Google sign-in failed");
@@ -40,7 +59,7 @@ function AuthPage() {
       return;
     }
     if (result.redirected) return;
-    navigate({ to: "/dashboard" });
+    goAfterAuth();
   };
 
   const handleSubmit = async (e: React.FormEvent) => {
@@ -48,10 +67,13 @@ function AuthPage() {
     setBusy(true);
     try {
       if (mode === "sign-up") {
+        const emailRedirectTo = returnTo
+          ? `${window.location.origin}${returnTo}`
+          : window.location.origin;
         const { error } = await supabase.auth.signUp({
           email,
           password,
-          options: { emailRedirectTo: window.location.origin },
+          options: { emailRedirectTo },
         });
         if (error) throw error;
         toast.success("Account created. Signing you in…");
@@ -59,7 +81,7 @@ function AuthPage() {
         const { error } = await supabase.auth.signInWithPassword({ email, password });
         if (error) throw error;
       }
-      navigate({ to: "/dashboard" });
+      goAfterAuth();
     } catch (err) {
       toast.error(err instanceof Error ? err.message : "Something went wrong");
     } finally {
