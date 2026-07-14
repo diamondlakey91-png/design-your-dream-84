@@ -5,6 +5,9 @@ import { toast } from "sonner";
 import { Sparkles, RefreshCw, Plus, Trash2, Info } from "lucide-react";
 import { listPermitItems, generatePermitChecklist, addPermitItem, updatePermitItem, deletePermitItem } from "@/lib/checklist.functions";
 import { supabase } from "@/integrations/supabase/client";
+import { HealthAgencyDeepLinks } from "@/components/project/HealthAgencyDeepLinks";
+
+const HEALTH_GROUNDED_CATEGORIES = new Set(["Health", "Environmental", "Stormwater"]);
 
 const STATUS_LABEL: Record<string, string> = {
   not_started: "Not started",
@@ -68,6 +71,7 @@ export function ChecklistTab({ projectId, jurisdiction }: { projectId: string; j
   const items = q.data ?? [];
   const total = items.length;
   const done = items.filter((i) => i.status === "issued" || i.status === "approved" || i.status === "n_a").length;
+  const hasHealthGroundedItem = items.some((i) => HEALTH_GROUNDED_CATEGORIES.has(i.category));
 
   return (
     <div className="space-y-4">
@@ -134,6 +138,10 @@ export function ChecklistTab({ projectId, jurisdiction }: { projectId: string; j
             </li>
           ))}
         </ul>
+      )}
+
+      {hasHealthGroundedItem && jurisdiction && (
+        <HealthAgencyDeepLinks jurisdiction={jurisdiction} />
       )}
 
       <form

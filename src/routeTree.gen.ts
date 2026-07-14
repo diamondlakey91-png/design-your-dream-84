@@ -17,6 +17,7 @@ import { Route as CheckoutReturnRouteImport } from './routes/checkout.return'
 import { Route as AuthenticatedPortalsRouteImport } from './routes/_authenticated/portals'
 import { Route as AuthenticatedLookupRouteImport } from './routes/_authenticated/lookup'
 import { Route as AuthenticatedJurisdictionsRouteImport } from './routes/_authenticated/jurisdictions'
+import { Route as AuthenticatedHealthPortalsRouteImport } from './routes/_authenticated/health-portals'
 import { Route as AuthenticatedDashboardRouteImport } from './routes/_authenticated/dashboard'
 import { Route as AuthenticatedAssistantRouteImport } from './routes/_authenticated/assistant'
 import { Route as AuthenticatedProjectsIndexRouteImport } from './routes/_authenticated/projects.index'
@@ -29,6 +30,7 @@ import { Route as AuthenticatedInspectionsIdRouteImport } from './routes/_authen
 import { Route as AuthenticatedAssistantAnalysisRouteImport } from './routes/_authenticated/assistant.analysis'
 import { Route as AuthenticatedAssistantThreadIdRouteImport } from './routes/_authenticated/assistant.$threadId'
 import { Route as AuthenticatedAdminPortalsRouteImport } from './routes/_authenticated/admin.portals'
+import { Route as AuthenticatedAdminHealthPortalsRouteImport } from './routes/_authenticated/admin.health-portals'
 import { Route as ApiPublicPaymentsWebhookRouteImport } from './routes/api/public/payments/webhook'
 
 const PricingRoute = PricingRouteImport.update({
@@ -69,6 +71,12 @@ const AuthenticatedJurisdictionsRoute =
   AuthenticatedJurisdictionsRouteImport.update({
     id: '/jurisdictions',
     path: '/jurisdictions',
+    getParentRoute: () => AuthenticatedRouteRoute,
+  } as any)
+const AuthenticatedHealthPortalsRoute =
+  AuthenticatedHealthPortalsRouteImport.update({
+    id: '/health-portals',
+    path: '/health-portals',
     getParentRoute: () => AuthenticatedRouteRoute,
   } as any)
 const AuthenticatedDashboardRoute = AuthenticatedDashboardRouteImport.update({
@@ -138,6 +146,12 @@ const AuthenticatedAdminPortalsRoute =
     path: '/admin/portals',
     getParentRoute: () => AuthenticatedRouteRoute,
   } as any)
+const AuthenticatedAdminHealthPortalsRoute =
+  AuthenticatedAdminHealthPortalsRouteImport.update({
+    id: '/admin/health-portals',
+    path: '/admin/health-portals',
+    getParentRoute: () => AuthenticatedRouteRoute,
+  } as any)
 const ApiPublicPaymentsWebhookRoute =
   ApiPublicPaymentsWebhookRouteImport.update({
     id: '/api/public/payments/webhook',
@@ -151,10 +165,12 @@ export interface FileRoutesByFullPath {
   '/pricing': typeof PricingRoute
   '/assistant': typeof AuthenticatedAssistantRouteWithChildren
   '/dashboard': typeof AuthenticatedDashboardRoute
+  '/health-portals': typeof AuthenticatedHealthPortalsRoute
   '/jurisdictions': typeof AuthenticatedJurisdictionsRouteWithChildren
   '/lookup': typeof AuthenticatedLookupRoute
   '/portals': typeof AuthenticatedPortalsRoute
   '/checkout/return': typeof CheckoutReturnRoute
+  '/admin/health-portals': typeof AuthenticatedAdminHealthPortalsRoute
   '/admin/portals': typeof AuthenticatedAdminPortalsRoute
   '/assistant/$threadId': typeof AuthenticatedAssistantThreadIdRoute
   '/assistant/analysis': typeof AuthenticatedAssistantAnalysisRoute
@@ -172,10 +188,12 @@ export interface FileRoutesByTo {
   '/auth': typeof AuthRoute
   '/pricing': typeof PricingRoute
   '/dashboard': typeof AuthenticatedDashboardRoute
+  '/health-portals': typeof AuthenticatedHealthPortalsRoute
   '/jurisdictions': typeof AuthenticatedJurisdictionsRouteWithChildren
   '/lookup': typeof AuthenticatedLookupRoute
   '/portals': typeof AuthenticatedPortalsRoute
   '/checkout/return': typeof CheckoutReturnRoute
+  '/admin/health-portals': typeof AuthenticatedAdminHealthPortalsRoute
   '/admin/portals': typeof AuthenticatedAdminPortalsRoute
   '/assistant/$threadId': typeof AuthenticatedAssistantThreadIdRoute
   '/assistant/analysis': typeof AuthenticatedAssistantAnalysisRoute
@@ -196,10 +214,12 @@ export interface FileRoutesById {
   '/pricing': typeof PricingRoute
   '/_authenticated/assistant': typeof AuthenticatedAssistantRouteWithChildren
   '/_authenticated/dashboard': typeof AuthenticatedDashboardRoute
+  '/_authenticated/health-portals': typeof AuthenticatedHealthPortalsRoute
   '/_authenticated/jurisdictions': typeof AuthenticatedJurisdictionsRouteWithChildren
   '/_authenticated/lookup': typeof AuthenticatedLookupRoute
   '/_authenticated/portals': typeof AuthenticatedPortalsRoute
   '/checkout/return': typeof CheckoutReturnRoute
+  '/_authenticated/admin/health-portals': typeof AuthenticatedAdminHealthPortalsRoute
   '/_authenticated/admin/portals': typeof AuthenticatedAdminPortalsRoute
   '/_authenticated/assistant/$threadId': typeof AuthenticatedAssistantThreadIdRoute
   '/_authenticated/assistant/analysis': typeof AuthenticatedAssistantAnalysisRoute
@@ -220,10 +240,12 @@ export interface FileRouteTypes {
     | '/pricing'
     | '/assistant'
     | '/dashboard'
+    | '/health-portals'
     | '/jurisdictions'
     | '/lookup'
     | '/portals'
     | '/checkout/return'
+    | '/admin/health-portals'
     | '/admin/portals'
     | '/assistant/$threadId'
     | '/assistant/analysis'
@@ -241,10 +263,12 @@ export interface FileRouteTypes {
     | '/auth'
     | '/pricing'
     | '/dashboard'
+    | '/health-portals'
     | '/jurisdictions'
     | '/lookup'
     | '/portals'
     | '/checkout/return'
+    | '/admin/health-portals'
     | '/admin/portals'
     | '/assistant/$threadId'
     | '/assistant/analysis'
@@ -264,10 +288,12 @@ export interface FileRouteTypes {
     | '/pricing'
     | '/_authenticated/assistant'
     | '/_authenticated/dashboard'
+    | '/_authenticated/health-portals'
     | '/_authenticated/jurisdictions'
     | '/_authenticated/lookup'
     | '/_authenticated/portals'
     | '/checkout/return'
+    | '/_authenticated/admin/health-portals'
     | '/_authenticated/admin/portals'
     | '/_authenticated/assistant/$threadId'
     | '/_authenticated/assistant/analysis'
@@ -348,6 +374,13 @@ declare module '@tanstack/react-router' {
       path: '/jurisdictions'
       fullPath: '/jurisdictions'
       preLoaderRoute: typeof AuthenticatedJurisdictionsRouteImport
+      parentRoute: typeof AuthenticatedRouteRoute
+    }
+    '/_authenticated/health-portals': {
+      id: '/_authenticated/health-portals'
+      path: '/health-portals'
+      fullPath: '/health-portals'
+      preLoaderRoute: typeof AuthenticatedHealthPortalsRouteImport
       parentRoute: typeof AuthenticatedRouteRoute
     }
     '/_authenticated/dashboard': {
@@ -434,6 +467,13 @@ declare module '@tanstack/react-router' {
       preLoaderRoute: typeof AuthenticatedAdminPortalsRouteImport
       parentRoute: typeof AuthenticatedRouteRoute
     }
+    '/_authenticated/admin/health-portals': {
+      id: '/_authenticated/admin/health-portals'
+      path: '/admin/health-portals'
+      fullPath: '/admin/health-portals'
+      preLoaderRoute: typeof AuthenticatedAdminHealthPortalsRouteImport
+      parentRoute: typeof AuthenticatedRouteRoute
+    }
     '/api/public/payments/webhook': {
       id: '/api/public/payments/webhook'
       path: '/api/public/payments/webhook'
@@ -479,9 +519,11 @@ const AuthenticatedJurisdictionsRouteWithChildren =
 interface AuthenticatedRouteRouteChildren {
   AuthenticatedAssistantRoute: typeof AuthenticatedAssistantRouteWithChildren
   AuthenticatedDashboardRoute: typeof AuthenticatedDashboardRoute
+  AuthenticatedHealthPortalsRoute: typeof AuthenticatedHealthPortalsRoute
   AuthenticatedJurisdictionsRoute: typeof AuthenticatedJurisdictionsRouteWithChildren
   AuthenticatedLookupRoute: typeof AuthenticatedLookupRoute
   AuthenticatedPortalsRoute: typeof AuthenticatedPortalsRoute
+  AuthenticatedAdminHealthPortalsRoute: typeof AuthenticatedAdminHealthPortalsRoute
   AuthenticatedAdminPortalsRoute: typeof AuthenticatedAdminPortalsRoute
   AuthenticatedInspectionsIdRoute: typeof AuthenticatedInspectionsIdRoute
   AuthenticatedProjectsIdRoute: typeof AuthenticatedProjectsIdRoute
@@ -491,9 +533,11 @@ interface AuthenticatedRouteRouteChildren {
 const AuthenticatedRouteRouteChildren: AuthenticatedRouteRouteChildren = {
   AuthenticatedAssistantRoute: AuthenticatedAssistantRouteWithChildren,
   AuthenticatedDashboardRoute: AuthenticatedDashboardRoute,
+  AuthenticatedHealthPortalsRoute: AuthenticatedHealthPortalsRoute,
   AuthenticatedJurisdictionsRoute: AuthenticatedJurisdictionsRouteWithChildren,
   AuthenticatedLookupRoute: AuthenticatedLookupRoute,
   AuthenticatedPortalsRoute: AuthenticatedPortalsRoute,
+  AuthenticatedAdminHealthPortalsRoute: AuthenticatedAdminHealthPortalsRoute,
   AuthenticatedAdminPortalsRoute: AuthenticatedAdminPortalsRoute,
   AuthenticatedInspectionsIdRoute: AuthenticatedInspectionsIdRoute,
   AuthenticatedProjectsIdRoute: AuthenticatedProjectsIdRoute,

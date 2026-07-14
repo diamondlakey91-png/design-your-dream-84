@@ -1,4 +1,5 @@
 import { z } from "zod";
+import { findHealthAgencyDeepLinks, buildHealthAgencyEntryFromMapping, type HealthAgencyServiceType } from "@/lib/healthAgencyRegistry";
 
 // Shared AI/jurisdiction-grounding helpers and constants used across the chat, checklist,
 // jurisdiction-profiles, plan-review, and permit-analysis server function modules.
@@ -74,6 +75,37 @@ Rules for using this context:
 - When you quote a duration, fee, or requirement from this block, append the source URL in parentheses.
 - If a stage/fee is not listed, say "not cached for this jurisdiction — verify with the portal above" instead of guessing a number.`;
   return { block, hasData: true, profile };
+}
+
+// ---- Health/environmental agency grounding: mirrors loadJurisdictionContextBlock ----
+export async function loadHealthAgencyContextBlock(
+  supabase: { from: (t: string) => unknown },
+  jurisdiction: string,
+  opts: { serviceType?: HealthAgencyServiceType } = {},
+): Promise<{ block: string; hasData: boolean }> {
+  if (!jurisdiction.trim()) return { block: "", hasData: false };
+  // eslint-disable-next-line @typescript-eslint/no-explicit-any
+  const q: any = (supabase as any)
+    .from("health_environmental_portals")
+    .select("jurisdiction, state, agency_type, service_types, url, address_search_template, permit_search_template, plan_review_url, notes")
+    .eq("is_active", true);
+  const { data: rows } = (await q) as {
+    data: Array<Parameters<typeof buildHealthAgencyEntryFromMapping>[0]> | null;
+  };
+  const extra = (rows ?? []).map(buildHealthAgencyEntryFromMapping);
+  const matches = findHealthAgencyDeepLinks(jurisdiction, { serviceType: opts.serviceType, limit: 3, extra });
+  if (matches.length === 0) return { block: "", hasData: false };
+
+  const lines = matches
+    .map((m) => `- ${m.entry.jurisdiction}, ${m.entry.state} (${m.entry.agencyType}) — services: ${m.entry.serviceTypes.join(", ") || "unspecified"} — ${m.entry.url}`)
+    .join("\n");
+  const block = `\n\n[HEALTH/ENVIRONMENTAL AGENCY CONTEXT]
+${lines}
+
+Rules for using this context:
+- Cite one of these URLs when you reference septic/OSSF, well permitting, food-service plan review, or wetlands/stormwater requirements.
+- If none of these agencies actually cover what's needed, say the health/environmental agency isn't cached for this jurisdiction instead of guessing an agency name.`;
+  return { block, hasData: true };
 }
 
 export const SYSTEM_PROMPT = `You are the Permivio Permit Assistant — a specialist that helps contractors, architects, and developers identify the building, trade, planning, and regulatory permits required for construction projects in specific United States jurisdictions.

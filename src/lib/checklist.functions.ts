@@ -1,7 +1,7 @@
 import { createServerFn } from "@tanstack/react-start";
 import { requireSupabaseAuth } from "@/integrations/supabase/auth-middleware";
 import { z } from "zod";
-import { callLovableAI, SYSTEM_PROMPT, PERMIT_STATUSES, ExtractedItem, loadJurisdictionContextBlock } from "@/lib/ai.shared";
+import { callLovableAI, SYSTEM_PROMPT, PERMIT_STATUSES, ExtractedItem, loadJurisdictionContextBlock, loadHealthAgencyContextBlock } from "@/lib/ai.shared";
 
 // ---- Permit checklist ----
 export const listPermitItems = createServerFn({ method: "GET" })
@@ -114,12 +114,20 @@ export const generatePermitChecklist = createServerFn({ method: "POST" })
       .from("projects").select("*").eq("id", data.project_id).maybeSingle();
     if (!p) throw new Error("Project not found");
 
+    const jc = p.jurisdiction
+      ? await loadJurisdictionContextBlock(context.supabase, p.jurisdiction)
+      : { block: "", hasData: false, profile: null };
+    const hc = p.jurisdiction
+      ? await loadHealthAgencyContextBlock(context.supabase, p.jurisdiction)
+      : { block: "", hasData: false };
+
     const prompt = `Generate a permit checklist for this project. Return ONLY valid JSON, no prose.
 
 Project: ${p.name}
 Type: ${p.project_type}
 Location: ${p.location || "unspecified"}
 Jurisdiction: ${p.jurisdiction || "unspecified"}
+${jc.block}${hc.block}
 
 Return this JSON shape:
 {"items":[{"name":"Building Permit","category":"Building","required":true,"why":"..."}]}
@@ -130,6 +138,7 @@ Rules:
 - required=true for likely-required, false for conditional.
 - name is the specific permit/approval name; where jurisdiction is known, use the local term (e.g. "LADBS Building Permit", "NYC DOB PW1 Filing").
 - why is one short clause explaining trigger.
+- When a [JURISDICTION CONTEXT] block is provided, prefer permit names/timelines listed there. When a [HEALTH/ENVIRONMENTAL AGENCY CONTEXT] block is provided, ground any Health, Environmental, or Stormwater category item's name/why in the agency and services listed there instead of guessing.
 
 PROJECT-TYPE RULES (critical — tailor the list to "${p.project_type}"):
 - Tenant Fit-Out / Tenant Improvement / TI: focus on interior alterations — Zoning Use Approval, Building (Alteration/TI), MEP (Mech/Elec/Plumb) sub-permits, Fire (sprinkler/alarm modification, hood suppression if applicable), Health (if food service), Sign. Usually NO grading, stormwater, or site work. If restaurant/food service, include Health Dept plan review + Hood/Grease permits.
@@ -238,10 +247,13 @@ export const intakeGenerateChecklist = createServerFn({ method: "POST" })
       description: `Project "${project.name}" created from AI intake.`,
     });
 
-    // Load cached jurisdiction context (grounds checklist in real permits/timelines/sources)
+    // Load cached jurisdiction + health/environmental agency context (grounds checklist in real permits/timelines/sources)
     const jc = data.jurisdiction
       ? await loadJurisdictionContextBlock(context.supabase, data.jurisdiction)
       : { block: "", hasData: false, profile: null };
+    const hc = data.jurisdiction
+      ? await loadHealthAgencyContextBlock(context.supabase, data.jurisdiction)
+      : { block: "", hasData: false };
 
     // Ask AI for a checklist tailored to the intake scope
     const prompt = `Generate a permit checklist for this project based on the intake below. Return ONLY valid JSON, no prose.
@@ -255,7 +267,7 @@ Location: ${data.location}
 Jurisdiction: ${data.jurisdiction || "unspecified"}
 Scope described by user:
 """${data.scope}"""
-${jc.block}
+${jc.block}${hc.block}
 
 Return this JSON shape:
 {"items":[{"name":"Building Permit","category":"Building","required":true,"why":"..."}]}
@@ -265,7 +277,8 @@ Rules:
 - category one of: Building, MEP, Fire, Health, Zoning, Sign, Right-of-Way, Grading, Demolition, Stormwater, Historic, Environmental, Occupancy.
 - required=true for clearly-required based on scope; false for conditional/only-if-triggered.
 - name uses the local term when jurisdiction is known (e.g. "LADBS Building Permit", "NYC DOB PW1 Filing"). If a JURISDICTION CONTEXT block is provided above, prefer permit names listed there.
-- why is one short clause tied to the scope (mention the trigger from the intake). When a stage's typical duration is in the JURISDICTION CONTEXT, append " (~<duration>)" to why for that item.`;
+- why is one short clause tied to the scope (mention the trigger from the intake). When a stage's typical duration is in the JURISDICTION CONTEXT, append " (~<duration>)" to why for that item.
+- When a [HEALTH/ENVIRONMENTAL AGENCY CONTEXT] block is provided, ground any Health, Environmental, or Stormwater category item's name/why in the agency and services listed there instead of guessing.`;
 
     const raw = await callLovableAI(apiKey, [
       { role: "system", content: SYSTEM_PROMPT },

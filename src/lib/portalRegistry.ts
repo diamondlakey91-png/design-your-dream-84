@@ -439,7 +439,7 @@ export const US_STATES: string[] = [
 // direct deep links that land on the correct pre-filled search page.
 // ---------------------------------------------------------------------------
 
-const STATE_NAME_TO_CODE: Record<string, string> = {
+export const STATE_NAME_TO_CODE: Record<string, string> = {
   alabama:"AL", alaska:"AK", arizona:"AZ", arkansas:"AR", california:"CA", colorado:"CO",
   connecticut:"CT", delaware:"DE", florida:"FL", georgia:"GA", hawaii:"HI", idaho:"ID",
   illinois:"IL", indiana:"IN", iowa:"IA", kansas:"KS", kentucky:"KY", louisiana:"LA",
@@ -452,7 +452,7 @@ const STATE_NAME_TO_CODE: Record<string, string> = {
   "west virginia":"WV", wisconsin:"WI", wyoming:"WY", "district of columbia":"DC",
 };
 
-function normalize(s: string): string {
+export function normalize(s: string): string {
   return s.toLowerCase()
     .replace(/\bcounty\b|\bcity of\b|\btown of\b|\bvillage of\b|\bborough of\b/g, "")
     .replace(/[^\w\s]/g, " ")

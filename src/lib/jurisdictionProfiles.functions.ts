@@ -3,6 +3,7 @@ import { requireSupabaseAuth } from "@/integrations/supabase/auth-middleware";
 import { z } from "zod";
 import { callLovableAI, toSlug } from "@/lib/ai.shared";
 import { firecrawlSearch, firecrawlScrape } from "@/lib/firecrawl.shared";
+import { findHealthAgencyDeepLinks } from "@/lib/healthAgencyRegistry";
 
 export const listJurisdictionProfiles = createServerFn({ method: "GET" })
   .middleware([requireSupabaseAuth])
@@ -63,6 +64,12 @@ const ProfileExtractionSchema = z.object({
     detail: z.string(),
   })).max(20),
   source_urls: z.array(z.string()).max(15),
+  health_department: z.object({
+    name: z.string().default(""),
+    portal_url: z.string().default(""),
+    phone: z.string().default(""),
+    services: z.array(z.string()).default([]),
+  }).default({ name: "", portal_url: "", phone: "", services: [] }),
 });
 
 export const buildJurisdictionProfile = createServerFn({ method: "POST" })
@@ -100,10 +107,29 @@ export const buildJurisdictionProfile = createServerFn({ method: "POST" })
       }
     }));
 
+    // Health/environmental agency search — separate query, since the building-department
+    // search above rarely surfaces septic/OSSF, well-permitting, or food-service pages.
+    const healthHits = await firecrawlSearch(
+      fcKey,
+      `${data.jurisdiction} health department septic OSSF well permit food service plan review site:.gov`,
+      3,
+    ).catch(() => []);
+    const healthTargets = healthHits
+      .filter((h) => /\.gov/i.test(h.url))
+      .slice(0, 2);
+    const healthScrapes = await Promise.all(healthTargets.map(async (h) => {
+      try {
+        const s = await firecrawlScrape(fcKey, h.url);
+        return `HEALTH/ENVIRONMENTAL SOURCE: ${h.url}\nTITLE: ${h.title ?? ""}\n${s.markdown.slice(0, 3500)}`;
+      } catch {
+        return `HEALTH/ENVIRONMENTAL SOURCE: ${h.url}\nTITLE: ${h.title ?? ""}\nDESC: ${h.description ?? ""}`;
+      }
+    }));
+
     const prompt = `Build a jurisdiction intelligence profile for ${data.jurisdiction}, USA. Use ONLY facts from the sources below. If you don't know, leave the field empty; never fabricate specific fee amounts or code sections.
 
 SOURCES
-${scrapes.join("\n\n---\n\n")}
+${[...scrapes, ...healthScrapes].join("\n\n---\n\n")}
 
 Return ONLY valid JSON of this exact shape:
 {
@@ -116,8 +142,11 @@ Return ONLY valid JSON of this exact shape:
   "fees": [{"label":"Building permit fee","detail":"formula or 'valuation-based; see fee schedule'"}],
   "timelines": [{"stage":"Plan review","typical_duration":"2-6 weeks"}],
   "contacts": [{"role":"Building Department","detail":"phone / email / address"}],
-  "source_urls": ["https://..."]
-}`;
+  "source_urls": ["https://..."],
+  "health_department": {"name":"official health dept / environmental agency name, or empty if no HEALTH/ENVIRONMENTAL SOURCE was provided above","portal_url":"...","phone":"...","services":["septic/OSSF","well permitting","food service plan review"]}
+}
+
+The "health_department" field must be based ONLY on the HEALTH/ENVIRONMENTAL SOURCE entries above (if any). If none were provided, leave name/portal_url/phone empty and services as an empty array — do not guess.`;
 
     const raw = await callLovableAI(aiKey, [
       { role: "system", content: "You extract structured jurisdiction data. Output valid JSON only, no prose, no fences. Never fabricate specific numbers." },
@@ -128,6 +157,25 @@ Return ONLY valid JSON of this exact shape:
     let parsed: z.infer<typeof ProfileExtractionSchema>;
     try { parsed = ProfileExtractionSchema.parse(JSON.parse(cleaned.slice(s, e + 1))); }
     catch { throw new Error("AI returned unparseable profile. Try again."); }
+
+    // Prefer a known, hand-verified health-agency URL over the AI's guess when we have a
+    // high-confidence registry match — same cross-check idea as the building-department
+    // side would use if it queried portalRegistry.ts (it doesn't today; this is additive).
+    const healthMatch = findHealthAgencyDeepLinks(data.jurisdiction, { limit: 1 })[0];
+    const healthDeptName = parsed.health_department.name || (healthMatch && healthMatch.score >= 6 ? healthMatch.entry.jurisdiction + " Health Department" : "");
+    const healthDeptUrl = (healthMatch && healthMatch.score >= 6) ? healthMatch.entry.url : parsed.health_department.portal_url;
+
+    const departments = [
+      { name: "Building", responsibility: parsed.department, webpage: parsed.portal_url },
+      ...(healthDeptName
+        ? [{
+            name: "Health Department",
+            responsibility: parsed.health_department.services.join(", "),
+            webpage: healthDeptUrl,
+            phone: parsed.health_department.phone,
+          }]
+        : []),
+    ];
 
     const payload = {
       slug,
@@ -141,6 +189,7 @@ Return ONLY valid JSON of this exact shape:
       timelines: parsed.timelines,
       contacts: parsed.contacts,
       source_urls: parsed.source_urls,
+      departments,
       refreshed_at: new Date().toISOString(),
       created_by: context.userId,
     };
