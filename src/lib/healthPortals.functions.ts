@@ -76,7 +76,7 @@ export const upsertHealthPortalMapping = createServerFn({ method: "POST" })
       is_active: data.is_active ?? true,
     };
     if (data.id) {
-      const { data: row, error } = await context.supabase
+      const { data: row, error } = await (context.supabase as any)
         .from("health_environmental_portals")
         .update(payload)
         .eq("id", data.id)
@@ -85,13 +85,14 @@ export const upsertHealthPortalMapping = createServerFn({ method: "POST" })
       if (error) throw new Error(error.message);
       return row as HealthPortalMappingRow;
     }
-    const { data: row, error } = await context.supabase
+    const { data: row, error } = await (context.supabase as any)
       .from("health_environmental_portals")
       .insert({ ...payload, created_by: context.userId })
       .select("*")
       .single();
     if (error) throw new Error(error.message);
     return row as HealthPortalMappingRow;
+
   });
 
 /** Delete a health/environmental portal mapping (admin only). */
