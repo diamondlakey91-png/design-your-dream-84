@@ -29,8 +29,10 @@ function ProjectDetail() {
   const navigate = useNavigate();
   const qc = useQueryClient();
   const [tab, setTab] = useState<Tab>("overview");
+  const [editOpen, setEditOpen] = useState(false);
 
   const getFn = useServerFn(getProject);
+  const updateFn = useServerFn(updateProject);
   const q = useQuery({ queryKey: ["project", id], queryFn: () => getFn({ data: { id } }) });
 
   if (q.isLoading) return <AppShell><div className="p-6 text-sm text-muted-foreground">Loading…</div></AppShell>;
