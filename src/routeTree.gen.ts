@@ -33,6 +33,7 @@ import { Route as AuthenticatedAssistantAnalysisRouteImport } from './routes/_au
 import { Route as AuthenticatedAssistantThreadIdRouteImport } from './routes/_authenticated/assistant.$threadId'
 import { Route as AuthenticatedAdminPortalsRouteImport } from './routes/_authenticated/admin.portals'
 import { Route as AuthenticatedAdminHealthPortalsRouteImport } from './routes/_authenticated/admin.health-portals'
+import { Route as AuthenticatedAssistantScreensIndexRouteImport } from './routes/_authenticated/assistant.screens.index'
 import { Route as ApiPublicPaymentsWebhookRouteImport } from './routes/api/public/payments/webhook'
 import { Route as ApiPublicHooksRefreshLinkedPermitsRouteImport } from './routes/api/public/hooks/refresh-linked-permits'
 import { Route as AuthenticatedAssistantScreensIdRouteImport } from './routes/_authenticated/assistant.screens.$id'
@@ -167,6 +168,12 @@ const AuthenticatedAdminHealthPortalsRoute =
     path: '/admin/health-portals',
     getParentRoute: () => AuthenticatedRouteRoute,
   } as any)
+const AuthenticatedAssistantScreensIndexRoute =
+  AuthenticatedAssistantScreensIndexRouteImport.update({
+    id: '/',
+    path: '/',
+    getParentRoute: () => AuthenticatedAssistantScreensRoute,
+  } as any)
 const ApiPublicPaymentsWebhookRoute =
   ApiPublicPaymentsWebhookRouteImport.update({
     id: '/api/public/payments/webhook',
@@ -213,6 +220,7 @@ export interface FileRoutesByFullPath {
   '/assistant/screens/$id': typeof AuthenticatedAssistantScreensIdRoute
   '/api/public/hooks/refresh-linked-permits': typeof ApiPublicHooksRefreshLinkedPermitsRoute
   '/api/public/payments/webhook': typeof ApiPublicPaymentsWebhookRoute
+  '/assistant/screens/': typeof AuthenticatedAssistantScreensIndexRoute
 }
 export interface FileRoutesByTo {
   '/': typeof IndexRoute
@@ -229,7 +237,6 @@ export interface FileRoutesByTo {
   '/admin/portals': typeof AuthenticatedAdminPortalsRoute
   '/assistant/$threadId': typeof AuthenticatedAssistantThreadIdRoute
   '/assistant/analysis': typeof AuthenticatedAssistantAnalysisRoute
-  '/assistant/screens': typeof AuthenticatedAssistantScreensRouteWithChildren
   '/inspections/$id': typeof AuthenticatedInspectionsIdRoute
   '/jurisdictions/$slug': typeof AuthenticatedJurisdictionsSlugRoute
   '/projects/$id': typeof AuthenticatedProjectsIdRoute
@@ -240,6 +247,7 @@ export interface FileRoutesByTo {
   '/assistant/screens/$id': typeof AuthenticatedAssistantScreensIdRoute
   '/api/public/hooks/refresh-linked-permits': typeof ApiPublicHooksRefreshLinkedPermitsRoute
   '/api/public/payments/webhook': typeof ApiPublicPaymentsWebhookRoute
+  '/assistant/screens': typeof AuthenticatedAssistantScreensIndexRoute
 }
 export interface FileRoutesById {
   __root__: typeof rootRouteImport
@@ -270,6 +278,7 @@ export interface FileRoutesById {
   '/_authenticated/assistant/screens/$id': typeof AuthenticatedAssistantScreensIdRoute
   '/api/public/hooks/refresh-linked-permits': typeof ApiPublicHooksRefreshLinkedPermitsRoute
   '/api/public/payments/webhook': typeof ApiPublicPaymentsWebhookRoute
+  '/_authenticated/assistant/screens/': typeof AuthenticatedAssistantScreensIndexRoute
 }
 export interface FileRouteTypes {
   fileRoutesByFullPath: FileRoutesByFullPath
@@ -300,6 +309,7 @@ export interface FileRouteTypes {
     | '/assistant/screens/$id'
     | '/api/public/hooks/refresh-linked-permits'
     | '/api/public/payments/webhook'
+    | '/assistant/screens/'
   fileRoutesByTo: FileRoutesByTo
   to:
     | '/'
@@ -316,7 +326,6 @@ export interface FileRouteTypes {
     | '/admin/portals'
     | '/assistant/$threadId'
     | '/assistant/analysis'
-    | '/assistant/screens'
     | '/inspections/$id'
     | '/jurisdictions/$slug'
     | '/projects/$id'
@@ -327,6 +336,7 @@ export interface FileRouteTypes {
     | '/assistant/screens/$id'
     | '/api/public/hooks/refresh-linked-permits'
     | '/api/public/payments/webhook'
+    | '/assistant/screens'
   id:
     | '__root__'
     | '/'
@@ -356,6 +366,7 @@ export interface FileRouteTypes {
     | '/_authenticated/assistant/screens/$id'
     | '/api/public/hooks/refresh-linked-permits'
     | '/api/public/payments/webhook'
+    | '/_authenticated/assistant/screens/'
   fileRoutesById: FileRoutesById
 }
 export interface RootRouteChildren {
@@ -540,6 +551,13 @@ declare module '@tanstack/react-router' {
       preLoaderRoute: typeof AuthenticatedAdminHealthPortalsRouteImport
       parentRoute: typeof AuthenticatedRouteRoute
     }
+    '/_authenticated/assistant/screens/': {
+      id: '/_authenticated/assistant/screens/'
+      path: '/'
+      fullPath: '/assistant/screens/'
+      preLoaderRoute: typeof AuthenticatedAssistantScreensIndexRouteImport
+      parentRoute: typeof AuthenticatedAssistantScreensRoute
+    }
     '/api/public/payments/webhook': {
       id: '/api/public/payments/webhook'
       path: '/api/public/payments/webhook'
@@ -566,11 +584,14 @@ declare module '@tanstack/react-router' {
 
 interface AuthenticatedAssistantScreensRouteChildren {
   AuthenticatedAssistantScreensIdRoute: typeof AuthenticatedAssistantScreensIdRoute
+  AuthenticatedAssistantScreensIndexRoute: typeof AuthenticatedAssistantScreensIndexRoute
 }
 
 const AuthenticatedAssistantScreensRouteChildren: AuthenticatedAssistantScreensRouteChildren =
   {
     AuthenticatedAssistantScreensIdRoute: AuthenticatedAssistantScreensIdRoute,
+    AuthenticatedAssistantScreensIndexRoute:
+      AuthenticatedAssistantScreensIndexRoute,
   }
 
 const AuthenticatedAssistantScreensRouteWithChildren =
