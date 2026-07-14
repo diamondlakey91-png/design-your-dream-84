@@ -14,6 +14,7 @@ import { Route as AuthRouteImport } from './routes/auth'
 import { Route as AuthenticatedRouteRouteImport } from './routes/_authenticated/route'
 import { Route as IndexRouteImport } from './routes/index'
 import { Route as CheckoutReturnRouteImport } from './routes/checkout.return'
+import { Route as AuthenticatedPropertyRouteImport } from './routes/_authenticated/property'
 import { Route as AuthenticatedPortalsRouteImport } from './routes/_authenticated/portals'
 import { Route as AuthenticatedLookupRouteImport } from './routes/_authenticated/lookup'
 import { Route as AuthenticatedJurisdictionsRouteImport } from './routes/_authenticated/jurisdictions'
@@ -54,6 +55,11 @@ const CheckoutReturnRoute = CheckoutReturnRouteImport.update({
   id: '/checkout/return',
   path: '/checkout/return',
   getParentRoute: () => rootRouteImport,
+} as any)
+const AuthenticatedPropertyRoute = AuthenticatedPropertyRouteImport.update({
+  id: '/property',
+  path: '/property',
+  getParentRoute: () => AuthenticatedRouteRoute,
 } as any)
 const AuthenticatedPortalsRoute = AuthenticatedPortalsRouteImport.update({
   id: '/portals',
@@ -154,6 +160,7 @@ export interface FileRoutesByFullPath {
   '/jurisdictions': typeof AuthenticatedJurisdictionsRouteWithChildren
   '/lookup': typeof AuthenticatedLookupRoute
   '/portals': typeof AuthenticatedPortalsRoute
+  '/property': typeof AuthenticatedPropertyRoute
   '/checkout/return': typeof CheckoutReturnRoute
   '/admin/portals': typeof AuthenticatedAdminPortalsRoute
   '/assistant/$threadId': typeof AuthenticatedAssistantThreadIdRoute
@@ -175,6 +182,7 @@ export interface FileRoutesByTo {
   '/jurisdictions': typeof AuthenticatedJurisdictionsRouteWithChildren
   '/lookup': typeof AuthenticatedLookupRoute
   '/portals': typeof AuthenticatedPortalsRoute
+  '/property': typeof AuthenticatedPropertyRoute
   '/checkout/return': typeof CheckoutReturnRoute
   '/admin/portals': typeof AuthenticatedAdminPortalsRoute
   '/assistant/$threadId': typeof AuthenticatedAssistantThreadIdRoute
@@ -199,6 +207,7 @@ export interface FileRoutesById {
   '/_authenticated/jurisdictions': typeof AuthenticatedJurisdictionsRouteWithChildren
   '/_authenticated/lookup': typeof AuthenticatedLookupRoute
   '/_authenticated/portals': typeof AuthenticatedPortalsRoute
+  '/_authenticated/property': typeof AuthenticatedPropertyRoute
   '/checkout/return': typeof CheckoutReturnRoute
   '/_authenticated/admin/portals': typeof AuthenticatedAdminPortalsRoute
   '/_authenticated/assistant/$threadId': typeof AuthenticatedAssistantThreadIdRoute
@@ -223,6 +232,7 @@ export interface FileRouteTypes {
     | '/jurisdictions'
     | '/lookup'
     | '/portals'
+    | '/property'
     | '/checkout/return'
     | '/admin/portals'
     | '/assistant/$threadId'
@@ -244,6 +254,7 @@ export interface FileRouteTypes {
     | '/jurisdictions'
     | '/lookup'
     | '/portals'
+    | '/property'
     | '/checkout/return'
     | '/admin/portals'
     | '/assistant/$threadId'
@@ -267,6 +278,7 @@ export interface FileRouteTypes {
     | '/_authenticated/jurisdictions'
     | '/_authenticated/lookup'
     | '/_authenticated/portals'
+    | '/_authenticated/property'
     | '/checkout/return'
     | '/_authenticated/admin/portals'
     | '/_authenticated/assistant/$threadId'
@@ -328,6 +340,13 @@ declare module '@tanstack/react-router' {
       fullPath: '/checkout/return'
       preLoaderRoute: typeof CheckoutReturnRouteImport
       parentRoute: typeof rootRouteImport
+    }
+    '/_authenticated/property': {
+      id: '/_authenticated/property'
+      path: '/property'
+      fullPath: '/property'
+      preLoaderRoute: typeof AuthenticatedPropertyRouteImport
+      parentRoute: typeof AuthenticatedRouteRoute
     }
     '/_authenticated/portals': {
       id: '/_authenticated/portals'
@@ -482,6 +501,7 @@ interface AuthenticatedRouteRouteChildren {
   AuthenticatedJurisdictionsRoute: typeof AuthenticatedJurisdictionsRouteWithChildren
   AuthenticatedLookupRoute: typeof AuthenticatedLookupRoute
   AuthenticatedPortalsRoute: typeof AuthenticatedPortalsRoute
+  AuthenticatedPropertyRoute: typeof AuthenticatedPropertyRoute
   AuthenticatedAdminPortalsRoute: typeof AuthenticatedAdminPortalsRoute
   AuthenticatedInspectionsIdRoute: typeof AuthenticatedInspectionsIdRoute
   AuthenticatedProjectsIdRoute: typeof AuthenticatedProjectsIdRoute
@@ -494,6 +514,7 @@ const AuthenticatedRouteRouteChildren: AuthenticatedRouteRouteChildren = {
   AuthenticatedJurisdictionsRoute: AuthenticatedJurisdictionsRouteWithChildren,
   AuthenticatedLookupRoute: AuthenticatedLookupRoute,
   AuthenticatedPortalsRoute: AuthenticatedPortalsRoute,
+  AuthenticatedPropertyRoute: AuthenticatedPropertyRoute,
   AuthenticatedAdminPortalsRoute: AuthenticatedAdminPortalsRoute,
   AuthenticatedInspectionsIdRoute: AuthenticatedInspectionsIdRoute,
   AuthenticatedProjectsIdRoute: AuthenticatedProjectsIdRoute,

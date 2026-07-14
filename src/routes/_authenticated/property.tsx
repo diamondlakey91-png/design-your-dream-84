@@ -366,9 +366,15 @@ function UtilityIcon({ kind }: { kind: string }) {
 }
 
 // ---- Map (Google Maps JS) ----
+type GMapsGlobal = {
+  maps: {
+    Map: new (el: HTMLElement, opts: Record<string, unknown>) => unknown;
+    Marker: new (opts: Record<string, unknown>) => unknown;
+  };
+};
 declare global {
   interface Window {
-    google?: typeof google;
+    google?: GMapsGlobal;
     __permivioInitMap?: () => void;
     __permivioMapReady?: boolean;
   }
