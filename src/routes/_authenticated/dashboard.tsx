@@ -9,6 +9,7 @@ import { useEffect, useMemo, useState } from "react";
 import { Plus, X, Sparkles, ArrowUpRight, CalendarClock, ClipboardCheck, Loader2, AlertTriangle, Trophy, Trash2 } from "lucide-react";
 import { toast } from "sonner";
 import { format, differenceInCalendarDays, parseISO } from "date-fns";
+import { JurisdictionAutocomplete } from "@/components/JurisdictionAutocomplete";
 
 export const Route = createFileRoute("/_authenticated/dashboard")({
   head: () => ({
