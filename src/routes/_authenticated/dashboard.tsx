@@ -4,9 +4,10 @@ import { useServerFn } from "@tanstack/react-start";
 import { AppShell } from "@/components/AppShell";
 import { listProjects, listDeadlines, createProject, deleteProject } from "@/lib/projects.functions";
 import { generateDailyBriefing } from "@/lib/chat.functions";
+import { geocodeAddress } from "@/lib/geocoding.functions";
 import { supabase } from "@/integrations/supabase/client";
 import { useEffect, useMemo, useState } from "react";
-import { Plus, X, Sparkles, ArrowUpRight, CalendarClock, ClipboardCheck, Loader2, AlertTriangle, Trophy, Trash2 } from "lucide-react";
+import { Plus, X, Sparkles, ArrowUpRight, CalendarClock, ClipboardCheck, Loader2, AlertTriangle, Trophy, Trash2, MapPin, CheckCircle2 } from "lucide-react";
 import { toast } from "sonner";
 import { format, differenceInCalendarDays, parseISO } from "date-fns";
 import { JurisdictionAutocomplete } from "@/components/JurisdictionAutocomplete";
@@ -521,12 +522,14 @@ function computePortfolio(
 function CreateProjectDialog({ onClose }: { onClose: () => void }) {
   const navigate = useNavigate();
   const createFn = useServerFn(createProject);
+  const geocodeFn = useServerFn(geocodeAddress);
   const queryClient = useQueryClient();
   const [name, setName] = useState("");
   const [location, setLocation] = useState("");
   const [jurisdiction, setJurisdiction] = useState("");
   const [projectType, setProjectType] = useState("Tenant Fit-Out");
   const [permitCount, setPermitCount] = useState(3);
+  const [geocodeVerified, setGeocodeVerified] = useState(false);
 
   const mut = useMutation({
     mutationFn: () => createFn({ data: { name, location, jurisdiction, project_type: projectType, permit_count: permitCount } }),
@@ -537,6 +540,17 @@ function CreateProjectDialog({ onClose }: { onClose: () => void }) {
       navigate({ to: "/projects/$id", params: { id: row.id } });
     },
     onError: (e) => toast.error(e instanceof Error ? e.message : "Failed"),
+  });
+
+  const verifyMut = useMutation({
+    mutationFn: () => geocodeFn({ data: { address: location } }),
+    onSuccess: (res) => {
+      setLocation(res.formatted_address);
+      setJurisdiction(res.jurisdiction);
+      setGeocodeVerified(true);
+      toast.success("Address verified");
+    },
+    onError: (e) => toast.error(e instanceof Error ? e.message : "Couldn't verify that address"),
   });
 
   return (
@@ -562,12 +576,25 @@ function CreateProjectDialog({ onClose }: { onClose: () => void }) {
               className="h-11 rounded-lg border border-input bg-card px-3 text-sm outline-none focus:border-primary" />
           </Field>
           <Field label="Location">
-            <input value={location} onChange={(e) => setLocation(e.target.value)}
-              placeholder="Cleveland, OH"
-              className="h-11 rounded-lg border border-input bg-card px-3 text-sm outline-none focus:border-primary" />
+            <div className="flex gap-2">
+              <input value={location} onChange={(e) => { setLocation(e.target.value); setGeocodeVerified(false); }}
+                placeholder="Cleveland, OH"
+                className="h-11 flex-1 rounded-lg border border-input bg-card px-3 text-sm outline-none focus:border-primary" />
+              <button type="button" disabled={!location.trim() || verifyMut.isPending}
+                onClick={() => verifyMut.mutate()}
+                className="inline-flex h-11 shrink-0 items-center gap-1.5 rounded-lg border border-input px-3 text-xs font-medium disabled:opacity-40">
+                {verifyMut.isPending ? <Loader2 className="size-3.5 animate-spin" /> : <MapPin className="size-3.5" />}
+                Verify
+              </button>
+            </div>
           </Field>
           <Field label="Jurisdiction">
-            <JurisdictionAutocomplete value={jurisdiction} onChange={setJurisdiction} placeholder="Cuyahoga County, OH" />
+            <JurisdictionAutocomplete value={jurisdiction} onChange={(v) => { setJurisdiction(v); setGeocodeVerified(false); }} placeholder="Cuyahoga County, OH" />
+            {geocodeVerified && (
+              <span className="mt-1 inline-flex items-center gap-1 text-xs font-medium text-emerald-600">
+                <CheckCircle2 className="size-3.5" /> Verified via geocoding
+              </span>
+            )}
           </Field>
           <Field label="Project type">
             <select value={projectType} onChange={(e) => setProjectType(e.target.value)}

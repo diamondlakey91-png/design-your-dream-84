@@ -8,6 +8,7 @@ import { toast } from "sonner";
 import {
   ArrowLeft, Sparkles, FileText, ClipboardList, Building2, Route as RouteIcon,
   ShieldAlert, ListChecks, LinkIcon, Loader2, Save, Send, RotateCcw, CalendarPlus, Wand2, Layers,
+  MapPin, CheckCircle2,
 } from "lucide-react";
 import {
   generatePermitAnalysis, attachAnalysisToProject,
@@ -15,6 +16,7 @@ import {
   type PermitIntake,
 } from "@/lib/permitAnalysis.functions";
 import { listProjects } from "@/lib/projects.functions";
+import { geocodeAddress } from "@/lib/geocoding.functions";
 
 const analysisSearchSchema = z.object({
   screen_set_id: fallback(z.string(), "").default(""),
@@ -385,7 +387,31 @@ function Field({ label, value, onChange, placeholder, textarea, cols = 2 }: {
 }
 
 function IntakeForm({ intake, onChange }: { intake: PermitIntake; onChange: (i: PermitIntake) => void }) {
-  const set = <K extends keyof PermitIntake>(k: K, v: PermitIntake[K]) => onChange({ ...intake, [k]: v });
+  const [geocodeVerified, setGeocodeVerified] = useState(false);
+  const geocodeFn = useServerFn(geocodeAddress);
+  const set = <K extends keyof PermitIntake>(k: K, v: PermitIntake[K]) => {
+    onChange({ ...intake, [k]: v });
+    if (k === "address" || k === "city" || k === "county" || k === "state" || k === "zip" || k === "jurisdiction") {
+      setGeocodeVerified(false);
+    }
+  };
+  const verifyMut = useMutation({
+    mutationFn: () => geocodeFn({ data: { address: intake.address } }),
+    onSuccess: (res) => {
+      onChange({
+        ...intake,
+        address: res.formatted_address,
+        city: res.city,
+        county: res.county,
+        state: res.state,
+        zip: res.zip,
+        jurisdiction: res.jurisdiction,
+      });
+      setGeocodeVerified(true);
+      toast.success("Address verified");
+    },
+    onError: (e) => toast.error(e instanceof Error ? e.message : "Couldn't verify that address"),
+  });
   return (
     <div className="rounded-2xl bg-white/[0.03] ring-1 ring-white/10 p-4">
       <div className="text-sm font-semibold mb-3 flex items-center gap-2">
@@ -393,7 +419,26 @@ function IntakeForm({ intake, onChange }: { intake: PermitIntake; onChange: (i: 
       </div>
       <div className="grid grid-cols-2 gap-2.5">
         <Field cols={1} label="Project name" value={intake.project_name} onChange={(v) => set("project_name", v)} placeholder="e.g. Bayside Cafe TI" />
-        <Field cols={1} label="Full address" value={intake.address} onChange={(v) => set("address", v)} />
+        <div className="col-span-2">
+          <span className="block text-[10px] uppercase tracking-widest text-zinc-500 mb-1">Full address</span>
+          <div className="flex gap-2">
+            <input
+              value={intake.address} onChange={(e) => set("address", e.target.value)}
+              className="w-full bg-black/40 ring-1 ring-white/10 focus:ring-sky-500/40 rounded-md px-2 py-1.5 text-sm placeholder-zinc-600"
+            />
+            <button type="button" disabled={!intake.address.trim() || verifyMut.isPending}
+              onClick={() => verifyMut.mutate()}
+              className="inline-flex shrink-0 items-center gap-1.5 rounded-md ring-1 ring-white/10 px-2.5 text-xs font-medium disabled:opacity-40 hover:bg-white/5">
+              {verifyMut.isPending ? <Loader2 className="size-3.5 animate-spin" /> : <MapPin className="size-3.5" />}
+              Verify
+            </button>
+          </div>
+          {geocodeVerified && (
+            <span className="mt-1 inline-flex items-center gap-1 text-xs font-medium text-emerald-500">
+              <CheckCircle2 className="size-3.5" /> Verified via geocoding
+            </span>
+          )}
+        </div>
         <Field label="City" value={intake.city} onChange={(v) => set("city", v)} />
         <Field label="County" value={intake.county} onChange={(v) => set("county", v)} />
         <Field label="State" value={intake.state} onChange={(v) => set("state", v)} placeholder="e.g. VA" />
