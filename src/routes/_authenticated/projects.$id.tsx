@@ -126,3 +126,100 @@ function ProjectDetail() {
     </AppShell>
   );
 }
+
+type EditPatch = {
+  name?: string;
+  location?: string;
+  project_type?: string;
+  jurisdiction?: string;
+  permit_count?: number;
+};
+
+function EditProjectDialog({
+  open,
+  onOpenChange,
+  project,
+  onSave,
+}: {
+  open: boolean;
+  onOpenChange: (v: boolean) => void;
+  project: { name: string; location: string | null; project_type: string | null; jurisdiction: string | null; permit_count: number };
+  onSave: (patch: EditPatch) => void | Promise<void>;
+}) {
+  const [name, setName] = useState(project.name);
+  const [location, setLocation] = useState(project.location ?? "");
+  const [projectType, setProjectType] = useState(project.project_type ?? "");
+  const [jurisdiction, setJurisdiction] = useState(project.jurisdiction ?? "");
+  const [permitCount, setPermitCount] = useState(String(project.permit_count ?? 0));
+  const [saving, setSaving] = useState(false);
+
+  return (
+    <Dialog open={open} onOpenChange={onOpenChange}>
+      <DialogContent>
+        <DialogHeader>
+          <DialogTitle>Edit project</DialogTitle>
+        </DialogHeader>
+        <div className="space-y-3">
+          <div className="space-y-1.5">
+            <Label>Project name</Label>
+            <Input value={name} onChange={(e) => setName(e.target.value)} maxLength={200} />
+          </div>
+          <div className="space-y-1.5">
+            <Label>Jurisdiction</Label>
+            <Input
+              value={jurisdiction}
+              onChange={(e) => setJurisdiction(e.target.value)}
+              placeholder="e.g., Arlington County, VA"
+              maxLength={200}
+            />
+            <p className="text-[11px] text-muted-foreground">
+              Drives which codes, portals, and amendments the AI uses for this project.
+            </p>
+          </div>
+          <div className="space-y-1.5">
+            <Label>Address / location</Label>
+            <Input value={location} onChange={(e) => setLocation(e.target.value)} maxLength={200} />
+          </div>
+          <div className="grid grid-cols-2 gap-3">
+            <div className="space-y-1.5">
+              <Label>Project type</Label>
+              <Input value={projectType} onChange={(e) => setProjectType(e.target.value)} maxLength={80} />
+            </div>
+            <div className="space-y-1.5">
+              <Label>Permit count</Label>
+              <Input
+                type="number"
+                min={0}
+                max={50}
+                value={permitCount}
+                onChange={(e) => setPermitCount(e.target.value)}
+              />
+            </div>
+          </div>
+        </div>
+        <DialogFooter>
+          <Button variant="ghost" onClick={() => onOpenChange(false)}>Cancel</Button>
+          <Button
+            disabled={saving || !name.trim()}
+            onClick={async () => {
+              setSaving(true);
+              try {
+                await onSave({
+                  name: name.trim(),
+                  location: location.trim(),
+                  project_type: projectType.trim(),
+                  jurisdiction: jurisdiction.trim(),
+                  permit_count: Math.max(0, Math.min(50, Number(permitCount) || 0)),
+                });
+              } finally {
+                setSaving(false);
+              }
+            }}
+          >
+            {saving ? "Saving…" : "Save changes"}
+          </Button>
+        </DialogFooter>
+      </DialogContent>
+    </Dialog>
+  );
+}
