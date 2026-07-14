@@ -820,7 +820,7 @@ const PermitNumberSchema = z.object({
   no_match_reason: z.string().default(""),
 });
 
-async function scrapePermitByNumber(fcKey: string, aiKey: string, jurisdiction: string, permitNumber: string) {
+export async function scrapePermitByNumber(fcKey: string, aiKey: string, jurisdiction: string, permitNumber: string) {
   const urls = buildDirectPortalUrlsForPermitNumber(jurisdiction, permitNumber);
   const scrapes = (await Promise.all(
     urls.map(async (u) => {
