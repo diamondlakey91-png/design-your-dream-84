@@ -103,7 +103,7 @@ export const updateProject = createServerFn({ method: "POST" })
     if (Object.keys(patch).length === 1) return existing;
 
     const { data: updated, error } = await context.supabase
-      .from("projects").update(patch).eq("id", data.id).select("*").single();
+      .from("projects").update(patch as any).eq("id", data.id).select("*").single();
     if (error) throw new Error(error.message);
 
     await context.supabase.from("activity").insert({
