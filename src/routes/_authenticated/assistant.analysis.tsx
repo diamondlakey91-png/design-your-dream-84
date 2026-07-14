@@ -1,11 +1,13 @@
 import { createFileRoute, Link, useNavigate } from "@tanstack/react-router";
+import { zodValidator, fallback } from "@tanstack/zod-adapter";
+import { z } from "zod";
 import { useMutation, useQuery, useQueryClient } from "@tanstack/react-query";
 import { useServerFn } from "@tanstack/react-start";
-import { useState } from "react";
+import { useEffect, useState } from "react";
 import { toast } from "sonner";
 import {
   ArrowLeft, Sparkles, FileText, ClipboardList, Building2, Route as RouteIcon,
-  ShieldAlert, ListChecks, LinkIcon, Loader2, Save, Send, RotateCcw, CalendarPlus, Wand2,
+  ShieldAlert, ListChecks, LinkIcon, Loader2, Save, Send, RotateCcw, CalendarPlus, Wand2, Layers,
 } from "lucide-react";
 import {
   generatePermitAnalysis, attachAnalysisToProject,
@@ -14,8 +16,14 @@ import {
 } from "@/lib/permitAnalysis.functions";
 import { listProjects } from "@/lib/projects.functions";
 
+const analysisSearchSchema = z.object({
+  screen_set_id: fallback(z.string(), "").default(""),
+  open: fallback(z.string(), "").default(""),
+});
+
 export const Route = createFileRoute("/_authenticated/assistant/analysis")({
   head: () => ({ meta: [{ title: "Permit Analysis — Permivio" }, { name: "robots", content: "noindex" }] }),
+  validateSearch: zodValidator(analysisSearchSchema),
   component: AnalysisPage,
 });
 
@@ -114,6 +122,7 @@ function severityChip(s: string | undefined) {
 }
 
 function AnalysisPage() {
+  const { screen_set_id, open } = Route.useSearch();
   const genFn = useServerFn(generatePermitAnalysis);
   const projectsFn = useServerFn(listProjects);
   const attachFn = useServerFn(attachAnalysisToProject);
@@ -132,10 +141,11 @@ function AnalysisPage() {
   const historyQ = useQuery({ queryKey: ["permit-analyses"], queryFn: () => listFn() });
 
   const generate = useMutation({
-    mutationFn: (i: PermitIntake) => genFn({ data: i }),
+    mutationFn: (i: PermitIntake) => genFn({ data: { ...i, screen_set_id: screen_set_id || null } }),
     onSuccess: (row) => {
       setCurrent(row as unknown as AnalysisRow);
       qc.invalidateQueries({ queryKey: ["permit-analyses"] });
+      if (screen_set_id) qc.invalidateQueries({ queryKey: ["screen-set-analyses", screen_set_id] });
       toast.success("Analysis ready");
     },
     onError: (e) => toast.error(e instanceof Error ? e.message : "Generation failed"),
@@ -169,6 +179,11 @@ function AnalysisPage() {
     }
   };
 
+  useEffect(() => {
+    if (open) openHistorical(open);
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, [open]);
+
   const projects = projectsQ.data ?? [];
   const history = historyQ.data ?? [];
   const analysis: Analysis = current?.analysis ?? {};
@@ -185,6 +200,15 @@ function AnalysisPage() {
             <Link to="/assistant" className="inline-flex items-center gap-1.5 text-sm text-zinc-400 hover:text-white shrink-0">
               <ArrowLeft className="size-4" /> Assistant
             </Link>
+            {screen_set_id && (
+              <Link
+                to="/assistant/screens/$id"
+                params={{ id: screen_set_id }}
+                className="inline-flex items-center gap-1.5 text-sm text-sky-300 hover:text-sky-200 shrink-0"
+              >
+                <Layers className="size-4" /> Back to comparison
+              </Link>
+            )}
             <div className="hidden sm:flex items-center gap-2 min-w-0">
               <div className="size-7 rounded-md bg-gradient-to-br from-sky-500 to-violet-600 grid place-items-center">
                 <Sparkles className="size-4 text-white" />

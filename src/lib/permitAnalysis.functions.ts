@@ -2,6 +2,7 @@ import { createServerFn } from "@tanstack/react-start";
 import { requireSupabaseAuth } from "@/integrations/supabase/auth-middleware";
 import { z } from "zod";
 import { loadJurisdictionContextBlock, type JProfileRow } from "@/lib/ai.shared";
+import { getEntitlement, requireProjectQuota } from "@/lib/entitlements";
 
 
 // ============= Permit Analysis (Structured Roadmap) =============
@@ -31,6 +32,7 @@ const PermitIntakeSchema = z.object({
   jurisdiction: z.string().max(200).default(""),
   existing_permit_number: z.string().max(120).default(""),
   project_id: z.string().uuid().nullable().optional(),
+  screen_set_id: z.string().uuid().nullable().optional(),
 });
 export type PermitIntake = z.infer<typeof PermitIntakeSchema>;
 
@@ -129,6 +131,7 @@ Rules:
       .insert({
         user_id: context.userId,
         project_id: data.project_id ?? null,
+        screen_set_id: data.screen_set_id ?? null,
         title: data.project_name,
         intake: data as unknown as Record<string, string>,
         analysis: analysis as unknown as Record<string, string>,
@@ -172,6 +175,51 @@ export const attachAnalysisToProject = createServerFn({ method: "POST" })
       .from("permit_analyses").update({ project_id: data.project_id }).eq("id", data.analysis_id);
     if (error) throw new Error(error.message);
     return { ok: true };
+  });
+
+/** Turn a candidate analysis into a real tracked project, and attach the analysis to it. */
+export const promoteAnalysisToProject = createServerFn({ method: "POST" })
+  .middleware([requireSupabaseAuth])
+  .inputValidator((input: unknown) => z.object({ analysis_id: z.string().uuid() }).parse(input))
+  .handler(async ({ data, context }) => {
+    const { data: a, error: aErr } = await context.supabase
+      .from("permit_analyses").select("*").eq("id", data.analysis_id).maybeSingle();
+    if (aErr) throw new Error(aErr.message);
+    if (!a) throw new Error("Analysis not found");
+    const intake = (a.intake ?? {}) as Record<string, string>;
+
+    const ent = await getEntitlement(context.supabase, context.userId);
+    await requireProjectQuota(context.supabase, context.userId, ent);
+
+    const location = [intake.address, intake.city, intake.state].filter(Boolean).join(", ");
+    const { data: project, error: pErr } = await context.supabase
+      .from("projects")
+      .insert({
+        user_id: context.userId,
+        name: intake.project_name || a.title || "Untitled project",
+        location,
+        project_type: intake.project_type || "Commercial",
+        jurisdiction: intake.jurisdiction || a.jurisdiction || "",
+        permit_count: 3,
+        permits_issued: 0,
+        current_stage: 0,
+        status: "Pre-Planning",
+      })
+      .select("*")
+      .single();
+    if (pErr) throw new Error(pErr.message);
+
+    await context.supabase.from("activity").insert({
+      user_id: context.userId,
+      project_id: project.id,
+      description: `Project "${project.name}" created from candidate site screen.`,
+    });
+
+    const { error: uErr } = await context.supabase
+      .from("permit_analyses").update({ project_id: project.id }).eq("id", data.analysis_id);
+    if (uErr) throw new Error(uErr.message);
+
+    return project;
   });
 
 export const analysisToChecklist = createServerFn({ method: "POST" })

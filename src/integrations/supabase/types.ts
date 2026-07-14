@@ -501,6 +501,7 @@ export type Database = {
           intake: Json
           jurisdiction: string | null
           project_id: string | null
+          screen_set_id: string | null
           title: string
           updated_at: string
           user_id: string
@@ -512,6 +513,7 @@ export type Database = {
           intake?: Json
           jurisdiction?: string | null
           project_id?: string | null
+          screen_set_id?: string | null
           title?: string
           updated_at?: string
           user_id: string
@@ -523,6 +525,7 @@ export type Database = {
           intake?: Json
           jurisdiction?: string | null
           project_id?: string | null
+          screen_set_id?: string | null
           title?: string
           updated_at?: string
           user_id?: string
@@ -535,7 +538,41 @@ export type Database = {
             referencedRelation: "projects"
             referencedColumns: ["id"]
           },
+          {
+            foreignKeyName: "permit_analyses_screen_set_id_fkey"
+            columns: ["screen_set_id"]
+            isOneToOne: false
+            referencedRelation: "screen_sets"
+            referencedColumns: ["id"]
+          },
         ]
+      }
+      screen_sets: {
+        Row: {
+          created_at: string
+          id: string
+          name: string
+          notes: string
+          updated_at: string
+          user_id: string
+        }
+        Insert: {
+          created_at?: string
+          id?: string
+          name: string
+          notes?: string
+          updated_at?: string
+          user_id: string
+        }
+        Update: {
+          created_at?: string
+          id?: string
+          name?: string
+          notes?: string
+          updated_at?: string
+          user_id?: string
+        }
+        Relationships: []
       }
       permit_items: {
         Row: {

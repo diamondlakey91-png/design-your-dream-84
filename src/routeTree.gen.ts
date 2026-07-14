@@ -28,12 +28,14 @@ import { Route as ApiChatStreamRouteImport } from './routes/api/chat.stream'
 import { Route as AuthenticatedProjectsIdRouteImport } from './routes/_authenticated/projects.$id'
 import { Route as AuthenticatedJurisdictionsSlugRouteImport } from './routes/_authenticated/jurisdictions.$slug'
 import { Route as AuthenticatedInspectionsIdRouteImport } from './routes/_authenticated/inspections.$id'
+import { Route as AuthenticatedAssistantScreensRouteImport } from './routes/_authenticated/assistant.screens'
 import { Route as AuthenticatedAssistantAnalysisRouteImport } from './routes/_authenticated/assistant.analysis'
 import { Route as AuthenticatedAssistantThreadIdRouteImport } from './routes/_authenticated/assistant.$threadId'
 import { Route as AuthenticatedAdminPortalsRouteImport } from './routes/_authenticated/admin.portals'
 import { Route as AuthenticatedAdminHealthPortalsRouteImport } from './routes/_authenticated/admin.health-portals'
 import { Route as ApiPublicPaymentsWebhookRouteImport } from './routes/api/public/payments/webhook'
 import { Route as ApiPublicHooksRefreshLinkedPermitsRouteImport } from './routes/api/public/hooks/refresh-linked-permits'
+import { Route as AuthenticatedAssistantScreensIdRouteImport } from './routes/_authenticated/assistant.screens.$id'
 
 const PricingRoute = PricingRouteImport.update({
   id: '/pricing',
@@ -135,6 +137,12 @@ const AuthenticatedInspectionsIdRoute =
     path: '/inspections/$id',
     getParentRoute: () => AuthenticatedRouteRoute,
   } as any)
+const AuthenticatedAssistantScreensRoute =
+  AuthenticatedAssistantScreensRouteImport.update({
+    id: '/screens',
+    path: '/screens',
+    getParentRoute: () => AuthenticatedAssistantRoute,
+  } as any)
 const AuthenticatedAssistantAnalysisRoute =
   AuthenticatedAssistantAnalysisRouteImport.update({
     id: '/analysis',
@@ -171,6 +179,12 @@ const ApiPublicHooksRefreshLinkedPermitsRoute =
     path: '/api/public/hooks/refresh-linked-permits',
     getParentRoute: () => rootRouteImport,
   } as any)
+const AuthenticatedAssistantScreensIdRoute =
+  AuthenticatedAssistantScreensIdRouteImport.update({
+    id: '/$id',
+    path: '/$id',
+    getParentRoute: () => AuthenticatedAssistantScreensRoute,
+  } as any)
 
 export interface FileRoutesByFullPath {
   '/': typeof IndexRoute
@@ -188,6 +202,7 @@ export interface FileRoutesByFullPath {
   '/admin/portals': typeof AuthenticatedAdminPortalsRoute
   '/assistant/$threadId': typeof AuthenticatedAssistantThreadIdRoute
   '/assistant/analysis': typeof AuthenticatedAssistantAnalysisRoute
+  '/assistant/screens': typeof AuthenticatedAssistantScreensRouteWithChildren
   '/inspections/$id': typeof AuthenticatedInspectionsIdRoute
   '/jurisdictions/$slug': typeof AuthenticatedJurisdictionsSlugRoute
   '/projects/$id': typeof AuthenticatedProjectsIdRoute
@@ -195,6 +210,7 @@ export interface FileRoutesByFullPath {
   '/share/reports/$token': typeof ShareReportsTokenRoute
   '/assistant/': typeof AuthenticatedAssistantIndexRoute
   '/projects/': typeof AuthenticatedProjectsIndexRoute
+  '/assistant/screens/$id': typeof AuthenticatedAssistantScreensIdRoute
   '/api/public/hooks/refresh-linked-permits': typeof ApiPublicHooksRefreshLinkedPermitsRoute
   '/api/public/payments/webhook': typeof ApiPublicPaymentsWebhookRoute
 }
@@ -213,6 +229,7 @@ export interface FileRoutesByTo {
   '/admin/portals': typeof AuthenticatedAdminPortalsRoute
   '/assistant/$threadId': typeof AuthenticatedAssistantThreadIdRoute
   '/assistant/analysis': typeof AuthenticatedAssistantAnalysisRoute
+  '/assistant/screens': typeof AuthenticatedAssistantScreensRouteWithChildren
   '/inspections/$id': typeof AuthenticatedInspectionsIdRoute
   '/jurisdictions/$slug': typeof AuthenticatedJurisdictionsSlugRoute
   '/projects/$id': typeof AuthenticatedProjectsIdRoute
@@ -220,6 +237,7 @@ export interface FileRoutesByTo {
   '/share/reports/$token': typeof ShareReportsTokenRoute
   '/assistant': typeof AuthenticatedAssistantIndexRoute
   '/projects': typeof AuthenticatedProjectsIndexRoute
+  '/assistant/screens/$id': typeof AuthenticatedAssistantScreensIdRoute
   '/api/public/hooks/refresh-linked-permits': typeof ApiPublicHooksRefreshLinkedPermitsRoute
   '/api/public/payments/webhook': typeof ApiPublicPaymentsWebhookRoute
 }
@@ -241,6 +259,7 @@ export interface FileRoutesById {
   '/_authenticated/admin/portals': typeof AuthenticatedAdminPortalsRoute
   '/_authenticated/assistant/$threadId': typeof AuthenticatedAssistantThreadIdRoute
   '/_authenticated/assistant/analysis': typeof AuthenticatedAssistantAnalysisRoute
+  '/_authenticated/assistant/screens': typeof AuthenticatedAssistantScreensRouteWithChildren
   '/_authenticated/inspections/$id': typeof AuthenticatedInspectionsIdRoute
   '/_authenticated/jurisdictions/$slug': typeof AuthenticatedJurisdictionsSlugRoute
   '/_authenticated/projects/$id': typeof AuthenticatedProjectsIdRoute
@@ -248,6 +267,7 @@ export interface FileRoutesById {
   '/share/reports/$token': typeof ShareReportsTokenRoute
   '/_authenticated/assistant/': typeof AuthenticatedAssistantIndexRoute
   '/_authenticated/projects/': typeof AuthenticatedProjectsIndexRoute
+  '/_authenticated/assistant/screens/$id': typeof AuthenticatedAssistantScreensIdRoute
   '/api/public/hooks/refresh-linked-permits': typeof ApiPublicHooksRefreshLinkedPermitsRoute
   '/api/public/payments/webhook': typeof ApiPublicPaymentsWebhookRoute
 }
@@ -269,6 +289,7 @@ export interface FileRouteTypes {
     | '/admin/portals'
     | '/assistant/$threadId'
     | '/assistant/analysis'
+    | '/assistant/screens'
     | '/inspections/$id'
     | '/jurisdictions/$slug'
     | '/projects/$id'
@@ -276,6 +297,7 @@ export interface FileRouteTypes {
     | '/share/reports/$token'
     | '/assistant/'
     | '/projects/'
+    | '/assistant/screens/$id'
     | '/api/public/hooks/refresh-linked-permits'
     | '/api/public/payments/webhook'
   fileRoutesByTo: FileRoutesByTo
@@ -294,6 +316,7 @@ export interface FileRouteTypes {
     | '/admin/portals'
     | '/assistant/$threadId'
     | '/assistant/analysis'
+    | '/assistant/screens'
     | '/inspections/$id'
     | '/jurisdictions/$slug'
     | '/projects/$id'
@@ -301,6 +324,7 @@ export interface FileRouteTypes {
     | '/share/reports/$token'
     | '/assistant'
     | '/projects'
+    | '/assistant/screens/$id'
     | '/api/public/hooks/refresh-linked-permits'
     | '/api/public/payments/webhook'
   id:
@@ -321,6 +345,7 @@ export interface FileRouteTypes {
     | '/_authenticated/admin/portals'
     | '/_authenticated/assistant/$threadId'
     | '/_authenticated/assistant/analysis'
+    | '/_authenticated/assistant/screens'
     | '/_authenticated/inspections/$id'
     | '/_authenticated/jurisdictions/$slug'
     | '/_authenticated/projects/$id'
@@ -328,6 +353,7 @@ export interface FileRouteTypes {
     | '/share/reports/$token'
     | '/_authenticated/assistant/'
     | '/_authenticated/projects/'
+    | '/_authenticated/assistant/screens/$id'
     | '/api/public/hooks/refresh-linked-permits'
     | '/api/public/payments/webhook'
   fileRoutesById: FileRoutesById
@@ -479,6 +505,13 @@ declare module '@tanstack/react-router' {
       preLoaderRoute: typeof AuthenticatedInspectionsIdRouteImport
       parentRoute: typeof AuthenticatedRouteRoute
     }
+    '/_authenticated/assistant/screens': {
+      id: '/_authenticated/assistant/screens'
+      path: '/screens'
+      fullPath: '/assistant/screens'
+      preLoaderRoute: typeof AuthenticatedAssistantScreensRouteImport
+      parentRoute: typeof AuthenticatedAssistantRoute
+    }
     '/_authenticated/assistant/analysis': {
       id: '/_authenticated/assistant/analysis'
       path: '/analysis'
@@ -521,12 +554,34 @@ declare module '@tanstack/react-router' {
       preLoaderRoute: typeof ApiPublicHooksRefreshLinkedPermitsRouteImport
       parentRoute: typeof rootRouteImport
     }
+    '/_authenticated/assistant/screens/$id': {
+      id: '/_authenticated/assistant/screens/$id'
+      path: '/$id'
+      fullPath: '/assistant/screens/$id'
+      preLoaderRoute: typeof AuthenticatedAssistantScreensIdRouteImport
+      parentRoute: typeof AuthenticatedAssistantScreensRoute
+    }
   }
 }
+
+interface AuthenticatedAssistantScreensRouteChildren {
+  AuthenticatedAssistantScreensIdRoute: typeof AuthenticatedAssistantScreensIdRoute
+}
+
+const AuthenticatedAssistantScreensRouteChildren: AuthenticatedAssistantScreensRouteChildren =
+  {
+    AuthenticatedAssistantScreensIdRoute: AuthenticatedAssistantScreensIdRoute,
+  }
+
+const AuthenticatedAssistantScreensRouteWithChildren =
+  AuthenticatedAssistantScreensRoute._addFileChildren(
+    AuthenticatedAssistantScreensRouteChildren,
+  )
 
 interface AuthenticatedAssistantRouteChildren {
   AuthenticatedAssistantThreadIdRoute: typeof AuthenticatedAssistantThreadIdRoute
   AuthenticatedAssistantAnalysisRoute: typeof AuthenticatedAssistantAnalysisRoute
+  AuthenticatedAssistantScreensRoute: typeof AuthenticatedAssistantScreensRouteWithChildren
   AuthenticatedAssistantIndexRoute: typeof AuthenticatedAssistantIndexRoute
 }
 
@@ -534,6 +589,8 @@ const AuthenticatedAssistantRouteChildren: AuthenticatedAssistantRouteChildren =
   {
     AuthenticatedAssistantThreadIdRoute: AuthenticatedAssistantThreadIdRoute,
     AuthenticatedAssistantAnalysisRoute: AuthenticatedAssistantAnalysisRoute,
+    AuthenticatedAssistantScreensRoute:
+      AuthenticatedAssistantScreensRouteWithChildren,
     AuthenticatedAssistantIndexRoute: AuthenticatedAssistantIndexRoute,
   }
 

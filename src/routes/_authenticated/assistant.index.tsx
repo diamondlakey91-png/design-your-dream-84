@@ -3,7 +3,7 @@ import { useMutation, useQuery, useQueryClient } from "@tanstack/react-query";
 import { useServerFn } from "@tanstack/react-start";
 import { listThreads, createThread, deleteThread } from "@/lib/chat.functions";
 import { listProjects } from "@/lib/projects.functions";
-import { ArrowLeft, Plus, MessageSquare, Trash2, Briefcase } from "lucide-react";
+import { ArrowLeft, Plus, MessageSquare, Trash2, Briefcase, Layers } from "lucide-react";
 import { toast } from "sonner";
 
 export const Route = createFileRoute("/_authenticated/assistant/")({
@@ -64,6 +64,18 @@ function AssistantIndex() {
             <div className="text-[11px] font-mono uppercase tracking-widest text-sky-300/80">New</div>
             <div className="text-base font-semibold mt-1">Structured permit analysis →</div>
             <p className="text-xs text-zinc-400 mt-1">Enter a project and get a full roadmap: permits, agencies, sequence, inspections, risks, and next actions.</p>
+          </Link>
+
+          <Link
+            to="/assistant/screens"
+            className="block rounded-2xl p-5 bg-zinc-900 ring-1 ring-white/5 hover:ring-white/10 transition"
+          >
+            <div className="flex items-center gap-2 text-zinc-400">
+              <Layers className="size-4" />
+              <span className="text-[11px] font-mono uppercase tracking-widest">Site screening</span>
+            </div>
+            <div className="text-base font-semibold mt-1">Compare candidate sites →</div>
+            <p className="text-xs text-zinc-400 mt-1">Screen several sites side by side before committing to a tracked project for any of them.</p>
           </Link>
 
           {projects.length > 0 && (
