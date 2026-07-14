@@ -566,9 +566,7 @@ function CreateProjectDialog({ onClose }: { onClose: () => void }) {
               className="h-11 rounded-lg border border-input bg-card px-3 text-sm outline-none focus:border-primary" />
           </Field>
           <Field label="Jurisdiction">
-            <input value={jurisdiction} onChange={(e) => setJurisdiction(e.target.value)}
-              placeholder="Cuyahoga County Planning"
-              className="h-11 rounded-lg border border-input bg-card px-3 text-sm outline-none focus:border-primary" />
+            <JurisdictionAutocomplete value={jurisdiction} onChange={setJurisdiction} placeholder="Cuyahoga County, OH" />
           </Field>
           <Field label="Project type">
             <select value={projectType} onChange={(e) => setProjectType(e.target.value)}
