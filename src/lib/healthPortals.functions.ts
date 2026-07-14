@@ -47,13 +47,14 @@ async function ensureAdmin(context: { supabase: any; userId: string }) {
 export const listHealthPortalMappings = createServerFn({ method: "GET" })
   .middleware([requireSupabaseAuth])
   .handler(async ({ context }) => {
-    const { data, error } = await context.supabase
+    const { data, error } = await (context.supabase as any)
       .from("health_environmental_portals")
       .select("*")
       .order("state", { ascending: true })
       .order("jurisdiction", { ascending: true });
     if (error) throw new Error(error.message);
     return (data ?? []) as HealthPortalMappingRow[];
+
   });
 
 /** Create or update a health/environmental portal mapping (admin only). */
@@ -75,7 +76,7 @@ export const upsertHealthPortalMapping = createServerFn({ method: "POST" })
       is_active: data.is_active ?? true,
     };
     if (data.id) {
-      const { data: row, error } = await context.supabase
+      const { data: row, error } = await (context.supabase as any)
         .from("health_environmental_portals")
         .update(payload)
         .eq("id", data.id)
@@ -84,13 +85,14 @@ export const upsertHealthPortalMapping = createServerFn({ method: "POST" })
       if (error) throw new Error(error.message);
       return row as HealthPortalMappingRow;
     }
-    const { data: row, error } = await context.supabase
+    const { data: row, error } = await (context.supabase as any)
       .from("health_environmental_portals")
       .insert({ ...payload, created_by: context.userId })
       .select("*")
       .single();
     if (error) throw new Error(error.message);
     return row as HealthPortalMappingRow;
+
   });
 
 /** Delete a health/environmental portal mapping (admin only). */
@@ -99,7 +101,7 @@ export const deleteHealthPortalMapping = createServerFn({ method: "POST" })
   .inputValidator((raw: unknown) => z.object({ id: z.string().uuid() }).parse(raw))
   .handler(async ({ data, context }) => {
     await ensureAdmin(context);
-    const { error } = await context.supabase.from("health_environmental_portals").delete().eq("id", data.id);
+    const { error } = await (context.supabase as any).from("health_environmental_portals").delete().eq("id", data.id);
     if (error) throw new Error(error.message);
     return { ok: true };
   });
