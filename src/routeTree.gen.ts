@@ -14,6 +14,7 @@ import { Route as AuthRouteImport } from './routes/auth'
 import { Route as AuthenticatedRouteRouteImport } from './routes/_authenticated/route'
 import { Route as IndexRouteImport } from './routes/index'
 import { Route as CheckoutReturnRouteImport } from './routes/checkout.return'
+import { Route as AuthenticatedPropertyRouteImport } from './routes/_authenticated/property'
 import { Route as AuthenticatedPortalsRouteImport } from './routes/_authenticated/portals'
 import { Route as AuthenticatedLookupRouteImport } from './routes/_authenticated/lookup'
 import { Route as AuthenticatedJurisdictionsRouteImport } from './routes/_authenticated/jurisdictions'
@@ -32,6 +33,7 @@ import { Route as AuthenticatedAssistantThreadIdRouteImport } from './routes/_au
 import { Route as AuthenticatedAdminPortalsRouteImport } from './routes/_authenticated/admin.portals'
 import { Route as AuthenticatedAdminHealthPortalsRouteImport } from './routes/_authenticated/admin.health-portals'
 import { Route as ApiPublicPaymentsWebhookRouteImport } from './routes/api/public/payments/webhook'
+import { Route as ApiPublicHooksRefreshLinkedPermitsRouteImport } from './routes/api/public/hooks/refresh-linked-permits'
 
 const PricingRoute = PricingRouteImport.update({
   id: '/pricing',
@@ -56,6 +58,11 @@ const CheckoutReturnRoute = CheckoutReturnRouteImport.update({
   id: '/checkout/return',
   path: '/checkout/return',
   getParentRoute: () => rootRouteImport,
+} as any)
+const AuthenticatedPropertyRoute = AuthenticatedPropertyRouteImport.update({
+  id: '/property',
+  path: '/property',
+  getParentRoute: () => AuthenticatedRouteRoute,
 } as any)
 const AuthenticatedPortalsRoute = AuthenticatedPortalsRouteImport.update({
   id: '/portals',
@@ -158,6 +165,12 @@ const ApiPublicPaymentsWebhookRoute =
     path: '/api/public/payments/webhook',
     getParentRoute: () => rootRouteImport,
   } as any)
+const ApiPublicHooksRefreshLinkedPermitsRoute =
+  ApiPublicHooksRefreshLinkedPermitsRouteImport.update({
+    id: '/api/public/hooks/refresh-linked-permits',
+    path: '/api/public/hooks/refresh-linked-permits',
+    getParentRoute: () => rootRouteImport,
+  } as any)
 
 export interface FileRoutesByFullPath {
   '/': typeof IndexRoute
@@ -169,6 +182,7 @@ export interface FileRoutesByFullPath {
   '/jurisdictions': typeof AuthenticatedJurisdictionsRouteWithChildren
   '/lookup': typeof AuthenticatedLookupRoute
   '/portals': typeof AuthenticatedPortalsRoute
+  '/property': typeof AuthenticatedPropertyRoute
   '/checkout/return': typeof CheckoutReturnRoute
   '/admin/health-portals': typeof AuthenticatedAdminHealthPortalsRoute
   '/admin/portals': typeof AuthenticatedAdminPortalsRoute
@@ -181,6 +195,7 @@ export interface FileRoutesByFullPath {
   '/share/reports/$token': typeof ShareReportsTokenRoute
   '/assistant/': typeof AuthenticatedAssistantIndexRoute
   '/projects/': typeof AuthenticatedProjectsIndexRoute
+  '/api/public/hooks/refresh-linked-permits': typeof ApiPublicHooksRefreshLinkedPermitsRoute
   '/api/public/payments/webhook': typeof ApiPublicPaymentsWebhookRoute
 }
 export interface FileRoutesByTo {
@@ -192,6 +207,7 @@ export interface FileRoutesByTo {
   '/jurisdictions': typeof AuthenticatedJurisdictionsRouteWithChildren
   '/lookup': typeof AuthenticatedLookupRoute
   '/portals': typeof AuthenticatedPortalsRoute
+  '/property': typeof AuthenticatedPropertyRoute
   '/checkout/return': typeof CheckoutReturnRoute
   '/admin/health-portals': typeof AuthenticatedAdminHealthPortalsRoute
   '/admin/portals': typeof AuthenticatedAdminPortalsRoute
@@ -204,6 +220,7 @@ export interface FileRoutesByTo {
   '/share/reports/$token': typeof ShareReportsTokenRoute
   '/assistant': typeof AuthenticatedAssistantIndexRoute
   '/projects': typeof AuthenticatedProjectsIndexRoute
+  '/api/public/hooks/refresh-linked-permits': typeof ApiPublicHooksRefreshLinkedPermitsRoute
   '/api/public/payments/webhook': typeof ApiPublicPaymentsWebhookRoute
 }
 export interface FileRoutesById {
@@ -218,6 +235,7 @@ export interface FileRoutesById {
   '/_authenticated/jurisdictions': typeof AuthenticatedJurisdictionsRouteWithChildren
   '/_authenticated/lookup': typeof AuthenticatedLookupRoute
   '/_authenticated/portals': typeof AuthenticatedPortalsRoute
+  '/_authenticated/property': typeof AuthenticatedPropertyRoute
   '/checkout/return': typeof CheckoutReturnRoute
   '/_authenticated/admin/health-portals': typeof AuthenticatedAdminHealthPortalsRoute
   '/_authenticated/admin/portals': typeof AuthenticatedAdminPortalsRoute
@@ -230,6 +248,7 @@ export interface FileRoutesById {
   '/share/reports/$token': typeof ShareReportsTokenRoute
   '/_authenticated/assistant/': typeof AuthenticatedAssistantIndexRoute
   '/_authenticated/projects/': typeof AuthenticatedProjectsIndexRoute
+  '/api/public/hooks/refresh-linked-permits': typeof ApiPublicHooksRefreshLinkedPermitsRoute
   '/api/public/payments/webhook': typeof ApiPublicPaymentsWebhookRoute
 }
 export interface FileRouteTypes {
@@ -244,6 +263,7 @@ export interface FileRouteTypes {
     | '/jurisdictions'
     | '/lookup'
     | '/portals'
+    | '/property'
     | '/checkout/return'
     | '/admin/health-portals'
     | '/admin/portals'
@@ -256,6 +276,7 @@ export interface FileRouteTypes {
     | '/share/reports/$token'
     | '/assistant/'
     | '/projects/'
+    | '/api/public/hooks/refresh-linked-permits'
     | '/api/public/payments/webhook'
   fileRoutesByTo: FileRoutesByTo
   to:
@@ -267,6 +288,7 @@ export interface FileRouteTypes {
     | '/jurisdictions'
     | '/lookup'
     | '/portals'
+    | '/property'
     | '/checkout/return'
     | '/admin/health-portals'
     | '/admin/portals'
@@ -279,6 +301,7 @@ export interface FileRouteTypes {
     | '/share/reports/$token'
     | '/assistant'
     | '/projects'
+    | '/api/public/hooks/refresh-linked-permits'
     | '/api/public/payments/webhook'
   id:
     | '__root__'
@@ -292,6 +315,7 @@ export interface FileRouteTypes {
     | '/_authenticated/jurisdictions'
     | '/_authenticated/lookup'
     | '/_authenticated/portals'
+    | '/_authenticated/property'
     | '/checkout/return'
     | '/_authenticated/admin/health-portals'
     | '/_authenticated/admin/portals'
@@ -304,6 +328,7 @@ export interface FileRouteTypes {
     | '/share/reports/$token'
     | '/_authenticated/assistant/'
     | '/_authenticated/projects/'
+    | '/api/public/hooks/refresh-linked-permits'
     | '/api/public/payments/webhook'
   fileRoutesById: FileRoutesById
 }
@@ -315,6 +340,7 @@ export interface RootRouteChildren {
   CheckoutReturnRoute: typeof CheckoutReturnRoute
   ApiChatStreamRoute: typeof ApiChatStreamRoute
   ShareReportsTokenRoute: typeof ShareReportsTokenRoute
+  ApiPublicHooksRefreshLinkedPermitsRoute: typeof ApiPublicHooksRefreshLinkedPermitsRoute
   ApiPublicPaymentsWebhookRoute: typeof ApiPublicPaymentsWebhookRoute
 }
 
@@ -354,6 +380,13 @@ declare module '@tanstack/react-router' {
       fullPath: '/checkout/return'
       preLoaderRoute: typeof CheckoutReturnRouteImport
       parentRoute: typeof rootRouteImport
+    }
+    '/_authenticated/property': {
+      id: '/_authenticated/property'
+      path: '/property'
+      fullPath: '/property'
+      preLoaderRoute: typeof AuthenticatedPropertyRouteImport
+      parentRoute: typeof AuthenticatedRouteRoute
     }
     '/_authenticated/portals': {
       id: '/_authenticated/portals'
@@ -481,6 +514,13 @@ declare module '@tanstack/react-router' {
       preLoaderRoute: typeof ApiPublicPaymentsWebhookRouteImport
       parentRoute: typeof rootRouteImport
     }
+    '/api/public/hooks/refresh-linked-permits': {
+      id: '/api/public/hooks/refresh-linked-permits'
+      path: '/api/public/hooks/refresh-linked-permits'
+      fullPath: '/api/public/hooks/refresh-linked-permits'
+      preLoaderRoute: typeof ApiPublicHooksRefreshLinkedPermitsRouteImport
+      parentRoute: typeof rootRouteImport
+    }
   }
 }
 
@@ -523,6 +563,7 @@ interface AuthenticatedRouteRouteChildren {
   AuthenticatedJurisdictionsRoute: typeof AuthenticatedJurisdictionsRouteWithChildren
   AuthenticatedLookupRoute: typeof AuthenticatedLookupRoute
   AuthenticatedPortalsRoute: typeof AuthenticatedPortalsRoute
+  AuthenticatedPropertyRoute: typeof AuthenticatedPropertyRoute
   AuthenticatedAdminHealthPortalsRoute: typeof AuthenticatedAdminHealthPortalsRoute
   AuthenticatedAdminPortalsRoute: typeof AuthenticatedAdminPortalsRoute
   AuthenticatedInspectionsIdRoute: typeof AuthenticatedInspectionsIdRoute
@@ -537,6 +578,7 @@ const AuthenticatedRouteRouteChildren: AuthenticatedRouteRouteChildren = {
   AuthenticatedJurisdictionsRoute: AuthenticatedJurisdictionsRouteWithChildren,
   AuthenticatedLookupRoute: AuthenticatedLookupRoute,
   AuthenticatedPortalsRoute: AuthenticatedPortalsRoute,
+  AuthenticatedPropertyRoute: AuthenticatedPropertyRoute,
   AuthenticatedAdminHealthPortalsRoute: AuthenticatedAdminHealthPortalsRoute,
   AuthenticatedAdminPortalsRoute: AuthenticatedAdminPortalsRoute,
   AuthenticatedInspectionsIdRoute: AuthenticatedInspectionsIdRoute,
@@ -555,6 +597,8 @@ const rootRouteChildren: RootRouteChildren = {
   CheckoutReturnRoute: CheckoutReturnRoute,
   ApiChatStreamRoute: ApiChatStreamRoute,
   ShareReportsTokenRoute: ShareReportsTokenRoute,
+  ApiPublicHooksRefreshLinkedPermitsRoute:
+    ApiPublicHooksRefreshLinkedPermitsRoute,
   ApiPublicPaymentsWebhookRoute: ApiPublicPaymentsWebhookRoute,
 }
 export const routeTree = rootRouteImport

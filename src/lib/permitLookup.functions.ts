@@ -3,6 +3,7 @@ import { requireSupabaseAuth } from "@/integrations/supabase/auth-middleware";
 import { z } from "zod";
 import { callLovableAI } from "@/lib/ai.shared";
 import { firecrawlSearch, firecrawlScrape } from "@/lib/firecrawl.shared";
+import { browserFallbackScrape } from "@/lib/browserFallback";
 
 const AddressLookupInput = z.object({
   address: z.string().trim().min(3).max(300),
@@ -819,13 +820,22 @@ const PermitNumberSchema = z.object({
   no_match_reason: z.string().default(""),
 });
 
-async function scrapePermitByNumber(fcKey: string, aiKey: string, jurisdiction: string, permitNumber: string) {
+export async function scrapePermitByNumber(fcKey: string, aiKey: string, jurisdiction: string, permitNumber: string) {
   const urls = buildDirectPortalUrlsForPermitNumber(jurisdiction, permitNumber);
   const scrapes = (await Promise.all(
     urls.map(async (u) => {
       try {
         const s = await firecrawlScrape(fcKey, u);
-        return `PORTAL URL: ${u}\n${(s.markdown || "").slice(0, 5000)}`;
+        let md = s.markdown || "";
+        // If the plain scrape came back thin (JS-only portal shell), drive a
+        // real headless browser through the portal's search flow.
+        if (md.trim().length < 400 || !/permit|record|application|status/i.test(md)) {
+          const fb = await browserFallbackScrape(fcKey, u, permitNumber);
+          if (fb.markdown && fb.markdown.length > md.length) {
+            md = `[browser-fallback:${fb.kind}]\n${fb.markdown}`;
+          }
+        }
+        return `PORTAL URL: ${u}\n${md.slice(0, 6000)}`;
       } catch { return ""; }
     })
   )).filter(Boolean).join("\n\n---\n\n");
