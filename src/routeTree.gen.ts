@@ -31,6 +31,7 @@ import { Route as AuthenticatedAssistantAnalysisRouteImport } from './routes/_au
 import { Route as AuthenticatedAssistantThreadIdRouteImport } from './routes/_authenticated/assistant.$threadId'
 import { Route as AuthenticatedAdminPortalsRouteImport } from './routes/_authenticated/admin.portals'
 import { Route as ApiPublicPaymentsWebhookRouteImport } from './routes/api/public/payments/webhook'
+import { Route as ApiPublicHooksRefreshLinkedPermitsRouteImport } from './routes/api/public/hooks/refresh-linked-permits'
 
 const PricingRoute = PricingRouteImport.update({
   id: '/pricing',
@@ -150,6 +151,12 @@ const ApiPublicPaymentsWebhookRoute =
     path: '/api/public/payments/webhook',
     getParentRoute: () => rootRouteImport,
   } as any)
+const ApiPublicHooksRefreshLinkedPermitsRoute =
+  ApiPublicHooksRefreshLinkedPermitsRouteImport.update({
+    id: '/api/public/hooks/refresh-linked-permits',
+    path: '/api/public/hooks/refresh-linked-permits',
+    getParentRoute: () => rootRouteImport,
+  } as any)
 
 export interface FileRoutesByFullPath {
   '/': typeof IndexRoute
@@ -172,6 +179,7 @@ export interface FileRoutesByFullPath {
   '/share/reports/$token': typeof ShareReportsTokenRoute
   '/assistant/': typeof AuthenticatedAssistantIndexRoute
   '/projects/': typeof AuthenticatedProjectsIndexRoute
+  '/api/public/hooks/refresh-linked-permits': typeof ApiPublicHooksRefreshLinkedPermitsRoute
   '/api/public/payments/webhook': typeof ApiPublicPaymentsWebhookRoute
 }
 export interface FileRoutesByTo {
@@ -194,6 +202,7 @@ export interface FileRoutesByTo {
   '/share/reports/$token': typeof ShareReportsTokenRoute
   '/assistant': typeof AuthenticatedAssistantIndexRoute
   '/projects': typeof AuthenticatedProjectsIndexRoute
+  '/api/public/hooks/refresh-linked-permits': typeof ApiPublicHooksRefreshLinkedPermitsRoute
   '/api/public/payments/webhook': typeof ApiPublicPaymentsWebhookRoute
 }
 export interface FileRoutesById {
@@ -219,6 +228,7 @@ export interface FileRoutesById {
   '/share/reports/$token': typeof ShareReportsTokenRoute
   '/_authenticated/assistant/': typeof AuthenticatedAssistantIndexRoute
   '/_authenticated/projects/': typeof AuthenticatedProjectsIndexRoute
+  '/api/public/hooks/refresh-linked-permits': typeof ApiPublicHooksRefreshLinkedPermitsRoute
   '/api/public/payments/webhook': typeof ApiPublicPaymentsWebhookRoute
 }
 export interface FileRouteTypes {
@@ -244,6 +254,7 @@ export interface FileRouteTypes {
     | '/share/reports/$token'
     | '/assistant/'
     | '/projects/'
+    | '/api/public/hooks/refresh-linked-permits'
     | '/api/public/payments/webhook'
   fileRoutesByTo: FileRoutesByTo
   to:
@@ -266,6 +277,7 @@ export interface FileRouteTypes {
     | '/share/reports/$token'
     | '/assistant'
     | '/projects'
+    | '/api/public/hooks/refresh-linked-permits'
     | '/api/public/payments/webhook'
   id:
     | '__root__'
@@ -290,6 +302,7 @@ export interface FileRouteTypes {
     | '/share/reports/$token'
     | '/_authenticated/assistant/'
     | '/_authenticated/projects/'
+    | '/api/public/hooks/refresh-linked-permits'
     | '/api/public/payments/webhook'
   fileRoutesById: FileRoutesById
 }
@@ -301,6 +314,7 @@ export interface RootRouteChildren {
   CheckoutReturnRoute: typeof CheckoutReturnRoute
   ApiChatStreamRoute: typeof ApiChatStreamRoute
   ShareReportsTokenRoute: typeof ShareReportsTokenRoute
+  ApiPublicHooksRefreshLinkedPermitsRoute: typeof ApiPublicHooksRefreshLinkedPermitsRoute
   ApiPublicPaymentsWebhookRoute: typeof ApiPublicPaymentsWebhookRoute
 }
 
@@ -460,6 +474,13 @@ declare module '@tanstack/react-router' {
       preLoaderRoute: typeof ApiPublicPaymentsWebhookRouteImport
       parentRoute: typeof rootRouteImport
     }
+    '/api/public/hooks/refresh-linked-permits': {
+      id: '/api/public/hooks/refresh-linked-permits'
+      path: '/api/public/hooks/refresh-linked-permits'
+      fullPath: '/api/public/hooks/refresh-linked-permits'
+      preLoaderRoute: typeof ApiPublicHooksRefreshLinkedPermitsRouteImport
+      parentRoute: typeof rootRouteImport
+    }
   }
 }
 
@@ -532,6 +553,8 @@ const rootRouteChildren: RootRouteChildren = {
   CheckoutReturnRoute: CheckoutReturnRoute,
   ApiChatStreamRoute: ApiChatStreamRoute,
   ShareReportsTokenRoute: ShareReportsTokenRoute,
+  ApiPublicHooksRefreshLinkedPermitsRoute:
+    ApiPublicHooksRefreshLinkedPermitsRoute,
   ApiPublicPaymentsWebhookRoute: ApiPublicPaymentsWebhookRoute,
 }
 export const routeTree = rootRouteImport
