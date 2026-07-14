@@ -61,11 +61,40 @@ function ProjectDetail() {
           <span className="text-[10px] font-mono px-1.5 py-0.5 rounded bg-brand/15 text-brand">{project.status.toUpperCase()}</span>
         </div>
         <h1 className="text-2xl font-semibold">{project.name}</h1>
-        <div className="mt-1 text-sm text-muted-foreground flex flex-wrap gap-x-3 gap-y-1">
-          {project.jurisdiction && <span className="inline-flex items-center gap-1"><Landmark className="size-3.5" />{project.jurisdiction}</span>}
-          {project.location && <span className="inline-flex items-center gap-1"><MapPin className="size-3.5" />{project.location}</span>}
+        <div className="flex items-start justify-between gap-3">
+          <div>
+            <h1 className="text-2xl font-semibold">{project.name}</h1>
+            <div className="mt-1 text-sm text-muted-foreground flex flex-wrap gap-x-3 gap-y-1">
+              {project.jurisdiction && <span className="inline-flex items-center gap-1"><Landmark className="size-3.5" />{project.jurisdiction}</span>}
+              {project.location && <span className="inline-flex items-center gap-1"><MapPin className="size-3.5" />{project.location}</span>}
+              {project.project_type && <span className="inline-flex items-center gap-1">· {project.project_type}</span>}
+            </div>
+          </div>
+          <button
+            onClick={() => setEditOpen(true)}
+            className="inline-flex items-center gap-1.5 text-xs font-mono uppercase tracking-widest px-2.5 py-1.5 rounded border border-border hover:border-brand hover:text-brand"
+          >
+            <Pencil className="size-3.5" /> Edit
+          </button>
         </div>
       </header>
+
+      <EditProjectDialog
+        open={editOpen}
+        onOpenChange={setEditOpen}
+        project={project}
+        onSave={async (patch) => {
+          try {
+            await updateFn({ data: { id, ...patch } });
+            toast.success("Project updated");
+            setEditOpen(false);
+            qc.invalidateQueries({ queryKey: ["project", id] });
+            qc.invalidateQueries({ queryKey: ["projects"] });
+          } catch (e) {
+            toast.error(e instanceof Error ? e.message : "Update failed");
+          }
+        }}
+      />
 
       {/* Tabs */}
       <nav className="sticky top-0 z-10 bg-background/95 backdrop-blur border-b border-border">
