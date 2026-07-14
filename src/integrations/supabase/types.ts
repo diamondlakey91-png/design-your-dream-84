@@ -163,6 +163,66 @@ export type Database = {
           },
         ]
       }
+      health_environmental_portals: {
+        Row: {
+          address_search_template: string | null
+          agency_type: string
+          created_at: string
+          created_by: string | null
+          id: string
+          is_active: boolean
+          jurisdiction: string
+          last_verified_date: string | null
+          notes: string | null
+          permit_search_template: string | null
+          plan_review_url: string | null
+          service_types: string[]
+          state: string
+          updated_at: string
+          url: string
+          verification_status: string
+          verified_by: string | null
+        }
+        Insert: {
+          address_search_template?: string | null
+          agency_type: string
+          created_at?: string
+          created_by?: string | null
+          id?: string
+          is_active?: boolean
+          jurisdiction: string
+          last_verified_date?: string | null
+          notes?: string | null
+          permit_search_template?: string | null
+          plan_review_url?: string | null
+          service_types?: string[]
+          state: string
+          updated_at?: string
+          url: string
+          verification_status?: string
+          verified_by?: string | null
+        }
+        Update: {
+          address_search_template?: string | null
+          agency_type?: string
+          created_at?: string
+          created_by?: string | null
+          id?: string
+          is_active?: boolean
+          jurisdiction?: string
+          last_verified_date?: string | null
+          notes?: string | null
+          permit_search_template?: string | null
+          plan_review_url?: string | null
+          service_types?: string[]
+          state?: string
+          updated_at?: string
+          url?: string
+          verification_status?: string
+          verified_by?: string | null
+        }
+        Relationships: []
+      }
       inspections: {
         Row: {
           checklist: Json | null
@@ -231,66 +291,6 @@ export type Database = {
             referencedColumns: ["id"]
           },
         ]
-      }
-      health_environmental_portals: {
-        Row: {
-          address_search_template: string | null
-          agency_type: string
-          created_at: string
-          created_by: string | null
-          id: string
-          is_active: boolean
-          jurisdiction: string
-          last_verified_date: string | null
-          notes: string | null
-          permit_search_template: string | null
-          plan_review_url: string | null
-          service_types: string[]
-          state: string
-          updated_at: string
-          url: string
-          verification_status: string
-          verified_by: string | null
-        }
-        Insert: {
-          address_search_template?: string | null
-          agency_type: string
-          created_at?: string
-          created_by?: string | null
-          id?: string
-          is_active?: boolean
-          jurisdiction: string
-          last_verified_date?: string | null
-          notes?: string | null
-          permit_search_template?: string | null
-          plan_review_url?: string | null
-          service_types?: string[]
-          state: string
-          updated_at?: string
-          url: string
-          verification_status?: string
-          verified_by?: string | null
-        }
-        Update: {
-          address_search_template?: string | null
-          agency_type?: string
-          created_at?: string
-          created_by?: string | null
-          id?: string
-          is_active?: boolean
-          jurisdiction?: string
-          last_verified_date?: string | null
-          notes?: string | null
-          permit_search_template?: string | null
-          plan_review_url?: string | null
-          service_types?: string[]
-          state?: string
-          updated_at?: string
-          url?: string
-          verification_status?: string
-          verified_by?: string | null
-        }
-        Relationships: []
       }
       jurisdiction_profiles: {
         Row: {
@@ -966,6 +966,33 @@ export type Database = {
             referencedColumns: ["id"]
           },
         ]
+      }
+      screen_sets: {
+        Row: {
+          created_at: string
+          id: string
+          name: string
+          notes: string
+          updated_at: string
+          user_id: string
+        }
+        Insert: {
+          created_at?: string
+          id?: string
+          name: string
+          notes?: string
+          updated_at?: string
+          user_id: string
+        }
+        Update: {
+          created_at?: string
+          id?: string
+          name?: string
+          notes?: string
+          updated_at?: string
+          user_id?: string
+        }
+        Relationships: []
       }
       subscriptions: {
         Row: {
