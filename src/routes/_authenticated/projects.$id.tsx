@@ -10,6 +10,7 @@ import { Dialog, DialogContent, DialogHeader, DialogTitle, DialogFooter } from "
 import { Input } from "@/components/ui/input";
 import { Label } from "@/components/ui/label";
 import { Button } from "@/components/ui/button";
+import { JurisdictionAutocomplete } from "@/components/JurisdictionAutocomplete";
 import { OverviewTab } from "@/components/project/OverviewTab";
 import { ChecklistTab } from "@/components/project/ChecklistTab";
 import { DocsTab } from "@/components/project/DocsTab";
