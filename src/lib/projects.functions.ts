@@ -71,6 +71,49 @@ export const createProject = createServerFn({ method: "POST" })
     return row;
   });
 
+const UpdateProjectInput = z.object({
+  id: z.string().uuid(),
+  name: z.string().trim().min(1).max(200).optional(),
+  location: z.string().trim().max(200).optional(),
+  project_type: z.string().trim().max(80).optional(),
+  jurisdiction: z.string().trim().max(200).optional(),
+  permit_count: z.number().int().min(0).max(50).optional(),
+});
+
+export const updateProject = createServerFn({ method: "POST" })
+  .middleware([requireSupabaseAuth])
+  .inputValidator((input: unknown) => UpdateProjectInput.parse(input))
+  .handler(async ({ data, context }) => {
+    const { data: existing, error: eErr } = await context.supabase
+      .from("projects").select("id, user_id, jurisdiction, name, location, project_type, permit_count")
+      .eq("id", data.id).maybeSingle();
+    if (eErr) throw new Error(eErr.message);
+    if (!existing) throw new Error("Project not found");
+    if (existing.user_id !== context.userId) throw new Error("Forbidden");
+
+    const patch: Record<string, unknown> = { updated_at: new Date().toISOString() };
+    const changes: string[] = [];
+    (["name", "location", "project_type", "jurisdiction", "permit_count"] as const).forEach((k) => {
+      if (data[k] !== undefined && data[k] !== (existing as any)[k]) {
+        patch[k] = data[k];
+        changes.push(`${k.replace("_", " ")} → ${data[k]}`);
+      }
+    });
+
+    if (Object.keys(patch).length === 1) return existing;
+
+    const { data: updated, error } = await context.supabase
+      .from("projects").update(patch).eq("id", data.id).select("*").single();
+    if (error) throw new Error(error.message);
+
+    await context.supabase.from("activity").insert({
+      user_id: context.userId,
+      project_id: data.id,
+      description: `Project updated: ${changes.join(", ")}`,
+    });
+    return updated;
+  });
+
 export const deleteProject = createServerFn({ method: "POST" })
   .middleware([requireSupabaseAuth])
   .inputValidator((input: unknown) => z.object({ id: z.string().uuid() }).parse(input))
