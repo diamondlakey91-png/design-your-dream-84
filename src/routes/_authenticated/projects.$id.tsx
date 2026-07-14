@@ -167,14 +167,9 @@ function EditProjectDialog({
           </div>
           <div className="space-y-1.5">
             <Label>Jurisdiction</Label>
-            <Input
-              value={jurisdiction}
-              onChange={(e) => setJurisdiction(e.target.value)}
-              placeholder="e.g., Arlington County, VA"
-              maxLength={200}
-            />
+            <JurisdictionAutocomplete value={jurisdiction} onChange={setJurisdiction} />
             <p className="text-[11px] text-muted-foreground">
-              Drives which codes, portals, and amendments the AI uses for this project.
+              Pick from the library to guarantee the AI uses the right codes, portals, and amendments.
             </p>
           </div>
           <div className="space-y-1.5">
