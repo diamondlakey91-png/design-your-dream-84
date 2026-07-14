@@ -418,6 +418,7 @@ function PropertyMap({ lat, lng, label }: { lat: number; lng: number; label: str
           zoomControl: true,
         });
         new window.google.maps.Marker({ position: { lat, lng }, map, title: label });
+        void map;
       })
       .catch((e) => setErr((e as Error).message));
     return () => { cancelled = true; };
