@@ -8,10 +8,11 @@ import {
   ShieldAlert, ListChecks, LinkIcon, Loader2, Save, Send, RotateCcw, CalendarPlus, Wand2,
 } from "lucide-react";
 import {
-  generatePermitAnalysis, listProjects, attachAnalysisToProject,
+  generatePermitAnalysis, attachAnalysisToProject,
   analysisToChecklist, analysisToDeadlines, listPermitAnalyses, getPermitAnalysis,
   type PermitIntake,
-} from "@/lib/permits.functions";
+} from "@/lib/permitAnalysis.functions";
+import { listProjects } from "@/lib/projects.functions";
 
 export const Route = createFileRoute("/_authenticated/assistant/analysis")({
   head: () => ({ meta: [{ title: "Permit Analysis — Permivio" }, { name: "robots", content: "noindex" }] }),

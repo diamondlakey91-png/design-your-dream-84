@@ -9,7 +9,7 @@ import {
   listJurisdictionRequests,
   createJurisdictionRequest,
   seedDemoJurisdictions,
-} from "@/lib/permits.functions";
+} from "@/lib/jurisdictionProfiles.functions";
 import {
   Search, Sparkles, MapPin, Bookmark, BookmarkCheck, Pin,
   ShieldCheck, ShieldAlert, ShieldQuestion, Plus, X, Building2, Info,

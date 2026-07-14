@@ -1,7 +1,8 @@
 import { createFileRoute, Link, useNavigate } from "@tanstack/react-router";
 import { useMutation, useQuery, useQueryClient } from "@tanstack/react-query";
 import { useServerFn } from "@tanstack/react-start";
-import { listThreads, createThread, deleteThread, listProjects } from "@/lib/permits.functions";
+import { listThreads, createThread, deleteThread } from "@/lib/chat.functions";
+import { listProjects } from "@/lib/projects.functions";
 import { ArrowLeft, Plus, MessageSquare, Trash2, Briefcase } from "lucide-react";
 import { toast } from "sonner";
 

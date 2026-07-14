@@ -6,7 +6,7 @@ import {
   buildJurisdictionProfile,
   toggleSaveJurisdiction,
   listSavedJurisdictions,
-} from "@/lib/permits.functions";
+} from "@/lib/jurisdictionProfiles.functions";
 import {
   ArrowLeft, RefreshCw, ExternalLink, Building2, Bookmark, BookmarkCheck,
   ShieldCheck, ShieldAlert, ShieldQuestion, Info, MessageSquare,

@@ -2,7 +2,7 @@ import { createFileRoute, Link, useNavigate } from "@tanstack/react-router";
 import { useMutation, useQuery, useQueryClient } from "@tanstack/react-query";
 import { useServerFn } from "@tanstack/react-start";
 import { AppShell } from "@/components/AppShell";
-import { getInspection, updateInspectionFields } from "@/lib/permits.functions";
+import { getInspection, updateInspectionFields } from "@/lib/inspections.functions";
 import { supabase } from "@/integrations/supabase/client";
 import { ArrowLeft, Camera, Check, X, Trash2, Plus } from "lucide-react";
 import { useState, useRef, useEffect } from "react";

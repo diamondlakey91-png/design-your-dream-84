@@ -4,13 +4,12 @@ import { useServerFn } from "@tanstack/react-start";
 import {
   listThreadMessages,
   listThreads,
-  listProjects,
   setThreadProject,
   renameThread,
-  intakeGenerateChecklist,
   extractChecklistFromMessage,
-  addPermitItemsBulk,
-} from "@/lib/permits.functions";
+} from "@/lib/chat.functions";
+import { listProjects } from "@/lib/projects.functions";
+import { intakeGenerateChecklist, addPermitItemsBulk } from "@/lib/checklist.functions";
 import { supabase } from "@/integrations/supabase/client";
 import { ArrowLeft, Send, Briefcase, X, Edit3, ClipboardList, Sparkles, ListPlus, Check, Loader2 } from "lucide-react";
 import { useCallback, useEffect, useMemo, useRef, useState } from "react";
