@@ -826,7 +826,16 @@ async function scrapePermitByNumber(fcKey: string, aiKey: string, jurisdiction: 
     urls.map(async (u) => {
       try {
         const s = await firecrawlScrape(fcKey, u);
-        return `PORTAL URL: ${u}\n${(s.markdown || "").slice(0, 5000)}`;
+        let md = s.markdown || "";
+        // If the plain scrape came back thin (JS-only portal shell), drive a
+        // real headless browser through the portal's search flow.
+        if (md.trim().length < 400 || !/permit|record|application|status/i.test(md)) {
+          const fb = await browserFallbackScrape(fcKey, u, permitNumber);
+          if (fb.markdown && fb.markdown.length > md.length) {
+            md = `[browser-fallback:${fb.kind}]\n${fb.markdown}`;
+          }
+        }
+        return `PORTAL URL: ${u}\n${md.slice(0, 6000)}`;
       } catch { return ""; }
     })
   )).filter(Boolean).join("\n\n---\n\n");
