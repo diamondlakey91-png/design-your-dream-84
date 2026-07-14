@@ -71,6 +71,32 @@ export const createProject = createServerFn({ method: "POST" })
     return row;
   });
 
+export const deleteProject = createServerFn({ method: "POST" })
+  .middleware([requireSupabaseAuth])
+  .inputValidator((input: unknown) => z.object({ id: z.string().uuid() }).parse(input))
+  .handler(async ({ data, context }) => {
+    // Verify ownership
+    const { data: proj, error: pErr } = await context.supabase
+      .from("projects").select("id, user_id, name").eq("id", data.id).maybeSingle();
+    if (pErr) throw new Error(pErr.message);
+    if (!proj) throw new Error("Project not found");
+    if (proj.user_id !== context.userId) throw new Error("Forbidden");
+
+    // Delete related rows first (in case FKs don't cascade)
+    const tables = [
+      "activity", "deadlines", "permit_items", "project_documents",
+      "inspections", "chat_messages", "chat_threads", "permit_analyses",
+      "jurisdiction_syncs", "permit_sync_history", "report_shares",
+    ] as const;
+    for (const t of tables) {
+      await (context.supabase as any).from(t).delete().eq("project_id", data.id);
+    }
+
+    const { error } = await context.supabase.from("projects").delete().eq("id", data.id);
+    if (error) throw new Error(error.message);
+    return { ok: true };
+  });
+
 export const advanceStage = createServerFn({ method: "POST" })
   .middleware([requireSupabaseAuth])
   .inputValidator((input: unknown) => z.object({ id: z.string().uuid() }).parse(input))
