@@ -40,6 +40,7 @@ export function AppShell({ children }: { children: ReactNode }) {
       <nav className="fixed inset-x-0 bottom-0 z-40 border-t border-border bg-background/80 backdrop-blur-xl">
         <div className="mx-auto flex max-w-2xl items-center justify-around px-6 py-3">
           <NavItem to="/dashboard" icon={<Home className="size-5" />} label="Sites" active={active("/dashboard")} />
+          <NavItem to="/property" icon={<Building2 className="size-5" />} label="Property" active={active("/property")} />
           <NavItem to="/lookup" icon={<MapPin className="size-5" />} label="Lookup" active={active("/lookup")} />
           <Link
             to="/assistant"
