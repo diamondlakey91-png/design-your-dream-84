@@ -3,6 +3,7 @@ import { requireSupabaseAuth } from "@/integrations/supabase/auth-middleware";
 import { z } from "zod";
 import { callLovableAI } from "@/lib/ai.shared";
 import { firecrawlSearch, firecrawlScrape } from "@/lib/firecrawl.shared";
+import { browserFallbackScrape } from "@/lib/browserFallback";
 
 const AddressLookupInput = z.object({
   address: z.string().trim().min(3).max(300),
