@@ -29,6 +29,9 @@ export type HealthPortalMappingRow = {
   plan_review_url: string | null;
   notes: string | null;
   is_active: boolean;
+  verification_status: string;
+  last_verified_date: string | null;
+  verified_by: string | null;
   created_by: string | null;
   created_at: string;
   updated_at: string;
@@ -93,6 +96,36 @@ export const upsertHealthPortalMapping = createServerFn({ method: "POST" })
     if (error) throw new Error(error.message);
     return row as HealthPortalMappingRow;
 
+  });
+
+/** Set a health/environmental portal mapping's verification status (admin only). */
+export const verifyHealthPortalMapping = createServerFn({ method: "POST" })
+  .middleware([requireSupabaseAuth])
+  .inputValidator((raw: unknown) => z.object({
+    id: z.string().uuid(),
+    status: z.enum(["verified", "review_recommended", "unverified"]),
+  }).parse(raw))
+  .handler(async ({ data, context }) => {
+    await ensureAdmin(context);
+    const patch: { verification_status: string; last_verified_date?: string | null; verified_by?: string | null } = {
+      verification_status: data.status,
+    };
+    if (data.status === "verified") {
+      const email = (context.claims as { email?: string } | undefined)?.email;
+      patch.last_verified_date = new Date().toISOString().slice(0, 10);
+      patch.verified_by = email ?? context.userId;
+    } else if (data.status === "unverified") {
+      patch.last_verified_date = null;
+      patch.verified_by = null;
+    }
+    const { data: row, error } = await (context.supabase as any)
+      .from("health_environmental_portals")
+      .update(patch)
+      .eq("id", data.id)
+      .select("*")
+      .single();
+    if (error) throw new Error(error.message);
+    return row as HealthPortalMappingRow;
   });
 
 /** Delete a health/environmental portal mapping (admin only). */

@@ -9,13 +9,16 @@ import {
 } from "@/lib/jurisdictionProfiles.functions";
 import {
   ArrowLeft, RefreshCw, ExternalLink, Building2, Bookmark, BookmarkCheck,
-  ShieldCheck, ShieldAlert, ShieldQuestion, Info, MessageSquare,
+  MessageSquare, ShieldCheck, ShieldX, ShieldAlert,
   Phone, Mail, MapPin, Globe, FileText, Server, ListChecks, Clock, Users,
 } from "lucide-react";
 import { toast } from "sonner";
 import ReactMarkdown from "react-markdown";
 import remarkGfm from "remark-gfm";
 import { useMemo } from "react";
+import { verifyMeta } from "@/lib/verification";
+import { useIsAdmin } from "@/hooks/useIsAdmin";
+import { verifyJurisdictionProfile } from "@/lib/jurisdictionProfiles.functions";
 
 export const Route = createFileRoute("/_authenticated/jurisdictions/$slug")({
   head: () => ({
@@ -27,21 +30,6 @@ export const Route = createFileRoute("/_authenticated/jurisdictions/$slug")({
   }),
   component: JurisdictionDetail,
 });
-
-type VStatus = "verified" | "recently_verified" | "review_recommended" | "limited" | "unverified" | "source_unavailable" | "demo";
-function verifyMeta(status: string | null | undefined) {
-  const s = (status || "unverified") as VStatus;
-  const map = {
-    verified:            { label: "Verified",            klass: "text-emerald-400 bg-emerald-500/10 ring-emerald-500/30", icon: ShieldCheck },
-    recently_verified:   { label: "Recently verified",   klass: "text-emerald-400 bg-emerald-500/10 ring-emerald-500/30", icon: ShieldCheck },
-    review_recommended:  { label: "Review recommended",  klass: "text-amber-400 bg-amber-500/10 ring-amber-500/30",       icon: ShieldAlert },
-    limited:             { label: "Limited information", klass: "text-amber-400 bg-amber-500/10 ring-amber-500/30",       icon: ShieldAlert },
-    unverified:          { label: "Unverified",          klass: "text-muted-foreground bg-muted/40 ring-border",           icon: ShieldQuestion },
-    source_unavailable:  { label: "Source unavailable",  klass: "text-red-400 bg-red-500/10 ring-red-500/30",              icon: ShieldAlert },
-    demo:                { label: "Demonstration data",  klass: "text-brand bg-brand/10 ring-brand/30",                    icon: Info },
-  } as const;
-  return map[s] ?? map.unverified;
-}
 
 type PermitLegacy = { name: string; when_required?: string; typical_reviewers?: string };
 type FeeEntry = { label: string; detail?: string };
@@ -62,6 +50,8 @@ function JurisdictionDetail() {
   const buildFn = useServerFn(buildJurisdictionProfile);
   const savedFn = useServerFn(listSavedJurisdictions);
   const toggleSaveFn = useServerFn(toggleSaveJurisdiction);
+  const verifyFn = useServerFn(verifyJurisdictionProfile);
+  const adminQ = useIsAdmin();
 
   const q = useQuery({ queryKey: ["jurisdiction", slug], queryFn: () => getFn({ data: { slug } }) });
   const savedQ = useQuery({ queryKey: ["saved-jurisdictions"], queryFn: () => savedFn() });
@@ -85,6 +75,17 @@ function JurisdictionDetail() {
   const toggleSave = useMutation({
     mutationFn: () => toggleSaveFn({ data: { jurisdiction_id: p!.id } }),
     onSuccess: () => qc.invalidateQueries({ queryKey: ["saved-jurisdictions"] }),
+  });
+
+  const verify = useMutation({
+    mutationFn: (status: "verified" | "review_recommended" | "unverified") =>
+      verifyFn({ data: { id: p!.id, status } }),
+    onSuccess: () => {
+      qc.invalidateQueries({ queryKey: ["jurisdiction", slug] });
+      qc.invalidateQueries({ queryKey: ["jurisdictions"] });
+      toast.success("Verification status updated");
+    },
+    onError: (e) => toast.error(e instanceof Error ? e.message : "Failed"),
   });
 
   if (q.isLoading) return <div className="p-6 text-sm text-muted-foreground">Loading…</div>;
@@ -138,12 +139,39 @@ function JurisdictionDetail() {
                 {p.last_verified_date && (
                   <span className="text-[10px] text-muted-foreground">
                     Last verified {new Date(p.last_verified_date).toLocaleDateString()}
+                    {p.verified_by && ` by ${p.verified_by}`}
                   </span>
                 )}
                 {p.confidence && (
                   <span className="text-[10px] font-mono text-muted-foreground uppercase">confidence: {p.confidence}</span>
                 )}
               </div>
+              {adminQ.data === true && (
+                <div className="flex flex-wrap items-center gap-1.5 mt-2">
+                  <span className="text-[10px] font-mono uppercase tracking-widest text-muted-foreground/80">Admin:</span>
+                  <button
+                    onClick={() => verify.mutate("verified")}
+                    disabled={verify.isPending}
+                    className="inline-flex items-center gap-1 rounded-md ring-1 ring-emerald-500/30 bg-emerald-500/10 text-emerald-400 px-2 py-1 text-[11px] hover:bg-emerald-500/20 disabled:opacity-50"
+                  >
+                    <ShieldCheck className="size-3" /> Mark verified
+                  </button>
+                  <button
+                    onClick={() => verify.mutate("review_recommended")}
+                    disabled={verify.isPending}
+                    className="inline-flex items-center gap-1 rounded-md ring-1 ring-amber-500/30 bg-amber-500/10 text-amber-400 px-2 py-1 text-[11px] hover:bg-amber-500/20 disabled:opacity-50"
+                  >
+                    <ShieldAlert className="size-3" /> Flag for review
+                  </button>
+                  <button
+                    onClick={() => verify.mutate("unverified")}
+                    disabled={verify.isPending}
+                    className="inline-flex items-center gap-1 rounded-md ring-1 ring-border bg-background text-muted-foreground px-2 py-1 text-[11px] hover:text-foreground disabled:opacity-50"
+                  >
+                    <ShieldX className="size-3" /> Mark unverified
+                  </button>
+                </div>
+              )}
             </div>
             <div className="flex flex-col sm:flex-row items-end gap-2">
               <button

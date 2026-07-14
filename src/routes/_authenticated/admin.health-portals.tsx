@@ -8,11 +8,12 @@ import {
   listHealthPortalMappings,
   upsertHealthPortalMapping,
   deleteHealthPortalMapping,
-  type HealthPortalMappingRow,
+  verifyHealthPortalMapping,
 } from "@/lib/healthPortals.functions";
 import { HEALTH_AGENCY_REGISTRY, HEALTH_AGENCY_TYPES, HEALTH_AGENCY_SERVICE_TYPES, type HealthAgencyType, type HealthAgencyServiceType } from "@/lib/healthAgencyRegistry";
 import { US_STATES } from "@/lib/portalRegistry";
-import { Plus, Pencil, Trash2, Save, X, ShieldAlert, Search, ExternalLink, Eye, EyeOff } from "lucide-react";
+import { verifyMeta } from "@/lib/verification";
+import { Plus, Pencil, Trash2, Save, X, ShieldAlert, ShieldCheck, ShieldX, Search, ExternalLink, Eye, EyeOff } from "lucide-react";
 
 export const Route = createFileRoute("/_authenticated/admin/health-portals")({
   component: AdminHealthPortalsPage,
@@ -86,6 +87,12 @@ function AdminHealthPortalsPage() {
 
   const deleteMut = useMutation({
     mutationFn: async (id: string) => deleteFn({ data: { id } }),
+    onSuccess: () => qc.invalidateQueries({ queryKey: ["health-portal-mappings"] }),
+  });
+
+  const verifyFn = useServerFn(verifyHealthPortalMapping);
+  const verifyMut = useMutation({
+    mutationFn: async (v: { id: string; status: "verified" | "review_recommended" | "unverified" }) => verifyFn({ data: v }),
     onSuccess: () => qc.invalidateQueries({ queryKey: ["health-portal-mappings"] }),
   });
 
@@ -195,6 +202,15 @@ function AdminHealthPortalsPage() {
                     {!r.is_active && (
                       <span className="rounded-full border border-orange-500/40 bg-orange-500/10 text-orange-300 px-2 py-0.5 text-[10px]">disabled</span>
                     )}
+                    {(() => {
+                      const m = verifyMeta(r.verification_status);
+                      const MIcon = m.icon;
+                      return (
+                        <span className={`inline-flex items-center gap-1 rounded-full px-1.5 py-0.5 ring-1 text-[10px] ${m.klass}`}>
+                          <MIcon className="size-3" /> {m.label}
+                        </span>
+                      );
+                    })()}
                   </div>
                   <a
                     href={r.url}
@@ -205,6 +221,34 @@ function AdminHealthPortalsPage() {
                     {r.url} <ExternalLink className="size-3" />
                   </a>
                   {r.notes && <p className="mt-1 text-[11px] text-muted-foreground">{r.notes}</p>}
+                  {r.verified_by && r.last_verified_date && (
+                    <p className="mt-1 text-[10px] text-muted-foreground">
+                      Verified by {r.verified_by} on {new Date(r.last_verified_date).toLocaleDateString()}
+                    </p>
+                  )}
+                  <div className="mt-1.5 flex items-center gap-1">
+                    <button
+                      title="Mark verified"
+                      onClick={() => verifyMut.mutate({ id: r.id, status: "verified" })}
+                      className="rounded p-1 text-emerald-400/70 hover:bg-emerald-500/10 hover:text-emerald-400"
+                    >
+                      <ShieldCheck className="size-3.5" />
+                    </button>
+                    <button
+                      title="Flag for review"
+                      onClick={() => verifyMut.mutate({ id: r.id, status: "review_recommended" })}
+                      className="rounded p-1 text-amber-400/70 hover:bg-amber-500/10 hover:text-amber-400"
+                    >
+                      <ShieldAlert className="size-3.5" />
+                    </button>
+                    <button
+                      title="Mark unverified"
+                      onClick={() => verifyMut.mutate({ id: r.id, status: "unverified" })}
+                      className="rounded p-1 text-muted-foreground hover:bg-background hover:text-foreground"
+                    >
+                      <ShieldX className="size-3.5" />
+                    </button>
+                  </div>
                 </div>
                 <div className="flex items-center gap-1">
                   <button

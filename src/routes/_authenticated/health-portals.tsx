@@ -13,6 +13,7 @@ import {
 import { US_STATES } from "@/lib/portalRegistry";
 import { listHealthPortalMappings } from "@/lib/healthPortals.functions";
 import { useIsAdmin } from "@/hooks/useIsAdmin";
+import { verifyMeta } from "@/lib/verification";
 import { ExternalLink, Search, HeartPulse, FileText, MapPin, Hash, Info, Zap, ShieldAlert } from "lucide-react";
 
 const healthPortalsSearchSchema = z.object({
@@ -305,8 +306,22 @@ function HealthAgencyCard({ p, address, permitNo }: { p: HealthAgencyEntry; addr
             {p.serviceTypes.map((s) => (
               <span key={s} className="rounded-full border border-border bg-background px-2 py-0.5 text-[10px] text-muted-foreground">{s}</span>
             ))}
+            {p.id && (() => {
+              const m = verifyMeta(p.verificationStatus);
+              const MIcon = m.icon;
+              return (
+                <span className={`inline-flex items-center gap-1 rounded-full px-1.5 py-0.5 ring-1 text-[10px] ${m.klass}`}>
+                  <MIcon className="size-3" /> {m.label}
+                </span>
+              );
+            })()}
           </div>
           {p.notes && <p className="mt-1 text-[11px] text-muted-foreground">{p.notes}</p>}
+          {p.verifiedBy && p.lastVerifiedDate && (
+            <p className="mt-0.5 text-[10px] text-muted-foreground">
+              Verified by {p.verifiedBy} on {new Date(p.lastVerifiedDate).toLocaleDateString()}
+            </p>
+          )}
         </div>
       </div>
       <div className="flex flex-wrap gap-1.5">

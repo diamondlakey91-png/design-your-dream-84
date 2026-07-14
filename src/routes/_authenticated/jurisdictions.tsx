@@ -12,10 +12,11 @@ import {
 } from "@/lib/jurisdictionProfiles.functions";
 import {
   Search, Sparkles, MapPin, Bookmark, BookmarkCheck, Pin,
-  ShieldCheck, ShieldAlert, ShieldQuestion, Plus, X, Building2, Info,
+  Plus, X, Building2,
 } from "lucide-react";
 import { useEffect, useMemo, useState } from "react";
 import { toast } from "sonner";
+import { verifyMeta, type VerificationStatus } from "@/lib/verification";
 
 export const Route = createFileRoute("/_authenticated/jurisdictions")({
   head: () => ({
@@ -30,22 +31,6 @@ export const Route = createFileRoute("/_authenticated/jurisdictions")({
 
 const US_STATES = ["AL","AK","AZ","AR","CA","CO","CT","DE","DC","FL","GA","HI","ID","IL","IN","IA","KS","KY","LA","ME","MD","MA","MI","MN","MS","MO","MT","NE","NV","NH","NJ","NM","NY","NC","ND","OH","OK","OR","PA","RI","SC","SD","TN","TX","UT","VT","VA","WA","WV","WI","WY"];
 const TYPES = ["city", "county", "town", "borough", "parish", "township", "district", "state"];
-
-type VStatus = "verified" | "recently_verified" | "review_recommended" | "limited" | "unverified" | "source_unavailable" | "demo";
-
-function verifyMeta(status: string | null | undefined): { label: string; klass: string; icon: typeof ShieldCheck } {
-  const s = (status || "unverified") as VStatus;
-  const map: Record<VStatus, { label: string; klass: string; icon: typeof ShieldCheck }> = {
-    verified:            { label: "Verified",            klass: "text-emerald-400 bg-emerald-500/10 ring-emerald-500/30", icon: ShieldCheck },
-    recently_verified:   { label: "Recently verified",   klass: "text-emerald-400 bg-emerald-500/10 ring-emerald-500/30", icon: ShieldCheck },
-    review_recommended:  { label: "Review recommended",  klass: "text-amber-400 bg-amber-500/10 ring-amber-500/30",       icon: ShieldAlert },
-    limited:             { label: "Limited information", klass: "text-amber-400 bg-amber-500/10 ring-amber-500/30",       icon: ShieldAlert },
-    unverified:          { label: "Unverified",          klass: "text-muted-foreground bg-muted/40 ring-border",           icon: ShieldQuestion },
-    source_unavailable:  { label: "Source unavailable",  klass: "text-red-400 bg-red-500/10 ring-red-500/30",              icon: ShieldAlert },
-    demo:                { label: "Demonstration data",  klass: "text-brand bg-brand/10 ring-brand/30",                    icon: Info },
-  };
-  return map[s] ?? map.unverified;
-}
 
 function JurisdictionsIndex() {
   const listFn = useServerFn(listJurisdictionProfiles);
@@ -246,7 +231,7 @@ function JurisdictionsIndex() {
             <section id="legend">
               <SectionTitle>Verification status legend</SectionTitle>
               <div className="rounded-xl bg-card ring-1 ring-border p-4 grid sm:grid-cols-2 gap-2 text-xs">
-                {(["verified","recently_verified","review_recommended","limited","unverified","source_unavailable","demo"] as VStatus[]).map((s) => {
+                {(["verified","recently_verified","review_recommended","limited","unverified","source_unavailable","demo"] as VerificationStatus[]).map((s) => {
                   const m = verifyMeta(s); const Icon = m.icon;
                   return (
                     <div key={s} className="flex items-center gap-2">

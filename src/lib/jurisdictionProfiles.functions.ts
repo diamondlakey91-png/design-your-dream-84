@@ -5,6 +5,46 @@ import { callLovableAI, toSlug } from "@/lib/ai.shared";
 import { firecrawlSearch, firecrawlScrape } from "@/lib/firecrawl.shared";
 import { findHealthAgencyDeepLinks } from "@/lib/healthAgencyRegistry";
 
+async function ensureAdmin(context: { supabase: any; userId: string }) {
+  const { data, error } = await context.supabase.rpc("has_role", {
+    _user_id: context.userId,
+    _role: "admin",
+  });
+  if (error) throw new Error(error.message);
+  if (!data) throw new Error("Forbidden: admin role required");
+}
+
+/** Set a jurisdiction profile's verification status (admin only). */
+export const verifyJurisdictionProfile = createServerFn({ method: "POST" })
+  .middleware([requireSupabaseAuth])
+  .inputValidator((input: unknown) => z.object({
+    id: z.string().uuid(),
+    status: z.enum(["verified", "review_recommended", "unverified"]),
+  }).parse(input))
+  .handler(async ({ data, context }) => {
+    await ensureAdmin(context);
+    const patch: { verification_status: string; last_verified_date?: string | null; verified_by?: string | null } = {
+      verification_status: data.status,
+    };
+    if (data.status === "verified") {
+      const email = (context.claims as { email?: string } | undefined)?.email;
+      patch.last_verified_date = new Date().toISOString().slice(0, 10);
+      patch.verified_by = email ?? context.userId;
+    } else if (data.status === "unverified") {
+      patch.last_verified_date = null;
+      patch.verified_by = null;
+    }
+    // review_recommended: leave last_verified_date/verified_by as-is — don't erase prior verification history.
+    const { data: row, error } = await context.supabase
+      .from("jurisdiction_profiles")
+      .update(patch)
+      .eq("id", data.id)
+      .select("*")
+      .single();
+    if (error) throw new Error(error.message);
+    return row;
+  });
+
 export const listJurisdictionProfiles = createServerFn({ method: "GET" })
   .middleware([requireSupabaseAuth])
   .inputValidator((input: unknown) => z.object({

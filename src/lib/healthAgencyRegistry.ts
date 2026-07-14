@@ -36,6 +36,12 @@ export type HealthAgencyEntry = {
   permitSearch?: (permitNumber: string) => string;
   planReviewUrl?: string;
   notes?: string;
+  /** Only present for DB-backed entries (admin-added rows) — static seed entries below have
+   * no row to verify against and are hand-checked at authoring time instead. */
+  id?: string;
+  verificationStatus?: string;
+  lastVerifiedDate?: string | null;
+  verifiedBy?: string | null;
 };
 
 export const HEALTH_AGENCY_TYPES: HealthAgencyType[] = [
@@ -142,6 +148,7 @@ function buildDeepLinkKey(jurisdiction: string, state: string, agencyType: strin
 
 /** Convert a DB-backed health/environmental portal mapping row into a runtime HealthAgencyEntry. */
 export function buildHealthAgencyEntryFromMapping(m: {
+  id?: string;
   jurisdiction: string;
   state: string;
   agency_type: string;
@@ -151,6 +158,9 @@ export function buildHealthAgencyEntryFromMapping(m: {
   permit_search_template?: string | null;
   plan_review_url?: string | null;
   notes?: string | null;
+  verification_status?: string;
+  last_verified_date?: string | null;
+  verified_by?: string | null;
 }): HealthAgencyEntry {
   const agencyType: HealthAgencyType = (HEALTH_AGENCY_TYPES as string[]).includes(m.agency_type)
     ? (m.agency_type as HealthAgencyType)
@@ -174,6 +184,10 @@ export function buildHealthAgencyEntryFromMapping(m: {
       : undefined,
     planReviewUrl: m.plan_review_url ?? undefined,
     notes: m.notes ?? undefined,
+    id: m.id,
+    verificationStatus: m.verification_status,
+    lastVerifiedDate: m.last_verified_date,
+    verifiedBy: m.verified_by,
   };
 }
 
