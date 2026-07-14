@@ -101,7 +101,7 @@ export const deleteHealthPortalMapping = createServerFn({ method: "POST" })
   .inputValidator((raw: unknown) => z.object({ id: z.string().uuid() }).parse(raw))
   .handler(async ({ data, context }) => {
     await ensureAdmin(context);
-    const { error } = await context.supabase.from("health_environmental_portals").delete().eq("id", data.id);
+    const { error } = await (context.supabase as any).from("health_environmental_portals").delete().eq("id", data.id);
     if (error) throw new Error(error.message);
     return { ok: true };
   });
