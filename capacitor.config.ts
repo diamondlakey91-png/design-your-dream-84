@@ -10,9 +10,22 @@ const config: CapacitorConfig = {
   // webDir is required by the CLI but unused when `server.url` is set.
   webDir: "dist",
   server: {
-    url: "https://design-your-dream-84.lovable.app",
+    url: "https://permivio.lovable.app",
     cleartext: false,
     androidScheme: "https",
+    // Allow the WebView to navigate to auth broker + Supabase auth domains
+    // so Google sign-in redirects don't get blocked by the native shell.
+    allowNavigation: [
+      "permivio.lovable.app",
+      "*.lovable.app",
+      "*.lovable.dev",
+      "oauth.lovable.app",
+      "*.supabase.co",
+      "accounts.google.com",
+      "*.google.com",
+      "*.googleusercontent.com",
+      "appleid.apple.com",
+    ],
   },
   ios: {
     contentInset: "always",
