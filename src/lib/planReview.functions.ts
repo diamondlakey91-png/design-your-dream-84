@@ -99,8 +99,8 @@ async function fetchJurisdictionAmendments(
 }
 
 
-// Internal: run plan review for one document. Reused by reviewPlan + batchReviewPlans.
-async function runPlanReviewForDocument(
+// Internal: run plan review for one document. Reused by reviewPlan + batchReviewPlans + MCP tool.
+export async function runPlanReviewForDocument(
   // eslint-disable-next-line @typescript-eslint/no-explicit-any
   supabase: any,
   userId: string,
