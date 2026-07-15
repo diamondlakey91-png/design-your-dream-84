@@ -4,6 +4,7 @@ import getProjectTool from "./tools/get-project";
 import listChecklistTool from "./tools/list-checklist";
 import listDeadlinesTool from "./tools/list-deadlines";
 import askAssistantTool from "./tools/ask-assistant";
+import reviewPlansTool from "./tools/review-plans";
 
 const projectRef = import.meta.env.VITE_SUPABASE_PROJECT_ID ?? "project-ref-unset";
 
