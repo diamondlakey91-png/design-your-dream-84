@@ -32,6 +32,11 @@ function AuthPage() {
   const navigate = useNavigate();
   const { next } = Route.useSearch();
   const returnTo = safeNext(next);
+  const isNativeApp =
+    typeof window !== "undefined" &&
+    (/(permivio-native|capacitor|CapacitorWebView)/i.test(window.navigator.userAgent) ||
+      // Capacitor injects window.Capacitor on native
+      Boolean((window as unknown as { Capacitor?: unknown }).Capacitor));
   const [mode, setMode] = useState<"sign-in" | "sign-up">("sign-in");
   const [email, setEmail] = useState("");
   const [password, setPassword] = useState("");
