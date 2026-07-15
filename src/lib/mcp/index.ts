@@ -4,6 +4,7 @@ import getProjectTool from "./tools/get-project";
 import listChecklistTool from "./tools/list-checklist";
 import listDeadlinesTool from "./tools/list-deadlines";
 import askAssistantTool from "./tools/ask-assistant";
+import reviewPlansTool from "./tools/review-plans";
 
 const projectRef = import.meta.env.VITE_SUPABASE_PROJECT_ID ?? "project-ref-unset";
 
@@ -17,5 +18,5 @@ export default defineMcp({
     issuer: `https://${projectRef}.supabase.co/auth/v1`,
     acceptedAudiences: "authenticated",
   }),
-  tools: [listProjectsTool, getProjectTool, listChecklistTool, listDeadlinesTool, askAssistantTool],
+  tools: [listProjectsTool, getProjectTool, listChecklistTool, listDeadlinesTool, askAssistantTool, reviewPlansTool],
 });
