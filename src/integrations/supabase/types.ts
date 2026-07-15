@@ -547,33 +547,6 @@ export type Database = {
           },
         ]
       }
-      screen_sets: {
-        Row: {
-          created_at: string
-          id: string
-          name: string
-          notes: string
-          updated_at: string
-          user_id: string
-        }
-        Insert: {
-          created_at?: string
-          id?: string
-          name: string
-          notes?: string
-          updated_at?: string
-          user_id: string
-        }
-        Update: {
-          created_at?: string
-          id?: string
-          name?: string
-          notes?: string
-          updated_at?: string
-          user_id?: string
-        }
-        Relationships: []
-      }
       permit_items: {
         Row: {
           application_fields: Json | null
@@ -966,6 +939,33 @@ export type Database = {
             referencedColumns: ["id"]
           },
         ]
+      }
+      screen_sets: {
+        Row: {
+          created_at: string
+          id: string
+          name: string
+          notes: string
+          updated_at: string
+          user_id: string
+        }
+        Insert: {
+          created_at?: string
+          id?: string
+          name: string
+          notes?: string
+          updated_at?: string
+          user_id: string
+        }
+        Update: {
+          created_at?: string
+          id?: string
+          name?: string
+          notes?: string
+          updated_at?: string
+          user_id?: string
+        }
+        Relationships: []
       }
       subscriptions: {
         Row: {
