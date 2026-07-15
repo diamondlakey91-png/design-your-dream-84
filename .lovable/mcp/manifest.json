@@ -134,6 +134,38 @@
           "$schema": "http://json-schema.org/draft-07/schema#"
         },
         "outputSchema": null
+      },
+      {
+        "name": "review_plans",
+        "title": "AI plan review",
+        "description": "Run AI plan review across all uploaded plan documents (PDF/image) in a Permivio project. Returns per-document findings (egress, ADA, fire code, permitting mistakes) with severity, code references, and a consolidated summary. Runs sequentially and may take a while for large projects.",
+        "annotations": {
+          "readOnlyHint": false,
+          "openWorldHint": true
+        },
+        "inputSchema": {
+          "type": "object",
+          "properties": {
+            "project_id": {
+              "type": "string",
+              "description": "Project UUID"
+            },
+            "force": {
+              "type": "boolean",
+              "description": "Re-review documents that already have a stored review. Defaults to false (only new plans)."
+            },
+            "document_id": {
+              "type": "string",
+              "description": "Optional single document UUID to review instead of the whole project."
+            }
+          },
+          "required": [
+            "project_id"
+          ],
+          "additionalProperties": false,
+          "$schema": "http://json-schema.org/draft-07/schema#"
+        },
+        "outputSchema": null
       }
     ]
   }
