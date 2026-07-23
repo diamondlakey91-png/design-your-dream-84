@@ -500,7 +500,7 @@ export const exportComplianceReportPdf = createServerFn({ method: "POST" })
 
 
     const wrap = (text: string, size: number, f = font) => {
-      const words = text.split(/\s+/);
+      const words = san(text).split(/\s+/);
       const lines: string[] = [];
       let line = "";
       for (const w of words) {
