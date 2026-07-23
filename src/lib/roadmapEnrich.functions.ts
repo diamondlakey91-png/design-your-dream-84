@@ -385,7 +385,7 @@ export const enrichRoadmapWithAI = createServerFn({ method: "POST" })
       })
       .eq("id", roadmap.id);
 
-    return { ok: true, sources_added: totalSources, new_permits: ai.new_permits.length };
+    return { ok: true, sources_added: totalSources, new_permits: newPermits.length };
   });
 
 // ---------- Phase 4: send to checklist ----------
