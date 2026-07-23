@@ -315,11 +315,22 @@ export function RoadmapView({ projectId }: { projectId: string }) {
           {/* Follow-ups */}
           {r.followups.length > 0 && (
             <Section icon={<HelpCircle className="size-3.5" />} title={`Follow-up Questions (${r.followups.length})`}>
-              <ul className="space-y-1.5">
+              <ul className="space-y-3">
                 {r.followups.map((f) => (
-                  <li key={f.id} className="text-sm">
+                  <li key={f.id} className="text-sm space-y-1.5">
                     <div>{f.question}</div>
                     {f.field_hint && <div className="text-[11px] text-muted-foreground font-mono">{f.field_hint}</div>}
+                    <div className="flex gap-2">
+                      <Input
+                        value={answers[f.id] ?? ""}
+                        onChange={(e) => setAnswers((a) => ({ ...a, [f.id]: e.target.value }))}
+                        placeholder="Your answer…"
+                        className="h-8 text-sm"
+                      />
+                      <Button size="sm" variant="outline" onClick={() => submitAnswer(f.id)} disabled={!answers[f.id]?.trim()}>
+                        Save
+                      </Button>
+                    </div>
                   </li>
                 ))}
               </ul>
@@ -329,7 +340,7 @@ export function RoadmapView({ projectId }: { projectId: string }) {
           <div className="rounded-md border border-border bg-muted/30 p-3 flex items-start gap-2 text-[11px] text-muted-foreground">
             <ShieldCheck className="size-3.5 mt-0.5 shrink-0" />
             <span>
-              Baseline generated from model codes (IBC/IRC/NFPA/IECC) and Permivio's rule matrix. Items marked "Needs Confirmation" must be verified with the jurisdiction. AI enrichment with live source citations lands in Phase 3.
+              Baseline generated from model codes (IBC/IRC/NFPA/IECC) and Permivio's rule matrix. Items marked "Needs Confirmation" must be verified with the jurisdiction. "AI enrich" adds live source citations from official portals.
             </span>
           </div>
         </>
