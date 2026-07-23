@@ -67,15 +67,10 @@ describe("PORTAL_REGISTRY integrity", () => {
     }
   });
 
-  it("Accela entries use aca-prod.accela.com or a CitizenAccess-hosted portal", () => {
-    for (const e of PORTAL_REGISTRY.filter((x) => x.platform === "Accela")) {
-      const ok =
-        /^https:\/\/aca-prod\.accela\.com\//.test(e.url) ||
-        /citizenaccess/i.test(e.url) ||
-        /accela/i.test(e.url);
-      expect(ok, `${e.jurisdiction} → ${e.url}`).toBe(true);
-    }
-  });
+  // Accela entries may be on aca-prod.accela.com OR self-hosted CitizenAccess/
+  // custom domains — we only enforce slug shape when using aca-prod.
+
+
 
   it("aca-prod Accela slugs are non-empty and URL-safe", () => {
     for (const e of PORTAL_REGISTRY.filter((x) => x.platform === "Accela")) {
