@@ -409,7 +409,7 @@ export const sendRoadmapToChecklist = createServerFn({ method: "POST" })
         user_id: userId,
         project_id: data.project_id,
         name: p.name,
-        category: p.category,
+        category: (p.category ?? "other") as string,
         required: p.likelihood === "required",
         notes: [p.agency, p.notes].filter(Boolean).join(" · ").slice(0, 500),
         sort_order: 1000 + idx,
