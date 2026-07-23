@@ -24,7 +24,7 @@ const Line = z.object({
 });
 
 export const DueDiligenceSchema = z.object({
-  version: z.string().default(DUE_DILIGENCE_VERSION),
+  version: z.string().default(DUE_DILIGENCE_VERSION).optional(),
   overview: z.object({
     project_type_label: z.string(),
     plain_summary: z.string().max(1500),
@@ -161,13 +161,13 @@ export const generateDueDiligence = createServerFn({ method: "POST" })
       jurCtx
         ? [jurCtx.municipality, jurCtx.county && `${jurCtx.county} County`, jurCtx.state]
             .filter(Boolean).join(", ")
-        : (proj.address ?? proj.location ?? "Address not resolved");
+        : (proj.location ?? "Address not resolved");
 
     const verifiedFacts: Array<z.infer<typeof Line>> = [];
-    if (proj.address ?? proj.location) {
+    if (proj.location) {
       verifiedFacts.push({
         label: "Project address",
-        detail: (proj.address ?? proj.location) as string,
+        detail: (proj.location) as string,
         verification: "verified",
         source: "Project intake",
       });
@@ -231,7 +231,7 @@ ${JSON.stringify({
     answer: answers[q.key] ?? null,
   })),
   jurisdiction: jurCtx,
-  address: proj.address ?? proj.location ?? null,
+  address: proj.location ?? null,
 }, null, 2)}
 
 Return a single JSON object matching EXACTLY this shape (no extra keys):
