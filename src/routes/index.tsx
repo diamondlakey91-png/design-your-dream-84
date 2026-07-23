@@ -357,7 +357,8 @@ function Landing() {
             </Link>
           </div>
         </div>
-      </section>
+        </section>
+      </main>
 
       <footer className="relative border-t border-blue-500/10">
         <div
