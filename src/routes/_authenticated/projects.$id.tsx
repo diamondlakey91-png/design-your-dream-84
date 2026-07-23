@@ -17,13 +17,14 @@ import { DocsTab } from "@/components/project/DocsTab";
 import { DeadlinesTab } from "@/components/project/DeadlinesTab";
 import { InspectionsTab } from "@/components/project/InspectionsTab";
 import { TimelineTab } from "@/components/project/TimelineTab";
+import { ScopeTab } from "@/components/project/ScopeTab";
 
 export const Route = createFileRoute("/_authenticated/projects/$id")({
   head: () => ({ meta: [{ title: "Project — Permivio" }, { name: "robots", content: "noindex" }] }),
   component: ProjectDetail,
 });
 
-type Tab = "overview" | "checklist" | "docs" | "deadlines" | "inspections" | "timeline";
+type Tab = "overview" | "scope" | "checklist" | "docs" | "deadlines" | "inspections" | "timeline";
 
 function ProjectDetail() {
   const { id } = Route.useParams();
@@ -100,7 +101,7 @@ function ProjectDetail() {
       {/* Tabs */}
       <nav className="sticky top-0 z-10 bg-background/95 backdrop-blur border-b border-border">
         <div className="flex overflow-x-auto">
-          {(["overview", "checklist", "docs", "deadlines", "inspections", "timeline"] as Tab[]).map((t) => (
+          {(["overview", "scope", "checklist", "docs", "deadlines", "inspections", "timeline"] as Tab[]).map((t) => (
             <button
               key={t}
               onClick={() => setTab(t)}
@@ -118,6 +119,7 @@ function ProjectDetail() {
         {tab === "overview" && (
           <OverviewTab project={project} stage={stage} activity={activity} onChange={() => qc.invalidateQueries({ queryKey: ["project", id] })} />
         )}
+        {tab === "scope" && <ScopeTab projectId={id} defaultAddress={project.location} />}
         {tab === "checklist" && <ChecklistTab projectId={id} jurisdiction={project.jurisdiction} />}
         {tab === "docs" && <DocsTab projectId={id} userId={project.user_id} />}
         {tab === "deadlines" && <DeadlinesTab projectId={id} />}
