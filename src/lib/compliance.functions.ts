@@ -496,8 +496,8 @@ export const exportComplianceReportPdf = createServerFn({ method: "POST" })
       .replace(/[\u2715\u2717\u2718]/g, "[ ]")
       .replace(/\u00A0/g, " ")
       .replace(/[^\x00-\xFF]/g, "?");
-    const _drawText = page.drawText.bind(page);
-    const drawText = (t: string, opts: Parameters<typeof _drawText>[1]) => _drawText(san(t), opts);
+    const drawText = (t: string, opts: Parameters<typeof page.drawText>[1]) => page.drawText(san(t), opts);
+
 
     const wrap = (text: string, size: number, f = font) => {
       const words = text.split(/\s+/);
