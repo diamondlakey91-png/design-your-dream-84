@@ -24,8 +24,13 @@ function ReportDetailPage() {
   const { id } = Route.useParams();
   const getFn = useServerFn(getComplianceReport);
   const pdfFn = useServerFn(exportComplianceReportPdf);
-  const [view, setView] = useState<"standard" | "wbs">("standard");
+  const [view, setView] = useState<"pdf" | "standard" | "wbs">("pdf");
+  const [format, setFormat] = useState<"standard" | "wbs">("standard");
   const [exporting, setExporting] = useState<"standard" | "wbs" | null>(null);
+  const [pdfUrl, setPdfUrl] = useState<string | null>(null);
+  const [pdfLoading, setPdfLoading] = useState(false);
+  const [pdfData, setPdfData] = useState<{ base64: string; filename: string } | null>(null);
+  const lastLoadedFormat = useRef<string | null>(null);
 
   const q = useQuery({
     queryKey: ["compliance-report", id],
@@ -33,10 +38,58 @@ function ReportDetailPage() {
     refetchInterval: (query) => (query.state.data?.status === "generating" ? 2000 : false),
   });
 
-  const doExport = async (format: "standard" | "wbs") => {
+  // Auto-render PDF preview when report is ready or format toggles
+  useEffect(() => {
+    if (q.data?.status !== "completed") return;
+    if (view !== "pdf") return;
+    if (lastLoadedFormat.current === format) return;
+    let cancelled = false;
+    (async () => {
+      setPdfLoading(true);
+      try {
+        const { pdf_base64, filename } = await pdfFn({ data: { id, format } });
+        if (cancelled) return;
+        const bin = atob(pdf_base64);
+        const bytes = new Uint8Array(bin.length);
+        for (let i = 0; i < bin.length; i++) bytes[i] = bin.charCodeAt(i);
+        const blob = new Blob([bytes], { type: "application/pdf" });
+        const url = URL.createObjectURL(blob);
+        setPdfUrl((prev) => {
+          if (prev) URL.revokeObjectURL(prev);
+          return url;
+        });
+        setPdfData({ base64: pdf_base64, filename });
+        lastLoadedFormat.current = format;
+      } catch (e) {
+        toast.error(e instanceof Error ? e.message : "Failed to render PDF");
+      } finally {
+        if (!cancelled) setPdfLoading(false);
+      }
+    })();
+    return () => {
+      cancelled = true;
+    };
+  }, [q.data?.status, view, format, id, pdfFn]);
+
+  // Cleanup on unmount
+  useEffect(() => () => { if (pdfUrl) URL.revokeObjectURL(pdfUrl); }, [pdfUrl]);
+
+  const downloadCurrent = () => {
+    if (!pdfData) return;
+    const bin = atob(pdfData.base64);
+    const bytes = new Uint8Array(bin.length);
+    for (let i = 0; i < bin.length; i++) bytes[i] = bin.charCodeAt(i);
+    const blob = new Blob([bytes], { type: "application/pdf" });
+    const url = URL.createObjectURL(blob);
+    const a = document.createElement("a");
+    a.href = url; a.download = pdfData.filename; a.click();
+    URL.revokeObjectURL(url);
+  };
+
+  const doExport = async (fmt: "standard" | "wbs") => {
     try {
-      setExporting(format);
-      const { pdf_base64, filename } = await pdfFn({ data: { id, format } });
+      setExporting(fmt);
+      const { pdf_base64, filename } = await pdfFn({ data: { id, format: fmt } });
       const bin = atob(pdf_base64);
       const bytes = new Uint8Array(bin.length);
       for (let i = 0; i < bin.length; i++) bytes[i] = bin.charCodeAt(i);
