@@ -1,5 +1,5 @@
 import { createFileRoute, Link } from "@tanstack/react-router";
-import { ArrowRight, CheckCircle2, ClipboardList, Sparkles } from "lucide-react";
+import { ArrowRight, BookOpen, Building2, CheckCircle2, ClipboardList, MapPinCheck, Sparkles, Zap } from "lucide-react";
 import heroAsset from "@/assets/permivio-hero.png.asset.json";
 
 export const Route = createFileRoute("/")({
