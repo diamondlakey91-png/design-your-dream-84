@@ -7,7 +7,7 @@ import { generateDailyBriefing } from "@/lib/chat.functions";
 import { geocodeAddress } from "@/lib/geocoding.functions";
 import { supabase } from "@/integrations/supabase/client";
 import { useEffect, useMemo, useState } from "react";
-import { Plus, X, Sparkles, ArrowUpRight, CalendarClock, ClipboardCheck, Loader2, AlertTriangle, Trophy, Trash2, MapPin, CheckCircle2 } from "lucide-react";
+import { Plus, X, Sparkles, ArrowUpRight, CalendarClock, ClipboardCheck, Loader2, AlertTriangle, Trophy, Trash2, MapPin, CheckCircle2, FileCheck2 } from "lucide-react";
 import { toast } from "sonner";
 import { format, differenceInCalendarDays, parseISO } from "date-fns";
 import { JurisdictionAutocomplete } from "@/components/JurisdictionAutocomplete";
