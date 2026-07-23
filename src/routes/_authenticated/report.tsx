@@ -257,11 +257,6 @@ function ReportHubPage() {
             </ul>
           )}
         </section>
-                </li>
-              ))}
-            </ul>
-          )}
-        </section>
       </div>
     </AppShell>
   );
