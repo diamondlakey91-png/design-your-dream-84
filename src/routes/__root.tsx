@@ -87,6 +87,7 @@ export const Route = createRootRouteWithContext<{ queryClient: QueryClient }>()(
       { name: "twitter:description", content: "Permivio is a field-tested permit management tool for residential and commercial contractors. Track applications, deadlines, and AI-guided permit requirements from one place." },
       { property: "og:image", content: "https://storage.googleapis.com/gpt-engineer-file-uploads/o5aZWAKVa1RvSD6Nis9T0nlVDU82/social-images/social-1783967487341-ChatGPT_Image_Jul_13,_2026,_02_31_18_PM.webp" },
       { name: "twitter:image", content: "https://storage.googleapis.com/gpt-engineer-file-uploads/o5aZWAKVa1RvSD6Nis9T0nlVDU82/social-images/social-1783967487341-ChatGPT_Image_Jul_13,_2026,_02_31_18_PM.webp" },
+      { name: "google-site-verification", content: "Fd0jzTnWYJluwBYkufIZgl82J8JAcfGNSAXYvqc5t5k" },
     ],
     links: [
       { rel: "stylesheet", href: appCss },
