@@ -17,6 +17,7 @@ import { DocsTab } from "@/components/project/DocsTab";
 import { DeadlinesTab } from "@/components/project/DeadlinesTab";
 import { InspectionsTab } from "@/components/project/InspectionsTab";
 import { TimelineTab } from "@/components/project/TimelineTab";
+import { ScopeTab } from "@/components/project/ScopeTab";
 
 export const Route = createFileRoute("/_authenticated/projects/$id")({
   head: () => ({ meta: [{ title: "Project — Permivio" }, { name: "robots", content: "noindex" }] }),
