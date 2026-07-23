@@ -392,9 +392,9 @@ export const PORTAL_REGISTRY: PortalEntry[] = [
     notes: "DOB NOW for active permits; BIS for records.",
   },
   {
-    jurisdiction: "Washington, DC (eServices DCRA)", state: "DC", platform: "Custom",
-    url: "https://eservices.dcra.dc.gov/DCRAPermitApplicationSearch/",
-    addressSearch: (a) => `https://eservices.dcra.dc.gov/DCRAPermitApplicationSearch/Search/Permit?address=${enc(a)}`,
+    jurisdiction: "Washington, DC (DOB Permit Wizard)", state: "DC", platform: "Custom",
+    url: "https://dob.dc.gov/service/permit-wizard",
+    notes: "DCRA has been reorganized into DOB. Use Permit Wizard to reach the current permit portal.",
   },
   {
     jurisdiction: "Los Angeles (LADBS)", state: "CA", platform: "Custom",
