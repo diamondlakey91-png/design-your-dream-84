@@ -220,7 +220,8 @@ ${data.jurisdiction_hint ? `User-provided jurisdiction hint: ${data.jurisdiction
 
 Return ONLY JSON matching the exact schema shown in the system message. Use the EXACT key names from the schema template — no substitutions, no renames, no extra top-level keys.`;
 
-      const report = await callGeminiJSON(prompt, system, ReportSchema, { model: "google/gemini-3.6-flash", max_tokens: 32000, normalize: normalizeComplianceJson });
+      const NormalizedSchema = z.preprocess(normalizeComplianceJson, ReportSchema);
+      const report = (await callGeminiJSON(prompt, system, NormalizedSchema, { model: "google/gemini-3.6-flash", max_tokens: 32000 })) as ComplianceReport;
 
       // Merge live URLs into sources if the AI missed them.
       const sources = Array.from(new Set([...(report.sources ?? []), ...live.urls])).slice(0, 12);
