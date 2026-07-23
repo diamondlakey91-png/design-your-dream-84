@@ -242,13 +242,30 @@ export const getComplianceReport = createServerFn({ method: "POST" })
   .inputValidator((data: unknown) => z.object({ id: z.string().uuid() }).parse(data))
   .handler(async ({ data, context }) => {
     // eslint-disable-next-line @typescript-eslint/no-explicit-any
-    const { data: row, error } = await (context.supabase as any)
+    const supa = context.supabase as any;
+    const { data: row, error } = await supa
       .from("compliance_reports")
       .select("*")
       .eq("id", data.id)
       .maybeSingle();
     if (error) throw new Error(error.message);
     if (!row) throw new Error("Report not found");
+
+    // Auto-fail rows stuck in "generating" for more than 3 minutes — the worker
+    // process died before the final UPDATE could land. Flip to "failed" so the
+    // UI can offer a Retry instead of spinning forever.
+    if (row.status === "generating") {
+      const ageMs = Date.now() - new Date(row.updated_at ?? row.created_at).getTime();
+      if (ageMs > 3 * 60 * 1000) {
+        await supa
+          .from("compliance_reports")
+          .update({ status: "failed", error: "Generation timed out. Please retry." })
+          .eq("id", data.id);
+        row.status = "failed";
+        row.error = "Generation timed out. Please retry.";
+      }
+    }
+
     return row as {
       id: string;
       user_id: string;
