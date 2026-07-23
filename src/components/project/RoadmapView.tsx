@@ -14,6 +14,9 @@ import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
 import { Sheet, SheetContent, SheetHeader, SheetTitle, SheetTrigger } from "@/components/ui/sheet";
 import { Sparkles, RefreshCw, ShieldCheck, AlertTriangle, HelpCircle, Building2, FileText, Users, Wand2, ListChecks, Download, Link as LinkIcon, ExternalLink } from "lucide-react";
+import { JurisdictionConfirmCard } from "./JurisdictionConfirmCard";
+import { getJurisdictionConfirmation } from "@/lib/jurisdiction.functions";
+
 
 type Verification = "verified" | "ai_assisted" | "needs_agency_confirmation";
 
