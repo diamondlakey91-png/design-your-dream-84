@@ -486,6 +486,19 @@ export const exportComplianceReportPdf = createServerFn({ method: "POST" })
     const M = 48;
     const W = 612 - M * 2;
 
+    const san = (s: string) => (s ?? "")
+      .replace(/[\u2018\u2019\u201A\u201B]/g, "'")
+      .replace(/[\u201C\u201D\u201E\u201F]/g, '"')
+      .replace(/[\u2013\u2014\u2212]/g, "-")
+      .replace(/\u2026/g, "...")
+      .replace(/[\u2022\u25E6\u25AA\u25AB]/g, "-")
+      .replace(/[\u2713\u2714]/g, "[x]")
+      .replace(/[\u2715\u2717\u2718]/g, "[ ]")
+      .replace(/\u00A0/g, " ")
+      .replace(/[^\x00-\xFF]/g, "?");
+    const _drawText = page.drawText.bind(page);
+    const drawText = (t: string, opts: Parameters<typeof _drawText>[1]) => _drawText(san(t), opts);
+
     const wrap = (text: string, size: number, f = font) => {
       const words = text.split(/\s+/);
       const lines: string[] = [];
