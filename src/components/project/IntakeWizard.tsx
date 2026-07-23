@@ -284,7 +284,7 @@ export function IntakeWizard({ projectId }: { projectId: string }) {
         <Button
           variant="outline"
           size="sm"
-          onClick={() => setStep((s) => Math.max(1, (s - 1) as Step))}
+          onClick={() => setStep((s) => (Math.max(1, s - 1) as Step))}
           disabled={busy || step === 1}
         >
           <ArrowLeft className="size-4 mr-1.5" /> Back
