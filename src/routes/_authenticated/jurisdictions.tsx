@@ -55,8 +55,19 @@ function JurisdictionsIndex() {
   const [q, setQ] = useState("");
   const [term, setTerm] = useState("");
   const [stateF, setStateF] = useState("");
+  const [countyF, setCountyF] = useState("");
   const [typeF, setTypeF] = useState("");
   const [verifiedOnly, setVerifiedOnly] = useState(false);
+  const [requestOpen, setRequestOpen] = useState(false);
+
+  // Live search — debounce input so typing "anne arundel" filters as you go.
+  useEffect(() => {
+    const t = setTimeout(() => setTerm(q.trim()), 180);
+    return () => clearTimeout(t);
+  }, [q]);
+
+  // Reset county when state changes so we never leave a stale county filter behind.
+  useEffect(() => { setCountyF(""); }, [stateF]);
   const [requestOpen, setRequestOpen] = useState(false);
 
   const listQ = useQuery({
