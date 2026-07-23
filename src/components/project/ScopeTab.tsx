@@ -534,6 +534,10 @@ export function ScopeTab({ projectId, defaultAddress }: { projectId: string; def
           Address, residential/commercial, project type, and scope description are required to submit.
         </p>
       )}
+
+      <div className="pt-6 border-t border-border">
+        <RoadmapView projectId={projectId} />
+      </div>
     </div>
   );
 }
