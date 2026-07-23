@@ -467,7 +467,7 @@ export const exportRoadmapPdf = createServerFn({ method: "POST" })
       supabase.from("roadmap_sources").select("*").eq("roadmap_id", roadmap.id),
     ]);
     const { data: project } = await supabase
-      .from("projects").select("name, address").eq("id", data.project_id).maybeSingle();
+      .from("projects").select("name, location").eq("id", data.project_id).maybeSingle();
 
     const { PDFDocument, StandardFonts, rgb } = await import("pdf-lib");
     const pdf = await PDFDocument.create();
