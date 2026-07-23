@@ -263,10 +263,10 @@ export const enrichRoadmapWithAI = createServerFn({ method: "POST" })
     const norm = (s: string) => s.trim().toLowerCase();
 
     // Permit updates
-    for (const upd of ai.permit_updates) {
+    for (const upd of ai.permit_updates ?? []) {
       const target = permits.find((p) => norm(p.name) === norm(upd.name));
       if (!target) continue;
-      const ids = upd.source_urls
+      const ids = (upd.source_urls ?? [])
         .map((u) => urlToSourceId.get(normalizeUrl(u)))
         .filter((x): x is string => !!x);
       if (!ids.length && !upd.jurisdiction_confirmed) continue;
@@ -279,14 +279,15 @@ export const enrichRoadmapWithAI = createServerFn({ method: "POST" })
       if (upd.fee_estimate_usd != null) patch.fee_estimate_cents = Math.round(upd.fee_estimate_usd * 100);
       if (upd.fee_basis) patch.fee_basis = upd.fee_basis;
       if (upd.notes) patch.notes = [target.notes, upd.notes].filter(Boolean).join(" · ").slice(0, 800);
-      await supabase.from("roadmap_permits").update(patch).eq("id", target.id);
+      // eslint-disable-next-line @typescript-eslint/no-explicit-any
+      await (supabase.from("roadmap_permits") as any).update(patch).eq("id", target.id);
     }
 
     // Document updates
-    for (const upd of ai.document_updates) {
+    for (const upd of ai.document_updates ?? []) {
       const target = docs.find((d) => norm(d.name) === norm(upd.name));
       if (!target) continue;
-      const ids = upd.source_urls.map((u) => urlToSourceId.get(normalizeUrl(u))).filter((x): x is string => !!x);
+      const ids = (upd.source_urls ?? []).map((u) => urlToSourceId.get(normalizeUrl(u))).filter((x): x is string => !!x);
       if (!ids.length) continue;
       await supabase
         .from("roadmap_documents")
@@ -298,10 +299,10 @@ export const enrichRoadmapWithAI = createServerFn({ method: "POST" })
     }
 
     // Agency updates
-    for (const upd of ai.agency_updates) {
+    for (const upd of ai.agency_updates ?? []) {
       const target = agencies.find((a) => norm(a.name) === norm(upd.name));
       if (!target) continue;
-      const ids = upd.source_urls.map((u) => urlToSourceId.get(normalizeUrl(u))).filter((x): x is string => !!x);
+      const ids = (upd.source_urls ?? []).map((u) => urlToSourceId.get(normalizeUrl(u))).filter((x): x is string => !!x);
       const patch: Record<string, unknown> = {};
       if (ids.length) {
         patch.source_id = ids[0];
@@ -309,21 +310,24 @@ export const enrichRoadmapWithAI = createServerFn({ method: "POST" })
       }
       if (upd.url) patch.url = upd.url;
       if (upd.phone) patch.phone = upd.phone;
-      if (Object.keys(patch).length) await supabase.from("roadmap_agencies").update(patch).eq("id", target.id);
+      // eslint-disable-next-line @typescript-eslint/no-explicit-any
+      if (Object.keys(patch).length) await (supabase.from("roadmap_agencies") as any).update(patch).eq("id", target.id);
     }
 
     // New permits
-    if (ai.new_permits.length) {
-      const rows = ai.new_permits.map((p, i) => {
-        const ids = p.source_urls.map((u) => urlToSourceId.get(normalizeUrl(u))).filter((x): x is string => !!x);
+    const newPermits = ai.new_permits ?? [];
+    if (newPermits.length) {
+      const rows = newPermits.map((p, i) => {
+        const ids = (p.source_urls ?? []).map((u) => urlToSourceId.get(normalizeUrl(u))).filter((x): x is string => !!x);
         return {
           roadmap_id: roadmap.id,
           name: p.name,
           agency: p.agency,
           level: p.level,
-          category: p.category,
+          // cast: AI returns free-form category; DB enum will validate at insert time
+          category: p.category as never,
           likelihood: p.likelihood,
-          verification: ids.length ? "verified" : "ai_assisted",
+          verification: (ids.length ? "verified" : "ai_assisted") as never,
           review_days_min: p.review_days_min ?? null,
           review_days_max: p.review_days_max ?? null,
           sequence_order: (permits.length + i + 1) * 10,
@@ -334,13 +338,15 @@ export const enrichRoadmapWithAI = createServerFn({ method: "POST" })
           concurrent_with: [] as string[],
         };
       });
-      await supabase.from("roadmap_permits").insert(rows);
+      // eslint-disable-next-line @typescript-eslint/no-explicit-any
+      await (supabase.from("roadmap_permits") as any).insert(rows);
     }
 
     // Risks
-    if (ai.new_risks.length) {
+    const newRisks = ai.new_risks ?? [];
+    if (newRisks.length) {
       await supabase.from("roadmap_risks").insert(
-        ai.new_risks.map((r) => ({
+        newRisks.map((r) => ({
           roadmap_id: roadmap.id,
           severity: r.severity,
           category: r.category ?? null,
@@ -351,11 +357,12 @@ export const enrichRoadmapWithAI = createServerFn({ method: "POST" })
     }
 
     // Follow-ups (append; don't dup existing ones)
-    if (ai.followups.length) {
+    const followups = ai.followups ?? [];
+    if (followups.length) {
       const { data: existing } = await supabase
         .from("roadmap_followups").select("question").eq("roadmap_id", roadmap.id);
       const known = new Set((existing ?? []).map((r) => norm(r.question)));
-      const rows = ai.followups
+      const rows = followups
         .filter((f) => !known.has(norm(f.question)))
         .map((f) => ({ roadmap_id: roadmap.id, question: f.question, field_hint: f.field_hint ?? null }));
       if (rows.length) await supabase.from("roadmap_followups").insert(rows);
