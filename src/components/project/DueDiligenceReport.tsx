@@ -14,6 +14,8 @@ import {
   type DueDiligenceReport,
 } from "@/lib/dueDiligence.functions";
 import { generateRoadmapFromRules } from "@/lib/roadmap.functions";
+import { supabase } from "@/integrations/supabase/client";
+
 
 type V = "verified" | "ai_assisted" | "needs_confirmation";
 
