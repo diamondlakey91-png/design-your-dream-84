@@ -20,6 +20,9 @@ export const Route = createFileRoute("/")({
       { property: "og:type", content: "website" },
       { name: "twitter:card", content: "summary_large_image" },
     ],
+    links: [
+      { rel: "preload", as: "image", href: heroAsset.url, fetchpriority: "high" },
+    ],
   }),
   component: Landing,
 });
@@ -109,7 +112,10 @@ function Landing() {
             src={heroAsset.url}
             alt="Permivio dashboard on desktop, tablet, and mobile showing project health, permit assistant, and jurisdiction library."
             className="w-full rounded-2xl"
-            loading="eager"
+            width={2400}
+            height={1400}
+            decoding="async"
+            fetchPriority="high"
           />
         </div>
       </section>
