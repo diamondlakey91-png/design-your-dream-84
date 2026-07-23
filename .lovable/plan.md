@@ -1,152 +1,133 @@
-# Simplified Intake + Due Diligence Report
+# One Shared Project Type System
 
-Goal: a first-time user can enter an address, pick a plain-language project type, describe the work, and get a full Due Diligence report and Permit Roadmap — without knowing occupancy classes, construction types, agencies, or code sections. The existing dark theme, navigation, cards, and tabs stay exactly as they are.
+Turn Project Type into a real platform-wide field: one library, one selector, stable IDs, and consistent behavior everywhere. No visual redesign — reuses existing Permivio components, dark theme, blue accents, cards, and typography.
 
-## 1. Screen flow (new intake wizard)
+## Where Project Type lives today (inspection results)
 
-Replaces only the intake surface. Existing project pages, tabs, roadmap UI, and pipeline are untouched.
+Hardcoded / freeform in these screens and helpers — will be replaced:
+
+- `src/lib/projectTypeMap.ts` — informal 16-item catalog (kept and promoted to source of truth, expanded with aliases + metadata).
+- `src/routes/_authenticated/dashboard.tsx` — Quick-create modal: hardcoded `<select>` seeded with "Tenant Fit-Out".
+- `src/routes/_authenticated/projects.$id.tsx` — Edit form: freeform `<Input>` (80 chars).
+- `src/routes/_authenticated/report.tsx` — Compliance report intake: freeform text field.
+- `src/routes/_authenticated/jurisdictions.tsx` — Jurisdiction request form: freeform text.
+- `src/components/project/IntakeWizard.tsx` — Uses the friendly enum but as a bespoke chip grid.
+- `src/components/project/OverviewTab.tsx` — Displays raw `project.project_type` string.
+- Server helpers referencing the string field: `projects.functions.ts`, `scope.functions.ts`, `compliance.functions.ts`, `chat.functions.ts`, `permitAnalysis.functions.ts`, `dueDiligence.functions.ts`, `roadmapEnrich.functions.ts`, `permitRules.ts`, `jurisdictionSync.functions.ts`, `jurisdictionProfiles.functions.ts`, `planReview.functions.ts`, `checklist.functions.ts`, `intake.functions.ts`, `intakeQuestions.ts`, `reportShares.functions.ts`, `mcp/tools/list-projects.ts`, `routes/api/chat.stream.ts`, `share.reports.$token.tsx`.
+
+## Architecture
 
 ```text
-New Project  →  1. Address        (structured, geocoded)
-             →  2. Jurisdiction   (confirm resolved AHJs)
-             →  3. Project type   (plain-language cards)
-             →  4. Scope          (freeform + upload)
-             →  5. Smart follow-ups  (only relevant, plain English)
-             →  6. Due Diligence report
-             →  7. Generate Permit Roadmap
+project_type_categories  ─┐
+project_types            ─┼──► ProjectTypeSelector (single | primary+additional | multi | readonly | ai-recommend)
+project_type_aliases     ─┘         │
+                                    ├─► IntakeWizard, ProjectEdit, QuickCreate, Report intake,
+project_type_id (stable) ───────────┤   Jurisdictions request, Filters, AI Assistant,
++ additional_project_type_ids       │   Due Diligence, Roadmap rules, Compliance reports
++ custom description / source /     │
+  confidence / confirmed_at         └─► Read-only card display
 ```
 
-Each step saves a draft. The user can leave and resume — status shown as "Draft", "Answer a few questions", "Ready for analysis", "Report ready", "Roadmap created".
+- **One catalog:** `public.project_types` (+ categories, aliases). Seeded from the current `FRIENDLY_PROJECT_TYPES` plus new entries the request implies (restaurant remodel, ADU, storefront modification, EV charger, pool enclosure, hood suppression, sprinkler modification, MEP-only, sign, change-of-use, etc.).
+- **One component:** `src/components/project-type/ProjectTypeSelector.tsx` with `mode` prop (`single | primary_additional | multi | readonly | ai_recommend`), searchable, categorized, keyboard/screen-reader accessible, mobile-friendly, alias-aware.
+- **One data hook:** `useProjectTypes()` — TanStack Query against a public read-only server fn `listProjectTypes()`.
+- **Stable IDs everywhere** — new columns store IDs, old text field kept for backfill visibility only.
 
-## 2. Fields removed from initial intake (moved to follow-ups or AI extraction)
+## Database (single migration)
 
-Removed from the first screens (kept in the data model, filled later):
+1. `project_type_categories` — id, name, description, icon, display_order, active.
+2. `project_types` — id, category_id, client_label, internal_name, short_description, residential_or_commercial, common_scope_triggers[], follow_up_question_ids[], possible_permit_categories[], possible_agency_categories[], possible_document_categories[], display_order, active, timestamps.
+3. `project_type_aliases` — id, project_type_id, alias, keyword_only bool.
+4. `projects` gets: `primary_project_type_id`, `additional_project_type_ids uuid[]`, `custom_project_type_description text`, `project_type_source text`, `project_type_confidence numeric`, `project_type_confirmed_at`, `project_type_confirmed_by uuid`. Existing `project_type text` **stays** (backfill display, no data loss).
+5. Same fields optional on `scope_of_work` (`primary_project_type_id`, `additional_project_type_ids`) — keeps `friendly_project_type` for backward compat, but the ID becomes canonical.
+6. RLS: catalog tables read-only to `authenticated` + `anon`; admin write via `has_role(auth.uid(),'admin')`. Project-level fields keep existing row-owner policies.
+7. GRANTs per Cloud rules.
+8. Seed the catalog with ~30 project types across categories: Commercial TI, New Construction, Residential Alteration, Change of Use, Site & Exterior, Signage, Specialty (ADU, EV charger, pool, hood, sprinkler).
+9. Seed aliases: TI, build-out, fit-out, ground-up, restaurant remodel, ADU, mother-in-law suite, MEP, storefront, Ansul, hood, sprinklers, pool cage, charger, etc.
 
-- IBC occupancy classification
-- Construction type (I-A … V-B)
-- Gross vs. affected square footage
-- Dwelling unit count
-- Construction value
-- Target open/start dates (moved to a short "Timeline" follow-up)
-- The current trade matrix (electrical/mechanical/plumbing/fire alarm/sprinkler/food service/signage/site/utility/ROW) — asked as plain-language yes/no/unsure follow-ups instead
-- "Occupancy existing → proposed" — asked as "Is the way the space will be used changing?"
+## Legacy backfill
 
-## 3. Follow-up question logic (plain language, conditional)
+Server function `backfillProjectTypes` (admin-only) that:
 
-A small rule table decides which questions to ask, driven by `project_type` + scope keywords. Only ask what's relevant.
+- Reads each `projects.project_type` text value.
+- Maps via alias table + fuzzy match to a `project_type_id` with a confidence score.
+- Confidence ≥ 0.8 → sets `primary_project_type_id`, `project_type_source='imported'`, `project_type_confidence`.
+- Below threshold → leaves ID null, keeps original text, marks needs confirmation.
+- Never deletes or overwrites the original `project_type` text.
 
-- Restaurant / kitchen keywords → food service, hood, grease, seating
-- Any tenant improvement / remodel → walls added/removed, MEP changes
-- New construction / addition → site work, utilities, structural
-- Any commercial → signage, existing CO
-- Site work keywords ("grading", "paving", "drainage") → site + stormwater
-- Change of use project type → "Is the way the space being used changing?" forced
+UI shows "Project type needs confirmation" chip on any project with a legacy string but no ID.
 
-Answer options everywhere: Yes / No / Unsure / Upload a document / Ask me later. "Unsure" shows a one-line explanation of why it matters and offers to extract from uploaded plans.
+## Shared component API
 
-## 4. Jurisdiction resolution workflow
+```ts
+<ProjectTypeSelector
+  mode="single" | "primary_additional" | "multi" | "readonly" | "ai_recommend"
+  value={{ primaryId, additionalIds, customDescription }}
+  onChange={next => ...}
+  showRecentlyUsed
+  allowNotSure
+  allowOther
+  label="What are you planning to do?"
+  helperText="Choose the option that best describes your project…"
+  aiSuggestions={[{ id, confidence, reason }]}
+/>
+```
 
-Already shipped as `JurisdictionConfirmCard`. In the new flow it becomes step 2, before project details, so agencies are known before follow-ups are chosen.
+- Searchable combobox with category headers, alias hits highlighted.
+- Recently used (localStorage per user).
+- "I'm not sure" surfaces AI recommendation flow; "Other" enables custom description field.
+- Readonly mode renders primary chip + compact additional list, same look as existing project cards.
+- AI-recommend mode shows suggestions with Accept / Dismiss per item.
 
-- Google geocode → county, municipality, incorporated status
-- Curated authority map (extending the existing Anne Arundel + Annapolis entries) supplies exact agency names
-- Confirmed → verifications may be AI-Assisted; unconfirmed → everything downgrades to "Needs Confirmation"
-- Actions: Confirm, Correct, Request human verification
+## Rollout to screens
 
-No behavior change from the last turn — just repositioned earlier in the flow.
+| Screen | Mode |
+|---|---|
+| Dashboard quick create | single |
+| Projects edit page | primary_additional |
+| IntakeWizard step 3 | primary_additional (AI hints after scope text) |
+| Overview / Project card | readonly |
+| Due Diligence intake | primary (readonly if already set) |
+| Roadmap generation | reads IDs, no UI |
+| Compliance Report intake (`/report`) | single |
+| Jurisdictions request form | single |
+| Permit Lookup / filters | multi |
+| Dashboard filters | multi |
+| Reporting filters | multi |
+| AI Assistant / chat | readonly context (no reselect) |
+| Document analysis confirm | ai_recommend |
 
-## 5. Document upload + AI extraction
+## AI + rule engine wiring
 
-One drop zone accepts plans, permits, CO letters, reviewer comments, utility docs. Reuse existing `project-docs` bucket and `project_documents` table.
+- `permitRules.ts` and enrichment functions accept `primary_project_type_id + additional_project_type_ids` and use `internal_name` + `residential_or_commercial` from the catalog row.
+- Follow-up question resolver reads `follow_up_question_ids` from the selected types.
+- AI assistant + document analysis produce `{ id, confidence, reason }[]` for `ai_recommend` mode; user must confirm before writing to project.
+- Recalc warning shown before overwriting a saved primary type: "Changing the project type may update the recommended permits, documents, questions, and timeline."
 
-Extraction (Gemini, existing gateway): address, existing/proposed use, suggested occupancy + construction type, sq ft, occupant load, project team, code editions, drawing disciplines, permit numbers, utility info. Every extracted field surfaces on a "Confirm extracted info" card with per-field Confirm / Edit / Reject. Nothing extracted is treated as verified.
+## Files (new / changed)
 
-## 6. Due Diligence report structure
+**New**
+- `src/lib/projectTypes.functions.ts` — `listProjectTypes`, `listCategories`, `resolveAlias`, `setProjectType`, `confirmAiRecommendation`, `backfillProjectTypes` (admin).
+- `src/components/project-type/ProjectTypeSelector.tsx`
+- `src/components/project-type/ProjectTypeBadge.tsx` (readonly chip reused in cards)
+- `src/hooks/useProjectTypes.ts`
+- Migration: catalog tables, project columns, seed data.
 
-New tab on the project (or replacing the current Scope tab header) called **Due Diligence**. Rendered from a single `compliance_reports`-style record with these sections, each carrying Verified / AI-Assisted / Needs Confirmation labels:
+**Edited (replace hardcoded lists / freeform inputs)**
+- Dashboard quick create, Projects edit page, Report intake, Jurisdictions request form, IntakeWizard, OverviewTab, ScopeTab, DueDiligenceReport, RoadmapView, filters.
+- Rule + AI helpers to consume IDs instead of freeform strings (kept string fallback for pre-backfill records).
 
-1. Project Summary — address, type, plain-language scope, existing/proposed use, jurisdiction, target dates, missing info list
-2. Jurisdiction & Agency Summary — exact building, zoning, fire, health, site-dev, utility authorities + official sources
-3. Required and Possible Approvals — grouped Likely required / Conditional / Needs confirmation / Not expected; each shows name, agency, trigger, source, last checked
-4. Required Documents — grouped by permit; status Uploaded / Missing / Needs confirmation
-5. Recommended Submission Sequence — ordered list with parallelization badges
-6. Estimated Timeline — per-permit ranges with basis label (Officially published / PERMIVIO history / AI estimate / Unknown)
-7. Risks & Possible Delays — plain-language, never presented as violations
-8. Recommended Next Steps — short prioritized action list
+## Validation checklist (post-implementation)
 
-Exports as PDF using the existing `pdf-lib` pipeline.
+- One catalog file/table, zero hardcoded `<select>` lists.
+- Existing projects still load; those with unmapped legacy strings show the confirmation banner.
+- New projects save stable IDs on primary + additional fields.
+- Aliases route correctly (TI → Tenant improvement, ADU → Accessory dwelling unit, etc.).
+- Multi-select filters return combined results.
+- AI recommendations require explicit confirm.
+- No visual redesign — all changes reuse existing tokens/components.
 
-## 7. Permit Roadmap creation workflow
+## Out of scope (explicit)
 
-Unchanged mechanics — the existing rule engine + AI enrichment + "Sync to checklist" already produce permits, agencies, documents, tasks, risks, and follow-ups. From the Due Diligence report the user clicks **Create Permit Roadmap**, which calls the existing `generateRoadmapFromRules` + `enrichRoadmapWithAI` + `sendRoadmapToChecklist` chain and lands on the current Roadmap tab.
-
-Certificate of Occupancy readiness, inspection checklist, and deadlines are already produced by the rule engine and existing inspections/deadlines tables.
-
-## 8. Database changes
-
-Small and additive — no destructive migrations.
-
-- `scope_of_work`: add `plain_scope` (text), `friendly_project_type` (text, one of the plain-language options above), `intake_step` (int), `intake_status` (text: draft / questions / ready / analyzing / report_ready / roadmap_created / human_review). Existing columns stay.
-- New table `intake_answers` (project_id, question_key, answer text, source enum: user / ai_extracted / uploaded, verified bool, created/updated). Lets the same follow-up store user answers and AI-extracted answers side-by-side for confirmation.
-- New table `due_diligence_reports` (project_id, jurisdiction snapshot JSON, summary JSON, approvals JSON, documents JSON, sequence JSON, timeline JSON, risks JSON, next_steps JSON, generated_by_model, prompt_version, verification_summary JSON, created/updated).
-- Extend authority curation in code, not in DB — add rows to `CURATED_AUTHORITIES` in `src/lib/jurisdiction.functions.ts` as jurisdictions come online.
-
-All new tables get GRANTs, RLS enabled, and owner-scoped policies via `projects.user_id`.
-
-## 9. Files to modify / add
-
-Modify:
-
-- `src/components/project/ScopeTab.tsx` — replace multi-step technical form with the new 4-step wizard (address → project type → scope → follow-ups). Keep the same card/tab shell.
-- `src/lib/scope.functions.ts` — new save action for `plain_scope` + `friendly_project_type`; keep existing writes.
-- `src/lib/permitRules.ts` — map `friendly_project_type` → internal `project_type` + trade defaults; keep the rule engine untouched otherwise.
-- `src/lib/roadmap.functions.ts` — no logic change; already reads confirmed jurisdiction.
-- `src/routes/_authenticated/projects.$id.tsx` — add "Due Diligence" tab between Scope and Roadmap (or as new sub-tab).
-- `src/components/project/JurisdictionConfirmCard.tsx` — surface it inside the intake wizard as step 2 (no visual change).
-
-Add:
-
-- `src/components/project/IntakeWizard.tsx` — the guided flow shell.
-- `src/components/project/intake/ProjectTypeStep.tsx` — plain-language cards.
-- `src/components/project/intake/ScopeStep.tsx` — textarea + upload.
-- `src/components/project/intake/FollowupsStep.tsx` — conditional Q&A with Yes/No/Unsure/Upload/Later.
-- `src/components/project/intake/ExtractedInfoCard.tsx` — per-field confirm UI.
-- `src/components/project/DueDiligenceReport.tsx` — read-only rendered report + PDF export + "Create Permit Roadmap" CTA.
-- `src/lib/dueDiligence.functions.ts` — `generateDueDiligence`, `getDueDiligence`, `regenerate`. Uses the existing Gemini gateway, jurisdiction context, follow-up answers, and extracted document fields.
-- `src/lib/intakeQuestions.ts` — pure rule table: `pickQuestions(projectType, scopeText, answers) → Question[]`.
-- `src/lib/documentExtract.functions.ts` — server function that runs Gemini over an uploaded doc and returns extracted fields for confirmation.
-
-## 10. First build phase vs. later
-
-**Phase 1 (this approval):**
-
-- IntakeWizard shell + step 1 address (reuses existing structured address on `JurisdictionConfirmCard`)
-- ProjectTypeStep with the plain-language options
-- ScopeStep with textarea + upload (upload uses existing `project-docs` bucket)
-- FollowupsStep with the conditional rule table and Yes/No/Unsure/Upload/Later answers
-- Data model additions (`plain_scope`, `friendly_project_type`, `intake_status`, `intake_answers` table)
-- Mapping `friendly_project_type` → `permitRules` inputs
-- User-facing status labels replacing the technical enums in the intake UI only
-
-**Phase 2 (next approval):**
-
-- Due Diligence report generation and route
-- Document AI extraction with per-field confirmation
-- "Create Permit Roadmap" CTA from the report
-- PDF export of Due Diligence
-
-**Phase 3 (later):**
-
-- Expanded curated authority map beyond current MD entries
-- Human verification queue UI
-- Officially-published timeline table populated per jurisdiction
-
-## Technical details
-
-- No visual redesign. New components reuse existing `Card`, `Button`, `Input`, `Badge`, tab shell, spacing, and mono-uppercase section headers.
-- Status label mapping lives in one helper (`src/lib/statusLabels.ts`) so raw enums never leak into UI copy. Existing DB values stay for compatibility.
-- Follow-up rules are pure functions (no I/O) — same shape as `permitRules.ts` — so they're safe to import from client components.
-- Verification labeling: unchanged three-tier system (Verified / AI-Assisted / Needs Confirmation) already enforced by the rule engine after last turn's correction.
-- No changes to `_authenticated` gating, storage RLS, or the existing roadmap generation contract.
-
-Approve to start Phase 1.
+- No admin CRUD screen for the catalog in this pass; admin edits go through migrations for now (spec says "create a manageable structure" — the tables + admin RLS satisfy that; UI can come later).
+- No changes to authentication, layout, navigation, branding, or color tokens.
