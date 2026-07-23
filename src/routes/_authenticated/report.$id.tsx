@@ -6,7 +6,7 @@ import { AppShell } from "@/components/AppShell";
 import { getComplianceReport, exportComplianceReportPdf } from "@/lib/compliance.functions";
 import { getAgent } from "@/lib/complianceAgents";
 import { toast } from "sonner";
-import { ArrowLeft, Download, ShieldCheck, Phone, Mail, Globe, AlertTriangle, Building2, DollarSign, Clock, ListChecks, BarChart3, FileText, Loader2 } from "lucide-react";
+import { ArrowLeft, Download, ShieldCheck, Phone, Mail, Globe, AlertTriangle, Building2, DollarSign, Clock, ListChecks, BarChart3, FileText, Loader2, RefreshCw } from "lucide-react";
 
 export const Route = createFileRoute("/_authenticated/report/$id")({
   head: () => ({
@@ -29,7 +29,10 @@ function ReportDetailPage() {
   const [exporting, setExporting] = useState<"standard" | "wbs" | null>(null);
   const [pdfUrl, setPdfUrl] = useState<string | null>(null);
   const [pdfLoading, setPdfLoading] = useState(false);
+  const [pdfError, setPdfError] = useState<string | null>(null);
+  const [pdfProgress, setPdfProgress] = useState(0);
   const [pdfData, setPdfData] = useState<{ base64: string; filename: string } | null>(null);
+  const [pdfAttempt, setPdfAttempt] = useState(0);
   const lastLoadedFormat = useRef<string | null>(null);
 
   const q = useQuery({
@@ -38,14 +41,27 @@ function ReportDetailPage() {
     refetchInterval: (query) => (query.state.data?.status === "generating" ? 2000 : false),
   });
 
+  const retryPdf = () => {
+    lastLoadedFormat.current = null;
+    setPdfError(null);
+    setPdfAttempt((n) => n + 1);
+  };
+
   // Auto-render PDF preview when report is ready or format toggles
   useEffect(() => {
     if (q.data?.status !== "completed") return;
     if (view !== "pdf") return;
-    if (lastLoadedFormat.current === format) return;
+    if (lastLoadedFormat.current === format && !pdfError) return;
     let cancelled = false;
+    let progressTimer: ReturnType<typeof setInterval> | null = null;
     (async () => {
       setPdfLoading(true);
+      setPdfError(null);
+      setPdfProgress(8);
+      // Simulated progress ramp — real generation is server-side and opaque
+      progressTimer = setInterval(() => {
+        setPdfProgress((p) => (p >= 90 ? p : p + Math.max(1, Math.round((92 - p) / 12))));
+      }, 350);
       try {
         const { pdf_base64, filename } = await pdfFn({ data: { id, format } });
         if (cancelled) return;
@@ -59,17 +75,24 @@ function ReportDetailPage() {
           return url;
         });
         setPdfData({ base64: pdf_base64, filename });
+        setPdfProgress(100);
         lastLoadedFormat.current = format;
       } catch (e) {
-        toast.error(e instanceof Error ? e.message : "Failed to render PDF");
+        if (cancelled) return;
+        const msg = e instanceof Error ? e.message : "Failed to render PDF";
+        setPdfError(msg);
+        toast.error(msg);
       } finally {
+        if (progressTimer) clearInterval(progressTimer);
         if (!cancelled) setPdfLoading(false);
       }
     })();
     return () => {
       cancelled = true;
+      if (progressTimer) clearInterval(progressTimer);
     };
-  }, [q.data?.status, view, format, id, pdfFn]);
+  }, [q.data?.status, view, format, id, pdfFn, pdfAttempt]);
+
 
   // Cleanup on unmount
   useEffect(() => () => { if (pdfUrl) URL.revokeObjectURL(pdfUrl); }, [pdfUrl]);
@@ -194,15 +217,40 @@ function ReportDetailPage() {
 
         {view === "pdf" ? (
           <section className="rounded-xl border border-border bg-card overflow-hidden">
-            {pdfLoading && !pdfUrl ? (
-              <div className="flex h-[80vh] items-center justify-center text-sm text-muted-foreground">
-                <Loader2 className="mr-2 size-4 animate-spin" /> Rendering PDF…
+            {pdfError && !pdfLoading ? (
+              <div className="flex h-[60vh] flex-col items-center justify-center gap-4 px-6 text-center">
+                <div className="flex size-12 items-center justify-center rounded-full border border-red-500/40 bg-red-500/10">
+                  <AlertTriangle className="size-5 text-red-300" />
+                </div>
+                <div>
+                  <div className="text-sm font-medium">PDF generation failed</div>
+                  <div className="mt-1 max-w-md text-xs text-muted-foreground">{pdfError}</div>
+                </div>
+                <button
+                  onClick={retryPdf}
+                  className="inline-flex items-center gap-1.5 rounded-md border border-brand/40 bg-brand/10 px-3 py-1.5 text-xs text-brand hover:bg-brand/20"
+                >
+                  <RefreshCw className="size-3.5" /> Retry generation
+                </button>
+              </div>
+            ) : pdfLoading && !pdfUrl ? (
+              <div className="flex h-[80vh] flex-col items-center justify-center gap-4 px-6">
+                <div className="flex items-center gap-2 text-sm text-muted-foreground">
+                  <Loader2 className="size-4 animate-spin text-brand" /> Rendering {format === "wbs" ? "WBS" : "Standard"} PDF…
+                </div>
+                <div className="h-1.5 w-64 max-w-full overflow-hidden rounded-full bg-background border border-border">
+                  <div
+                    className="h-full rounded-full bg-brand shadow-[0_0_14px_-2px_oklch(0.66_0.19_258/0.9)] transition-[width] duration-300 ease-out"
+                    style={{ width: `${pdfProgress}%` }}
+                  />
+                </div>
+                <div className="text-[10px] font-mono uppercase tracking-widest text-muted-foreground">{Math.min(99, Math.round(pdfProgress))}%</div>
               </div>
             ) : pdfUrl ? (
               <div className="relative">
                 {pdfLoading && (
                   <div className="absolute right-3 top-3 z-10 inline-flex items-center gap-1.5 rounded-md border border-border bg-background/90 px-2 py-1 text-[11px] text-muted-foreground backdrop-blur">
-                    <Loader2 className="size-3 animate-spin" /> Updating…
+                    <Loader2 className="size-3 animate-spin" /> Updating {format === "wbs" ? "WBS" : "Standard"}…
                   </div>
                 )}
                 <iframe
@@ -212,9 +260,18 @@ function ReportDetailPage() {
                 />
               </div>
             ) : (
-              <div className="flex h-[60vh] items-center justify-center text-sm text-muted-foreground">PDF unavailable.</div>
+              <div className="flex h-[60vh] flex-col items-center justify-center gap-3 text-sm text-muted-foreground">
+                <span>PDF unavailable.</span>
+                <button
+                  onClick={retryPdf}
+                  className="inline-flex items-center gap-1.5 rounded-md border border-border bg-background px-3 py-1.5 text-xs hover:border-brand"
+                >
+                  <RefreshCw className="size-3.5" /> Generate PDF
+                </button>
+              </div>
             )}
           </section>
+
         ) : view === "wbs" ? (
           <section className="space-y-3">
             <SectionHeader icon={<BarChart3 className="size-4" />} title="Work Breakdown · Gantt" />
