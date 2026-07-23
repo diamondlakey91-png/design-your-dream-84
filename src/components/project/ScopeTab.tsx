@@ -3,11 +3,13 @@ import { useQuery, useQueryClient } from "@tanstack/react-query";
 import { useServerFn } from "@tanstack/react-start";
 import { toast } from "sonner";
 import { getScope, upsertScope, TRADE_KEYS, type TradeKey } from "@/lib/scope.functions";
+import { generateRoadmapFromRules } from "@/lib/roadmap.functions";
 import { Input } from "@/components/ui/input";
 import { Label } from "@/components/ui/label";
 import { Button } from "@/components/ui/button";
 import { Textarea } from "@/components/ui/textarea";
 import { Save, Sparkles, MapPin } from "lucide-react";
+import { RoadmapView } from "./RoadmapView";
 
 type TradeState = Record<string, { involved: "yes" | "no" | "unsure"; details?: Record<string, unknown> }>;
 
