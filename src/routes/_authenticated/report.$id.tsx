@@ -1,12 +1,12 @@
 import { createFileRoute, Link } from "@tanstack/react-router";
-import { useState } from "react";
+import { useEffect, useRef, useState } from "react";
 import { useQuery } from "@tanstack/react-query";
 import { useServerFn } from "@tanstack/react-start";
 import { AppShell } from "@/components/AppShell";
 import { getComplianceReport, exportComplianceReportPdf } from "@/lib/compliance.functions";
 import { getAgent } from "@/lib/complianceAgents";
 import { toast } from "sonner";
-import { ArrowLeft, Download, ShieldCheck, Phone, Mail, Globe, AlertTriangle, Building2, DollarSign, Clock, ListChecks, BarChart3 } from "lucide-react";
+import { ArrowLeft, Download, ShieldCheck, Phone, Mail, Globe, AlertTriangle, Building2, DollarSign, Clock, ListChecks, BarChart3, FileText, Loader2 } from "lucide-react";
 
 export const Route = createFileRoute("/_authenticated/report/$id")({
   head: () => ({
@@ -24,8 +24,13 @@ function ReportDetailPage() {
   const { id } = Route.useParams();
   const getFn = useServerFn(getComplianceReport);
   const pdfFn = useServerFn(exportComplianceReportPdf);
-  const [view, setView] = useState<"standard" | "wbs">("standard");
+  const [view, setView] = useState<"pdf" | "standard" | "wbs">("pdf");
+  const [format, setFormat] = useState<"standard" | "wbs">("standard");
   const [exporting, setExporting] = useState<"standard" | "wbs" | null>(null);
+  const [pdfUrl, setPdfUrl] = useState<string | null>(null);
+  const [pdfLoading, setPdfLoading] = useState(false);
+  const [pdfData, setPdfData] = useState<{ base64: string; filename: string } | null>(null);
+  const lastLoadedFormat = useRef<string | null>(null);
 
   const q = useQuery({
     queryKey: ["compliance-report", id],
@@ -33,10 +38,58 @@ function ReportDetailPage() {
     refetchInterval: (query) => (query.state.data?.status === "generating" ? 2000 : false),
   });
 
-  const doExport = async (format: "standard" | "wbs") => {
+  // Auto-render PDF preview when report is ready or format toggles
+  useEffect(() => {
+    if (q.data?.status !== "completed") return;
+    if (view !== "pdf") return;
+    if (lastLoadedFormat.current === format) return;
+    let cancelled = false;
+    (async () => {
+      setPdfLoading(true);
+      try {
+        const { pdf_base64, filename } = await pdfFn({ data: { id, format } });
+        if (cancelled) return;
+        const bin = atob(pdf_base64);
+        const bytes = new Uint8Array(bin.length);
+        for (let i = 0; i < bin.length; i++) bytes[i] = bin.charCodeAt(i);
+        const blob = new Blob([bytes], { type: "application/pdf" });
+        const url = URL.createObjectURL(blob);
+        setPdfUrl((prev) => {
+          if (prev) URL.revokeObjectURL(prev);
+          return url;
+        });
+        setPdfData({ base64: pdf_base64, filename });
+        lastLoadedFormat.current = format;
+      } catch (e) {
+        toast.error(e instanceof Error ? e.message : "Failed to render PDF");
+      } finally {
+        if (!cancelled) setPdfLoading(false);
+      }
+    })();
+    return () => {
+      cancelled = true;
+    };
+  }, [q.data?.status, view, format, id, pdfFn]);
+
+  // Cleanup on unmount
+  useEffect(() => () => { if (pdfUrl) URL.revokeObjectURL(pdfUrl); }, [pdfUrl]);
+
+  const downloadCurrent = () => {
+    if (!pdfData) return;
+    const bin = atob(pdfData.base64);
+    const bytes = new Uint8Array(bin.length);
+    for (let i = 0; i < bin.length; i++) bytes[i] = bin.charCodeAt(i);
+    const blob = new Blob([bytes], { type: "application/pdf" });
+    const url = URL.createObjectURL(blob);
+    const a = document.createElement("a");
+    a.href = url; a.download = pdfData.filename; a.click();
+    URL.revokeObjectURL(url);
+  };
+
+  const doExport = async (fmt: "standard" | "wbs") => {
     try {
-      setExporting(format);
-      const { pdf_base64, filename } = await pdfFn({ data: { id, format } });
+      setExporting(fmt);
+      const { pdf_base64, filename } = await pdfFn({ data: { id, format: fmt } });
       const bin = atob(pdf_base64);
       const bytes = new Uint8Array(bin.length);
       for (let i = 0; i < bin.length; i++) bytes[i] = bin.charCodeAt(i);
@@ -111,20 +164,58 @@ function ReportDetailPage() {
           {report.summary && <p className="text-sm">{report.summary}</p>}
 
           <div className="flex flex-wrap items-center gap-2 pt-2">
-            <button onClick={() => setView("standard")} className={`rounded-md border px-3 py-1.5 text-xs ${view === "standard" ? "border-brand bg-brand/15 text-brand" : "border-border bg-background text-muted-foreground"}`}>Standard</button>
+            <button onClick={() => setView("pdf")} className={`inline-flex items-center gap-1.5 rounded-md border px-3 py-1.5 text-xs ${view === "pdf" ? "border-brand bg-brand/15 text-brand" : "border-border bg-background text-muted-foreground"}`}><FileText className="size-3.5" /> PDF Report</button>
+            <button onClick={() => setView("standard")} className={`rounded-md border px-3 py-1.5 text-xs ${view === "standard" ? "border-brand bg-brand/15 text-brand" : "border-border bg-background text-muted-foreground"}`}>Detail View</button>
             <button onClick={() => setView("wbs")} className={`rounded-md border px-3 py-1.5 text-xs ${view === "wbs" ? "border-brand bg-brand/15 text-brand" : "border-border bg-background text-muted-foreground"}`}>WBS / Gantt</button>
             <div className="ml-auto flex gap-2">
-              <button disabled={exporting === "standard"} onClick={() => doExport("standard")} className="inline-flex items-center gap-1.5 rounded-md border border-border bg-background px-3 py-1.5 text-xs hover:border-brand disabled:opacity-40">
-                <Download className="size-3.5" /> {exporting === "standard" ? "Exporting…" : "PDF · Standard"}
-              </button>
-              <button disabled={exporting === "wbs"} onClick={() => doExport("wbs")} className="inline-flex items-center gap-1.5 rounded-md border border-border bg-background px-3 py-1.5 text-xs hover:border-brand disabled:opacity-40">
-                <Download className="size-3.5" /> {exporting === "wbs" ? "Exporting…" : "PDF · WBS"}
-              </button>
+              {view === "pdf" ? (
+                <>
+                  <div className="inline-flex rounded-md border border-border overflow-hidden">
+                    <button onClick={() => setFormat("standard")} className={`px-2.5 py-1.5 text-xs ${format === "standard" ? "bg-brand/15 text-brand" : "bg-background text-muted-foreground"}`}>Standard</button>
+                    <button onClick={() => setFormat("wbs")} className={`px-2.5 py-1.5 text-xs border-l border-border ${format === "wbs" ? "bg-brand/15 text-brand" : "bg-background text-muted-foreground"}`}>WBS</button>
+                  </div>
+                  <button disabled={!pdfData || pdfLoading} onClick={downloadCurrent} className="inline-flex items-center gap-1.5 rounded-md border border-brand/40 bg-brand/10 px-3 py-1.5 text-xs text-brand hover:bg-brand/20 disabled:opacity-40">
+                    <Download className="size-3.5" /> Download PDF
+                  </button>
+                </>
+              ) : (
+                <>
+                  <button disabled={exporting === "standard"} onClick={() => doExport("standard")} className="inline-flex items-center gap-1.5 rounded-md border border-border bg-background px-3 py-1.5 text-xs hover:border-brand disabled:opacity-40">
+                    <Download className="size-3.5" /> {exporting === "standard" ? "Exporting…" : "PDF · Standard"}
+                  </button>
+                  <button disabled={exporting === "wbs"} onClick={() => doExport("wbs")} className="inline-flex items-center gap-1.5 rounded-md border border-border bg-background px-3 py-1.5 text-xs hover:border-brand disabled:opacity-40">
+                    <Download className="size-3.5" /> {exporting === "wbs" ? "Exporting…" : "PDF · WBS"}
+                  </button>
+                </>
+              )}
             </div>
           </div>
         </header>
 
-        {view === "wbs" ? (
+        {view === "pdf" ? (
+          <section className="rounded-xl border border-border bg-card overflow-hidden">
+            {pdfLoading && !pdfUrl ? (
+              <div className="flex h-[80vh] items-center justify-center text-sm text-muted-foreground">
+                <Loader2 className="mr-2 size-4 animate-spin" /> Rendering PDF…
+              </div>
+            ) : pdfUrl ? (
+              <div className="relative">
+                {pdfLoading && (
+                  <div className="absolute right-3 top-3 z-10 inline-flex items-center gap-1.5 rounded-md border border-border bg-background/90 px-2 py-1 text-[11px] text-muted-foreground backdrop-blur">
+                    <Loader2 className="size-3 animate-spin" /> Updating…
+                  </div>
+                )}
+                <iframe
+                  src={pdfUrl}
+                  title="Compliance Report PDF"
+                  className="h-[85vh] w-full bg-white"
+                />
+              </div>
+            ) : (
+              <div className="flex h-[60vh] items-center justify-center text-sm text-muted-foreground">PDF unavailable.</div>
+            )}
+          </section>
+        ) : view === "wbs" ? (
           <section className="space-y-3">
             <SectionHeader icon={<BarChart3 className="size-4" />} title="Work Breakdown · Gantt" />
             <div className="rounded-xl border border-border bg-card p-4 space-y-2 overflow-x-auto">
