@@ -122,13 +122,22 @@ export function DueDiligenceReport({ projectId }: { projectId: string }) {
 
   const buildRoadmap = useMutation({
     mutationFn: () => roadmapFn({ data: { project_id: projectId } }),
-    onSuccess: () => {
-      toast.success("Permit Roadmap created");
+    onSuccess: (res) => {
+      const c = res?.counts;
+      toast.success(
+        c
+          ? `Roadmap built — ${c.permits} permits · ${c.agencies} agencies · ${c.checklist_added} tasks · ${c.deadlines_added} deadlines · ~${c.timeline_days_min}–${c.timeline_days_max}d (${c.review_cycles_expected} cycle${c.review_cycles_expected > 1 ? "s" : ""})`
+          : "Permit Roadmap created",
+      );
       qc.invalidateQueries({ queryKey: ["roadmap", projectId] });
       qc.invalidateQueries({ queryKey: ["scope", projectId] });
+      qc.invalidateQueries({ queryKey: ["checklist", projectId] });
+      qc.invalidateQueries({ queryKey: ["deadlines", projectId] });
+      qc.invalidateQueries({ queryKey: ["activity", projectId] });
     },
     onError: (e) => toast.error(e instanceof Error ? e.message : "Roadmap failed"),
   });
+
 
   const report = q.data?.report ?? null;
   const status = q.data?.intake_status ?? "draft";
@@ -207,10 +216,15 @@ export function DueDiligenceReport({ projectId }: { projectId: string }) {
               size="sm"
               onClick={() => buildRoadmap.mutate()}
               disabled={buildRoadmap.isPending}
+              title="Builds permit matrix, agency matrix, checklist, tasks, review cycles, and timeline"
             >
               <ArrowRight className="size-4 mr-1.5" />
-              {buildRoadmap.isPending ? "Building…" : "Create Permit Roadmap"}
+              {buildRoadmap.isPending ? "Building roadmap…" : "Create Permit Roadmap"}
             </Button>
+            <p className="text-[10px] text-muted-foreground text-right leading-tight max-w-[14rem]">
+              Builds permits · agencies · checklist · tasks · review cycles · timeline
+            </p>
+
           </div>
         </div>
 
