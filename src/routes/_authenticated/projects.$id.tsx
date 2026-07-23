@@ -24,7 +24,7 @@ export const Route = createFileRoute("/_authenticated/projects/$id")({
   component: ProjectDetail,
 });
 
-type Tab = "overview" | "checklist" | "docs" | "deadlines" | "inspections" | "timeline";
+type Tab = "overview" | "scope" | "checklist" | "docs" | "deadlines" | "inspections" | "timeline";
 
 function ProjectDetail() {
   const { id } = Route.useParams();
