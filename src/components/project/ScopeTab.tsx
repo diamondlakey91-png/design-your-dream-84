@@ -3,11 +3,13 @@ import { useQuery, useQueryClient } from "@tanstack/react-query";
 import { useServerFn } from "@tanstack/react-start";
 import { toast } from "sonner";
 import { getScope, upsertScope, TRADE_KEYS, type TradeKey } from "@/lib/scope.functions";
+import { generateRoadmapFromRules } from "@/lib/roadmap.functions";
 import { Input } from "@/components/ui/input";
 import { Label } from "@/components/ui/label";
 import { Button } from "@/components/ui/button";
 import { Textarea } from "@/components/ui/textarea";
 import { Save, Sparkles, MapPin } from "lucide-react";
+import { RoadmapView } from "./RoadmapView";
 
 type TradeState = Record<string, { involved: "yes" | "no" | "unsure"; details?: Record<string, unknown> }>;
 
@@ -48,6 +50,7 @@ export function ScopeTab({ projectId, defaultAddress }: { projectId: string; def
   const qc = useQueryClient();
   const getFn = useServerFn(getScope);
   const saveFn = useServerFn(upsertScope);
+  const genRoadmapFn = useServerFn(generateRoadmapFromRules);
 
   const q = useQuery({
     queryKey: ["scope", projectId],
@@ -157,7 +160,17 @@ export function ScopeTab({ projectId, defaultAddress }: { projectId: string; def
           status,
         },
       });
-      toast.success(status === "submitted" ? "Scope submitted — roadmap generation coming soon" : "Draft saved");
+      if (status === "submitted") {
+        try {
+          await genRoadmapFn({ data: { project_id: projectId } });
+          toast.success("Scope submitted — roadmap generated");
+          qc.invalidateQueries({ queryKey: ["roadmap", projectId] });
+        } catch (e) {
+          toast.error(e instanceof Error ? e.message : "Roadmap generation failed");
+        }
+      } else {
+        toast.success("Draft saved");
+      }
       qc.invalidateQueries({ queryKey: ["scope", projectId] });
     } catch (e) {
       toast.error(e instanceof Error ? e.message : "Save failed");
@@ -521,6 +534,10 @@ export function ScopeTab({ projectId, defaultAddress }: { projectId: string; def
           Address, residential/commercial, project type, and scope description are required to submit.
         </p>
       )}
+
+      <div className="pt-6 border-t border-border">
+        <RoadmapView projectId={projectId} />
+      </div>
     </div>
   );
 }
