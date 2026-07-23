@@ -64,6 +64,14 @@ export function RoadmapView({ projectId }: { projectId: string }) {
     queryKey: ["roadmap", projectId],
     queryFn: () => getFn({ data: { project_id: projectId } }),
   });
+  const jGet = useServerFn(getJurisdictionConfirmation);
+  const jq = useQuery({
+    queryKey: ["jurisdiction-confirmation", projectId],
+    queryFn: () => jGet({ data: { project_id: projectId } }),
+  });
+  const jurisdictionConfirmed =
+    jq.data?.confirmation?.status === "user_confirmed" ||
+    jq.data?.confirmation?.status === "human_verified";
   const sourcesQ = useQuery({
     queryKey: ["roadmap-sources", projectId],
     queryFn: () => getSourcesFn({ data: { project_id: projectId } }),
@@ -71,6 +79,11 @@ export function RoadmapView({ projectId }: { projectId: string }) {
   });
 
   const generate = async () => {
+    if (!jurisdictionConfirmed) {
+      toast.error("Confirm the jurisdiction above before generating the roadmap.");
+      return;
+    }
+
     setBusy("gen");
     try {
       await genFn({ data: { project_id: projectId } });
