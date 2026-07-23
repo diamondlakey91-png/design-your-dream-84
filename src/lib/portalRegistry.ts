@@ -433,8 +433,7 @@ export const PORTAL_REGISTRY: PortalEntry[] = [
   },
   {
     jurisdiction: "Fairfax County (Plan & Build)", state: "VA", platform: "Custom",
-    url: "https://www.fairfaxcounty.gov/plan2build/permit-status",
-    addressSearch: (a) => `https://www.fairfaxcounty.gov/plan2build/permit-status?address=${enc(a)}`,
+    url: "https://www.fairfaxcounty.gov/landdevelopment/permits",
   },
   {
     jurisdiction: "Portland (PortlandMaps)", state: "OR", platform: "Custom",
