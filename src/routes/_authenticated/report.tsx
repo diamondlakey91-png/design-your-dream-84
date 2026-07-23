@@ -268,3 +268,21 @@ function StatPill({ icon, label, value }: { icon: React.ReactNode; label: string
     </div>
   );
 }
+
+function ProjectTypeSelectorForReport({ value, onChange }: { value: string; onChange: (v: string) => void }) {
+  const { byId } = useProjectTypes();
+  const [primaryId, setPrimaryId] = useState<string | null>(null);
+  return (
+    <ProjectTypeSelector
+      mode="single"
+      value={{ primaryId }}
+      onChange={(v) => {
+        setPrimaryId(v.primaryId ?? null);
+        const t = v.primaryId ? byId.get(v.primaryId) : null;
+        onChange(t?.client_label ?? value);
+      }}
+      label=""
+      helperText=""
+    />
+  );
+}
