@@ -8,6 +8,8 @@ import { generateComplianceReport, listComplianceReports, deleteComplianceReport
 import { JurisdictionAutocomplete } from "@/components/JurisdictionAutocomplete";
 import { toast } from "sonner";
 import { FileCheck2, Zap, MapPin, ChevronRight, Trash2, Sparkles, Timer, ShieldCheck, Download, Loader2 } from "lucide-react";
+import { ProjectTypeSelector } from "@/components/project-type/ProjectTypeSelector";
+import { useProjectTypes } from "@/hooks/useProjectTypes";
 
 export const Route = createFileRoute("/_authenticated/report")({
   head: () => ({
@@ -120,14 +122,10 @@ function ReportHubPage() {
             </label>
             <label className="space-y-1.5">
               <span className="text-[11px] font-mono uppercase tracking-widest text-muted-foreground">Project type / scope</span>
-              <input
-                value={projectType}
-                onChange={(e) => setProjectType(e.target.value)}
-                placeholder="Restaurant tenant improvement, ~2,400 sf"
-                className="w-full rounded-md border border-border bg-background px-2.5 py-2 text-sm outline-none focus:border-brand"
-              />
+              <ProjectTypeSelectorForReport value={projectType} onChange={setProjectType} />
             </label>
           </div>
+
 
           <div className="grid gap-3 md:grid-cols-2">
             <label className="space-y-1.5">
@@ -268,5 +266,23 @@ function StatPill({ icon, label, value }: { icon: React.ReactNode; label: string
       <div className="flex items-center gap-1.5 text-brand">{icon}<span className="text-[10px] font-mono uppercase tracking-widest">{label}</span></div>
       <div className="mt-0.5 text-xs font-medium truncate">{value}</div>
     </div>
+  );
+}
+
+function ProjectTypeSelectorForReport({ value, onChange }: { value: string; onChange: (v: string) => void }) {
+  const { byId } = useProjectTypes();
+  const [primaryId, setPrimaryId] = useState<string | null>(null);
+  return (
+    <ProjectTypeSelector
+      mode="single"
+      value={{ primaryId }}
+      onChange={(v) => {
+        setPrimaryId(v.primaryId ?? null);
+        const t = v.primaryId ? byId.get(v.primaryId) : null;
+        onChange(t?.client_label ?? value);
+      }}
+      label=""
+      helperText=""
+    />
   );
 }

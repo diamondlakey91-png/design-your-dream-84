@@ -11,6 +11,9 @@ import { Plus, X, Sparkles, ArrowUpRight, CalendarClock, ClipboardCheck, Loader2
 import { toast } from "sonner";
 import { format, differenceInCalendarDays, parseISO } from "date-fns";
 import { JurisdictionAutocomplete } from "@/components/JurisdictionAutocomplete";
+import { ProjectTypeSelector } from "@/components/project-type/ProjectTypeSelector";
+import { setProjectTypeForProject } from "@/lib/projectTypes.functions";
+import { useProjectTypes } from "@/hooks/useProjectTypes";
 
 export const Route = createFileRoute("/_authenticated/dashboard")({
   head: () => ({
@@ -529,16 +532,25 @@ function CreateProjectDialog({ onClose }: { onClose: () => void }) {
   const navigate = useNavigate();
   const createFn = useServerFn(createProject);
   const geocodeFn = useServerFn(geocodeAddress);
+  const setTypeFn = useServerFn(setProjectTypeForProject);
   const queryClient = useQueryClient();
+  const { byId } = useProjectTypes();
   const [name, setName] = useState("");
   const [location, setLocation] = useState("");
   const [jurisdiction, setJurisdiction] = useState("");
   const [projectType, setProjectType] = useState("Tenant Fit-Out");
+  const [primaryTypeId, setPrimaryTypeId] = useState<string | null>(null);
   const [permitCount, setPermitCount] = useState(3);
   const [geocodeVerified, setGeocodeVerified] = useState(false);
 
   const mut = useMutation({
-    mutationFn: () => createFn({ data: { name, location, jurisdiction, project_type: projectType, permit_count: permitCount } }),
+    mutationFn: async () => {
+      const row = await createFn({ data: { name, location, jurisdiction, project_type: projectType, permit_count: permitCount } });
+      if (primaryTypeId) {
+        await setTypeFn({ data: { project_id: row.id, primary_project_type_id: primaryTypeId, additional_project_type_ids: [], source: "user_selected" } }).catch(() => {});
+      }
+      return row;
+    },
     onSuccess: (row) => {
       queryClient.invalidateQueries({ queryKey: ["projects"] });
       toast.success("Project created");
@@ -603,26 +615,19 @@ function CreateProjectDialog({ onClose }: { onClose: () => void }) {
             )}
           </Field>
           <Field label="Project type">
-            <select value={projectType} onChange={(e) => setProjectType(e.target.value)}
-              className="h-11 rounded-lg border border-input bg-card px-3 text-sm outline-none focus:border-primary">
-              <optgroup label="Commercial">
-                <option>Tenant Fit-Out</option>
-                <option>New Build</option>
-                <option>Shell / Core-and-Shell</option>
-                <option>Renovation</option>
-                <option>Addition</option>
-                <option>Change of Use</option>
-                <option>Demolition</option>
-                <option>Commercial</option>
-              </optgroup>
-              <optgroup label="Other">
-                <option>Residential</option>
-                <option>Mixed-Use</option>
-                <option>Industrial</option>
-                <option>Civil</option>
-              </optgroup>
-            </select>
+            <ProjectTypeSelector
+              mode="single"
+              value={{ primaryId: primaryTypeId }}
+              onChange={(v) => {
+                setPrimaryTypeId(v.primaryId ?? null);
+                const t = v.primaryId ? byId.get(v.primaryId) : null;
+                if (t) setProjectType(t.client_label);
+              }}
+              label=""
+              helperText=""
+            />
           </Field>
+
           <Field label="Estimated permit count">
             <input type="number" min={1} max={20} value={permitCount}
               onChange={(e) => setPermitCount(parseInt(e.target.value) || 1)}

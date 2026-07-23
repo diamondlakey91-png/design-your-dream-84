@@ -11,6 +11,9 @@ import { Input } from "@/components/ui/input";
 import { Label } from "@/components/ui/label";
 import { Button } from "@/components/ui/button";
 import { JurisdictionAutocomplete } from "@/components/JurisdictionAutocomplete";
+import { ProjectTypeSelector } from "@/components/project-type/ProjectTypeSelector";
+import { setProjectTypeForProject } from "@/lib/projectTypes.functions";
+import { useProjectTypes } from "@/hooks/useProjectTypes";
 import { OverviewTab } from "@/components/project/OverviewTab";
 import { ChecklistTab } from "@/components/project/ChecklistTab";
 import { DocsTab } from "@/components/project/DocsTab";
@@ -35,6 +38,7 @@ function ProjectDetail() {
 
   const getFn = useServerFn(getProject);
   const updateFn = useServerFn(updateProject);
+  const setTypeFn = useServerFn(setProjectTypeForProject);
   const q = useQuery({ queryKey: ["project", id], queryFn: () => getFn({ data: { id } }) });
 
   if (q.isLoading) return <AppShell><div className="p-6 text-sm text-muted-foreground">Loading…</div></AppShell>;
@@ -85,9 +89,20 @@ function ProjectDetail() {
         open={editOpen}
         onOpenChange={setEditOpen}
         project={project}
-        onSave={async (patch) => {
+        onSave={async (patch, typeIds) => {
           try {
-            await updateFn({ data: { id, ...patch } });
+            const { primary_project_type_id, additional_project_type_ids, ...rest } = patch;
+            await updateFn({ data: { id, ...rest } });
+            if (typeIds && typeIds.primaryId) {
+              await setTypeFn({
+                data: {
+                  project_id: id,
+                  primary_project_type_id: typeIds.primaryId,
+                  additional_project_type_ids: typeIds.additionalIds ?? [],
+                  source: "user_selected",
+                },
+              }).catch(() => {});
+            }
             toast.success("Project updated");
             setEditOpen(false);
             qc.invalidateQueries({ queryKey: ["project", id] });
@@ -97,6 +112,7 @@ function ProjectDetail() {
           }
         }}
       />
+
 
       {/* Tabs */}
       <nav className="sticky top-0 z-10 bg-background/95 backdrop-blur border-b border-border">
@@ -136,7 +152,11 @@ type EditPatch = {
   project_type?: string;
   jurisdiction?: string;
   permit_count?: number;
+  primary_project_type_id?: string | null;
+  additional_project_type_ids?: string[];
 };
+
+type TypeIds = { primaryId: string | null; additionalIds: string[] };
 
 function EditProjectDialog({
   open,
@@ -146,12 +166,14 @@ function EditProjectDialog({
 }: {
   open: boolean;
   onOpenChange: (v: boolean) => void;
-  project: { name: string; location: string | null; project_type: string | null; jurisdiction: string | null; permit_count: number };
-  onSave: (patch: EditPatch) => void | Promise<void>;
+  project: { name: string; location: string | null; project_type: string | null; jurisdiction: string | null; permit_count: number; primary_project_type_id?: string | null; additional_project_type_ids?: string[] | null };
+  onSave: (patch: EditPatch, typeIds: TypeIds) => void | Promise<void>;
 }) {
+  const { byId } = useProjectTypes();
   const [name, setName] = useState(project.name);
   const [location, setLocation] = useState(project.location ?? "");
-  const [projectType, setProjectType] = useState(project.project_type ?? "");
+  const [primaryId, setPrimaryId] = useState<string | null>(project.primary_project_type_id ?? null);
+  const [additionalIds, setAdditionalIds] = useState<string[]>(project.additional_project_type_ids ?? []);
   const [jurisdiction, setJurisdiction] = useState(project.jurisdiction ?? "");
   const [permitCount, setPermitCount] = useState(String(project.permit_count ?? 0));
   const [saving, setSaving] = useState(false);
@@ -178,21 +200,28 @@ function EditProjectDialog({
             <Label>Address / location</Label>
             <Input value={location} onChange={(e) => setLocation(e.target.value)} maxLength={200} />
           </div>
-          <div className="grid grid-cols-2 gap-3">
-            <div className="space-y-1.5">
-              <Label>Project type</Label>
-              <Input value={projectType} onChange={(e) => setProjectType(e.target.value)} maxLength={80} />
-            </div>
-            <div className="space-y-1.5">
-              <Label>Permit count</Label>
-              <Input
-                type="number"
-                min={0}
-                max={50}
-                value={permitCount}
-                onChange={(e) => setPermitCount(e.target.value)}
-              />
-            </div>
+          <div className="space-y-1.5">
+            <Label>Project type</Label>
+            <ProjectTypeSelector
+              mode="primary_additional"
+              value={{ primaryId, additionalIds }}
+              onChange={(v) => {
+                setPrimaryId(v.primaryId ?? null);
+                setAdditionalIds(v.additionalIds ?? []);
+              }}
+              label=""
+              helperText=""
+            />
+          </div>
+          <div className="space-y-1.5">
+            <Label>Permit count</Label>
+            <Input
+              type="number"
+              min={0}
+              max={50}
+              value={permitCount}
+              onChange={(e) => setPermitCount(e.target.value)}
+            />
           </div>
         </div>
         <DialogFooter>
@@ -202,13 +231,17 @@ function EditProjectDialog({
             onClick={async () => {
               setSaving(true);
               try {
-                await onSave({
-                  name: name.trim(),
-                  location: location.trim(),
-                  project_type: projectType.trim(),
-                  jurisdiction: jurisdiction.trim(),
-                  permit_count: Math.max(0, Math.min(50, Number(permitCount) || 0)),
-                });
+                const primaryLabel = primaryId ? byId.get(primaryId)?.client_label : project.project_type ?? "";
+                await onSave(
+                  {
+                    name: name.trim(),
+                    location: location.trim(),
+                    project_type: (primaryLabel ?? "").trim(),
+                    jurisdiction: jurisdiction.trim(),
+                    permit_count: Math.max(0, Math.min(50, Number(permitCount) || 0)),
+                  },
+                  { primaryId, additionalIds },
+                );
               } finally {
                 setSaving(false);
               }

@@ -1279,10 +1279,139 @@ export type Database = {
           },
         ]
       }
+      project_type_aliases: {
+        Row: {
+          alias: string
+          created_at: string
+          id: string
+          keyword_only: boolean
+          project_type_id: string
+        }
+        Insert: {
+          alias: string
+          created_at?: string
+          id?: string
+          keyword_only?: boolean
+          project_type_id: string
+        }
+        Update: {
+          alias?: string
+          created_at?: string
+          id?: string
+          keyword_only?: boolean
+          project_type_id?: string
+        }
+        Relationships: [
+          {
+            foreignKeyName: "project_type_aliases_project_type_id_fkey"
+            columns: ["project_type_id"]
+            isOneToOne: false
+            referencedRelation: "project_types"
+            referencedColumns: ["id"]
+          },
+        ]
+      }
+      project_type_categories: {
+        Row: {
+          active_status: boolean
+          category_name: string
+          created_at: string
+          description: string | null
+          display_order: number
+          icon: string | null
+          id: string
+          updated_at: string
+        }
+        Insert: {
+          active_status?: boolean
+          category_name: string
+          created_at?: string
+          description?: string | null
+          display_order?: number
+          icon?: string | null
+          id?: string
+          updated_at?: string
+        }
+        Update: {
+          active_status?: boolean
+          category_name?: string
+          created_at?: string
+          description?: string | null
+          display_order?: number
+          icon?: string | null
+          id?: string
+          updated_at?: string
+        }
+        Relationships: []
+      }
+      project_types: {
+        Row: {
+          active_status: boolean
+          category_id: string
+          client_label: string
+          common_scope_triggers: string[]
+          created_at: string
+          display_order: number
+          follow_up_question_ids: string[]
+          id: string
+          internal_name: string
+          possible_agency_categories: string[]
+          possible_document_categories: string[]
+          possible_permit_categories: string[]
+          residential_or_commercial: string
+          short_description: string | null
+          updated_at: string
+        }
+        Insert: {
+          active_status?: boolean
+          category_id: string
+          client_label: string
+          common_scope_triggers?: string[]
+          created_at?: string
+          display_order?: number
+          follow_up_question_ids?: string[]
+          id?: string
+          internal_name: string
+          possible_agency_categories?: string[]
+          possible_document_categories?: string[]
+          possible_permit_categories?: string[]
+          residential_or_commercial: string
+          short_description?: string | null
+          updated_at?: string
+        }
+        Update: {
+          active_status?: boolean
+          category_id?: string
+          client_label?: string
+          common_scope_triggers?: string[]
+          created_at?: string
+          display_order?: number
+          follow_up_question_ids?: string[]
+          id?: string
+          internal_name?: string
+          possible_agency_categories?: string[]
+          possible_document_categories?: string[]
+          possible_permit_categories?: string[]
+          residential_or_commercial?: string
+          short_description?: string | null
+          updated_at?: string
+        }
+        Relationships: [
+          {
+            foreignKeyName: "project_types_category_id_fkey"
+            columns: ["category_id"]
+            isOneToOne: false
+            referencedRelation: "project_type_categories"
+            referencedColumns: ["id"]
+          },
+        ]
+      }
       projects: {
         Row: {
+          additional_project_type_ids: string[]
           created_at: string
           current_stage: number
+          custom_project_type_description: string | null
           estimate: Json | null
           estimate_generated_at: string | null
           id: string
@@ -1295,14 +1424,21 @@ export type Database = {
           name: string
           permit_count: number
           permits_issued: number
+          primary_project_type_id: string | null
           project_type: string
+          project_type_confidence: number | null
+          project_type_confirmed_at: string | null
+          project_type_confirmed_by: string | null
+          project_type_source: string | null
           status: string
           updated_at: string
           user_id: string
         }
         Insert: {
+          additional_project_type_ids?: string[]
           created_at?: string
           current_stage?: number
+          custom_project_type_description?: string | null
           estimate?: Json | null
           estimate_generated_at?: string | null
           id?: string
@@ -1315,14 +1451,21 @@ export type Database = {
           name: string
           permit_count?: number
           permits_issued?: number
+          primary_project_type_id?: string | null
           project_type?: string
+          project_type_confidence?: number | null
+          project_type_confirmed_at?: string | null
+          project_type_confirmed_by?: string | null
+          project_type_source?: string | null
           status?: string
           updated_at?: string
           user_id: string
         }
         Update: {
+          additional_project_type_ids?: string[]
           created_at?: string
           current_stage?: number
+          custom_project_type_description?: string | null
           estimate?: Json | null
           estimate_generated_at?: string | null
           id?: string
@@ -1335,12 +1478,25 @@ export type Database = {
           name?: string
           permit_count?: number
           permits_issued?: number
+          primary_project_type_id?: string | null
           project_type?: string
+          project_type_confidence?: number | null
+          project_type_confirmed_at?: string | null
+          project_type_confirmed_by?: string | null
+          project_type_source?: string | null
           status?: string
           updated_at?: string
           user_id?: string
         }
-        Relationships: []
+        Relationships: [
+          {
+            foreignKeyName: "projects_primary_project_type_id_fkey"
+            columns: ["primary_project_type_id"]
+            isOneToOne: false
+            referencedRelation: "project_types"
+            referencedColumns: ["id"]
+          },
+        ]
       }
       report_shares: {
         Row: {
@@ -1844,6 +2000,7 @@ export type Database = {
       }
       scope_of_work: {
         Row: {
+          additional_project_type_ids: string[]
           address: string | null
           address_normalized: string | null
           construction_type: string | null
@@ -1862,6 +2019,7 @@ export type Database = {
           occupancy_existing: string | null
           occupancy_proposed: string | null
           plain_scope: string | null
+          primary_project_type_id: string | null
           project_id: string
           project_type: Database["public"]["Enums"]["scope_project_type"] | null
           residential_or_commercial:
@@ -1878,6 +2036,7 @@ export type Database = {
           user_id: string
         }
         Insert: {
+          additional_project_type_ids?: string[]
           address?: string | null
           address_normalized?: string | null
           construction_type?: string | null
@@ -1896,6 +2055,7 @@ export type Database = {
           occupancy_existing?: string | null
           occupancy_proposed?: string | null
           plain_scope?: string | null
+          primary_project_type_id?: string | null
           project_id: string
           project_type?:
             | Database["public"]["Enums"]["scope_project_type"]
@@ -1914,6 +2074,7 @@ export type Database = {
           user_id: string
         }
         Update: {
+          additional_project_type_ids?: string[]
           address?: string | null
           address_normalized?: string | null
           construction_type?: string | null
@@ -1932,6 +2093,7 @@ export type Database = {
           occupancy_existing?: string | null
           occupancy_proposed?: string | null
           plain_scope?: string | null
+          primary_project_type_id?: string | null
           project_id?: string
           project_type?:
             | Database["public"]["Enums"]["scope_project_type"]
@@ -1950,6 +2112,13 @@ export type Database = {
           user_id?: string
         }
         Relationships: [
+          {
+            foreignKeyName: "scope_of_work_primary_project_type_id_fkey"
+            columns: ["primary_project_type_id"]
+            isOneToOne: false
+            referencedRelation: "project_types"
+            referencedColumns: ["id"]
+          },
           {
             foreignKeyName: "scope_of_work_project_id_fkey"
             columns: ["project_id"]
