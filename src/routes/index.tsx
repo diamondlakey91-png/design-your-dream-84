@@ -365,7 +365,7 @@ function Landing() {
           aria-hidden
           className="pointer-events-none absolute inset-x-0 top-0 h-px bg-gradient-to-r from-transparent via-blue-500/50 to-transparent"
         />
-        <div className="mx-auto flex max-w-7xl flex-wrap items-center justify-between gap-4 px-6 py-10 font-mono text-[11px] uppercase tracking-[0.25em] text-blue-400/60">
+        <div className="mx-auto flex max-w-7xl flex-wrap items-center justify-between gap-4 px-6 py-10 font-mono text-[11px] uppercase tracking-[0.25em] text-blue-300/90">
           <div className="flex items-center gap-2.5">
             <PermivioMark className="h-5 w-5" />
             <span>© Permivio</span>
