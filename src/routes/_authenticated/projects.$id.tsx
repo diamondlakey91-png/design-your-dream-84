@@ -152,7 +152,11 @@ type EditPatch = {
   project_type?: string;
   jurisdiction?: string;
   permit_count?: number;
+  primary_project_type_id?: string | null;
+  additional_project_type_ids?: string[];
 };
+
+type TypeIds = { primaryId: string | null; additionalIds: string[] };
 
 function EditProjectDialog({
   open,
@@ -162,12 +166,14 @@ function EditProjectDialog({
 }: {
   open: boolean;
   onOpenChange: (v: boolean) => void;
-  project: { name: string; location: string | null; project_type: string | null; jurisdiction: string | null; permit_count: number };
-  onSave: (patch: EditPatch) => void | Promise<void>;
+  project: { name: string; location: string | null; project_type: string | null; jurisdiction: string | null; permit_count: number; primary_project_type_id?: string | null; additional_project_type_ids?: string[] | null };
+  onSave: (patch: EditPatch, typeIds: TypeIds) => void | Promise<void>;
 }) {
+  const { byId } = useProjectTypes();
   const [name, setName] = useState(project.name);
   const [location, setLocation] = useState(project.location ?? "");
-  const [projectType, setProjectType] = useState(project.project_type ?? "");
+  const [primaryId, setPrimaryId] = useState<string | null>(project.primary_project_type_id ?? null);
+  const [additionalIds, setAdditionalIds] = useState<string[]>(project.additional_project_type_ids ?? []);
   const [jurisdiction, setJurisdiction] = useState(project.jurisdiction ?? "");
   const [permitCount, setPermitCount] = useState(String(project.permit_count ?? 0));
   const [saving, setSaving] = useState(false);
@@ -194,21 +200,28 @@ function EditProjectDialog({
             <Label>Address / location</Label>
             <Input value={location} onChange={(e) => setLocation(e.target.value)} maxLength={200} />
           </div>
-          <div className="grid grid-cols-2 gap-3">
-            <div className="space-y-1.5">
-              <Label>Project type</Label>
-              <Input value={projectType} onChange={(e) => setProjectType(e.target.value)} maxLength={80} />
-            </div>
-            <div className="space-y-1.5">
-              <Label>Permit count</Label>
-              <Input
-                type="number"
-                min={0}
-                max={50}
-                value={permitCount}
-                onChange={(e) => setPermitCount(e.target.value)}
-              />
-            </div>
+          <div className="space-y-1.5">
+            <Label>Project type</Label>
+            <ProjectTypeSelector
+              mode="primary_additional"
+              value={{ primaryId, additionalIds }}
+              onChange={(v) => {
+                setPrimaryId(v.primaryId ?? null);
+                setAdditionalIds(v.additionalIds ?? []);
+              }}
+              label=""
+              helperText=""
+            />
+          </div>
+          <div className="space-y-1.5">
+            <Label>Permit count</Label>
+            <Input
+              type="number"
+              min={0}
+              max={50}
+              value={permitCount}
+              onChange={(e) => setPermitCount(e.target.value)}
+            />
           </div>
         </div>
         <DialogFooter>
@@ -218,13 +231,17 @@ function EditProjectDialog({
             onClick={async () => {
               setSaving(true);
               try {
-                await onSave({
-                  name: name.trim(),
-                  location: location.trim(),
-                  project_type: projectType.trim(),
-                  jurisdiction: jurisdiction.trim(),
-                  permit_count: Math.max(0, Math.min(50, Number(permitCount) || 0)),
-                });
+                const primaryLabel = primaryId ? byId.get(primaryId)?.client_label : project.project_type ?? "";
+                await onSave(
+                  {
+                    name: name.trim(),
+                    location: location.trim(),
+                    project_type: (primaryLabel ?? "").trim(),
+                    jurisdiction: jurisdiction.trim(),
+                    permit_count: Math.max(0, Math.min(50, Number(permitCount) || 0)),
+                  },
+                  { primaryId, additionalIds },
+                );
               } finally {
                 setSaving(false);
               }
