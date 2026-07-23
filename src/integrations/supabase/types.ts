@@ -128,6 +128,83 @@ export type Database = {
           },
         ]
       }
+      compliance_reports: {
+        Row: {
+          address: string
+          agent_id: string
+          confidence: number | null
+          contacts: Json
+          cost_estimate: Json
+          created_at: string
+          error: string | null
+          id: string
+          jurisdiction: string | null
+          project_id: string | null
+          project_type: string
+          report: Json
+          sources: Json
+          state: string | null
+          status: string
+          summary: string | null
+          timeline: Json
+          updated_at: string
+          user_id: string
+          wbs: Json
+        }
+        Insert: {
+          address: string
+          agent_id: string
+          confidence?: number | null
+          contacts?: Json
+          cost_estimate?: Json
+          created_at?: string
+          error?: string | null
+          id?: string
+          jurisdiction?: string | null
+          project_id?: string | null
+          project_type: string
+          report?: Json
+          sources?: Json
+          state?: string | null
+          status?: string
+          summary?: string | null
+          timeline?: Json
+          updated_at?: string
+          user_id: string
+          wbs?: Json
+        }
+        Update: {
+          address?: string
+          agent_id?: string
+          confidence?: number | null
+          contacts?: Json
+          cost_estimate?: Json
+          created_at?: string
+          error?: string | null
+          id?: string
+          jurisdiction?: string | null
+          project_id?: string | null
+          project_type?: string
+          report?: Json
+          sources?: Json
+          state?: string | null
+          status?: string
+          summary?: string | null
+          timeline?: Json
+          updated_at?: string
+          user_id?: string
+          wbs?: Json
+        }
+        Relationships: [
+          {
+            foreignKeyName: "compliance_reports_project_id_fkey"
+            columns: ["project_id"]
+            isOneToOne: false
+            referencedRelation: "projects"
+            referencedColumns: ["id"]
+          },
+        ]
+      }
       deadlines: {
         Row: {
           created_at: string

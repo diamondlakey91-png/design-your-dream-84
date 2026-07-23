@@ -15,6 +15,7 @@ import { Route as AuthRouteImport } from './routes/auth'
 import { Route as AuthenticatedRouteRouteImport } from './routes/_authenticated/route'
 import { Route as IndexRouteImport } from './routes/index'
 import { Route as CheckoutReturnRouteImport } from './routes/checkout.return'
+import { Route as AuthenticatedReportRouteImport } from './routes/_authenticated/report'
 import { Route as AuthenticatedPropertyRouteImport } from './routes/_authenticated/property'
 import { Route as AuthenticatedPortalsRouteImport } from './routes/_authenticated/portals'
 import { Route as AuthenticatedLookupRouteImport } from './routes/_authenticated/lookup'
@@ -28,6 +29,7 @@ import { Route as AuthenticatedProjectsIndexRouteImport } from './routes/_authen
 import { Route as AuthenticatedAssistantIndexRouteImport } from './routes/_authenticated/assistant.index'
 import { Route as ShareReportsTokenRouteImport } from './routes/share.reports.$token'
 import { Route as ApiChatStreamRouteImport } from './routes/api/chat.stream'
+import { Route as AuthenticatedReportIdRouteImport } from './routes/_authenticated/report.$id'
 import { Route as AuthenticatedProjectsIdRouteImport } from './routes/_authenticated/projects.$id'
 import { Route as AuthenticatedJurisdictionsSlugRouteImport } from './routes/_authenticated/jurisdictions.$slug'
 import { Route as AuthenticatedInspectionsIdRouteImport } from './routes/_authenticated/inspections.$id'
@@ -71,6 +73,11 @@ const CheckoutReturnRoute = CheckoutReturnRouteImport.update({
   id: '/checkout/return',
   path: '/checkout/return',
   getParentRoute: () => rootRouteImport,
+} as any)
+const AuthenticatedReportRoute = AuthenticatedReportRouteImport.update({
+  id: '/report',
+  path: '/report',
+  getParentRoute: () => AuthenticatedRouteRoute,
 } as any)
 const AuthenticatedPropertyRoute = AuthenticatedPropertyRouteImport.update({
   id: '/property',
@@ -142,6 +149,11 @@ const ApiChatStreamRoute = ApiChatStreamRouteImport.update({
   id: '/api/chat/stream',
   path: '/api/chat/stream',
   getParentRoute: () => rootRouteImport,
+} as any)
+const AuthenticatedReportIdRoute = AuthenticatedReportIdRouteImport.update({
+  id: '/$id',
+  path: '/$id',
+  getParentRoute: () => AuthenticatedReportRoute,
 } as any)
 const AuthenticatedProjectsIdRoute = AuthenticatedProjectsIdRouteImport.update({
   id: '/projects/$id',
@@ -240,6 +252,7 @@ export interface FileRoutesByFullPath {
   '/lookup': typeof AuthenticatedLookupRoute
   '/portals': typeof AuthenticatedPortalsRoute
   '/property': typeof AuthenticatedPropertyRoute
+  '/report': typeof AuthenticatedReportRouteWithChildren
   '/checkout/return': typeof CheckoutReturnRoute
   '/.lovable/oauth/consent': typeof DotlovableOauthConsentRoute
   '/.mcp/invoke-tool/$tool': typeof Char91DotmcpChar93InvokeToolToolRoute
@@ -251,6 +264,7 @@ export interface FileRoutesByFullPath {
   '/inspections/$id': typeof AuthenticatedInspectionsIdRoute
   '/jurisdictions/$slug': typeof AuthenticatedJurisdictionsSlugRoute
   '/projects/$id': typeof AuthenticatedProjectsIdRoute
+  '/report/$id': typeof AuthenticatedReportIdRoute
   '/api/chat/stream': typeof ApiChatStreamRoute
   '/share/reports/$token': typeof ShareReportsTokenRoute
   '/assistant/': typeof AuthenticatedAssistantIndexRoute
@@ -273,6 +287,7 @@ export interface FileRoutesByTo {
   '/lookup': typeof AuthenticatedLookupRoute
   '/portals': typeof AuthenticatedPortalsRoute
   '/property': typeof AuthenticatedPropertyRoute
+  '/report': typeof AuthenticatedReportRouteWithChildren
   '/checkout/return': typeof CheckoutReturnRoute
   '/.lovable/oauth/consent': typeof DotlovableOauthConsentRoute
   '/.mcp/invoke-tool/$tool': typeof Char91DotmcpChar93InvokeToolToolRoute
@@ -283,6 +298,7 @@ export interface FileRoutesByTo {
   '/inspections/$id': typeof AuthenticatedInspectionsIdRoute
   '/jurisdictions/$slug': typeof AuthenticatedJurisdictionsSlugRoute
   '/projects/$id': typeof AuthenticatedProjectsIdRoute
+  '/report/$id': typeof AuthenticatedReportIdRoute
   '/api/chat/stream': typeof ApiChatStreamRoute
   '/share/reports/$token': typeof ShareReportsTokenRoute
   '/assistant': typeof AuthenticatedAssistantIndexRoute
@@ -308,6 +324,7 @@ export interface FileRoutesById {
   '/_authenticated/lookup': typeof AuthenticatedLookupRoute
   '/_authenticated/portals': typeof AuthenticatedPortalsRoute
   '/_authenticated/property': typeof AuthenticatedPropertyRoute
+  '/_authenticated/report': typeof AuthenticatedReportRouteWithChildren
   '/checkout/return': typeof CheckoutReturnRoute
   '/.lovable/oauth/consent': typeof DotlovableOauthConsentRoute
   '/.mcp/invoke-tool/$tool': typeof Char91DotmcpChar93InvokeToolToolRoute
@@ -319,6 +336,7 @@ export interface FileRoutesById {
   '/_authenticated/inspections/$id': typeof AuthenticatedInspectionsIdRoute
   '/_authenticated/jurisdictions/$slug': typeof AuthenticatedJurisdictionsSlugRoute
   '/_authenticated/projects/$id': typeof AuthenticatedProjectsIdRoute
+  '/_authenticated/report/$id': typeof AuthenticatedReportIdRoute
   '/api/chat/stream': typeof ApiChatStreamRoute
   '/share/reports/$token': typeof ShareReportsTokenRoute
   '/_authenticated/assistant/': typeof AuthenticatedAssistantIndexRoute
@@ -344,6 +362,7 @@ export interface FileRouteTypes {
     | '/lookup'
     | '/portals'
     | '/property'
+    | '/report'
     | '/checkout/return'
     | '/.lovable/oauth/consent'
     | '/.mcp/invoke-tool/$tool'
@@ -355,6 +374,7 @@ export interface FileRouteTypes {
     | '/inspections/$id'
     | '/jurisdictions/$slug'
     | '/projects/$id'
+    | '/report/$id'
     | '/api/chat/stream'
     | '/share/reports/$token'
     | '/assistant/'
@@ -377,6 +397,7 @@ export interface FileRouteTypes {
     | '/lookup'
     | '/portals'
     | '/property'
+    | '/report'
     | '/checkout/return'
     | '/.lovable/oauth/consent'
     | '/.mcp/invoke-tool/$tool'
@@ -387,6 +408,7 @@ export interface FileRouteTypes {
     | '/inspections/$id'
     | '/jurisdictions/$slug'
     | '/projects/$id'
+    | '/report/$id'
     | '/api/chat/stream'
     | '/share/reports/$token'
     | '/assistant'
@@ -411,6 +433,7 @@ export interface FileRouteTypes {
     | '/_authenticated/lookup'
     | '/_authenticated/portals'
     | '/_authenticated/property'
+    | '/_authenticated/report'
     | '/checkout/return'
     | '/.lovable/oauth/consent'
     | '/.mcp/invoke-tool/$tool'
@@ -422,6 +445,7 @@ export interface FileRouteTypes {
     | '/_authenticated/inspections/$id'
     | '/_authenticated/jurisdictions/$slug'
     | '/_authenticated/projects/$id'
+    | '/_authenticated/report/$id'
     | '/api/chat/stream'
     | '/share/reports/$token'
     | '/_authenticated/assistant/'
@@ -492,6 +516,13 @@ declare module '@tanstack/react-router' {
       fullPath: '/checkout/return'
       preLoaderRoute: typeof CheckoutReturnRouteImport
       parentRoute: typeof rootRouteImport
+    }
+    '/_authenticated/report': {
+      id: '/_authenticated/report'
+      path: '/report'
+      fullPath: '/report'
+      preLoaderRoute: typeof AuthenticatedReportRouteImport
+      parentRoute: typeof AuthenticatedRouteRoute
     }
     '/_authenticated/property': {
       id: '/_authenticated/property'
@@ -583,6 +614,13 @@ declare module '@tanstack/react-router' {
       fullPath: '/api/chat/stream'
       preLoaderRoute: typeof ApiChatStreamRouteImport
       parentRoute: typeof rootRouteImport
+    }
+    '/_authenticated/report/$id': {
+      id: '/_authenticated/report/$id'
+      path: '/$id'
+      fullPath: '/report/$id'
+      preLoaderRoute: typeof AuthenticatedReportIdRouteImport
+      parentRoute: typeof AuthenticatedReportRoute
     }
     '/_authenticated/projects/$id': {
       id: '/_authenticated/projects/$id'
@@ -737,6 +775,17 @@ const AuthenticatedJurisdictionsRouteWithChildren =
     AuthenticatedJurisdictionsRouteChildren,
   )
 
+interface AuthenticatedReportRouteChildren {
+  AuthenticatedReportIdRoute: typeof AuthenticatedReportIdRoute
+}
+
+const AuthenticatedReportRouteChildren: AuthenticatedReportRouteChildren = {
+  AuthenticatedReportIdRoute: AuthenticatedReportIdRoute,
+}
+
+const AuthenticatedReportRouteWithChildren =
+  AuthenticatedReportRoute._addFileChildren(AuthenticatedReportRouteChildren)
+
 interface AuthenticatedRouteRouteChildren {
   AuthenticatedAssistantRoute: typeof AuthenticatedAssistantRouteWithChildren
   AuthenticatedDashboardRoute: typeof AuthenticatedDashboardRoute
@@ -745,6 +794,7 @@ interface AuthenticatedRouteRouteChildren {
   AuthenticatedLookupRoute: typeof AuthenticatedLookupRoute
   AuthenticatedPortalsRoute: typeof AuthenticatedPortalsRoute
   AuthenticatedPropertyRoute: typeof AuthenticatedPropertyRoute
+  AuthenticatedReportRoute: typeof AuthenticatedReportRouteWithChildren
   AuthenticatedAdminHealthPortalsRoute: typeof AuthenticatedAdminHealthPortalsRoute
   AuthenticatedAdminPortalsRoute: typeof AuthenticatedAdminPortalsRoute
   AuthenticatedInspectionsIdRoute: typeof AuthenticatedInspectionsIdRoute
@@ -760,6 +810,7 @@ const AuthenticatedRouteRouteChildren: AuthenticatedRouteRouteChildren = {
   AuthenticatedLookupRoute: AuthenticatedLookupRoute,
   AuthenticatedPortalsRoute: AuthenticatedPortalsRoute,
   AuthenticatedPropertyRoute: AuthenticatedPropertyRoute,
+  AuthenticatedReportRoute: AuthenticatedReportRouteWithChildren,
   AuthenticatedAdminHealthPortalsRoute: AuthenticatedAdminHealthPortalsRoute,
   AuthenticatedAdminPortalsRoute: AuthenticatedAdminPortalsRoute,
   AuthenticatedInspectionsIdRoute: AuthenticatedInspectionsIdRoute,
