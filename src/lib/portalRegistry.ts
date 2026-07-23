@@ -284,7 +284,7 @@ export const PORTAL_REGISTRY: PortalEntry[] = [
   { jurisdiction: "Orange County (ePlans)", state: "FL", platform: "ProjectDox", url: "https://fastrackepr.ocfl.net/ProjectDox/" },
   { jurisdiction: "Broward County (ePermits ePlans)", state: "FL", platform: "ProjectDox", url: "https://eplans.broward.org/ProjectDox/" },
   { jurisdiction: "Miami-Dade (ePlans)", state: "FL", platform: "ProjectDox", url: "https://eplans.miamidade.gov/ProjectDox/" },
-  { jurisdiction: "Chicago (E-Plan Review)", state: "IL", platform: "ProjectDox", url: "https://ipiweb.cityofchicago.org/EPlan/" },
+  { jurisdiction: "Chicago (E-Plan Review)", state: "IL", platform: "ProjectDox", url: "https://www.chicago.gov/city/en/depts/bldgs/provdrs/electronic_planreview.html" },
   { jurisdiction: "Louisville / Jefferson County (ePlans)", state: "KY", platform: "ProjectDox", url: "https://lojicplans.louisvilleky.gov/ProjectDox/" },
   { jurisdiction: "Nashville (ePlans)", state: "TN", platform: "ProjectDox", url: "https://plans.nashville.gov/ProjectDox/" },
   { jurisdiction: "Salt Lake City (ePlans)", state: "UT", platform: "ProjectDox", url: "https://eplans.slcgov.com/ProjectDox/" },
