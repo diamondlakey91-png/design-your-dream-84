@@ -150,17 +150,56 @@ export const generateComplianceReport = createServerFn({ method: "POST" })
         tryFirecrawlContext(data.address, agent.label),
       ]);
 
+      const schemaTemplate = `{
+  "jurisdiction": "string — exact primary authority (e.g. 'Anne Arundel County Department of Inspections and Permits')",
+  "jurisdiction_state": "string — two-letter state code (e.g. 'MD')",
+  "official_department": "string — the lead permitting department name",
+  "summary": "string — 2-4 sentence executive summary of what this project needs",
+  "scope_recap": "string — 1-2 sentence restatement of the scope of work",
+  "common_rejection_flags": ["string", "string"],
+  "departments": [
+    {
+      "name": "string — e.g. 'Building Department'",
+      "authority_reason": "string — why this department has authority over this project",
+      "required_reviews": ["string"],
+      "required_documents": ["string"],
+      "codes": [{ "code": "IBC 2021 §1006.2.1", "requirement": "string", "discipline": "Building|Health|Fire|ADA|Plumbing|Mechanical|Electrical|Zoning" }]
+    }
+  ],
+  "contacts": [
+    { "department": "string", "name": "string|null", "phone": "string|null", "email": "string|null", "website": "string|null", "verified": false }
+  ],
+  "timeline": [
+    { "phase": "string", "duration_business_days": "5-10", "responsible": "string", "note": "string" }
+  ],
+  "cost_estimate": {
+    "low_usd": 0,
+    "high_usd": 0,
+    "breakdown": [{ "label": "Building permit fee", "amount_usd_low": 0, "amount_usd_high": 0 }]
+  },
+  "sources": ["https://..."],
+  "wbs": [
+    { "id": "1", "name": "Pre-application meeting", "phase": "Intake", "duration_days": 3, "start_offset_days": 0, "depends_on": [], "responsible": "Applicant" }
+  ],
+  "confidence": 0.75
+}`;
+
       const system = `You are Permivio's PermitNow-style Compliance Report agent. Produce a jurisdiction-anchored multi-department permit compliance report.
 
+CRITICAL: Return JSON that EXACTLY matches the schema below. Use these exact top-level keys and nothing else. Do NOT invent keys like "project_summary", "jurisdiction_notes", "department_name". Use "summary" (not "project_summary"), "official_department" at the top level, and each department object MUST have a "name" field.
+
+SCHEMA (return an object with exactly these keys and shapes):
+${schemaTemplate}
+
 RULES:
-- Identify the EXACT jurisdiction with authority (e.g. "Pikes Peak Regional Building Department" not just "Colorado Springs"). If the address spans multiple, name the primary one and note the others.
+- Identify the EXACT jurisdiction with authority. If the address spans multiple, name the primary one and note the others in summary.
 - Enumerate every applicable department (Building, Health, Fire, Planning/Zoning, ADA, Public Works, Utilities, Environmental, Sign, Historic) with authority_reason.
 - Cite specific code sections: IBC/IRC/IPC/IMC/NEC/IECC/IFC 2021, ADA 2010, A117.1-2017, FDA Food Code, and any local amendments referenced in the context.
-- Every contact should include department, phone, email, website. Set verified=true ONLY if the phone/website appears explicitly in the LIVE context. Otherwise verified=false.
+- Every contact must include department, phone, email, website. Set verified=true ONLY if the phone/website appears explicitly in the LIVE context. Otherwise verified=false.
 - Timeline in business-day ranges, per phase.
-- Cost estimate: realistic low/high USD range with breakdown (permit fees, plan review, inspections).
+- cost_estimate.breakdown MUST be an ARRAY of objects, never a single object.
 - WBS: 6-14 tasks with duration_days and depends_on for Gantt rendering. Include intake, plan review cycles, corrections, fee payment, issuance, inspections, CO.
-- Include a "common_rejection_flags" list of the 3-5 most likely reasons this project type gets rejected on first submission in this jurisdiction.
+- common_rejection_flags: array of 3-5 strings — most likely first-submission rejection reasons for this project type in this jurisdiction.
 - sources: URLs you cited. Prefer URLs from the LIVE context block.
 - confidence: 0.0-1.0 self-assessment.
 
@@ -179,7 +218,7 @@ Scope: ${agent.scope}
 ${data.scope_notes ? `Additional scope notes: ${data.scope_notes}` : ""}
 ${data.jurisdiction_hint ? `User-provided jurisdiction hint: ${data.jurisdiction_hint}` : ""}
 
-Return ONLY JSON matching the schema. Do not include narrative outside JSON.`;
+Return ONLY JSON matching the exact schema shown in the system message. Use the EXACT key names from the schema template — no substitutions, no renames, no extra top-level keys.`;
 
       const report = await callGeminiJSON(prompt, system, ReportSchema, { model: "google/gemini-3.6-flash", max_tokens: 32000 });
 
