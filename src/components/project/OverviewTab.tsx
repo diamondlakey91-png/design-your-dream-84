@@ -13,6 +13,7 @@ import { LivePermitCard } from "@/components/project/LivePermitCard";
 import { LiveJurisdictionSync } from "@/components/project/LiveJurisdictionSync";
 import { AiCopilotPanel } from "@/components/project/AiCopilotPanel";
 import { MetaCard } from "@/components/project/MetaCard";
+import { ProjectTypeBadge } from "@/components/project-type/ProjectTypeBadge";
 
 export function OverviewTab({
   project, stage, activity, onChange,
