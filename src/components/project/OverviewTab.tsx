@@ -92,7 +92,17 @@ export function OverviewTab({
 
       <section className="grid grid-cols-1 gap-3">
         <MetaCard icon={<MapPin className="size-4" />} label="Location" value={project.location || "—"} />
-        <MetaCard icon={<Building2 className="size-4" />} label="Project Type" value={project.project_type} />
+        <div className="p-4 bg-card ring-1 ring-black/5 rounded-xl flex items-start gap-3">
+          <Building2 className="size-4 text-brand mt-0.5" />
+          <div className="flex-1 min-w-0">
+            <p className="text-[10px] font-mono uppercase tracking-widest text-muted-foreground mb-1.5">Project Type</p>
+            <ProjectTypeBadge
+              primaryId={(project as any).primary_project_type_id ?? null}
+              additionalIds={(project as any).additional_project_type_ids ?? []}
+              fallbackText={project.project_type}
+            />
+          </div>
+        </div>
         <MetaCard icon={<Landmark className="size-4" />} label="Jurisdiction" value={project.jurisdiction || "—"} />
       </section>
 
