@@ -376,16 +376,22 @@ SCHEMA (return an object with exactly these keys and shapes):
 ${schemaTemplate}
 
 RULES:
+DEPTH REQUIREMENTS — this is a preliminary permit compliance report, not a summary. It must be dense enough for a permit expeditor to hand to a design team.
 - Identify the EXACT jurisdiction with authority. If the address spans multiple, name the primary one and note the others in summary.
-- Enumerate every applicable department (Building, Health, Fire, Planning/Zoning, ADA, Public Works, Utilities, Environmental, Sign, Historic) with authority_reason.
-- Cite specific code sections: IBC/IRC/IPC/IMC/NEC/IECC/IFC 2021, ADA 2010, A117.1-2017, FDA Food Code, and any local amendments referenced in the context.
-- Every contact must include department, phone, email, website. Set verified=true ONLY if the phone/website appears explicitly in the LIVE context. Otherwise verified=false.
-- Timeline in business-day ranges, per phase.
-- cost_estimate.breakdown MUST be an ARRAY of objects, never a single object.
-- WBS: 6-14 tasks with duration_days and depends_on for Gantt rendering. Include intake, plan review cycles, corrections, fee payment, issuance, inspections, CO.
-- common_rejection_flags: array of 3-5 strings — most likely first-submission rejection reasons for this project type in this jurisdiction.
-- sources: URLs you cited. Prefer URLs from the LIVE context block.
-- confidence: 0.0-1.0 self-assessment.
+- Enumerate EVERY applicable department (Building, Health, Fire, Planning/Zoning, ADA, Public Works, Utilities, Environmental, Sign, Historic). For each department:
+  * authority_reason: 1–2 sentences on WHY they have authority over THIS scope.
+  * required_reviews: 4–10 specific review items (e.g. "Egress analysis per IBC 1006", "Grease interceptor sizing per local plumbing amendment").
+  * required_documents: 5–12 concrete deliverables (signed/sealed plans, T-24 forms, structural calcs, MEP schedules, hood cut-sheets, site survey, etc.).
+  * codes: 3–8 code citations with FULL section numbers (e.g. "IBC 2021 §1006.2.1", "IPC 2021 §802.1.7", "NFPA 96 §7.5", "ADA 2010 §606"), each with the specific requirement in one line and the correct discipline.
+- Prefer LOCAL amendments over model codes when the LIVE context mentions them. Cite the amendment name and section.
+- Every contact must include department, phone, email, website. Set verified=true ONLY if the phone/website appears explicitly in the LIVE context. Otherwise verified=false and leave unknown fields null — never invent contact info.
+- Timeline: 6–12 phases in business-day ranges (pre-app, intake/prescreen, 1st plan review, corrections, 2nd review, fee payment, issuance, rough inspections, final inspections, CO). Include "responsible" party.
+- cost_estimate.breakdown MUST be an ARRAY with 4–10 line items (plan review fee, permit fee, trade permit fees, impact/utility fees, health plan review, fire plan review, third-party review, expedited review).
+- WBS: 8–14 tasks with duration_days and depends_on for Gantt rendering. Include intake, plan review cycles, corrections, fee payment, issuance, rough inspections, final inspections, CO.
+- common_rejection_flags: 4–7 strings — most likely first-submission rejection reasons for THIS project type in THIS jurisdiction, referencing code section when possible.
+- sources: 4–12 URLs you cited. Prefer URLs from the LIVE context block; only include URLs that actually appear in the context.
+- confidence: 0.0–1.0 self-assessment. Lower it when LIVE context is thin.
+- Cite specific code sections everywhere: IBC/IRC/IPC/IMC/NEC/IECC/IFC 2021, ADA 2010, ICC A117.1-2017, FDA Food Code, NFPA 13/72/96, ASCE 7, ASHRAE 90.1-2019, plus any local amendment named in the context.
 
 AGENT FOCUS (${agent.label}):
 ${agent.focus.map((f) => `- ${f}`).join("\n")}
