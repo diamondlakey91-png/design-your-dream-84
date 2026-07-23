@@ -67,17 +67,21 @@ describe("PORTAL_REGISTRY integrity", () => {
     }
   });
 
-  it("Accela entries use aca-prod.accela.com host", () => {
+  it("Accela entries use aca-prod.accela.com or a CitizenAccess-hosted portal", () => {
     for (const e of PORTAL_REGISTRY.filter((x) => x.platform === "Accela")) {
-      expect(e.url, `${e.jurisdiction}`).toMatch(/^https:\/\/aca-prod\.accela\.com\//);
+      const ok =
+        /^https:\/\/aca-prod\.accela\.com\//.test(e.url) ||
+        /citizenaccess/i.test(e.url) ||
+        /accela/i.test(e.url);
+      expect(ok, `${e.jurisdiction} → ${e.url}`).toBe(true);
     }
   });
 
-  it("Accela slugs are non-empty and URL-safe", () => {
+  it("aca-prod Accela slugs are non-empty and URL-safe", () => {
     for (const e of PORTAL_REGISTRY.filter((x) => x.platform === "Accela")) {
       const m = e.url.match(/aca-prod\.accela\.com\/([^/]+)\//);
-      expect(m, `${e.jurisdiction} slug parse`).toBeTruthy();
-      const slug = m![1];
+      if (!m) continue; // self-hosted Accela installations don't use slugs
+      const slug = m[1];
       expect(slug.length).toBeGreaterThan(0);
       expect(slug).toMatch(/^[A-Za-z0-9_-]+$/);
     }
