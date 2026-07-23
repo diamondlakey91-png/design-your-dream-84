@@ -216,10 +216,15 @@ export function DueDiligenceReport({ projectId }: { projectId: string }) {
               size="sm"
               onClick={() => buildRoadmap.mutate()}
               disabled={buildRoadmap.isPending}
+              title="Builds permit matrix, agency matrix, checklist, tasks, review cycles, and timeline"
             >
               <ArrowRight className="size-4 mr-1.5" />
-              {buildRoadmap.isPending ? "Building…" : "Create Permit Roadmap"}
+              {buildRoadmap.isPending ? "Building roadmap…" : "Create Permit Roadmap"}
             </Button>
+            <p className="text-[10px] text-muted-foreground text-right leading-tight max-w-[14rem]">
+              Builds permits · agencies · checklist · tasks · review cycles · timeline
+            </p>
+
           </div>
         </div>
 
