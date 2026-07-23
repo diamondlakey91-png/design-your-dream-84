@@ -50,6 +50,7 @@ export function ScopeTab({ projectId, defaultAddress }: { projectId: string; def
   const qc = useQueryClient();
   const getFn = useServerFn(getScope);
   const saveFn = useServerFn(upsertScope);
+  const genRoadmapFn = useServerFn(generateRoadmapFromRules);
 
   const q = useQuery({
     queryKey: ["scope", projectId],
@@ -159,7 +160,17 @@ export function ScopeTab({ projectId, defaultAddress }: { projectId: string; def
           status,
         },
       });
-      toast.success(status === "submitted" ? "Scope submitted — roadmap generation coming soon" : "Draft saved");
+      if (status === "submitted") {
+        try {
+          await genRoadmapFn({ data: { project_id: projectId } });
+          toast.success("Scope submitted — roadmap generated");
+          qc.invalidateQueries({ queryKey: ["roadmap", projectId] });
+        } catch (e) {
+          toast.error(e instanceof Error ? e.message : "Roadmap generation failed");
+        }
+      } else {
+        toast.success("Draft saved");
+      }
       qc.invalidateQueries({ queryKey: ["scope", projectId] });
     } catch (e) {
       toast.error(e instanceof Error ? e.message : "Save failed");
