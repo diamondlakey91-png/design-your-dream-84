@@ -4,6 +4,7 @@ import { supabase } from "@/integrations/supabase/client";
 import { useQueryClient } from "@tanstack/react-query";
 import type { ReactNode } from "react";
 import { WelcomeBanner } from "@/components/WelcomeBanner";
+import { PermivioLogo } from "@/components/PermivioMark";
 
 export function AppShell({ children }: { children: ReactNode }) {
   const location = useLocation();
@@ -31,10 +32,22 @@ export function AppShell({ children }: { children: ReactNode }) {
             "radial-gradient(60rem 40rem at 15% -10%, oklch(0.66 0.19 258 / 0.12), transparent 60%), radial-gradient(50rem 40rem at 100% 10%, oklch(0.68 0.19 305 / 0.10), transparent 60%)",
         }}
       />
+      {/* Top brand bar */}
+      <header className="sticky top-0 z-30 border-b border-border/60 bg-background/70 backdrop-blur-xl">
+        <div className="mx-auto flex max-w-7xl items-center justify-between px-4 py-2.5 lg:px-8">
+          <Link to="/dashboard" aria-label="Permivio home" className="shrink-0">
+            <PermivioLogo />
+          </Link>
+          <span className="font-mono text-[10px] uppercase tracking-widest text-muted-foreground">
+            Permit OS
+          </span>
+        </div>
+      </header>
       <div className="mx-auto max-w-7xl px-4 pt-4 lg:px-8">
         <WelcomeBanner />
       </div>
       <div className="mx-auto max-w-7xl px-0 lg:px-8">{children}</div>
+
 
       {/* Bottom nav */}
       <nav className="fixed inset-x-0 bottom-0 z-40 border-t border-border bg-background/80 backdrop-blur-xl">
