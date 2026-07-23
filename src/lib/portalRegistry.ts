@@ -141,7 +141,7 @@ export const PORTAL_REGISTRY: PortalEntry[] = [
   S("Greensboro", "NC", "Custom", { url: "https://www.greensboro-nc.gov/departments/planning/permits" }),
 
   S("Howard County", "MD", "Custom", { url: "https://www.howardcountymd.gov/inspections-permits" }),
-  S("Anne Arundel County", "MD", "Custom", { url: "https://www.aacounty.org/departments/inspections-and-permits", planReviewUrl: "https://epermit.aacounty.org/ProjectDox/" }),
+  S("Anne Arundel County", "MD", "Custom", { url: "https://www.aacounty.org/inspections-and-permits/permits", planReviewUrl: "https://epermit.aacounty.org/ProjectDox/" }),
   S("San Antonio", "TX", "Custom", { url: "https://www.sanantonio.gov/DSD/Online-Services" }),
   S("Fort Worth", "TX", "Custom", { url: "https://www.fortworthtexas.gov/departments/development-services", planReviewUrl: "https://eplans.fortworthtexas.gov/ProjectDox/" }),
   A("El Paso", "TX", "elpaso"),
