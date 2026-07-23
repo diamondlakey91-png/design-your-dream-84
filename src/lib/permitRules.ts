@@ -11,6 +11,21 @@ export type PermitCategory =
 
 export type TradeVal = { involved: "yes" | "no" | "unsure"; details?: Record<string, unknown> };
 
+/**
+ * Confirmed jurisdiction context. When present, the rule engine uses exact
+ * agency names and may raise verification to "ai_assisted". When absent (or
+ * `confirmed: false`), every agency label is marked "needs confirmation" and
+ * every permit verification is downgraded to "needs_agency_confirmation".
+ */
+export type JurisdictionContext = {
+  municipality: string | null;
+  county: string;
+  state: string;
+  incorporated: boolean;
+  confirmed: boolean;
+  authorities?: Array<{ role: string; official_name: string }>;
+};
+
 export type ScopeInputForRules = {
   address?: string | null;
   residential_or_commercial?: "residential" | "commercial" | "mixed_use" | null;
@@ -26,6 +41,7 @@ export type ScopeInputForRules = {
   trades?: Record<string, TradeVal> | null;
   target_start_date?: string | null;
   target_open_date?: string | null;
+  jurisdiction_context?: JurisdictionContext | null;
 };
 
 export type DraftPermit = {
@@ -65,10 +81,19 @@ export type RoadmapDraft = {
 const AI = "ai_assisted" as const;
 const NEEDS = "needs_agency_confirmation" as const;
 
+/**
+ * Legacy free-text parser retained ONLY as a defensive last resort.
+ * It refuses any token that looks like a ZIP code, a state-code+digits combo,
+ * or a bare 2-letter state — so a raw string like "MD 21401" NEVER becomes a
+ * city or county label. The primary path is `jurisdiction_context`.
+ */
 function parseAddress(addr?: string | null): { city?: string; county?: string; state?: string } {
   if (!addr) return {};
   const parts = addr.split(",").map((s) => s.trim()).filter(Boolean);
-  // Common patterns: "123 Main St, Baltimore, MD 21201" or "..., Anne Arundel County, MD"
+  const looksLikeZipOrCode = (s: string) =>
+    /^\d/.test(s) || /^[A-Z]{2}\s*\d/i.test(s) || /^[A-Z]{2}$/i.test(s) || /\b\d{5}(?:-\d{4})?\b/.test(s);
+  const isCityish = (s: string) => /^[A-Za-z][A-Za-z\s.'\-]{1,60}$/.test(s) && !looksLikeZipOrCode(s);
+
   let state: string | undefined;
   let city: string | undefined;
   let county: string | undefined;
@@ -78,7 +103,7 @@ function parseAddress(addr?: string | null): { city?: string; county?: string; s
     if (m) state = m[1];
   }
   const cityCandidate = parts.length >= 2 ? parts[parts.length - 2] : undefined;
-  if (cityCandidate) {
+  if (cityCandidate && isCityish(cityCandidate)) {
     if (/county/i.test(cityCandidate)) county = cityCandidate.replace(/\s+county/i, "").trim();
     else city = cityCandidate;
   }
@@ -89,11 +114,42 @@ function trade(scope: ScopeInputForRules, key: string): TradeVal["involved"] {
   return scope.trades?.[key]?.involved ?? "unsure";
 }
 
+function fromContext(ctx: JurisdictionContext | null | undefined) {
+  if (!ctx) {
+    return {
+      cityLabel: "Local jurisdiction (needs confirmation)",
+      countyLabel: "County (needs confirmation)",
+      stateLabel: "State (needs confirmation)",
+      confirmed: false,
+    };
+  }
+  const stateLabel = ctx.state;
+  const countyLabel = `${ctx.county} County, ${ctx.state}`;
+  const cityLabel = ctx.incorporated && ctx.municipality ? `${ctx.municipality}, ${ctx.state}` : countyLabel;
+  return { cityLabel, countyLabel, stateLabel, confirmed: !!ctx.confirmed };
+}
+
+/** Prefer the confirmed authority's official name; else a safe generic label. */
+function agencyName(ctx: JurisdictionContext | null | undefined, role: string, fallback: string): string {
+  const exact = ctx?.authorities?.find((a) => a.role === role)?.official_name;
+  if (exact) return exact;
+  if (!ctx) return `${fallback} — exact authority needs confirmation`;
+  return fallback;
+}
+
 export function buildRoadmapDraft(scope: ScopeInputForRules): RoadmapDraft {
-  const auth = parseAddress(scope.address);
-  const cityLabel = auth.city ? `${auth.city}${auth.state ? ", " + auth.state : ""}` : (auth.county ? `${auth.county} County${auth.state ? ", " + auth.state : ""}` : "Local jurisdiction");
-  const countyLabel = auth.county ? `${auth.county} County${auth.state ? ", " + auth.state : ""}` : "County";
-  const stateLabel = auth.state ?? "State";
+  const ctx = scope.jurisdiction_context ?? null;
+  const legacy = ctx ? null : parseAddress(scope.address);
+  const { cityLabel, countyLabel, stateLabel, confirmed } = fromContext(
+    ctx ??
+      (legacy && (legacy.city || legacy.county || legacy.state)
+        ? { municipality: legacy.city ?? null, county: legacy.county ?? "Unknown", state: legacy.state ?? "??", incorporated: !!legacy.city, confirmed: false }
+        : null),
+  );
+  // When jurisdiction is not confirmed, every verification is downgraded so
+  // the UI can never present unresolved agencies as authoritative.
+  const baseline: Verification = confirmed ? AI : NEEDS;
+
 
   const isCommercial = scope.residential_or_commercial === "commercial" || scope.residential_or_commercial === "mixed_use";
   const isResidential = scope.residential_or_commercial === "residential";
@@ -454,8 +510,49 @@ export function buildRoadmapDraft(scope: ScopeInputForRules): RoadmapDraft {
   if (!scope.construction_value_cents) followups.push({ question: "What is the estimated construction value?", field_hint: "construction_value_cents" });
   if (!scope.sq_ft_affected && !scope.sq_ft_gross) followups.push({ question: "What is the square footage of the affected area?", field_hint: "sq_ft_affected" });
 
+  // ==== Verification downgrade when jurisdiction is not confirmed ====
+  // A ZIP or an unresolved municipality can never be treated as an authority.
+  // Force every permit, document, and agency to "needs_agency_confirmation" so
+  // the UI cannot present unresolved reviewers as AI-assisted or verified.
+  if (!confirmed) {
+    for (const p of permits) p.verification = NEEDS;
+    for (const d of documents) d.verification = NEEDS;
+  }
+  // Merge exact agency names when the caller supplied them via ctx.authorities.
+  if (ctx?.authorities?.length) {
+    const roleMap: Record<string, string> = {};
+    for (const a of ctx.authorities) roleMap[a.role] = a.official_name;
+    const roleForCategory = (c: PermitCategory): string | null => {
+      switch (c) {
+        case "building": case "electrical": case "mechanical": case "plumbing": return "building";
+        case "zoning": case "sign": return "planning_zoning";
+        case "fire": return "fire";
+        case "health": return "health";
+        case "site": return "public_works";
+        case "row": return "transportation_row";
+        case "environmental": return "environmental";
+        case "co": case "tco": return "building";
+        default: return null;
+      }
+    };
+    for (const p of permits) {
+      const role = roleForCategory(p.category);
+      if (role && roleMap[role]) p.agency = roleMap[role];
+    }
+    for (const a of agencies) {
+      const role = /building/i.test(a.role ?? "") ? "building"
+        : /zoning|planning|sign/i.test(a.role ?? "") ? "planning_zoning"
+        : /fire/i.test(a.role ?? "") ? "fire"
+        : /health|food/i.test(a.role ?? "") ? "health"
+        : /site|public works|grading/i.test(a.role ?? "") ? "public_works"
+        : null;
+      if (role && roleMap[role]) a.name = roleMap[role];
+    }
+  }
+
   // Confidence heuristic
   const filled = [
+
     scope.address, scope.residential_or_commercial, scope.project_type, scope.occupancy_proposed,
     scope.construction_value_cents, scope.sq_ft_affected ?? scope.sq_ft_gross, scope.scope_text,
   ].filter((x) => x != null && x !== "").length;
@@ -470,7 +567,12 @@ export function buildRoadmapDraft(scope: ScopeInputForRules): RoadmapDraft {
 
   return {
     summary,
-    authority_stack: { city: auth.city, county: auth.county, state: auth.state },
+    authority_stack: {
+      city: ctx?.incorporated ? ctx.municipality ?? undefined : undefined,
+      county: ctx?.county,
+      state: ctx?.state,
+    },
+
     permits,
     documents,
     agencies,
