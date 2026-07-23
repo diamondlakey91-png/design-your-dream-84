@@ -423,7 +423,8 @@ export const PORTAL_REGISTRY: PortalEntry[] = [
   },
   {
     jurisdiction: "Philadelphia (eCLIPSE)", state: "PA", platform: "Custom",
-    url: "https://eclipse.phila.gov/phillylmsprod/int/lms/Login.aspx",
+    url: "https://www.phila.gov/departments/department-of-licenses-and-inspections/permits-and-certificates/",
+    notes: "Direct eCLIPSE login is unstable — this landing page redirects to the current portal.",
   },
   {
     jurisdiction: "Phoenix (PDD Search)", state: "AZ", platform: "Custom",
