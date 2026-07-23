@@ -241,7 +241,9 @@ export async function callGeminiJSON<T>(
     try {
       return schema.parse(tryParse(repaired));
     } catch (err) {
-      console.error("callGeminiJSON parse failed", { finish_reason: j.choices?.[0]?.finish_reason, preview: raw.slice(0, 500), err });
+      const finish = j.choices?.[0]?.finish_reason;
+      console.error("callGeminiJSON parse failed", { finish_reason: finish, preview: raw.slice(0, 800), err });
+      if (finish === "length") throw new Error("AI response was truncated. Try again — increased token budget applied.");
       throw new Error("AI returned an unreadable response. Try again.");
     }
   }
