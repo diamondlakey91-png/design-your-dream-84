@@ -55,6 +55,12 @@ const energovSearch = (host: string) => (addr: string) =>
   `https://${host}/EnerGov_Prod/SelfService#/search?searchText=${enc(addr)}`;
 const energovHome = (host: string) => `https://${host}/EnerGov_Prod/SelfService#/home`;
 
+// Google search fallback — scoped to .gov sites so the top result is the
+// jurisdiction's actual portal. Guarantees the link always resolves to a
+// live page even for jurisdictions without a stable ACA/ePortal deep link.
+export const govSearchUrl = (jurisdiction: string, state: string, extra = "building permits online portal") =>
+  `https://www.google.com/search?q=${encodeURIComponent(`${jurisdiction} ${state} ${extra} site:.gov`)}`;
+
 function A(
   jurisdiction: string,
   state: string,
@@ -83,6 +89,27 @@ function E(
     platform: "EnerGov",
     url: energovHome(host),
     addressSearch: energovSearch(host),
+    ...extra,
+  };
+}
+/** Search-fallback entry for jurisdictions without a stable direct portal URL.
+ *  Uses a `site:.gov` Google search so users still land on the right portal. */
+function S(
+  jurisdiction: string,
+  state: string,
+  platform: PortalPlatform = "Custom",
+  extra: Partial<PortalEntry> = {},
+): PortalEntry {
+  return {
+    jurisdiction,
+    state,
+    platform,
+    url: extra.url ?? govSearchUrl(jurisdiction, state),
+    addressSearch: (a: string) => govSearchUrl(jurisdiction, state, `${a} permit`),
+    permitSearch: (n: string) => govSearchUrl(jurisdiction, state, `permit ${n}`),
+    notes:
+      extra.notes ??
+      "No stable public portal deep link — opens a scoped .gov search that surfaces the jurisdiction's live permit portal.",
     ...extra,
   };
 }
