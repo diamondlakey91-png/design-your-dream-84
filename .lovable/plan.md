@@ -1,274 +1,217 @@
 
-# Scope of Work Intelligence — Plan
+# Jurisdiction Resolution Correction — Scope of Work + Permit Roadmap
 
-Additive feature. No redesign. Reuses existing PERMIVIO cards, typography, colors, spacing, dark theme, blue/purple accents, and current navigation. New screens live inside the existing project shell.
+This is a logic and data-quality correction. No visual redesign. Existing PERMIVIO cards, tabs, spacing, colors, typography, icons and navigation stay exactly as they are. New content is inserted into the existing card system.
 
-## 1. Screen Flow
+---
+
+## 1. Files and components to modify
+
+Server / logic
+- `src/lib/scope.functions.ts` — require full structured address; reject "MD 21401"-style inputs from acting as jurisdiction.
+- `src/lib/permitRules.ts` — stop using ZIP/state string as agency name; agencies come from the resolved jurisdiction, not the mailing address.
+- `src/lib/roadmap.functions.ts` — block roadmap generation until jurisdiction is resolved (or explicitly marked "Needs Confirmation"); tag every permit/doc/agency with jurisdiction_id and verification level per the new rules.
+- `src/lib/roadmapEnrich.functions.ts` — enrichment queries keyed on resolved municipality + county + state + adopted-code sources, not the raw mailing city; may not upgrade an item to "Verified" unless its agency is resolved.
+- `src/lib/jurisdiction.functions.ts` **(new)** — `resolveAddress`, `getJurisdictionCandidates`, `confirmJurisdiction`, `overrideAuthority`, `requestHumanVerification`.
+- `src/lib/geocode.server.ts` **(new, server-only)** — Google Geocoding + reverse-geocoding (uses existing `GOOGLE_MAPS_API_KEY`); returns lat/lng, place components, incorporated flag.
+- `src/lib/parcel.server.ts` **(new, server-only)** — best-effort parcel + municipal-boundary lookup via existing state/county open-data portals via Firecrawl; graceful "unknown" fallback.
+- `src/lib/authorityRegistry.ts` **(new)** — curated exact-agency records (building, planning/zoning, fire, health, public works, site development, environmental, ROW/transportation, utilities, historic/floodplain) keyed by county/municipality; extends existing `portalRegistry.ts` and `healthAgencyRegistry.ts`, does not replace them.
+- `src/lib/adoptedCodes.ts` **(new)** — adopted code editions + local amendments by jurisdiction, with source + effective date + verified date.
+
+UI (content changes only, existing cards / classes)
+- `src/components/project/ScopeTab.tsx` — intake form gains: Street, Suite/Unit, City, State, ZIP, Parcel/Tax ID (optional). Existing free-text location field is deprecated for new projects; kept read-only for legacy.
+- `src/components/project/JurisdictionConfirmCard.tsx` **(new)** — same card shell as existing project cards; shown above `RoadmapView`. Contains resolved address, parcel, municipality, county, state, incorporated flag, each authority with responsibility / source / verification / last-checked date, and actions: Confirm, Correct location, Select different authority, Request human verification.
+- `src/components/project/RoadmapView.tsx` — every permit card gains: exact agency, requirement status, verification, triggering scope condition, source, last-verified date, timeline basis. Roadmap header shows "Draft — jurisdiction not confirmed" until confirmation. No layout change; new rows use existing muted / mono / badge styles.
+- `src/components/project/AgencyBadge.tsx` **(new)** — renders exact-agency name + department; falls back to "Exact authority needs confirmation".
+
+DB
+- New tables: `jurisdictions`, `authorities`, `official_sources`, `jurisdiction_confirmations`, `code_adoptions`.
+- New columns on `permit_roadmaps`, `roadmap_permits`, `roadmap_documents`, `roadmap_agencies` (see §3–§5).
+
+---
+
+## 2. Address-resolution workflow
 
 ```text
-Project Dashboard
-  └─ [New tab: "Scope & Roadmap"]  (added alongside Overview / Docs / Checklist / Inspections)
-       ├─ Step 1  Scope Intake (multi-section form, single page, sticky Save)
-       │         └─ Autosave draft → scope_of_work row (status=draft)
-       ├─ Step 2  Jurisdiction Resolution (auto, with manual override card)
-       │         └─ Confirms City / County / State authorities
-       ├─ Step 3  AI Analysis (progress card, cancellable, ~20–60s)
-       │         └─ Streams status: "Resolving jurisdiction → Fetching agencies → Matching permits → Drafting roadmap"
-       ├─ Step 4  Follow-up Questions (only if AI marks gaps)
-       │         └─ Answers loop back into analysis (re-run partial)
-       └─ Step 5  Permit Roadmap View (result)
-                 ├─ Permits list (grouped by agency)  — each card has verification badge
-                 ├─ Documents required
-                 ├─ Sequence & Critical Path (visual timeline)
-                 ├─ Fees & Review Timelines (with source links)
-                 ├─ Risks & Missing Info
-                 ├─ Sources panel (citations)
-                 └─ [Send to Checklist] [Request Human Verification] [Export PDF]
+Intake form
+  -> validate structured address (street + city + state + ZIP required; suite + parcel optional)
+  -> POST resolveAddress
+       1. Google Geocoding -> lat/lng, formatted address, place components
+       2. Reverse geocode + admin boundary lookup:
+            a. County (always)
+            b. Municipality (only if lat/lng falls inside an incorporated city boundary)
+            c. Incorporated vs unincorporated flag
+       3. Parcel lookup (best effort) by county open-data / state GIS via Firecrawl
+       4. Build authority candidate set from authorityRegistry keyed by:
+            - incorporated municipality (if inside city limits) OR county (if unincorporated)
+            - overlay authorities (state fire marshal, county health, state DOT for state roads, etc.)
+       5. Return JurisdictionCandidate with confidence per authority
+  -> JurisdictionConfirmCard renders candidates
+  -> User action:
+       Confirm      -> writes jurisdiction_confirmations row (source=user_confirmed)
+       Correct      -> re-runs resolveAddress with edited fields
+       Reassign     -> overrideAuthority(role, authority_id | free_text)
+       Human review -> requestHumanVerification -> status=pending_review
+  -> generateRoadmapFromRules is only allowed to emit verification="verified"
+     for items whose agency_id belongs to a confirmed authority; everything
+     else is "ai_assisted" or "needs_confirmation" per §7.
 ```
 
-Empty-state on Overview: "Add Scope of Work to generate roadmap" CTA using existing outlined card style.
+Rules:
+- A ZIP code alone never resolves a jurisdiction. If geocoding returns only a ZIP centroid, resolution fails with `low_confidence_address`.
+- Mailing city != permitting city when the parcel is unincorporated. The incorporated flag drives whether the city or the county is the primary building authority.
+- If Google returns multiple candidates, the form asks the user to pick before proceeding.
 
-## 2. Intake Questions (grouped, matches user list exactly)
+---
 
-Location & Classification
-- Project address (autocomplete, required)
-- Residential or Commercial (radio)
-- Existing occupancy / use
-- Proposed occupancy / use
-- Project type (New construction / TI / Change of occupancy / Addition / Alteration / Repair / Demolition / Shell / Core & shell)
-- Construction classification (IBC I-A … V-B, or IRC)
-- Construction value ($)
-- Square footage (gross / affected)
+## 3. Jurisdiction data model
 
-Scope Description
-- Detailed scope of work (long text)
+`public.jurisdictions`
+- id (uuid pk)
+- state (text)
+- county (text)
+- municipality (text, nullable when unincorporated)
+- incorporated (bool)
+- fips_county (text, nullable)
+- fips_place (text, nullable)
+- centroid_lat / centroid_lng (numeric, nullable)
+- created_at / updated_at
 
-Trade Involvement (each: Yes / No / Unsure)
-- Interior, Exterior, Structural, Electrical, Mechanical, Plumbing
-- Fire alarm, Fire sprinkler / suppression
-- Food service, Signage
-- Site development, Grading, Stormwater, Right-of-way, Utility
+`public.jurisdiction_confirmations`
+- id (uuid pk)
+- project_id (uuid fk projects)
+- jurisdiction_id (uuid fk jurisdictions)
+- formatted_address (text)
+- parcel_number (text, nullable)
+- lat / lng (numeric)
+- incorporated (bool)
+- status ('unconfirmed' | 'user_confirmed' | 'pending_review' | 'human_verified')
+- confirmed_by (uuid, nullable)
+- confirmed_at (timestamptz, nullable)
+- notes (text)
+- created_at / updated_at
 
-Dates
-- Target construction start date
-- Target opening / TCO date
+RLS: owner + admin. GRANTs to authenticated + service_role per platform rules.
 
-## 3. Conditional Question Logic
+---
 
-Only reveal deeper questions when triggered — keeps the form short.
+## 4. Agency / authority data model
 
-- Residential → hide "Construction classification IBC" (default IRC); show "Number of dwelling units".
-- Commercial + Food service = Yes → ask: seating count, grease-producing equipment, Type I/II hood, grease interceptor sized?, water/sewer impact.
-- Change of occupancy → force re-answer of Existing vs Proposed use; add "Is sprinkler system in place?" and "Egress reconfigured?"
-- Structural = Yes → ask: load-bearing wall changes, foundation work, roof structure, seismic retrofit.
-- Fire sprinkler = Yes → NFPA 13/13R/13D, new/modification, # heads (optional).
-- Site development / Grading / Stormwater = Yes → disturbed area (sq ft / acres), impervious added, floodplain, wetlands proximity.
-- Right-of-way = Yes → sidewalk, curb cut, lane closure, encroachment.
-- Utility = Yes → water, sewer, gas, electric, telecom; new service vs modification.
-- Signage = Yes → wall / freestanding / illuminated / electronic; historic district?
-- Construction value ≥ jurisdiction threshold OR sq ft ≥ threshold → flag likely design-professional stamp requirement.
-- Target opening date < AI-estimated timeline → risk flag ("aggressive schedule").
+`public.authorities`
+- id (uuid pk)
+- jurisdiction_id (uuid fk)
+- role ('building' | 'planning_zoning' | 'fire' | 'health' | 'public_works' | 'site_development' | 'environmental' | 'transportation_row' | 'utility_water' | 'utility_sewer' | 'utility_electric' | 'utility_gas' | 'stormwater' | 'historic' | 'floodplain' | 'other')
+- official_name (text, **required — no ZIP-based placeholders**)
+- department (text, nullable)
+- responsibility (text)
+- website (text, nullable)
+- portal_url (text, nullable)
+- phone (text, nullable)
+- source_id (uuid fk official_sources, nullable)
+- verification ('verified' | 'ai_assisted' | 'needs_confirmation')
+- last_verified_at (timestamptz, nullable)
+- created_at / updated_at
 
-Logic runs client-side (rules file) so the form stays snappy; AI does not gate the intake.
+Uniqueness: (`jurisdiction_id`, `role`, `official_name`).
 
-## 4. Database Tables and Fields
+Existing `portalRegistry.ts` and `healthAgencyRegistry.ts` seed `authorities` on first jurisdiction touch; the app never emits agency names that were not seeded or explicitly entered by a user / admin.
 
-New tables (public schema, RLS on, GRANT to authenticated + service_role). Existing `projects`, `permit_items`, `jurisdiction_profiles`, `chat_threads` untouched.
+`authorityRegistry.ts` is the code-side lookup used to seed the DB per resolved jurisdiction. Anne Arundel County, City of Annapolis, Baltimore County, etc. get exact records — never "MD 21401 — Building Department".
 
-`scope_of_work`
-- id uuid pk, project_id fk projects, user_id fk auth.users
-- address, address_normalized, lat, lng
-- occupancy_existing, occupancy_proposed
-- residential_or_commercial (enum)
-- project_type (enum), construction_type (enum), dwelling_units int
-- construction_value_cents bigint, sq_ft_gross int, sq_ft_affected int
-- scope_text text
-- trades jsonb  (interior/exterior/structural/electrical/mechanical/plumbing/fire_alarm/fire_sprinkler/food_service/signage/site_dev/grading/stormwater/row/utility → {involved: 'yes'|'no'|'unsure', details: jsonb})
-- target_start_date, target_open_date
-- status enum(draft, submitted, analyzing, needs_followup, complete)
-- created_at, updated_at
+---
 
-`permit_roadmaps`
-- id uuid pk, scope_id fk scope_of_work, project_id fk projects
-- jurisdiction_id fk jurisdiction_profiles (nullable if unresolved)
-- summary text
-- health_score int, confidence numeric
-- generated_by_model text, prompt_version text
-- created_at
+## 5. Official-source model + code adoptions
 
-`roadmap_permits`
-- id, roadmap_id fk permit_roadmaps
-- name, agency, level enum(city, county, state, federal, utility)
-- category enum(zoning, building, electrical, mechanical, plumbing, fire, health, site, environmental, row, utility, business_license, sign, tco, co)
-- likelihood enum(required, likely, conditional, not_required)
-- verification enum(verified, ai_assisted, needs_agency_confirmation)
-- fee_estimate_cents nullable, fee_basis text
-- review_days_min, review_days_max
-- sequence_order int, depends_on uuid[], concurrent_with uuid[], critical_path bool
-- notes, source_ids uuid[]
+`public.official_sources`
+- id (uuid pk)
+- url (text)
+- title (text)
+- publisher (text)         -- e.g. "Anne Arundel County, MD"
+- kind ('agency_site' | 'portal' | 'code' | 'ordinance' | 'amendment' | 'fee_schedule' | 'other')
+- quote (text, nullable)
+- fetched_at (timestamptz)
+- (unique on url)
 
-`roadmap_documents`
-- id, roadmap_id, permit_id nullable, name, description, required bool, verification enum, source_ids uuid[]
+`public.code_adoptions`
+- id (uuid pk)
+- jurisdiction_id (uuid fk)
+- discipline ('building' | 'residential' | 'fire' | 'accessibility' | 'energy' | 'plumbing' | 'mechanical' | 'electrical' | 'health')
+- code_family (text)       -- IBC, IRC, IFC, NFPA 13, ICC A117.1, IECC, ASHRAE 90.1, NEC, etc.
+- edition (text)           -- "2018", "2021"
+- local_amendments_url (text, nullable)
+- effective_date (date, nullable)
+- source_id (uuid fk official_sources)
+- verification ('verified' | 'ai_assisted' | 'needs_confirmation')
+- last_verified_at (timestamptz, nullable)
 
-`roadmap_agencies`
-- id, roadmap_id, name, level, jurisdiction, url, phone, role, verification enum, source_id nullable
+`roadmap_permits` gains: `authority_id`, `trigger_condition` (text), `timeline_basis` ('published' | 'permivio_history' | 'ai_estimate' | 'unknown'), `code_adoption_ids` (uuid[]).
+`roadmap_documents` gains: `required_by_authority_id`, `required_by_permit_id`.
+`roadmap_agencies` gains: `authority_id` (nullable during migration).
 
-`roadmap_sources`
-- id, roadmap_id, url, title, publisher, retrieved_at, quote, kind enum(agency_site, code, ordinance, portal, other)
+All new columns nullable; migration keeps existing rows readable.
 
-`roadmap_risks`
-- id, roadmap_id, severity enum(low, med, high), category, message, mitigation
+RLS + GRANTs: read-only for `authenticated` on `authorities`, `official_sources`, `code_adoptions` (they are shared reference data); write only via service_role / admin-role RPCs. `jurisdictions` and `jurisdiction_confirmations` are project-scoped.
 
-`roadmap_followups`
-- id, roadmap_id, question, field_hint, answered_value, answered_at
+---
 
-`roadmap_verifications` (human review workflow)
-- id, roadmap_id, item_table, item_id, requested_by, assigned_to, status enum(open, in_review, verified, rejected), notes, evidence_url, decided_at
+## 6. Conditional-question logic
 
-All tables: `ALTER TABLE ... ENABLE RLS`; policies scoped to `project.owner_id = auth.uid()` (via join) and admin role via `has_role`. `GRANT SELECT, INSERT, UPDATE, DELETE ... TO authenticated`; `GRANT ALL ... TO service_role`.
+`permitRules.ts` gains a per-permit `trigger` descriptor:
 
-## 5. AI Analysis Workflow
+```ts
+{ id: 'fire_alarm', trigger: {
+    question: 'Does the scope modify, extend, replace, reprogram or change coverage of the fire alarm system?',
+    fields: ['trades.fire_alarm_scope'],
+    codes_hint: 'NFPA 72',
+  } }
+```
 
-Server function `analyzeScope` (protected, `createServerFn` + `requireSupabaseAuth`), streamed via existing chat.stream route pattern. Steps:
+When the scope answers are ambiguous:
+- Permit is not emitted as "Required".
+- A follow-up question is inserted into `roadmap_followups` referencing the exact trigger.
+- The permit card renders "Pending — waiting for scope confirmation" instead of a generic "Conditional" label.
 
-1. Load `scope_of_work` row; validate required fields with zod.
-2. Resolve jurisdiction (see §6). Persist `jurisdiction_id`.
-3. Build research context:
-   - Look up cached `jurisdiction_profiles` + `portalRegistry` + `healthAgencyRegistry`.
-   - Fan-out Firecrawl searches (reuse existing `tryFirecrawlContext` pattern): building, zoning, fire, health, DPW/site, utility, business license, sign, ROW — scoped `site:.gov`.
-   - Scrape up to N pages in parallel; keep quotes + URLs into `roadmap_sources`.
-4. Rule-based pre-filter: from trades + project_type → shortlist candidate permit categories, mandatory CO/TCO for occupancy changes and new construction.
-5. LLM pass (Gemini 2.0 Flash, JSON mode, low temp) with a structured template. Prompt requires: every permit/document/agency must reference a source_id OR be labeled `needs_agency_confirmation`. No invention: if not in scraped context and not model-code default (IBC/IRC/NFPA/NEC), mark `ai_assisted` and add a follow-up question.
-6. Normalize JSON (extend existing `normalizeComplianceJson`) → zod parse → insert into roadmap tables in a single transaction.
-7. If AI returned `followups[]`, set `scope_of_work.status = needs_followup` and surface Step 4 UI.
-8. On completion, mirror required permits into existing `permit_items` (checklist) via "Send to Checklist" action so downstream tracking still works.
+Triggers implemented for: fire alarm, fire sprinkler, health plan review, sign permit, site-development, grease interceptor, hood/ANSUL, backflow, ROW / curb cut, tree removal, floodplain development, historic COA.
 
-Prompt/version stored on `permit_roadmaps.prompt_version` for reproducibility.
+---
 
-## 6. Jurisdiction Matching Logic
+## 7. Verification-state logic
 
-Reuse existing helpers; add explicit resolver:
+Enforced in `roadmap.functions.ts` and `roadmapEnrich.functions.ts`:
 
-1. Geocode address (existing Google Maps key) → lat/lng + administrative components.
-2. From components extract: state, county, incorporated city (if any). Detect unincorporated → county authority.
-3. Match to `jurisdiction_profiles` by `(state, city)` then `(state, county)`. If none → create profile stub (unverified) and surface manual confirm.
-4. Overlay state-level authorities (health, environmental, DOT for ROW on state roads, state fire marshal for regulated occupancies).
-5. Detect special overlays: historic district, floodplain (FEMA layer if available; else follow-up), coastal, tribal, airport.
-6. Emit `authority_stack` = [city, county, state, federal-if-applicable, utility providers]. This stack is passed to the LLM and constrains recommendations.
-7. User can override matched jurisdiction; override recorded on roadmap.
+| Condition                                                                                             | verification            |
+| ----------------------------------------------------------------------------------------------------- | ----------------------- |
+| Authority resolved AND item backed by an `official_sources` row AND jurisdiction confirmed by user or human | verified                |
+| Authority resolved, jurisdiction confirmed, no official source yet                                    | ai_assisted             |
+| Authority not resolved OR jurisdiction not confirmed OR trigger unresolved                            | needs_confirmation      |
 
-## 7. Permit Recommendation Model
+Explicit rule: **an item may not be `ai_assisted` if its agency has not been identified.** It must be `needs_confirmation`. Code path adds an assertion + Zod refinement so this can't regress.
 
-Hybrid: rule table + LLM refinement.
+Roadmap header states:
+- "Draft — jurisdiction not confirmed" when no confirmation row exists.
+- "Confirmed by user" or "Human-verified" once set; only then may individual items be labeled `verified`.
 
-Rule table (`permit_rules`, seeded, editable by admins later):
-- Input signals: project_type, occupancy_existing→proposed, trades, thresholds (value, sq_ft, disturbed area).
-- Output: candidate permits with default likelihood + category + typical reviewing agency.
-- Examples: `food_service=yes → Health permit (county/state)`; `change_of_occupancy=yes → CO required`; `disturbed_area ≥ 5000 sqft → grading + SWPPP`; `structural=yes → building + structural review`; `signage=yes AND illuminated → sign + electrical`.
+---
 
-LLM refines: adjusts likelihood using jurisdiction context, adds jurisdiction-specific permits (e.g., NYC LAA, DC BOCA-derived, Baltimore ZAD), removes non-applicable ones, and cites sources.
+## 8. Migration plan for existing generic results
 
-Concurrency and dependencies encoded as `depends_on` / `concurrent_with` on `roadmap_permits`. Critical-path = longest chain of dependencies until CO.
+Backfill migration (non-destructive):
+1. Add new tables + columns; keep existing columns.
+2. For every existing `permit_roadmaps` row: set `roadmap.status = 'needs_rescope'` if no `jurisdiction_confirmations` row exists.
+3. For every existing `roadmap_agencies.name` matching `/^[A-Z]{2}\s?\d{5}/` (ZIP-style) OR containing "— Building Department" / "Local " prefix without a jurisdiction:
+   - Set `verification = 'needs_confirmation'`.
+   - Blank out `name` to `Exact authority needs confirmation` for display, keep original in `raw_name` for audit.
+4. For every existing `roadmap_permits`: downgrade `verification` to `needs_confirmation` unless it already had an official source AND a resolvable authority.
+5. UI: `RoadmapView` shows a one-time banner on legacy projects: "Jurisdiction was inferred from a ZIP code. Confirm your jurisdiction to generate verified requirements." Clicking opens the new intake fields in `ScopeTab` prefilled from the old free-text location where possible.
+6. No data deleted. Users can re-run `Generate` / `AI enrich` after confirmation.
 
-## 8. Timeline Calculation Model
+Rollout order:
+1. DB migration (tables, columns, GRANTs, RLS, indexes).
+2. Server: `geocode.server.ts`, `jurisdiction.functions.ts`, `authorityRegistry.ts`, `adoptedCodes.ts`.
+3. UI: `ScopeTab` structured-address fields; `JurisdictionConfirmCard`; `AgencyBadge`.
+4. `RoadmapView` per-permit fields (exact agency, trigger, source, verified date, timeline basis).
+5. `permitRules.ts` trigger descriptors + `roadmap.functions.ts` verification gating.
+6. `roadmapEnrich.functions.ts` re-scoped to confirmed jurisdiction + adopted codes.
+7. Backfill migration for legacy roadmaps.
 
-- Each permit has `review_days_min/max` (from source or model-code default).
-- Build a DAG: nodes = permits + inspections + CO; edges = dependencies.
-- Earliest-start / earliest-finish computed forward pass from `target_start_date` (or today).
-- Latest-finish computed backward from `target_open_date`.
-- Critical path = zero-slack nodes; flagged in UI.
-- Construction & inspection timeline appended after permit issuance milestones, using rough duration inputs (project_type + sq_ft heuristic; user editable).
-- If total exceeds target_open_date → risk entry auto-created ("Schedule at risk by N days").
-
-## 9. Verification Model
-
-Every recommendation carries `verification` ∈ {`verified`, `ai_assisted`, `needs_agency_confirmation`}.
-
-- `verified`: sourced from a `.gov` page scraped this run OR from an existing `jurisdiction_profiles` field previously marked verified. Must have `source_id`.
-- `ai_assisted`: derived from model code (IBC, IRC, IFC, NFPA, NEC, IECC) or rule table; no jurisdiction-specific source; labeled with the code section.
-- `needs_agency_confirmation`: rule/LLM inferred but lacking both source and model-code basis; auto-generates a follow-up or human verification task.
-
-Badges rendered with the existing colored-chip component (green/amber/blue) — no new design tokens.
-
-## 10. Source Citation Model
-
-- Only sources with `url` starting `https://` and host in an allowed list (`*.gov`, `*.us`, jurisdictional custom TLDs) count as `verified`.
-- Each source stored once per roadmap in `roadmap_sources` with `retrieved_at` + `quote` (≤ 400 chars).
-- Permits, documents, agencies, fees, timelines each reference `source_ids uuid[]`.
-- UI: click any badge → drawer listing sources with quote preview + outbound link.
-- Model-code citations stored as sources with `kind='code'` and `publisher='ICC/NFPA/…'`, `url` optional.
-
-## 11. Error and Empty States
-
-- No address → intake blocks submission with inline error (existing form pattern).
-- Jurisdiction unresolved → yellow banner "We could not confirm your jurisdiction — confirm City/County" with dropdowns.
-- Firecrawl/network failure → roadmap still generated with `ai_assisted` labels; banner "Live jurisdiction sources unavailable — verify before submission." Retry button.
-- AI returned invalid JSON after 2 retries → toast + "Retry analysis" CTA; scope status returns to `submitted`.
-- Zero permits detected → empty-state card "Scope appears exempt — confirm with jurisdiction" plus follow-up question set.
-- No target dates → timeline shown as relative days.
-- Rate limit (429) / credits (402) → existing gateway error toasts.
-
-## 12. Human Verification Workflow
-
-- User clicks "Request Human Verification" on any card → creates `roadmap_verifications` row (status=open).
-- Admin role (`has_role('admin')`) sees `/admin/verifications` queue (reuses existing admin route pattern).
-- Admin can attach evidence URL, set status to `verified` or `rejected`, and add notes.
-- On `verified`, the underlying item's `verification` promoted to `verified`; source added.
-- Notification (in-app, existing pattern) to the requesting user.
-- Aggregate: a roadmap's overall confidence increases as items are verified.
-
-## 13. Minimum Viable Version (MVP)
-
-Ship in one release:
-- New `Scope & Roadmap` tab on Project view.
-- `scope_of_work` intake with all listed fields + conditional logic.
-- Jurisdiction resolution using existing geocoder + `jurisdiction_profiles`.
-- `analyzeScope` server function with rule table + Gemini pass + Firecrawl fan-out (reuse existing infra).
-- Roadmap tables + read-only Roadmap view with badges, sources drawer, sequence list.
-- "Send to Checklist" writes into existing `permit_items`.
-- PDF export reusing `pdf-lib` sanitizer pattern.
-- Follow-up question loop (single round).
-- Verification labels enforced.
-
-Explicitly out of MVP: DAG visualization, admin verification queue UI, FEMA/historic overlays, editable rule table UI, multi-round follow-ups.
-
-## 14. Recommended Development Phases
-
-Phase 1 — Data + intake (no AI)
-- Migrations, RLS, GRANTs, zod schemas.
-- Intake form + autosave + conditional logic.
-- Jurisdiction resolver + manual override.
-
-Phase 2 — Rule engine
-- Seed `permit_rules`.
-- Deterministic roadmap draft from rules only (no LLM). Verifiable baseline.
-
-Phase 3 — AI enrichment
-- Firecrawl fan-out + source capture.
-- Gemini pass + normalization + verification labeling.
-- Follow-up questions loop.
-
-Phase 4 — Roadmap UX
-- Roadmap view, sources drawer, badges, "Send to Checklist", PDF export.
-
-Phase 5 — Timeline & critical path
-- DAG builder, CPM computation, target-date risk flagging.
-
-Phase 6 — Human verification
-- `roadmap_verifications` queue, admin UI, promotion flow, notifications.
-
-Phase 7 — Overlays & polish
-- Floodplain / historic / airport / tribal detection.
-- Editable rule table (admin).
-- Multi-round follow-ups, confidence scoring, per-jurisdiction learning.
-
-## Technical Details
-
-- Files added (planned): `src/lib/scope.functions.ts`, `src/lib/scope.server.ts`, `src/lib/jurisdictionResolver.server.ts`, `src/lib/permitRules.ts`, `src/lib/roadmapNormalize.ts`, `src/routes/_authenticated/projects.$id.scope.tsx`, `src/routes/_authenticated/projects.$id.roadmap.tsx`, `src/routes/_authenticated/admin.verifications.tsx` (phase 6), migration files under Supabase migration tool.
-- Reuses: `tryFirecrawlContext`, `normalizeComplianceJson` pattern, `JurisdictionAutocomplete`, existing chip/badge components, `pdf-lib` sanitizer `san`, `useSubscription` gating (Beta unlocks all).
-- Auth: all server functions gated by `requireSupabaseAuth`; admin queue gated by `has_role('admin')`.
-- Model: `google/gemini-2.0-flash`, JSON mode, temp 0.2, max_tokens 32k; prompt version pinned.
-- Streaming: reuse `/api/chat.stream` transport pattern for progress; final result written server-side then fetched.
-- No changes to existing screens beyond adding the new tab entry.
-
-Awaiting approval before implementation.
+Approve to proceed with step 1 (schema + GRANTs + RLS).
