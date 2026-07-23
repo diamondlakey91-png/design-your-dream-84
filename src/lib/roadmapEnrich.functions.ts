@@ -227,7 +227,7 @@ export const enrichRoadmapWithAI = createServerFn({ method: "POST" })
     // Insert sources — dedupe by url
     const sourceUrlSet = new Set<string>();
     const sourceRows: { url: string; title: string | null; publisher: string | null; quote: string | null; kind: "agency_site" | "portal" | "code" | "ordinance" | "other" }[] = [];
-    for (const s of ai.sources) {
+    for (const s of ai.sources ?? []) {
       const url = normalizeUrl(s.url);
       if (!url || sourceUrlSet.has(url)) continue;
       sourceUrlSet.add(url);
