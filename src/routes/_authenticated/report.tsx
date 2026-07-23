@@ -27,6 +27,7 @@ function ReportHubPage() {
   const listFn = useServerFn(listComplianceReports);
   const genFn = useServerFn(generateComplianceReport);
   const delFn = useServerFn(deleteComplianceReport);
+  const pdfFn = useServerFn(exportComplianceReportPdf);
 
   const listQ = useQuery({ queryKey: ["compliance-reports"], queryFn: () => listFn() });
 
@@ -35,6 +36,25 @@ function ReportHubPage() {
   const [agentId, setAgentId] = useState(COMPLIANCE_AGENTS[0].id);
   const [jurisdiction, setJurisdiction] = useState("");
   const [notes, setNotes] = useState("");
+  const [pdfBusy, setPdfBusy] = useState<string | null>(null);
+
+  const downloadPdf = async (id: string, format: "standard" | "wbs") => {
+    try {
+      setPdfBusy(`${id}:${format}`);
+      const { pdf_base64, filename } = await pdfFn({ data: { id, format } });
+      const bin = atob(pdf_base64);
+      const bytes = new Uint8Array(bin.length);
+      for (let i = 0; i < bin.length; i++) bytes[i] = bin.charCodeAt(i);
+      const url = URL.createObjectURL(new Blob([bytes], { type: "application/pdf" }));
+      const a = document.createElement("a");
+      a.href = url; a.download = filename; a.click();
+      URL.revokeObjectURL(url);
+    } catch (e) {
+      toast.error(e instanceof Error ? e.message : "Export failed");
+    } finally {
+      setPdfBusy(null);
+    }
+  };
 
   const gen = useMutation({
     mutationFn: () => genFn({
