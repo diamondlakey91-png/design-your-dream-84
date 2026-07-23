@@ -118,7 +118,7 @@ export const PORTAL_REGISTRY: PortalEntry[] = [
   // ================= Accela (largest footprint) =================
   A("Arlington County", "VA", "ARLINGTONCO", { planReviewUrl: "https://permitva.arlingtonva.us/ProjectDox/index.aspx" }),
   A("Fairfax County", "VA", "fairfax", { planReviewUrl: "https://fidoprod.fairfaxcounty.gov/ProjectDox/" }),
-  S("Loudoun County", "VA", "Accela", { url: "https://loudounpdx.loudoun.gov/", planReviewUrl: "https://loudounpdx.loudoun.gov/ProjectDox/" }),
+  S("Loudoun County", "VA", "Custom", { url: "https://loudounpdx.loudoun.gov/", planReviewUrl: "https://loudounpdx.loudoun.gov/ProjectDox/" }),
   S("Alexandria", "VA", "Custom", { url: "https://www.alexandriava.gov/Permits" }),
   A("San Diego", "CA", "SANDIEGO", { planReviewUrl: "https://plans.sandiego.gov/ProjectDox/" }),
   A("Oakland", "CA", "OAKLAND"),
