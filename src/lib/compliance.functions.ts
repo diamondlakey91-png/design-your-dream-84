@@ -486,8 +486,21 @@ export const exportComplianceReportPdf = createServerFn({ method: "POST" })
     const M = 48;
     const W = 612 - M * 2;
 
+    const san = (s: string) => (s ?? "")
+      .replace(/[\u2018\u2019\u201A\u201B]/g, "'")
+      .replace(/[\u201C\u201D\u201E\u201F]/g, '"')
+      .replace(/[\u2013\u2014\u2212]/g, "-")
+      .replace(/\u2026/g, "...")
+      .replace(/[\u2022\u25E6\u25AA\u25AB]/g, "-")
+      .replace(/[\u2713\u2714]/g, "[x]")
+      .replace(/[\u2715\u2717\u2718]/g, "[ ]")
+      .replace(/\u00A0/g, " ")
+      .replace(/[^\x00-\xFF]/g, "?");
+    const drawText = (t: string, opts: Parameters<typeof page.drawText>[1]) => page.drawText(san(t), opts);
+
+
     const wrap = (text: string, size: number, f = font) => {
-      const words = text.split(/\s+/);
+      const words = san(text).split(/\s+/);
       const lines: string[] = [];
       let line = "";
       for (const w of words) {
@@ -508,31 +521,31 @@ export const exportComplianceReportPdf = createServerFn({ method: "POST" })
     };
     const heading = (t: string, size = 14) => {
       ensure(size + 12);
-      page.drawText(t, { x: M, y, size, font: bold, color: brand });
+      drawText(t, { x: M, y, size, font: bold, color: brand });
       y -= size + 8;
     };
     const para = (t: string, size = 10, color = ink) => {
       for (const l of wrap(t, size)) {
         ensure(size + 4);
-        page.drawText(l, { x: M, y, size, font, color });
+        drawText(l, { x: M, y, size, font, color });
         y -= size + 4;
       }
     };
     const kv = (k: string, v: string) => {
       ensure(14);
-      page.drawText(k, { x: M, y, size: 9, font: bold, color: muted });
+      drawText(k, { x: M, y, size: 9, font: bold, color: muted });
       const vLines = wrap(v, 10);
       for (let i = 0; i < vLines.length; i++) {
         ensure(14);
-        page.drawText(vLines[i], { x: M + 120, y, size: 10, font, color: ink });
+        drawText(vLines[i], { x: M + 120, y, size: 10, font, color: ink });
         y -= 14;
       }
     };
 
     // Header
     page.drawRectangle({ x: 0, y: 752, width: 612, height: 40, color: brand });
-    page.drawText("PERMIVIO · Compliance Report", { x: M, y: 766, size: 12, font: bold, color: rgb(1, 1, 1) });
-    page.drawText(data.format === "wbs" ? "WBS / Gantt Format" : "Standard Format", { x: 612 - M - 120, y: 766, size: 10, font, color: rgb(1, 1, 1) });
+    drawText("PERMIVIO · Compliance Report", { x: M, y: 766, size: 12, font: bold, color: rgb(1, 1, 1) });
+    drawText(data.format === "wbs" ? "WBS / Gantt Format" : "Standard Format", { x: 612 - M - 120, y: 766, size: 10, font, color: rgb(1, 1, 1) });
     y = 730;
 
     heading(r.address, 16);
@@ -554,14 +567,14 @@ export const exportComplianceReportPdf = createServerFn({ method: "POST" })
       const scale = barW / maxDay;
       for (const t of wbs) {
         ensure(22);
-        page.drawText(`${t.id}. ${t.name}`, { x: M, y, size: 9, font: bold, color: ink });
-        page.drawText(`${t.phase}`, { x: M, y: y - 10, size: 8, font, color: muted });
+        drawText(`${t.id}. ${t.name}`, { x: M, y, size: 9, font: bold, color: ink });
+        drawText(`${t.phase}`, { x: M, y: y - 10, size: 8, font, color: muted });
         // bar
         const bx = M + 220 + t.start_offset_days * scale;
         const bw = Math.max(2, t.duration_days * scale);
         page.drawRectangle({ x: M + 220, y: y - 6, width: barW, height: 2, color: rgb(0.9, 0.92, 0.96) });
         page.drawRectangle({ x: bx, y: y - 9, width: bw, height: 8, color: brand });
-        page.drawText(`${t.duration_days}d`, { x: bx + bw + 4, y: y - 8, size: 7, font, color: muted });
+        drawText(`${t.duration_days}d`, { x: bx + bw + 4, y: y - 8, size: 7, font, color: muted });
         y -= 22;
       }
       y -= 8;
@@ -570,7 +583,7 @@ export const exportComplianceReportPdf = createServerFn({ method: "POST" })
       heading("Applicable Departments");
       for (const d of r.report.departments ?? []) {
         ensure(18);
-        page.drawText(d.name, { x: M, y, size: 11, font: bold, color: ink });
+        drawText(d.name, { x: M, y, size: 11, font: bold, color: ink });
         y -= 14;
         para(d.authority_reason, 9, muted);
         if (d.codes?.length) {
@@ -584,7 +597,7 @@ export const exportComplianceReportPdf = createServerFn({ method: "POST" })
     heading("Verified Contacts");
     for (const c of r.contacts ?? []) {
       ensure(28);
-      page.drawText(`${c.department}${c.verified ? "  ✓ verified" : ""}`, { x: M, y, size: 10, font: bold, color: ink });
+      drawText(`${c.department}${c.verified ? "  ✓ verified" : ""}`, { x: M, y, size: 10, font: bold, color: ink });
       y -= 12;
       if (c.phone) para(`Phone: ${c.phone}`, 9);
       if (c.email) para(`Email: ${c.email}`, 9);
