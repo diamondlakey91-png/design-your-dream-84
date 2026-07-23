@@ -46,6 +46,72 @@ export type Database = {
           },
         ]
       }
+      authorities: {
+        Row: {
+          created_at: string
+          department: string | null
+          id: string
+          jurisdiction_id: string
+          last_verified_at: string | null
+          official_name: string
+          phone: string | null
+          portal_url: string | null
+          responsibility: string | null
+          role: Database["public"]["Enums"]["authority_role"]
+          source_id: string | null
+          updated_at: string
+          verification: string
+          website: string | null
+        }
+        Insert: {
+          created_at?: string
+          department?: string | null
+          id?: string
+          jurisdiction_id: string
+          last_verified_at?: string | null
+          official_name: string
+          phone?: string | null
+          portal_url?: string | null
+          responsibility?: string | null
+          role: Database["public"]["Enums"]["authority_role"]
+          source_id?: string | null
+          updated_at?: string
+          verification?: string
+          website?: string | null
+        }
+        Update: {
+          created_at?: string
+          department?: string | null
+          id?: string
+          jurisdiction_id?: string
+          last_verified_at?: string | null
+          official_name?: string
+          phone?: string | null
+          portal_url?: string | null
+          responsibility?: string | null
+          role?: Database["public"]["Enums"]["authority_role"]
+          source_id?: string | null
+          updated_at?: string
+          verification?: string
+          website?: string | null
+        }
+        Relationships: [
+          {
+            foreignKeyName: "authorities_jurisdiction_id_fkey"
+            columns: ["jurisdiction_id"]
+            isOneToOne: false
+            referencedRelation: "jurisdictions"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "authorities_source_id_fkey"
+            columns: ["source_id"]
+            isOneToOne: false
+            referencedRelation: "official_sources"
+            referencedColumns: ["id"]
+          },
+        ]
+      }
       chat_messages: {
         Row: {
           client_message_id: string | null
@@ -124,6 +190,66 @@ export type Database = {
             columns: ["project_id"]
             isOneToOne: false
             referencedRelation: "projects"
+            referencedColumns: ["id"]
+          },
+        ]
+      }
+      code_adoptions: {
+        Row: {
+          code_family: string
+          created_at: string
+          discipline: Database["public"]["Enums"]["code_discipline"]
+          edition: string
+          effective_date: string | null
+          id: string
+          jurisdiction_id: string
+          last_verified_at: string | null
+          local_amendments_url: string | null
+          source_id: string | null
+          updated_at: string
+          verification: string
+        }
+        Insert: {
+          code_family: string
+          created_at?: string
+          discipline: Database["public"]["Enums"]["code_discipline"]
+          edition: string
+          effective_date?: string | null
+          id?: string
+          jurisdiction_id: string
+          last_verified_at?: string | null
+          local_amendments_url?: string | null
+          source_id?: string | null
+          updated_at?: string
+          verification?: string
+        }
+        Update: {
+          code_family?: string
+          created_at?: string
+          discipline?: Database["public"]["Enums"]["code_discipline"]
+          edition?: string
+          effective_date?: string | null
+          id?: string
+          jurisdiction_id?: string
+          last_verified_at?: string | null
+          local_amendments_url?: string | null
+          source_id?: string | null
+          updated_at?: string
+          verification?: string
+        }
+        Relationships: [
+          {
+            foreignKeyName: "code_adoptions_jurisdiction_id_fkey"
+            columns: ["jurisdiction_id"]
+            isOneToOne: false
+            referencedRelation: "jurisdictions"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "code_adoptions_source_id_fkey"
+            columns: ["source_id"]
+            isOneToOne: false
+            referencedRelation: "official_sources"
             referencedColumns: ["id"]
           },
         ]
@@ -369,6 +495,90 @@ export type Database = {
           },
         ]
       }
+      jurisdiction_confirmations: {
+        Row: {
+          city: string
+          confirmed_at: string | null
+          confirmed_by: string | null
+          created_at: string
+          formatted_address: string | null
+          id: string
+          incorporated: boolean | null
+          jurisdiction_id: string | null
+          lat: number | null
+          lng: number | null
+          notes: string | null
+          overrides: Json
+          parcel_number: string | null
+          project_id: string
+          state: string
+          status: Database["public"]["Enums"]["jurisdiction_confirmation_status"]
+          street: string
+          suite: string | null
+          updated_at: string
+          zip: string
+        }
+        Insert: {
+          city: string
+          confirmed_at?: string | null
+          confirmed_by?: string | null
+          created_at?: string
+          formatted_address?: string | null
+          id?: string
+          incorporated?: boolean | null
+          jurisdiction_id?: string | null
+          lat?: number | null
+          lng?: number | null
+          notes?: string | null
+          overrides?: Json
+          parcel_number?: string | null
+          project_id: string
+          state: string
+          status?: Database["public"]["Enums"]["jurisdiction_confirmation_status"]
+          street: string
+          suite?: string | null
+          updated_at?: string
+          zip: string
+        }
+        Update: {
+          city?: string
+          confirmed_at?: string | null
+          confirmed_by?: string | null
+          created_at?: string
+          formatted_address?: string | null
+          id?: string
+          incorporated?: boolean | null
+          jurisdiction_id?: string | null
+          lat?: number | null
+          lng?: number | null
+          notes?: string | null
+          overrides?: Json
+          parcel_number?: string | null
+          project_id?: string
+          state?: string
+          status?: Database["public"]["Enums"]["jurisdiction_confirmation_status"]
+          street?: string
+          suite?: string | null
+          updated_at?: string
+          zip?: string
+        }
+        Relationships: [
+          {
+            foreignKeyName: "jurisdiction_confirmations_jurisdiction_id_fkey"
+            columns: ["jurisdiction_id"]
+            isOneToOne: false
+            referencedRelation: "jurisdictions"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "jurisdiction_confirmations_project_id_fkey"
+            columns: ["project_id"]
+            isOneToOne: false
+            referencedRelation: "projects"
+            referencedColumns: ["id"]
+          },
+        ]
+      }
       jurisdiction_profiles: {
         Row: {
           confidence: string
@@ -570,6 +780,81 @@ export type Database = {
         }
         Relationships: []
       }
+      jurisdictions: {
+        Row: {
+          centroid_lat: number | null
+          centroid_lng: number | null
+          county: string
+          created_at: string
+          fips_county: string | null
+          fips_place: string | null
+          id: string
+          incorporated: boolean
+          municipality: string | null
+          state: string
+          updated_at: string
+        }
+        Insert: {
+          centroid_lat?: number | null
+          centroid_lng?: number | null
+          county: string
+          created_at?: string
+          fips_county?: string | null
+          fips_place?: string | null
+          id?: string
+          incorporated?: boolean
+          municipality?: string | null
+          state: string
+          updated_at?: string
+        }
+        Update: {
+          centroid_lat?: number | null
+          centroid_lng?: number | null
+          county?: string
+          created_at?: string
+          fips_county?: string | null
+          fips_place?: string | null
+          id?: string
+          incorporated?: boolean
+          municipality?: string | null
+          state?: string
+          updated_at?: string
+        }
+        Relationships: []
+      }
+      official_sources: {
+        Row: {
+          created_at: string
+          fetched_at: string
+          id: string
+          kind: Database["public"]["Enums"]["source_kind"]
+          publisher: string | null
+          quote: string | null
+          title: string
+          url: string
+        }
+        Insert: {
+          created_at?: string
+          fetched_at?: string
+          id?: string
+          kind?: Database["public"]["Enums"]["source_kind"]
+          publisher?: string | null
+          quote?: string | null
+          title: string
+          url: string
+        }
+        Update: {
+          created_at?: string
+          fetched_at?: string
+          id?: string
+          kind?: Database["public"]["Enums"]["source_kind"]
+          publisher?: string | null
+          quote?: string | null
+          title?: string
+          url?: string
+        }
+        Relationships: []
+      }
       permit_analyses: {
         Row: {
           analysis: Json
@@ -694,6 +979,7 @@ export type Database = {
         Row: {
           authority_stack: Json
           confidence: number | null
+          confirmation_id: string | null
           created_at: string
           generated_by_model: string | null
           health_score: number | null
@@ -702,12 +988,14 @@ export type Database = {
           project_id: string
           prompt_version: string | null
           scope_id: string
+          status: string
           summary: string | null
           updated_at: string
         }
         Insert: {
           authority_stack?: Json
           confidence?: number | null
+          confirmation_id?: string | null
           created_at?: string
           generated_by_model?: string | null
           health_score?: number | null
@@ -716,12 +1004,14 @@ export type Database = {
           project_id: string
           prompt_version?: string | null
           scope_id: string
+          status?: string
           summary?: string | null
           updated_at?: string
         }
         Update: {
           authority_stack?: Json
           confidence?: number | null
+          confirmation_id?: string | null
           created_at?: string
           generated_by_model?: string | null
           health_score?: number | null
@@ -730,10 +1020,18 @@ export type Database = {
           project_id?: string
           prompt_version?: string | null
           scope_id?: string
+          status?: string
           summary?: string | null
           updated_at?: string
         }
         Relationships: [
+          {
+            foreignKeyName: "permit_roadmaps_confirmation_id_fkey"
+            columns: ["confirmation_id"]
+            isOneToOne: false
+            referencedRelation: "jurisdiction_confirmations"
+            referencedColumns: ["id"]
+          },
           {
             foreignKeyName: "permit_roadmaps_jurisdiction_id_fkey"
             columns: ["jurisdiction_id"]
@@ -1048,12 +1346,15 @@ export type Database = {
       }
       roadmap_agencies: {
         Row: {
+          authority_id: string | null
           created_at: string
           id: string
           jurisdiction: string | null
+          last_verified_at: string | null
           level: Database["public"]["Enums"]["authority_level"] | null
           name: string
           phone: string | null
+          raw_name: string | null
           roadmap_id: string
           role: string | null
           source_id: string | null
@@ -1061,12 +1362,15 @@ export type Database = {
           verification: Database["public"]["Enums"]["verification_label"]
         }
         Insert: {
+          authority_id?: string | null
           created_at?: string
           id?: string
           jurisdiction?: string | null
+          last_verified_at?: string | null
           level?: Database["public"]["Enums"]["authority_level"] | null
           name: string
           phone?: string | null
+          raw_name?: string | null
           roadmap_id: string
           role?: string | null
           source_id?: string | null
@@ -1074,12 +1378,15 @@ export type Database = {
           verification?: Database["public"]["Enums"]["verification_label"]
         }
         Update: {
+          authority_id?: string | null
           created_at?: string
           id?: string
           jurisdiction?: string | null
+          last_verified_at?: string | null
           level?: Database["public"]["Enums"]["authority_level"] | null
           name?: string
           phone?: string | null
+          raw_name?: string | null
           roadmap_id?: string
           role?: string | null
           source_id?: string | null
@@ -1087,6 +1394,13 @@ export type Database = {
           verification?: Database["public"]["Enums"]["verification_label"]
         }
         Relationships: [
+          {
+            foreignKeyName: "roadmap_agencies_authority_id_fkey"
+            columns: ["authority_id"]
+            isOneToOne: false
+            referencedRelation: "authorities"
+            referencedColumns: ["id"]
+          },
           {
             foreignKeyName: "roadmap_agencies_roadmap_id_fkey"
             columns: ["roadmap_id"]
@@ -1111,6 +1425,8 @@ export type Database = {
           name: string
           permit_id: string | null
           required: boolean
+          required_by_authority_id: string | null
+          required_by_permit_id: string | null
           roadmap_id: string
           source_ids: string[]
           verification: Database["public"]["Enums"]["verification_label"]
@@ -1122,6 +1438,8 @@ export type Database = {
           name: string
           permit_id?: string | null
           required?: boolean
+          required_by_authority_id?: string | null
+          required_by_permit_id?: string | null
           roadmap_id: string
           source_ids?: string[]
           verification?: Database["public"]["Enums"]["verification_label"]
@@ -1133,6 +1451,8 @@ export type Database = {
           name?: string
           permit_id?: string | null
           required?: boolean
+          required_by_authority_id?: string | null
+          required_by_permit_id?: string | null
           roadmap_id?: string
           source_ids?: string[]
           verification?: Database["public"]["Enums"]["verification_label"]
@@ -1143,6 +1463,13 @@ export type Database = {
             columns: ["permit_id"]
             isOneToOne: false
             referencedRelation: "roadmap_permits"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "roadmap_documents_required_by_authority_id_fkey"
+            columns: ["required_by_authority_id"]
+            isOneToOne: false
+            referencedRelation: "authorities"
             referencedColumns: ["id"]
           },
           {
@@ -1195,7 +1522,9 @@ export type Database = {
       roadmap_permits: {
         Row: {
           agency: string | null
+          authority_id: string | null
           category: Database["public"]["Enums"]["permit_category"] | null
+          code_adoption_ids: string[]
           concurrent_with: string[]
           created_at: string
           critical_path: boolean
@@ -1203,6 +1532,7 @@ export type Database = {
           fee_basis: string | null
           fee_estimate_cents: number | null
           id: string
+          last_verified_at: string | null
           level: Database["public"]["Enums"]["authority_level"] | null
           likelihood: Database["public"]["Enums"]["permit_likelihood"]
           name: string
@@ -1212,11 +1542,15 @@ export type Database = {
           roadmap_id: string
           sequence_order: number | null
           source_ids: string[]
+          timeline_basis: Database["public"]["Enums"]["timeline_basis"]
+          trigger_condition: string | null
           verification: Database["public"]["Enums"]["verification_label"]
         }
         Insert: {
           agency?: string | null
+          authority_id?: string | null
           category?: Database["public"]["Enums"]["permit_category"] | null
+          code_adoption_ids?: string[]
           concurrent_with?: string[]
           created_at?: string
           critical_path?: boolean
@@ -1224,6 +1558,7 @@ export type Database = {
           fee_basis?: string | null
           fee_estimate_cents?: number | null
           id?: string
+          last_verified_at?: string | null
           level?: Database["public"]["Enums"]["authority_level"] | null
           likelihood?: Database["public"]["Enums"]["permit_likelihood"]
           name: string
@@ -1233,11 +1568,15 @@ export type Database = {
           roadmap_id: string
           sequence_order?: number | null
           source_ids?: string[]
+          timeline_basis?: Database["public"]["Enums"]["timeline_basis"]
+          trigger_condition?: string | null
           verification?: Database["public"]["Enums"]["verification_label"]
         }
         Update: {
           agency?: string | null
+          authority_id?: string | null
           category?: Database["public"]["Enums"]["permit_category"] | null
+          code_adoption_ids?: string[]
           concurrent_with?: string[]
           created_at?: string
           critical_path?: boolean
@@ -1245,6 +1584,7 @@ export type Database = {
           fee_basis?: string | null
           fee_estimate_cents?: number | null
           id?: string
+          last_verified_at?: string | null
           level?: Database["public"]["Enums"]["authority_level"] | null
           likelihood?: Database["public"]["Enums"]["permit_likelihood"]
           name?: string
@@ -1254,9 +1594,18 @@ export type Database = {
           roadmap_id?: string
           sequence_order?: number | null
           source_ids?: string[]
+          timeline_basis?: Database["public"]["Enums"]["timeline_basis"]
+          trigger_condition?: string | null
           verification?: Database["public"]["Enums"]["verification_label"]
         }
         Relationships: [
+          {
+            foreignKeyName: "roadmap_permits_authority_id_fkey"
+            columns: ["authority_id"]
+            isOneToOne: false
+            referencedRelation: "authorities"
+            referencedColumns: ["id"]
+          },
           {
             foreignKeyName: "roadmap_permits_roadmap_id_fkey"
             columns: ["roadmap_id"]
@@ -1658,6 +2007,38 @@ export type Database = {
         | "federal"
         | "utility"
         | "special_district"
+      authority_role:
+        | "building"
+        | "planning_zoning"
+        | "fire"
+        | "health"
+        | "public_works"
+        | "site_development"
+        | "environmental"
+        | "transportation_row"
+        | "utility_water"
+        | "utility_sewer"
+        | "utility_electric"
+        | "utility_gas"
+        | "stormwater"
+        | "historic"
+        | "floodplain"
+        | "other"
+      code_discipline:
+        | "building"
+        | "residential"
+        | "fire"
+        | "accessibility"
+        | "energy"
+        | "plumbing"
+        | "mechanical"
+        | "electrical"
+        | "health"
+      jurisdiction_confirmation_status:
+        | "unconfirmed"
+        | "user_confirmed"
+        | "pending_review"
+        | "human_verified"
       permit_category:
         | "zoning"
         | "building"
@@ -1696,6 +2077,11 @@ export type Database = {
         | "needs_followup"
         | "complete"
       source_kind: "agency_site" | "code" | "ordinance" | "portal" | "other"
+      timeline_basis:
+        | "published"
+        | "permivio_history"
+        | "ai_estimate"
+        | "unknown"
       verification_label:
         | "verified"
         | "ai_assisted"
@@ -1837,6 +2223,41 @@ export const Constants = {
         "utility",
         "special_district",
       ],
+      authority_role: [
+        "building",
+        "planning_zoning",
+        "fire",
+        "health",
+        "public_works",
+        "site_development",
+        "environmental",
+        "transportation_row",
+        "utility_water",
+        "utility_sewer",
+        "utility_electric",
+        "utility_gas",
+        "stormwater",
+        "historic",
+        "floodplain",
+        "other",
+      ],
+      code_discipline: [
+        "building",
+        "residential",
+        "fire",
+        "accessibility",
+        "energy",
+        "plumbing",
+        "mechanical",
+        "electrical",
+        "health",
+      ],
+      jurisdiction_confirmation_status: [
+        "unconfirmed",
+        "user_confirmed",
+        "pending_review",
+        "human_verified",
+      ],
       permit_category: [
         "zoning",
         "building",
@@ -1878,6 +2299,12 @@ export const Constants = {
         "complete",
       ],
       source_kind: ["agency_site", "code", "ordinance", "portal", "other"],
+      timeline_basis: [
+        "published",
+        "permivio_history",
+        "ai_estimate",
+        "unknown",
+      ],
       verification_label: [
         "verified",
         "ai_assisted",
