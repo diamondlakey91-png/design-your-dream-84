@@ -22,8 +22,34 @@ export const generateRoadmapFromRules = createServerFn({ method: "POST" })
     if (sErr) throw new Error(sErr.message);
     if (!scope) throw new Error("Scope not found — save the intake first.");
 
+    // Load confirmed jurisdiction context (required for verified labels).
+    // eslint-disable-next-line @typescript-eslint/no-explicit-any
+    const { data: confirmation } = await (supabase.from("jurisdiction_confirmations") as any)
+      .select("*").eq("project_id", data.project_id).maybeSingle();
+    let jurisdiction_context: import("./permitRules").JurisdictionContext | null = null;
+    if (confirmation?.jurisdiction_id) {
+      const { data: j } = await supabase
+        .from("jurisdictions")
+        .select("state, county, municipality, incorporated")
+        .eq("id", confirmation.jurisdiction_id)
+        .maybeSingle();
+      if (j) {
+        jurisdiction_context = {
+          municipality: j.municipality,
+          county: j.county,
+          state: j.state,
+          incorporated: !!j.incorporated,
+          confirmed: confirmation.status === "user_confirmed" || confirmation.status === "human_verified",
+        };
+      }
+    }
+
     // Run rule engine
-    const draft = buildRoadmapDraft(scope as unknown as ScopeInputForRules);
+    const draft = buildRoadmapDraft({
+      ...(scope as unknown as ScopeInputForRules),
+      jurisdiction_context,
+    });
+
 
     // Delete any prior roadmaps for this scope (cascade removes children)
     await supabase.from("permit_roadmaps").delete().eq("scope_id", scope.id);
