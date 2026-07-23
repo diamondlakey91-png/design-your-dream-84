@@ -87,13 +87,15 @@ async function tryFirecrawlContext(address: string, agentLabel: string): Promise
     const query = `${address} building permit ${agentLabel} requirements site:.gov OR site:.us`;
     const results = await firecrawlSearch(key, query, 4);
     if (results.length === 0) return { block: "", urls: [] };
+    // Only scrape 1 page — keeps total wall time under the Worker budget so the
+    // final UPDATE actually lands. The remaining URLs still get folded into `sources`.
     const scraped: string[] = [];
     const urls: string[] = [];
-    for (const r of results.slice(0, 2)) {
+    for (const r of results.slice(0, 1)) {
       try {
         const s = await firecrawlScrape(key, r.url);
         if (s.markdown) {
-          scraped.push(`SOURCE: ${r.url}\nTITLE: ${s.title}\n${s.markdown.slice(0, 3500)}`);
+          scraped.push(`SOURCE: ${r.url}\nTITLE: ${s.title}\n${s.markdown.slice(0, 3000)}`);
           urls.push(r.url);
         }
       } catch {
@@ -179,7 +181,7 @@ ${data.jurisdiction_hint ? `User-provided jurisdiction hint: ${data.jurisdiction
 
 Return ONLY JSON matching the schema. Do not include narrative outside JSON.`;
 
-      const report = await callGeminiJSON(prompt, system, ReportSchema);
+      const report = await callGeminiJSON(prompt, system, ReportSchema, { model: "google/gemini-3.6-flash" });
 
       // Merge live URLs into sources if the AI missed them.
       const sources = Array.from(new Set([...(report.sources ?? []), ...live.urls])).slice(0, 12);
@@ -240,13 +242,30 @@ export const getComplianceReport = createServerFn({ method: "POST" })
   .inputValidator((data: unknown) => z.object({ id: z.string().uuid() }).parse(data))
   .handler(async ({ data, context }) => {
     // eslint-disable-next-line @typescript-eslint/no-explicit-any
-    const { data: row, error } = await (context.supabase as any)
+    const supa = context.supabase as any;
+    const { data: row, error } = await supa
       .from("compliance_reports")
       .select("*")
       .eq("id", data.id)
       .maybeSingle();
     if (error) throw new Error(error.message);
     if (!row) throw new Error("Report not found");
+
+    // Auto-fail rows stuck in "generating" for more than 3 minutes — the worker
+    // process died before the final UPDATE could land. Flip to "failed" so the
+    // UI can offer a Retry instead of spinning forever.
+    if (row.status === "generating") {
+      const ageMs = Date.now() - new Date(row.updated_at ?? row.created_at).getTime();
+      if (ageMs > 3 * 60 * 1000) {
+        await supa
+          .from("compliance_reports")
+          .update({ status: "failed", error: "Generation timed out. Please retry." })
+          .eq("id", data.id);
+        row.status = "failed";
+        row.error = "Generation timed out. Please retry.";
+      }
+    }
+
     return row as {
       id: string;
       user_id: string;

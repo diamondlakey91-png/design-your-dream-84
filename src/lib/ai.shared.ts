@@ -189,15 +189,20 @@ export const ExtractedItem = z.object({
   why: z.string().max(400).optional(),
 });
 
-export async function callGeminiJSON<T>(prompt: string, system: string, schema: z.ZodType<T>): Promise<T> {
+export async function callGeminiJSON<T>(
+  prompt: string,
+  system: string,
+  schema: z.ZodType<T>,
+  opts: { model?: string; max_tokens?: number } = {},
+): Promise<T> {
   const aiKey = process.env.LOVABLE_API_KEY;
   if (!aiKey) throw new Error("AI is not configured");
   const resp = await fetch("https://ai.gateway.lovable.dev/v1/chat/completions", {
     method: "POST",
     headers: { "Content-Type": "application/json", "Lovable-API-Key": aiKey },
     body: JSON.stringify({
-      model: "google/gemini-2.5-pro",
-      max_tokens: 8192,
+      model: opts.model ?? "google/gemini-2.5-pro",
+      max_tokens: opts.max_tokens ?? 8192,
       response_format: { type: "json_object" },
       messages: [
         { role: "system", content: system + "\n\nRespond ONLY with a single valid JSON value. No prose, no markdown fences." },
