@@ -181,7 +181,7 @@ ${data.jurisdiction_hint ? `User-provided jurisdiction hint: ${data.jurisdiction
 
 Return ONLY JSON matching the schema. Do not include narrative outside JSON.`;
 
-      const report = await callGeminiJSON(prompt, system, ReportSchema, { model: "google/gemini-3.6-flash" });
+      const report = await callGeminiJSON(prompt, system, ReportSchema, { model: "google/gemini-3.6-flash", max_tokens: 32000 });
 
       // Merge live URLs into sources if the AI missed them.
       const sources = Array.from(new Set([...(report.sources ?? []), ...live.urls])).slice(0, 12);
