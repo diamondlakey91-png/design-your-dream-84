@@ -1,0 +1,14 @@
+# Permivio
+
+> AI-powered construction permitting, project management, and compliance platform. Permivio helps contractors, developers, architects, engineers, and homeowners navigate permitting from intake through Certificate of Occupancy across 20,000+ U.S. jurisdictions.
+
+Permivio combines an AI Permit Assistant, live jurisdiction lookups, AI Plan Review, Permit Roadmaps, Inspection Mode, and a one-shot Compliance Report generator into a single operating system for construction permitting. AI findings are always classified as Verified Requirement, AI Suggested Issue, or Needs Human Review — never presented as confirmed code violations.
+
+## Pages
+
+- [Home](/): Product overview, feature highlights, and how Permivio works.
+- [Pricing](/pricing): Plans and pricing for Permivio.
+
+## Optional
+
+- [Sign in](/auth): Account sign-in and sign-up for existing customers.
