@@ -4,10 +4,10 @@ import { useMutation, useQuery, useQueryClient } from "@tanstack/react-query";
 import { useServerFn } from "@tanstack/react-start";
 import { AppShell } from "@/components/AppShell";
 import { COMPLIANCE_AGENTS } from "@/lib/complianceAgents";
-import { generateComplianceReport, listComplianceReports, deleteComplianceReport } from "@/lib/compliance.functions";
+import { generateComplianceReport, listComplianceReports, deleteComplianceReport, exportComplianceReportPdf } from "@/lib/compliance.functions";
 import { JurisdictionAutocomplete } from "@/components/JurisdictionAutocomplete";
 import { toast } from "sonner";
-import { FileCheck2, Zap, MapPin, ChevronRight, Trash2, Sparkles, Timer, ShieldCheck } from "lucide-react";
+import { FileCheck2, Zap, MapPin, ChevronRight, Trash2, Sparkles, Timer, ShieldCheck, Download, Loader2 } from "lucide-react";
 
 export const Route = createFileRoute("/_authenticated/report")({
   head: () => ({
@@ -27,6 +27,7 @@ function ReportHubPage() {
   const listFn = useServerFn(listComplianceReports);
   const genFn = useServerFn(generateComplianceReport);
   const delFn = useServerFn(deleteComplianceReport);
+  const pdfFn = useServerFn(exportComplianceReportPdf);
 
   const listQ = useQuery({ queryKey: ["compliance-reports"], queryFn: () => listFn() });
 
@@ -35,6 +36,25 @@ function ReportHubPage() {
   const [agentId, setAgentId] = useState(COMPLIANCE_AGENTS[0].id);
   const [jurisdiction, setJurisdiction] = useState("");
   const [notes, setNotes] = useState("");
+  const [pdfBusy, setPdfBusy] = useState<string | null>(null);
+
+  const downloadPdf = async (id: string, format: "standard" | "wbs") => {
+    try {
+      setPdfBusy(`${id}:${format}`);
+      const { pdf_base64, filename } = await pdfFn({ data: { id, format } });
+      const bin = atob(pdf_base64);
+      const bytes = new Uint8Array(bin.length);
+      for (let i = 0; i < bin.length; i++) bytes[i] = bin.charCodeAt(i);
+      const url = URL.createObjectURL(new Blob([bytes], { type: "application/pdf" }));
+      const a = document.createElement("a");
+      a.href = url; a.download = filename; a.click();
+      URL.revokeObjectURL(url);
+    } catch (e) {
+      toast.error(e instanceof Error ? e.message : "Export failed");
+    } finally {
+      setPdfBusy(null);
+    }
+  };
 
   const gen = useMutation({
     mutationFn: () => genFn({
@@ -195,6 +215,30 @@ function ReportHubPage() {
                         <span>· {new Date(r.created_at).toLocaleString()}</span>
                       </div>
                     </Link>
+                    {r.status === "ready" && (
+                      <div className="hidden sm:flex items-center gap-1">
+                        <button
+                          onClick={() => downloadPdf(r.id, "standard")}
+                          disabled={pdfBusy === `${r.id}:standard`}
+                          className="inline-flex items-center gap-1 rounded-md border border-border bg-background px-2 py-1 text-[11px] text-muted-foreground hover:border-brand hover:text-brand disabled:opacity-40"
+                          aria-label="Download standard PDF"
+                          title="Download PDF (Standard)"
+                        >
+                          {pdfBusy === `${r.id}:standard` ? <Loader2 className="size-3.5 animate-spin" /> : <Download className="size-3.5" />}
+                          PDF
+                        </button>
+                        <button
+                          onClick={() => downloadPdf(r.id, "wbs")}
+                          disabled={pdfBusy === `${r.id}:wbs`}
+                          className="inline-flex items-center gap-1 rounded-md border border-border bg-background px-2 py-1 text-[11px] text-muted-foreground hover:border-brand hover:text-brand disabled:opacity-40"
+                          aria-label="Download WBS PDF"
+                          title="Download PDF (WBS / Gantt)"
+                        >
+                          {pdfBusy === `${r.id}:wbs` ? <Loader2 className="size-3.5 animate-spin" /> : <Download className="size-3.5" />}
+                          WBS
+                        </button>
+                      </div>
+                    )}
                     <button
                       onClick={() => {
                         if (confirm("Delete this report?")) del.mutate(r.id);
