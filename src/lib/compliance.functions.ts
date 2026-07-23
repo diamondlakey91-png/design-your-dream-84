@@ -80,35 +80,100 @@ const GenInput = z.object({
   project_id: z.string().uuid().optional(),
 });
 
-async function tryFirecrawlContext(address: string, agentLabel: string): Promise<{ block: string; urls: string[] }> {
+async function tryFirecrawlContext(
+  address: string,
+  agentLabel: string,
+  agentDepartments: string[],
+  scopeNotes: string | undefined,
+): Promise<{ block: string; urls: string[] }> {
   const key = process.env.FIRECRAWL_API_KEY;
   if (!key) return { block: "", urls: [] };
   try {
-    const query = `${address} building permit ${agentLabel} requirements site:.gov OR site:.us`;
-    const results = await firecrawlSearch(key, query, 4);
-    if (results.length === 0) return { block: "", urls: [] };
-    // Only scrape 1 page — keeps total wall time under the Worker budget so the
-    // final UPDATE actually lands. The remaining URLs still get folded into `sources`.
-    const scraped: string[] = [];
-    const urls: string[] = [];
-    for (const r of results.slice(0, 1)) {
-      try {
-        const s = await firecrawlScrape(key, r.url);
-        if (s.markdown) {
-          scraped.push(`SOURCE: ${r.url}\nTITLE: ${s.title}\n${s.markdown.slice(0, 3000)}`);
-          urls.push(r.url);
-        }
-      } catch {
-        /* skip */
+    // Build a set of jurisdiction-anchored queries. We search per applicable
+    // department so the AI gets real, department-specific facts (fees, forms,
+    // review timelines, local amendments) instead of one generic hit.
+    const deptQueryMap: Record<string, string> = {
+      Building: "building permit application fees plan review",
+      Health: "health department plan review food service permit",
+      Fire: "fire marshal permit hood suppression alarm sprinkler",
+      "Planning/Zoning": "zoning use permit site plan review",
+      "Public Works": "right of way encroachment public works permit",
+      Utilities: "water sewer utility connection permit",
+      ADA: "accessibility path of travel accessibility review",
+      Environmental: "stormwater environmental review sediment erosion",
+      Sign: "sign permit ordinance requirements",
+      Historic: "historic preservation commission design review",
+    };
+    const deptSpecific = agentDepartments
+      .map((d) => deptQueryMap[d])
+      .filter(Boolean)
+      .slice(0, 4);
+    const baseQueries = [
+      `${address} ${agentLabel} permit requirements site:.gov OR site:.us`,
+      ...deptSpecific.map((q) => `${address} ${q} site:.gov OR site:.us`),
+    ];
+    if (scopeNotes && scopeNotes.length > 8) {
+      baseQueries.push(`${address} ${scopeNotes.slice(0, 120)} permit site:.gov OR site:.us`);
+    }
+
+    // Fan out searches in parallel; dedupe URLs, prefer .gov.
+    const searchResults = await Promise.all(
+      baseQueries.map((q) => firecrawlSearch(key, q, 4).catch(() => [])),
+    );
+    const seen = new Set<string>();
+    const ranked: { url: string; title: string }[] = [];
+    for (const bucket of searchResults) {
+      for (const r of bucket) {
+        if (!r?.url || seen.has(r.url)) continue;
+        seen.add(r.url);
+        ranked.push({ url: r.url, title: r.title ?? "" });
       }
     }
-    const otherUrls = results.map((r) => r.url).filter((u) => !urls.includes(u));
-    urls.push(...otherUrls);
+    // Rank .gov / .us first, then everything else.
+    ranked.sort((a, b) => {
+      const ag = /\.(gov|us)(\/|$)/i.test(a.url) ? 0 : 1;
+      const bg = /\.(gov|us)(\/|$)/i.test(b.url) ? 0 : 1;
+      return ag - bg;
+    });
+    if (ranked.length === 0) return { block: "", urls: [] };
+
+    // Scrape up to 4 pages in parallel — bounded so total wall time stays
+    // inside the Worker budget. Each scrape has its own timeout via a race.
+    const toScrape = ranked.slice(0, 4);
+    const scrapes = await Promise.all(
+      toScrape.map(async (r) => {
+        try {
+          const timeout = new Promise<null>((resolve) => setTimeout(() => resolve(null), 12000));
+          const s = await Promise.race([firecrawlScrape(key, r.url), timeout]);
+          if (!s || !s.markdown) return null;
+          return {
+            url: r.url,
+            title: s.title || r.title,
+            markdown: s.markdown.slice(0, 6000),
+          };
+        } catch {
+          return null;
+        }
+      }),
+    );
+    const scraped = scrapes.filter((s): s is NonNullable<typeof s> => !!s);
+    const urls = [
+      ...scraped.map((s) => s.url),
+      ...ranked.map((r) => r.url).filter((u) => !scraped.find((s) => s.url === u)),
+    ].slice(0, 12);
+
     if (scraped.length === 0) return { block: "", urls };
-    return {
-      block: `\n\n[LIVE JURISDICTION SEARCH — scraped ${scraped.length} pages]\n${scraped.join("\n\n---\n\n")}\n\nUse these excerpts to identify the exact department, phone/website, review timeline, and any local amendments. Cite the SOURCE url when you use a fact from it.`,
-      urls,
-    };
+
+    const block =
+      `\n\n[LIVE JURISDICTION RESEARCH — ${scraped.length} pages scraped from official sources]\n` +
+      scraped
+        .map(
+          (s, i) =>
+            `--- SOURCE ${i + 1} ---\nURL: ${s.url}\nTITLE: ${s.title}\n\n${s.markdown}`,
+        )
+        .join("\n\n") +
+      `\n\nMANDATE: Ground every department, code citation, fee, timeline, contact, and required document in the excerpts above. When you use a fact, put the SOURCE url in the "sources" array. If the excerpts contradict national defaults, prefer the local excerpt. Never fabricate a phone number, email, or fee — set fields to null when the excerpts don't cover them.`;
+    return { block, urls };
   } catch {
     return { block: "", urls: [] };
   }
@@ -266,7 +331,7 @@ export const generateComplianceReport = createServerFn({ method: "POST" })
       const [jCtx, hCtx, live] = await Promise.all([
         loadJurisdictionContextBlock(supabase, jHint),
         loadHealthAgencyContextBlock(supabase, jHint),
-        tryFirecrawlContext(data.address, agent.label),
+        tryFirecrawlContext(data.address, agent.label, agent.departments, data.scope_notes),
       ]);
 
       const schemaTemplate = `{
@@ -311,16 +376,22 @@ SCHEMA (return an object with exactly these keys and shapes):
 ${schemaTemplate}
 
 RULES:
+DEPTH REQUIREMENTS — this is a preliminary permit compliance report, not a summary. It must be dense enough for a permit expeditor to hand to a design team.
 - Identify the EXACT jurisdiction with authority. If the address spans multiple, name the primary one and note the others in summary.
-- Enumerate every applicable department (Building, Health, Fire, Planning/Zoning, ADA, Public Works, Utilities, Environmental, Sign, Historic) with authority_reason.
-- Cite specific code sections: IBC/IRC/IPC/IMC/NEC/IECC/IFC 2021, ADA 2010, A117.1-2017, FDA Food Code, and any local amendments referenced in the context.
-- Every contact must include department, phone, email, website. Set verified=true ONLY if the phone/website appears explicitly in the LIVE context. Otherwise verified=false.
-- Timeline in business-day ranges, per phase.
-- cost_estimate.breakdown MUST be an ARRAY of objects, never a single object.
-- WBS: 6-14 tasks with duration_days and depends_on for Gantt rendering. Include intake, plan review cycles, corrections, fee payment, issuance, inspections, CO.
-- common_rejection_flags: array of 3-5 strings — most likely first-submission rejection reasons for this project type in this jurisdiction.
-- sources: URLs you cited. Prefer URLs from the LIVE context block.
-- confidence: 0.0-1.0 self-assessment.
+- Enumerate EVERY applicable department (Building, Health, Fire, Planning/Zoning, ADA, Public Works, Utilities, Environmental, Sign, Historic). For each department:
+  * authority_reason: 1–2 sentences on WHY they have authority over THIS scope.
+  * required_reviews: 4–10 specific review items (e.g. "Egress analysis per IBC 1006", "Grease interceptor sizing per local plumbing amendment").
+  * required_documents: 5–12 concrete deliverables (signed/sealed plans, T-24 forms, structural calcs, MEP schedules, hood cut-sheets, site survey, etc.).
+  * codes: 3–8 code citations with FULL section numbers (e.g. "IBC 2021 §1006.2.1", "IPC 2021 §802.1.7", "NFPA 96 §7.5", "ADA 2010 §606"), each with the specific requirement in one line and the correct discipline.
+- Prefer LOCAL amendments over model codes when the LIVE context mentions them. Cite the amendment name and section.
+- Every contact must include department, phone, email, website. Set verified=true ONLY if the phone/website appears explicitly in the LIVE context. Otherwise verified=false and leave unknown fields null — never invent contact info.
+- Timeline: 6–12 phases in business-day ranges (pre-app, intake/prescreen, 1st plan review, corrections, 2nd review, fee payment, issuance, rough inspections, final inspections, CO). Include "responsible" party.
+- cost_estimate.breakdown MUST be an ARRAY with 4–10 line items (plan review fee, permit fee, trade permit fees, impact/utility fees, health plan review, fire plan review, third-party review, expedited review).
+- WBS: 8–14 tasks with duration_days and depends_on for Gantt rendering. Include intake, plan review cycles, corrections, fee payment, issuance, rough inspections, final inspections, CO.
+- common_rejection_flags: 4–7 strings — most likely first-submission rejection reasons for THIS project type in THIS jurisdiction, referencing code section when possible.
+- sources: 4–12 URLs you cited. Prefer URLs from the LIVE context block; only include URLs that actually appear in the context.
+- confidence: 0.0–1.0 self-assessment. Lower it when LIVE context is thin.
+- Cite specific code sections everywhere: IBC/IRC/IPC/IMC/NEC/IECC/IFC 2021, ADA 2010, ICC A117.1-2017, FDA Food Code, NFPA 13/72/96, ASCE 7, ASHRAE 90.1-2019, plus any local amendment named in the context.
 
 AGENT FOCUS (${agent.label}):
 ${agent.focus.map((f) => `- ${f}`).join("\n")}
