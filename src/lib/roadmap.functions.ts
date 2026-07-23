@@ -169,14 +169,119 @@ export const generateRoadmapFromRules = createServerFn({ method: "POST" })
       );
     }
 
+    // ---------- Checklist (permit_items) ----------
+    // Seed the project checklist from required/likely permits so users have
+    // actionable tasks without an extra button click.
+    let checklist_added = 0;
+    const checklistRows = draft.permits
+      .filter((p) => p.likelihood === "required" || p.likelihood === "likely")
+      .map((p, idx) => ({
+        user_id: context.userId,
+        project_id: scope.project_id,
+        name: p.name,
+        category: (p.category ?? "other") as string,
+        required: p.likelihood === "required",
+        notes: [p.agency, p.notes].filter(Boolean).join(" · ").slice(0, 500),
+        sort_order: 1000 + idx,
+      }));
+    if (checklistRows.length) {
+      const { data: existing } = await supabase
+        .from("permit_items").select("name").eq("project_id", scope.project_id);
+      const known = new Set((existing ?? []).map((r) => (r.name as string).trim().toLowerCase()));
+      const toInsert = checklistRows.filter((r) => !known.has(r.name.trim().toLowerCase()));
+      if (toInsert.length) {
+        const { error: ciErr } = await supabase.from("permit_items").insert(toInsert);
+        if (!ciErr) checklist_added = toInsert.length;
+      }
+    }
+
+    // ---------- Timeline rollup ----------
+    // Sum critical-path review windows to compute overall review timeline.
+    const critPermits = draft.permits.filter((p) => p.critical_path);
+    const rollupPermits = critPermits.length ? critPermits : draft.permits;
+    const total_min = rollupPermits.reduce((s, p) => s + (p.review_days_min ?? 0), 0);
+    const total_max = rollupPermits.reduce((s, p) => s + (p.review_days_max ?? 0), 0);
+    // Typical review cycles: 1 for straightforward, 2 for complex/new construction
+    const review_cycles_expected = draft.permits.some(
+      (p) => p.category === "building" && p.likelihood === "required",
+    ) ? 2 : 1;
+
+    // ---------- Milestone deadlines (tasks) ----------
+    // Only create deadlines when scope has target dates and we haven't already.
+    let deadlines_added = 0;
+    // eslint-disable-next-line @typescript-eslint/no-explicit-any
+    const targetStart = (scope as any).target_start_date as string | null | undefined;
+    // eslint-disable-next-line @typescript-eslint/no-explicit-any
+    const targetOpen = (scope as any).target_open_date as string | null | undefined;
+    const milestones: { title: string; due_date: string }[] = [];
+    if (targetStart) {
+      const start = new Date(targetStart);
+      // Submit application ~ total_min days before start
+      if (Number.isFinite(start.getTime()) && total_min > 0) {
+        const submit = new Date(start);
+        submit.setDate(submit.getDate() - total_max);
+        milestones.push({
+          title: "Submit permit application package",
+          due_date: submit.toISOString().slice(0, 10),
+        });
+      }
+      milestones.push({ title: "Target construction start", due_date: targetStart });
+    }
+    if (targetOpen) {
+      milestones.push({ title: "Final inspections & Certificate of Occupancy", due_date: targetOpen });
+    }
+    if (milestones.length) {
+      const { data: existingD } = await supabase
+        .from("deadlines").select("title, due_date").eq("project_id", scope.project_id);
+      const seen = new Set((existingD ?? []).map((d) => `${d.title}|${d.due_date}`));
+      const toInsert = milestones
+        .filter((m) => !seen.has(`${m.title}|${m.due_date}`))
+        .map((m) => ({
+          user_id: context.userId,
+          project_id: scope.project_id,
+          title: m.title,
+          due_date: m.due_date,
+        }));
+      if (toInsert.length) {
+        const { error: dErr } = await supabase.from("deadlines").insert(toInsert);
+        if (!dErr) deadlines_added = toInsert.length;
+      }
+    }
+
+    // Persist timeline rollup on roadmap summary meta.
+    const timelineLine = `Estimated review window: ${total_min}–${total_max} business days · ${review_cycles_expected} review cycle${review_cycles_expected > 1 ? "s" : ""} typical.`;
+    await supabase.from("permit_roadmaps").update({
+      summary: (draft.summary ? draft.summary + "\n\n" : "") + timelineLine,
+    }).eq("id", roadmap.id);
+
+    // Activity log
+    await supabase.from("activity").insert({
+      user_id: context.userId,
+      project_id: scope.project_id,
+      description: `Permit Roadmap built — ${draft.permits.length} permits, ${draft.agencies.length} agencies, ${checklist_added} checklist tasks, ${deadlines_added} deadlines.`,
+    });
+
     // Mark scope complete (or needs_followup if there are follow-ups)
     await supabase
       .from("scope_of_work")
       .update({ status: draft.followups.length ? "needs_followup" : "complete" })
       .eq("id", scope.id);
 
-    return { roadmap_id: roadmap.id };
+    return {
+      roadmap_id: roadmap.id,
+      counts: {
+        permits: draft.permits.length,
+        agencies: draft.agencies.length,
+        documents: draft.documents.length,
+        checklist_added,
+        deadlines_added,
+        review_cycles_expected,
+        timeline_days_min: total_min,
+        timeline_days_max: total_max,
+      },
+    };
   });
+
 
 export const getRoadmap = createServerFn({ method: "GET" })
   .middleware([requireSupabaseAuth])
