@@ -52,7 +52,7 @@ function Landing() {
         <div className="flex items-center gap-2">
           <Link
             to="/auth"
-            className="hidden text-sm font-medium text-slate-400 hover:text-white sm:inline"
+            className="hidden text-sm font-medium text-slate-200 hover:text-white sm:inline"
           >
             Sign in
           </Link>
