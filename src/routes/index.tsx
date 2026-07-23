@@ -52,7 +52,7 @@ function Landing() {
         <div className="flex items-center gap-2">
           <Link
             to="/auth"
-            className="hidden text-sm font-medium text-slate-400 hover:text-white sm:inline"
+            className="hidden text-sm font-medium text-slate-200 hover:text-white sm:inline"
           >
             Sign in
           </Link>
@@ -65,6 +65,7 @@ function Landing() {
         </div>
       </header>
 
+      <main>
       {/* Hero */}
       <section className="mx-auto max-w-7xl px-6 pt-8 pb-16 text-center md:pt-16">
         <p className="font-mono text-[11px] uppercase tracking-[0.3em] text-blue-400/80">
@@ -356,14 +357,15 @@ function Landing() {
             </Link>
           </div>
         </div>
-      </section>
+        </section>
+      </main>
 
       <footer className="relative border-t border-blue-500/10">
         <div
           aria-hidden
           className="pointer-events-none absolute inset-x-0 top-0 h-px bg-gradient-to-r from-transparent via-blue-500/50 to-transparent"
         />
-        <div className="mx-auto flex max-w-7xl flex-wrap items-center justify-between gap-4 px-6 py-10 font-mono text-[11px] uppercase tracking-[0.25em] text-blue-400/60">
+        <div className="mx-auto flex max-w-7xl flex-wrap items-center justify-between gap-4 px-6 py-10 font-mono text-[11px] uppercase tracking-[0.25em] text-blue-300/90">
           <div className="flex items-center gap-2.5">
             <PermivioMark className="h-5 w-5" />
             <span>© Permivio</span>
