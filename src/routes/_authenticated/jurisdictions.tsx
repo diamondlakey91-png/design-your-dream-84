@@ -68,7 +68,6 @@ function JurisdictionsIndex() {
 
   // Reset county when state changes so we never leave a stale county filter behind.
   useEffect(() => { setCountyF(""); }, [stateF]);
-  const [requestOpen, setRequestOpen] = useState(false);
 
   const listQ = useQuery({
     queryKey: ["jurisdictions", term, stateF, typeF, verifiedOnly],
