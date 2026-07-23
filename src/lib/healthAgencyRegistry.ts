@@ -79,6 +79,12 @@ export const HEALTH_AGENCY_REGISTRY: HealthAgencyEntry[] = [
     notes: "Health Dept. Division of Environmental Health, Environmental Engineering Program.",
   },
   {
+    jurisdiction: "Anne Arundel County", state: "MD", agencyType: "county_health_department",
+    serviceTypes: ["septic_ossf", "well_permitting", "food_service"],
+    url: "https://health.aacounty.org/programs-and-services/environmental-health/",
+    notes: "Anne Arundel County Department of Health — Bureau of Environmental Health handles septic (OSDS), well permitting, and food-service plan review. Percolation tests coordinated through Environmental Health.",
+  },
+  {
     jurisdiction: "Washington", state: "DC", agencyType: "municipal_health_department",
     serviceTypes: ["food_service"],
     url: "https://dchealth.dc.gov/service/food-establishments",
