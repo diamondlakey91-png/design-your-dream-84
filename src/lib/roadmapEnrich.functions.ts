@@ -518,7 +518,7 @@ export const exportRoadmapPdf = createServerFn({ method: "POST" })
 
     draw(project?.name ?? "Project Roadmap", { x: M, y, size: 16, font: bold, color: ink });
     y -= 20;
-    para(project?.address ?? "", 10, muted);
+    para(project?.location ?? "", 10, muted);
     y -= 4;
     if (roadmap.summary) { heading("Summary"); para(roadmap.summary); y -= 4; }
     para(`Health ${roadmap.health_score ?? "—"} · Confidence ${Math.round((roadmap.confidence ?? 0) * 100)}% · ${roadmap.prompt_version}`, 9, muted);
