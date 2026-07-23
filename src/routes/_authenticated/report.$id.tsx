@@ -164,20 +164,58 @@ function ReportDetailPage() {
           {report.summary && <p className="text-sm">{report.summary}</p>}
 
           <div className="flex flex-wrap items-center gap-2 pt-2">
-            <button onClick={() => setView("standard")} className={`rounded-md border px-3 py-1.5 text-xs ${view === "standard" ? "border-brand bg-brand/15 text-brand" : "border-border bg-background text-muted-foreground"}`}>Standard</button>
+            <button onClick={() => setView("pdf")} className={`inline-flex items-center gap-1.5 rounded-md border px-3 py-1.5 text-xs ${view === "pdf" ? "border-brand bg-brand/15 text-brand" : "border-border bg-background text-muted-foreground"}`}><FileText className="size-3.5" /> PDF Report</button>
+            <button onClick={() => setView("standard")} className={`rounded-md border px-3 py-1.5 text-xs ${view === "standard" ? "border-brand bg-brand/15 text-brand" : "border-border bg-background text-muted-foreground"}`}>Detail View</button>
             <button onClick={() => setView("wbs")} className={`rounded-md border px-3 py-1.5 text-xs ${view === "wbs" ? "border-brand bg-brand/15 text-brand" : "border-border bg-background text-muted-foreground"}`}>WBS / Gantt</button>
             <div className="ml-auto flex gap-2">
-              <button disabled={exporting === "standard"} onClick={() => doExport("standard")} className="inline-flex items-center gap-1.5 rounded-md border border-border bg-background px-3 py-1.5 text-xs hover:border-brand disabled:opacity-40">
-                <Download className="size-3.5" /> {exporting === "standard" ? "Exporting…" : "PDF · Standard"}
-              </button>
-              <button disabled={exporting === "wbs"} onClick={() => doExport("wbs")} className="inline-flex items-center gap-1.5 rounded-md border border-border bg-background px-3 py-1.5 text-xs hover:border-brand disabled:opacity-40">
-                <Download className="size-3.5" /> {exporting === "wbs" ? "Exporting…" : "PDF · WBS"}
-              </button>
+              {view === "pdf" ? (
+                <>
+                  <div className="inline-flex rounded-md border border-border overflow-hidden">
+                    <button onClick={() => setFormat("standard")} className={`px-2.5 py-1.5 text-xs ${format === "standard" ? "bg-brand/15 text-brand" : "bg-background text-muted-foreground"}`}>Standard</button>
+                    <button onClick={() => setFormat("wbs")} className={`px-2.5 py-1.5 text-xs border-l border-border ${format === "wbs" ? "bg-brand/15 text-brand" : "bg-background text-muted-foreground"}`}>WBS</button>
+                  </div>
+                  <button disabled={!pdfData || pdfLoading} onClick={downloadCurrent} className="inline-flex items-center gap-1.5 rounded-md border border-brand/40 bg-brand/10 px-3 py-1.5 text-xs text-brand hover:bg-brand/20 disabled:opacity-40">
+                    <Download className="size-3.5" /> Download PDF
+                  </button>
+                </>
+              ) : (
+                <>
+                  <button disabled={exporting === "standard"} onClick={() => doExport("standard")} className="inline-flex items-center gap-1.5 rounded-md border border-border bg-background px-3 py-1.5 text-xs hover:border-brand disabled:opacity-40">
+                    <Download className="size-3.5" /> {exporting === "standard" ? "Exporting…" : "PDF · Standard"}
+                  </button>
+                  <button disabled={exporting === "wbs"} onClick={() => doExport("wbs")} className="inline-flex items-center gap-1.5 rounded-md border border-border bg-background px-3 py-1.5 text-xs hover:border-brand disabled:opacity-40">
+                    <Download className="size-3.5" /> {exporting === "wbs" ? "Exporting…" : "PDF · WBS"}
+                  </button>
+                </>
+              )}
             </div>
           </div>
         </header>
 
-        {view === "wbs" ? (
+        {view === "pdf" ? (
+          <section className="rounded-xl border border-border bg-card overflow-hidden">
+            {pdfLoading && !pdfUrl ? (
+              <div className="flex h-[80vh] items-center justify-center text-sm text-muted-foreground">
+                <Loader2 className="mr-2 size-4 animate-spin" /> Rendering PDF…
+              </div>
+            ) : pdfUrl ? (
+              <div className="relative">
+                {pdfLoading && (
+                  <div className="absolute right-3 top-3 z-10 inline-flex items-center gap-1.5 rounded-md border border-border bg-background/90 px-2 py-1 text-[11px] text-muted-foreground backdrop-blur">
+                    <Loader2 className="size-3 animate-spin" /> Updating…
+                  </div>
+                )}
+                <iframe
+                  src={pdfUrl}
+                  title="Compliance Report PDF"
+                  className="h-[85vh] w-full bg-white"
+                />
+              </div>
+            ) : (
+              <div className="flex h-[60vh] items-center justify-center text-sm text-muted-foreground">PDF unavailable.</div>
+            )}
+          </section>
+        ) : view === "wbs" ? (
           <section className="space-y-3">
             <SectionHeader icon={<BarChart3 className="size-4" />} title="Work Breakdown · Gantt" />
             <div className="rounded-xl border border-border bg-card p-4 space-y-2 overflow-x-auto">
