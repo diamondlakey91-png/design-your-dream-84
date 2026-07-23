@@ -217,15 +217,40 @@ function ReportDetailPage() {
 
         {view === "pdf" ? (
           <section className="rounded-xl border border-border bg-card overflow-hidden">
-            {pdfLoading && !pdfUrl ? (
-              <div className="flex h-[80vh] items-center justify-center text-sm text-muted-foreground">
-                <Loader2 className="mr-2 size-4 animate-spin" /> Rendering PDF…
+            {pdfError && !pdfLoading ? (
+              <div className="flex h-[60vh] flex-col items-center justify-center gap-4 px-6 text-center">
+                <div className="flex size-12 items-center justify-center rounded-full border border-red-500/40 bg-red-500/10">
+                  <AlertTriangle className="size-5 text-red-300" />
+                </div>
+                <div>
+                  <div className="text-sm font-medium">PDF generation failed</div>
+                  <div className="mt-1 max-w-md text-xs text-muted-foreground">{pdfError}</div>
+                </div>
+                <button
+                  onClick={retryPdf}
+                  className="inline-flex items-center gap-1.5 rounded-md border border-brand/40 bg-brand/10 px-3 py-1.5 text-xs text-brand hover:bg-brand/20"
+                >
+                  <RefreshCw className="size-3.5" /> Retry generation
+                </button>
+              </div>
+            ) : pdfLoading && !pdfUrl ? (
+              <div className="flex h-[80vh] flex-col items-center justify-center gap-4 px-6">
+                <div className="flex items-center gap-2 text-sm text-muted-foreground">
+                  <Loader2 className="size-4 animate-spin text-brand" /> Rendering {format === "wbs" ? "WBS" : "Standard"} PDF…
+                </div>
+                <div className="h-1.5 w-64 max-w-full overflow-hidden rounded-full bg-background border border-border">
+                  <div
+                    className="h-full rounded-full bg-brand shadow-[0_0_14px_-2px_oklch(0.66_0.19_258/0.9)] transition-[width] duration-300 ease-out"
+                    style={{ width: `${pdfProgress}%` }}
+                  />
+                </div>
+                <div className="text-[10px] font-mono uppercase tracking-widest text-muted-foreground">{Math.min(99, Math.round(pdfProgress))}%</div>
               </div>
             ) : pdfUrl ? (
               <div className="relative">
                 {pdfLoading && (
                   <div className="absolute right-3 top-3 z-10 inline-flex items-center gap-1.5 rounded-md border border-border bg-background/90 px-2 py-1 text-[11px] text-muted-foreground backdrop-blur">
-                    <Loader2 className="size-3 animate-spin" /> Updating…
+                    <Loader2 className="size-3 animate-spin" /> Updating {format === "wbs" ? "WBS" : "Standard"}…
                   </div>
                 )}
                 <iframe
@@ -235,9 +260,18 @@ function ReportDetailPage() {
                 />
               </div>
             ) : (
-              <div className="flex h-[60vh] items-center justify-center text-sm text-muted-foreground">PDF unavailable.</div>
+              <div className="flex h-[60vh] flex-col items-center justify-center gap-3 text-sm text-muted-foreground">
+                <span>PDF unavailable.</span>
+                <button
+                  onClick={retryPdf}
+                  className="inline-flex items-center gap-1.5 rounded-md border border-border bg-background px-3 py-1.5 text-xs hover:border-brand"
+                >
+                  <RefreshCw className="size-3.5" /> Generate PDF
+                </button>
+              </div>
             )}
           </section>
+
         ) : view === "wbs" ? (
           <section className="space-y-3">
             <SectionHeader icon={<BarChart3 className="size-4" />} title="Work Breakdown · Gantt" />
