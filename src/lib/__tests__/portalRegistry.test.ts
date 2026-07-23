@@ -86,7 +86,7 @@ describe("PORTAL_REGISTRY integrity", () => {
   it("has no duplicate (jurisdiction, state, platform) entries", () => {
     const seen = new Set<string>();
     for (const e of PORTAL_REGISTRY) {
-      const key = `${normalize(e.jurisdiction)}|${e.state}|${e.platform}`;
+      const key = `${e.jurisdiction.toLowerCase().trim()}|${e.state}|${e.platform}`;
       expect(seen.has(key), `duplicate: ${key}`).toBe(false);
       seen.add(key);
     }
