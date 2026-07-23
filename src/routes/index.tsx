@@ -112,7 +112,10 @@ function Landing() {
             src={heroAsset.url}
             alt="Permivio dashboard on desktop, tablet, and mobile showing project health, permit assistant, and jurisdiction library."
             className="w-full rounded-2xl"
-            loading="eager"
+            width={2400}
+            height={1400}
+            decoding="async"
+            fetchPriority="high"
           />
         </div>
       </section>
