@@ -205,13 +205,10 @@ export const PORTAL_REGISTRY: PortalEntry[] = [
     addressSearch: (a) => `https://eservices.montgomerycountymd.gov/DPSPermitting/CitizenAccess/Cap/GlobalSearchResults.aspx?QueryText=${enc(a)}`,
     permitSearch: (n) => `https://eservices.montgomerycountymd.gov/DPSPermitting/CitizenAccess/Cap/GlobalSearchResults.aspx?QueryText=${encodeURIComponent(n.trim())}`,
   },
-  {
-    jurisdiction: "Arlington County", state: "VA", platform: "Accela",
-    url: "https://permits.arlingtonva.us/CitizenAccess/Default.aspx",
-    addressSearch: (a) => `https://permits.arlingtonva.us/CitizenAccess/Cap/GlobalSearchResults.aspx?QueryText=${enc(a)}`,
-    permitSearch: (n) => `https://permits.arlingtonva.us/CitizenAccess/Cap/GlobalSearchResults.aspx?QueryText=${encodeURIComponent(n.trim())}`,
-    notes: "Local mirror of Arlington's ACA instance.",
-  },
+  S("Arlington County (local mirror)", "VA", "Accela", {
+    url: "https://permitva.arlingtonva.us/CitizenAccess/",
+    notes: "Alternate deep link to Arlington's Permit VA portal.",
+  }),
   {
     jurisdiction: "Prince William County", state: "VA", platform: "Accela",
     url: "https://eservices.pwcgov.org/BuildingDevelopment/Default.aspx",
