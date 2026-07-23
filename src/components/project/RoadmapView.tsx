@@ -3,8 +3,17 @@ import { useServerFn } from "@tanstack/react-start";
 import { useState } from "react";
 import { toast } from "sonner";
 import { generateRoadmapFromRules, getRoadmap } from "@/lib/roadmap.functions";
+import {
+  enrichRoadmapWithAI,
+  sendRoadmapToChecklist,
+  exportRoadmapPdf,
+  getRoadmapSources,
+  answerRoadmapFollowup,
+} from "@/lib/roadmapEnrich.functions";
 import { Button } from "@/components/ui/button";
-import { Sparkles, RefreshCw, ShieldCheck, AlertTriangle, HelpCircle, Building2, FileText, Users } from "lucide-react";
+import { Input } from "@/components/ui/input";
+import { Sheet, SheetContent, SheetHeader, SheetTitle, SheetTrigger } from "@/components/ui/sheet";
+import { Sparkles, RefreshCw, ShieldCheck, AlertTriangle, HelpCircle, Building2, FileText, Users, Wand2, ListChecks, Download, Link as LinkIcon, ExternalLink } from "lucide-react";
 
 type Verification = "verified" | "ai_assisted" | "needs_agency_confirmation";
 
