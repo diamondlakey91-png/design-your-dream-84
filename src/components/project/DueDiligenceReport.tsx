@@ -14,6 +14,8 @@ import {
   type DueDiligenceReport,
 } from "@/lib/dueDiligence.functions";
 import { generateRoadmapFromRules } from "@/lib/roadmap.functions";
+import { supabase } from "@/integrations/supabase/client";
+
 
 type V = "verified" | "ai_assisted" | "needs_confirmation";
 
@@ -110,15 +112,22 @@ export function DueDiligenceReport({ projectId }: { projectId: string }) {
     queryFn: () => getFn({ data: { project_id: projectId } }),
   });
 
-  const gen = useMutation({
-    mutationFn: () => genFn({ data: { project_id: projectId } }),
-    onSuccess: () => {
-      toast.success("Due Diligence report generated");
-      qc.invalidateQueries({ queryKey: ["due-diligence", projectId] });
-      qc.invalidateQueries({ queryKey: ["scope", projectId] });
+  // Detect an existing roadmap so we can swap the CTA between
+  // "Create Permit Roadmap" and "Rebuild roadmap".
+  const roadmapExistsQ = useQuery({
+    queryKey: ["roadmap-exists", projectId],
+    queryFn: async () => {
+      const { data } = await supabase
+        .from("permit_roadmaps")
+        .select("id, updated_at, created_at")
+        .eq("project_id", projectId)
+        .order("created_at", { ascending: false })
+        .limit(1)
+        .maybeSingle();
+      return data;
     },
-    onError: (e) => toast.error(e instanceof Error ? e.message : "Report failed"),
   });
+  const hasRoadmap = !!roadmapExistsQ.data?.id;
 
   const buildRoadmap = useMutation({
     mutationFn: () => roadmapFn({ data: { project_id: projectId } }),
@@ -126,10 +135,11 @@ export function DueDiligenceReport({ projectId }: { projectId: string }) {
       const c = res?.counts;
       toast.success(
         c
-          ? `Roadmap built — ${c.permits} permits · ${c.agencies} agencies · ${c.checklist_added} tasks · ${c.deadlines_added} deadlines · ~${c.timeline_days_min}–${c.timeline_days_max}d (${c.review_cycles_expected} cycle${c.review_cycles_expected > 1 ? "s" : ""})`
-          : "Permit Roadmap created",
+          ? `${hasRoadmap ? "Roadmap rebuilt" : "Roadmap built"} — ${c.permits} permits · ${c.agencies} agencies · ${c.checklist_added} tasks · ${c.deadlines_added} deadlines · ~${c.timeline_days_min}–${c.timeline_days_max}d (${c.review_cycles_expected} cycle${c.review_cycles_expected > 1 ? "s" : ""})`
+          : hasRoadmap ? "Permit Roadmap rebuilt" : "Permit Roadmap created",
       );
       qc.invalidateQueries({ queryKey: ["roadmap", projectId] });
+      qc.invalidateQueries({ queryKey: ["roadmap-exists", projectId] });
       qc.invalidateQueries({ queryKey: ["scope", projectId] });
       qc.invalidateQueries({ queryKey: ["checklist", projectId] });
       qc.invalidateQueries({ queryKey: ["deadlines", projectId] });
@@ -137,6 +147,24 @@ export function DueDiligenceReport({ projectId }: { projectId: string }) {
     },
     onError: (e) => toast.error(e instanceof Error ? e.message : "Roadmap failed"),
   });
+
+  const gen = useMutation({
+    mutationFn: () => genFn({ data: { project_id: projectId } }),
+    onSuccess: async () => {
+      qc.invalidateQueries({ queryKey: ["due-diligence", projectId] });
+      qc.invalidateQueries({ queryKey: ["scope", projectId] });
+      if (hasRoadmap) {
+        // Auto-rebuild the roadmap when due diligence is regenerated so
+        // checklist, tasks, and timelines stay in sync with the new report.
+        toast.success("Due Diligence regenerated — rebuilding roadmap…");
+        buildRoadmap.mutate();
+      } else {
+        toast.success("Due Diligence report generated");
+      }
+    },
+    onError: (e) => toast.error(e instanceof Error ? e.message : "Report failed"),
+  });
+
 
 
   const report = q.data?.report ?? null;
@@ -216,14 +244,28 @@ export function DueDiligenceReport({ projectId }: { projectId: string }) {
               size="sm"
               onClick={() => buildRoadmap.mutate()}
               disabled={buildRoadmap.isPending}
-              title="Builds permit matrix, agency matrix, checklist, tasks, review cycles, and timeline"
+              title={
+                hasRoadmap
+                  ? "Regenerates checklist, tasks, and timelines from the latest due diligence"
+                  : "Builds permit matrix, agency matrix, checklist, tasks, review cycles, and timeline"
+              }
+              variant={hasRoadmap ? "outline" : "default"}
             >
-              <ArrowRight className="size-4 mr-1.5" />
-              {buildRoadmap.isPending ? "Building roadmap…" : "Create Permit Roadmap"}
+              {hasRoadmap ? (
+                <RefreshCw className={`size-4 mr-1.5 ${buildRoadmap.isPending ? "animate-spin" : ""}`} />
+              ) : (
+                <ArrowRight className="size-4 mr-1.5" />
+              )}
+              {buildRoadmap.isPending
+                ? hasRoadmap ? "Rebuilding…" : "Building roadmap…"
+                : hasRoadmap ? "Rebuild roadmap" : "Create Permit Roadmap"}
             </Button>
             <p className="text-[10px] text-muted-foreground text-right leading-tight max-w-[14rem]">
-              Builds permits · agencies · checklist · tasks · review cycles · timeline
+              {hasRoadmap
+                ? "Refreshes permits · checklist · tasks · timeline from this report"
+                : "Builds permits · agencies · checklist · tasks · review cycles · timeline"}
             </p>
+
 
           </div>
         </div>
