@@ -526,7 +526,12 @@ export function buildRoadmapDraft(scope: ScopeInputForRules): RoadmapDraft {
 
   return {
     summary,
-    authority_stack: { city: auth.city, county: auth.county, state: auth.state },
+    authority_stack: {
+      city: ctx?.incorporated ? ctx.municipality ?? undefined : undefined,
+      county: ctx?.county,
+      state: ctx?.state,
+    },
+
     permits,
     documents,
     agencies,
