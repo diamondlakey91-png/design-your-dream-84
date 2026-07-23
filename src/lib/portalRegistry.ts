@@ -278,7 +278,7 @@ export const PORTAL_REGISTRY: PortalEntry[] = [
   { jurisdiction: "Arlington County (Permit Arlington)", state: "VA", platform: "ProjectDox", url: "https://permitva.arlingtonva.us/ProjectDox/index.aspx" },
   { jurisdiction: "Prince William County (ePlans)", state: "VA", platform: "ProjectDox", url: "https://eplans.pwcgov.org/ProjectDox/" },
   { jurisdiction: "San Diego (DSD ePlans)", state: "CA", platform: "ProjectDox", url: "https://plans.sandiego.gov/ProjectDox/" },
-  { jurisdiction: "Denver (E-Permits ePlans)", state: "CO", platform: "ProjectDox", url: "https://www.denvergov.org/edaps/" },
+  { jurisdiction: "Denver (E-Permits ePlans)", state: "CO", platform: "ProjectDox", url: "https://www.denvergov.org/Government/Agencies-Departments-Offices/Agencies-Departments-Offices-Directory/Community-Planning-and-Development/Denver-Development-Services/Help-with-permits" },
   { jurisdiction: "Aurora (ePlans)", state: "CO", platform: "ProjectDox", url: "https://eplan.auroragov.org/ProjectDox/" },
   { jurisdiction: "Palm Beach County (ePlans)", state: "FL", platform: "ProjectDox", url: "https://epzb.pbcgov.org/ProjectDox/" },
   { jurisdiction: "Orange County (ePlans)", state: "FL", platform: "ProjectDox", url: "https://fastrackepr.ocfl.net/ProjectDox/" },
