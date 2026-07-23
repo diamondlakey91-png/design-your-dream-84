@@ -1,6 +1,7 @@
 import { createServerFn } from "@tanstack/react-start";
 import { requireSupabaseAuth } from "@/integrations/supabase/auth-middleware";
 import { z } from "zod";
+import { geocode as gatewayGeocode } from "@/lib/geocoding.shared";
 
 // Structured address required. A ZIP code alone is never a jurisdiction.
 const AddressInput = z.object({
@@ -26,42 +27,28 @@ type GeocodeResult = {
 };
 
 async function geocodeGoogle(address: string): Promise<GeocodeResult | null> {
-  const key = process.env.GOOGLE_MAPS_API_KEY;
-  if (!key) return null;
-  const url = `https://maps.googleapis.com/maps/api/geocode/json?address=${encodeURIComponent(address)}&key=${key}`;
-  const res = await fetch(url);
-  if (!res.ok) return null;
-  const json = (await res.json()) as {
-    status: string;
-    results?: Array<{
-      formatted_address: string;
-      place_id: string;
-      geometry: { location: { lat: number; lng: number }; location_type: string };
-      address_components: Array<{ long_name: string; short_name: string; types: string[] }>;
-    }>;
-  };
-  if (json.status !== "OK" || !json.results?.length) return null;
-  const r = json.results[0];
-  const comp = (type: string) =>
-    r.address_components.find((c) => c.types.includes(type)) ?? null;
-  const county = comp("administrative_area_level_2")?.long_name?.replace(/\s+County$/i, "") ?? null;
-  const stateShort = comp("administrative_area_level_1")?.short_name ?? null;
-  const locality = comp("locality")?.long_name ?? null; // incorporated place
-  const subLocality = comp("sublocality")?.long_name ?? null;
-  const municipality = locality ?? subLocality;
-  const incorporated = !!locality;
-  return {
-    formatted_address: r.formatted_address,
-    lat: r.geometry.location.lat,
-    lng: r.geometry.location.lng,
-    county,
-    municipality,
-    state: stateShort,
-    incorporated,
-    location_type: r.geometry.location_type,
-    place_id: r.place_id,
-  };
+  try {
+    const g = await gatewayGeocode(address);
+    const county = (g.components.county ?? "").replace(/\s+County$/i, "") || null;
+    const municipality = g.components.locality ?? g.components.sublocality ?? null;
+    const incorporated = !!g.components.locality;
+    return {
+      formatted_address: g.formatted_address,
+      lat: g.lat,
+      lng: g.lng,
+      county,
+      municipality,
+      state: g.components.state_code ?? null,
+      incorporated,
+      location_type: g.location_type,
+      place_id: g.place_id,
+    };
+  } catch (err) {
+    console.error("[jurisdiction] geocode failed:", (err as Error).message);
+    return null;
+  }
 }
+
 
 /** Authority candidate suggested for a resolved jurisdiction. */
 type AuthorityCandidate = {
