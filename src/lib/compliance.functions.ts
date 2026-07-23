@@ -114,6 +114,125 @@ async function tryFirecrawlContext(address: string, agentLabel: string): Promise
   }
 }
 
+// Normalize common AI drift so ReportSchema.parse succeeds.
+// eslint-disable-next-line @typescript-eslint/no-explicit-any
+function normalizeComplianceJson(input: unknown): any {
+  if (!input || typeof input !== "object") return input;
+  // eslint-disable-next-line @typescript-eslint/no-explicit-any
+  const r: any = { ...(input as any) };
+
+  // project_summary → summary / scope_recap
+  if (!r.summary && r.project_summary) {
+    const ps = r.project_summary;
+    if (typeof ps === "string") r.summary = ps;
+    else if (ps && typeof ps === "object") {
+      r.summary = r.summary ?? ps.summary ?? ps.executive_summary ?? ps.description ?? "";
+      r.scope_recap = r.scope_recap ?? ps.scope ?? ps.scope_recap ?? ps.scope_of_work ?? "";
+    }
+  }
+  r.summary = r.summary ?? r.executive_summary ?? r.overview ?? "";
+  r.scope_recap = r.scope_recap ?? r.scope ?? r.scope_of_work ?? "";
+
+  // official_department fallback
+  if (!r.official_department) {
+    r.official_department = r.lead_department ?? r.primary_department ?? r.jurisdiction ?? "Building Department";
+  }
+
+  // jurisdiction_state alt keys
+  r.jurisdiction_state = r.jurisdiction_state ?? r.state ?? r.state_code ?? undefined;
+
+  // jurisdiction fallback
+  if (!r.jurisdiction && r.jurisdiction_notes) r.jurisdiction = String(r.jurisdiction_notes).slice(0, 120);
+  r.jurisdiction = r.jurisdiction ?? r.authority ?? "Unknown jurisdiction";
+
+  // departments: normalize each entry's key names
+  if (Array.isArray(r.departments)) {
+    // eslint-disable-next-line @typescript-eslint/no-explicit-any
+    r.departments = r.departments.map((d: any) => {
+      if (!d || typeof d !== "object") return d;
+      return {
+        name: d.name ?? d.department ?? d.department_name ?? d.title ?? "Department",
+        authority_reason: d.authority_reason ?? d.reason ?? d.why ?? d.rationale ?? "",
+        required_reviews: Array.isArray(d.required_reviews) ? d.required_reviews : (Array.isArray(d.reviews) ? d.reviews : []),
+        required_documents: Array.isArray(d.required_documents) ? d.required_documents : (Array.isArray(d.documents) ? d.documents : []),
+        codes: Array.isArray(d.codes)
+          // eslint-disable-next-line @typescript-eslint/no-explicit-any
+          ? d.codes.map((c: any) => (typeof c === "string" ? { code: c, requirement: "" } : {
+              code: c?.code ?? c?.section ?? c?.citation ?? "",
+              requirement: c?.requirement ?? c?.description ?? c?.text ?? "",
+              discipline: c?.discipline ?? c?.category ?? undefined,
+            }))
+          : [],
+      };
+    });
+  } else {
+    r.departments = [];
+  }
+
+  // cost_estimate.breakdown must be an array
+  if (r.cost_estimate && typeof r.cost_estimate === "object") {
+    const ce = r.cost_estimate;
+    if (ce.breakdown && !Array.isArray(ce.breakdown)) {
+      // object like { "permit fees": {low, high}, ... } → array
+      ce.breakdown = Object.entries(ce.breakdown).map(([label, v]) => {
+        // eslint-disable-next-line @typescript-eslint/no-explicit-any
+        const val: any = v ?? {};
+        if (typeof val === "number") return { label, amount_usd_low: val, amount_usd_high: val };
+        return {
+          label,
+          amount_usd_low: val.low_usd ?? val.low ?? val.amount_usd_low ?? val.min,
+          amount_usd_high: val.high_usd ?? val.high ?? val.amount_usd_high ?? val.max,
+        };
+      });
+    }
+    if (!Array.isArray(ce.breakdown)) ce.breakdown = [];
+  } else {
+    r.cost_estimate = { breakdown: [] };
+  }
+
+  // wbs: coerce string ids & numeric defaults
+  if (Array.isArray(r.wbs)) {
+    // eslint-disable-next-line @typescript-eslint/no-explicit-any
+    r.wbs = r.wbs.map((t: any, i: number) => ({
+      id: String(t?.id ?? i + 1),
+      name: t?.name ?? t?.task ?? `Task ${i + 1}`,
+      phase: t?.phase ?? "General",
+      duration_days: Number(t?.duration_days ?? t?.duration ?? 1) || 1,
+      start_offset_days: Number(t?.start_offset_days ?? t?.start ?? 0) || 0,
+      depends_on: Array.isArray(t?.depends_on) ? t.depends_on.map(String) : [],
+      responsible: t?.responsible ?? undefined,
+    }));
+  }
+
+  // timeline defaults
+  if (Array.isArray(r.timeline)) {
+    // eslint-disable-next-line @typescript-eslint/no-explicit-any
+    r.timeline = r.timeline.map((t: any) => ({
+      phase: t?.phase ?? t?.name ?? "Phase",
+      duration_business_days: String(t?.duration_business_days ?? t?.duration ?? t?.days ?? ""),
+      responsible: t?.responsible ?? undefined,
+      note: t?.note ?? t?.notes ?? undefined,
+    }));
+  }
+
+  // contacts default
+  if (Array.isArray(r.contacts)) {
+    // eslint-disable-next-line @typescript-eslint/no-explicit-any
+    r.contacts = r.contacts.map((c: any) => ({
+      department: c?.department ?? c?.name ?? "Department",
+      name: c?.name ?? null,
+      phone: c?.phone ?? null,
+      email: c?.email ?? null,
+      website: c?.website ?? c?.url ?? null,
+      verified: Boolean(c?.verified ?? false),
+    }));
+  }
+
+  return r;
+}
+
+
+
 export const generateComplianceReport = createServerFn({ method: "POST" })
   .middleware([requireSupabaseAuth])
   .inputValidator((data: unknown) => GenInput.parse(data))
@@ -150,17 +269,56 @@ export const generateComplianceReport = createServerFn({ method: "POST" })
         tryFirecrawlContext(data.address, agent.label),
       ]);
 
+      const schemaTemplate = `{
+  "jurisdiction": "string — exact primary authority (e.g. 'Anne Arundel County Department of Inspections and Permits')",
+  "jurisdiction_state": "string — two-letter state code (e.g. 'MD')",
+  "official_department": "string — the lead permitting department name",
+  "summary": "string — 2-4 sentence executive summary of what this project needs",
+  "scope_recap": "string — 1-2 sentence restatement of the scope of work",
+  "common_rejection_flags": ["string", "string"],
+  "departments": [
+    {
+      "name": "string — e.g. 'Building Department'",
+      "authority_reason": "string — why this department has authority over this project",
+      "required_reviews": ["string"],
+      "required_documents": ["string"],
+      "codes": [{ "code": "IBC 2021 §1006.2.1", "requirement": "string", "discipline": "Building|Health|Fire|ADA|Plumbing|Mechanical|Electrical|Zoning" }]
+    }
+  ],
+  "contacts": [
+    { "department": "string", "name": "string|null", "phone": "string|null", "email": "string|null", "website": "string|null", "verified": false }
+  ],
+  "timeline": [
+    { "phase": "string", "duration_business_days": "5-10", "responsible": "string", "note": "string" }
+  ],
+  "cost_estimate": {
+    "low_usd": 0,
+    "high_usd": 0,
+    "breakdown": [{ "label": "Building permit fee", "amount_usd_low": 0, "amount_usd_high": 0 }]
+  },
+  "sources": ["https://..."],
+  "wbs": [
+    { "id": "1", "name": "Pre-application meeting", "phase": "Intake", "duration_days": 3, "start_offset_days": 0, "depends_on": [], "responsible": "Applicant" }
+  ],
+  "confidence": 0.75
+}`;
+
       const system = `You are Permivio's PermitNow-style Compliance Report agent. Produce a jurisdiction-anchored multi-department permit compliance report.
 
+CRITICAL: Return JSON that EXACTLY matches the schema below. Use these exact top-level keys and nothing else. Do NOT invent keys like "project_summary", "jurisdiction_notes", "department_name". Use "summary" (not "project_summary"), "official_department" at the top level, and each department object MUST have a "name" field.
+
+SCHEMA (return an object with exactly these keys and shapes):
+${schemaTemplate}
+
 RULES:
-- Identify the EXACT jurisdiction with authority (e.g. "Pikes Peak Regional Building Department" not just "Colorado Springs"). If the address spans multiple, name the primary one and note the others.
+- Identify the EXACT jurisdiction with authority. If the address spans multiple, name the primary one and note the others in summary.
 - Enumerate every applicable department (Building, Health, Fire, Planning/Zoning, ADA, Public Works, Utilities, Environmental, Sign, Historic) with authority_reason.
 - Cite specific code sections: IBC/IRC/IPC/IMC/NEC/IECC/IFC 2021, ADA 2010, A117.1-2017, FDA Food Code, and any local amendments referenced in the context.
-- Every contact should include department, phone, email, website. Set verified=true ONLY if the phone/website appears explicitly in the LIVE context. Otherwise verified=false.
+- Every contact must include department, phone, email, website. Set verified=true ONLY if the phone/website appears explicitly in the LIVE context. Otherwise verified=false.
 - Timeline in business-day ranges, per phase.
-- Cost estimate: realistic low/high USD range with breakdown (permit fees, plan review, inspections).
+- cost_estimate.breakdown MUST be an ARRAY of objects, never a single object.
 - WBS: 6-14 tasks with duration_days and depends_on for Gantt rendering. Include intake, plan review cycles, corrections, fee payment, issuance, inspections, CO.
-- Include a "common_rejection_flags" list of the 3-5 most likely reasons this project type gets rejected on first submission in this jurisdiction.
+- common_rejection_flags: array of 3-5 strings — most likely first-submission rejection reasons for this project type in this jurisdiction.
 - sources: URLs you cited. Prefer URLs from the LIVE context block.
 - confidence: 0.0-1.0 self-assessment.
 
@@ -179,9 +337,10 @@ Scope: ${agent.scope}
 ${data.scope_notes ? `Additional scope notes: ${data.scope_notes}` : ""}
 ${data.jurisdiction_hint ? `User-provided jurisdiction hint: ${data.jurisdiction_hint}` : ""}
 
-Return ONLY JSON matching the schema. Do not include narrative outside JSON.`;
+Return ONLY JSON matching the exact schema shown in the system message. Use the EXACT key names from the schema template — no substitutions, no renames, no extra top-level keys.`;
 
-      const report = await callGeminiJSON(prompt, system, ReportSchema, { model: "google/gemini-3.6-flash", max_tokens: 32000 });
+      const NormalizedSchema = z.preprocess(normalizeComplianceJson, ReportSchema);
+      const report = (await callGeminiJSON(prompt, system, NormalizedSchema, { model: "google/gemini-3.6-flash", max_tokens: 32000 })) as ComplianceReport;
 
       // Merge live URLs into sources if the AI missed them.
       const sources = Array.from(new Set([...(report.sources ?? []), ...live.urls])).slice(0, 12);
