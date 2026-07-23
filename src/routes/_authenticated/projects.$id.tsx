@@ -38,6 +38,7 @@ function ProjectDetail() {
 
   const getFn = useServerFn(getProject);
   const updateFn = useServerFn(updateProject);
+  const setTypeFn = useServerFn(setProjectTypeForProject);
   const q = useQuery({ queryKey: ["project", id], queryFn: () => getFn({ data: { id } }) });
 
   if (q.isLoading) return <AppShell><div className="p-6 text-sm text-muted-foreground">Loading…</div></AppShell>;
