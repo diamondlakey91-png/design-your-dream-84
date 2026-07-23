@@ -55,6 +55,12 @@ const energovSearch = (host: string) => (addr: string) =>
   `https://${host}/EnerGov_Prod/SelfService#/search?searchText=${enc(addr)}`;
 const energovHome = (host: string) => `https://${host}/EnerGov_Prod/SelfService#/home`;
 
+// Google search fallback — scoped to .gov sites so the top result is the
+// jurisdiction's actual portal. Guarantees the link always resolves to a
+// live page even for jurisdictions without a stable ACA/ePortal deep link.
+export const govSearchUrl = (jurisdiction: string, state: string, extra = "building permits online portal") =>
+  `https://www.google.com/search?q=${encodeURIComponent(`${jurisdiction} ${state} ${extra} site:.gov`)}`;
+
 function A(
   jurisdiction: string,
   state: string,
@@ -86,78 +92,99 @@ function E(
     ...extra,
   };
 }
+/** Search-fallback entry for jurisdictions without a stable direct portal URL.
+ *  Uses a `site:.gov` Google search so users still land on the right portal. */
+function S(
+  jurisdiction: string,
+  state: string,
+  platform: PortalPlatform = "Custom",
+  extra: Partial<PortalEntry> = {},
+): PortalEntry {
+  return {
+    jurisdiction,
+    state,
+    platform,
+    url: extra.url ?? govSearchUrl(jurisdiction, state),
+    addressSearch: (a: string) => govSearchUrl(jurisdiction, state, `${a} permit`),
+    permitSearch: (n: string) => govSearchUrl(jurisdiction, state, `permit ${n}`),
+    notes:
+      extra.notes ??
+      "No stable public portal deep link — opens a scoped .gov search that surfaces the jurisdiction's live permit portal.",
+    ...extra,
+  };
+}
 
 export const PORTAL_REGISTRY: PortalEntry[] = [
   // ================= Accela (largest footprint) =================
   A("Arlington County", "VA", "ARLINGTONCO", { planReviewUrl: "https://permitva.arlingtonva.us/ProjectDox/index.aspx" }),
-  A("Fairfax County", "VA", "FFXC", { planReviewUrl: "https://fidoprod.fairfaxcounty.gov/ProjectDox/" }),
-  A("Loudoun County", "VA", "LOUDOUN", { planReviewUrl: "https://loudounpdx.loudoun.gov/ProjectDox/" }),
-  A("Alexandria", "VA", "ALEXANDRIA"),
+  A("Fairfax County", "VA", "fairfax", { planReviewUrl: "https://fidoprod.fairfaxcounty.gov/ProjectDox/" }),
+  S("Loudoun County", "VA", "Accela", { url: "https://loudounpdx.loudoun.gov/", planReviewUrl: "https://loudounpdx.loudoun.gov/ProjectDox/" }),
+  S("Alexandria", "VA", "Custom", { url: "https://www.alexandriava.gov/Permits" }),
   A("San Diego", "CA", "SANDIEGO", { planReviewUrl: "https://plans.sandiego.gov/ProjectDox/" }),
   A("Oakland", "CA", "OAKLAND"),
-  A("San Jose", "CA", "SANJOSECA"),
+  S("San Jose", "CA", "Accela", { url: "https://buildingpermits.sanjoseca.gov/CitizenAccess/" }),
   A("Sacramento", "CA", "SACRAMENTO"),
-  A("Long Beach", "CA", "LONGBEACH"),
+  S("Long Beach", "CA", "Accela", { url: "https://lbpermits.longbeach.gov/CitizenAccess/" }),
   A("Anaheim", "CA", "ANAHEIM"),
-  A("Riverside", "CA", "RIVERSIDECA"),
+  S("Riverside", "CA"),
   A("Fresno", "CA", "FRESNO"),
-  A("Bakersfield", "CA", "BAKERSFIELD"),
-  A("Denver", "CO", "denver", { planReviewUrl: "https://www.denvergov.org/edaps/" }),
-  A("Colorado Springs", "CO", "COLORADOSPRINGS"),
-  A("Aurora", "CO", "AURORACO"),
+  S("Bakersfield", "CA"),
+  A("Denver", "CO", "denver"),
+  S("Colorado Springs", "CO", "Custom", { url: "https://coloradosprings.gov/permits" }),
+  S("Aurora", "CO", "Custom", { url: "https://www.auroragov.org/business/permits", planReviewUrl: "https://eplan.auroragov.org/ProjectDox/" }),
   A("Atlanta", "GA", "ATLANTA_GA"),
-  A("Savannah", "GA", "SAVANNAH"),
-  A("Minneapolis", "MN", "MINNEAPOLIS"),
-  A("Charlotte / Mecklenburg", "NC", "CLTNC"),
-  A("Raleigh", "NC", "RALEIGH"),
-  A("Durham", "NC", "DURHAM"),
-  A("Greensboro", "NC", "GREENSBORO"),
-  
-  A("Howard County", "MD", "HOWARD"),
-  A("Anne Arundel County", "MD", "AACOUNTY_MD", { planReviewUrl: "https://epermit.aacounty.org/ProjectDox/" }),
-  A("San Antonio", "TX", "SANANTONIO_TX"),
-  A("Fort Worth", "TX", "FORTWORTH"),
-  A("El Paso", "TX", "ELPASOTX"),
-  A("Plano", "TX", "PLANO"),
-  A("Arlington", "TX", "ARLINGTON_TX"),
-  A("Orlando", "FL", "ORLANDO"),
+  S("Savannah", "GA"),
+  S("Minneapolis", "MN", "Custom", { url: "https://www2.minneapolismn.gov/business-services/permits-licenses/" }),
+  S("Charlotte / Mecklenburg", "NC", "Custom", { url: "https://www.mecklenburgcountync.gov/departments/code-enforcement" }),
+  S("Raleigh", "NC", "Custom", { url: "https://raleighnc.gov/services/permits-and-inspections" }),
+  S("Durham", "NC", "Custom", { url: "https://durhamnc.gov/1146/Permits-Inspections" }),
+  S("Greensboro", "NC", "Custom", { url: "https://www.greensboro-nc.gov/departments/planning/permits" }),
+
+  S("Howard County", "MD", "Custom", { url: "https://www.howardcountymd.gov/inspections-permits" }),
+  S("Anne Arundel County", "MD", "Custom", { url: "https://www.aacounty.org/departments/inspections-and-permits", planReviewUrl: "https://epermit.aacounty.org/ProjectDox/" }),
+  S("San Antonio", "TX", "Custom", { url: "https://www.sanantonio.gov/DSD/Online-Services" }),
+  S("Fort Worth", "TX", "Custom", { url: "https://www.fortworthtexas.gov/departments/development-services", planReviewUrl: "https://eplans.fortworthtexas.gov/ProjectDox/" }),
+  A("El Paso", "TX", "elpaso"),
+  S("Plano", "TX", "Custom", { url: "https://www.plano.gov/292/Building-Inspections" }),
+  S("Arlington", "TX", "Custom", { url: "https://www.arlingtontx.gov/city_hall/departments/community_development_and_planning" }),
+  S("Orlando", "FL", "Custom", { url: "https://www.orlando.gov/Building-Development" }),
   A("Tampa", "FL", "TAMPA"),
-  A("Jacksonville", "FL", "JACKSONVILLE"),
+  S("Jacksonville", "FL", "Custom", { url: "https://www.coj.net/departments/planning-and-development" }),
   A("Fort Lauderdale", "FL", "FTL"),
-  A("St. Petersburg", "FL", "STPETE"),
+  S("St. Petersburg", "FL", "Custom", { url: "https://www.stpete.org/business/development_review/index.php" }),
   A("Tacoma", "WA", "TACOMA"),
   A("King County", "WA", "KINGCO"),
-  A("Eugene", "OR", "EUGENE"),
-  A("Pittsburgh", "PA", "PITTSBURGHPA"),
-  A("Newark", "NJ", "NEWARK"),
-  A("Jersey City", "NJ", "JCNJ"),
+  S("Eugene", "OR", "Custom", { url: "https://www.eugene-or.gov/95/Building-Permits" }),
+  S("Pittsburgh", "PA", "Custom", { url: "https://pittsburghpa.gov/pli/pli-home" }),
+  S("Newark", "NJ"),
+  S("Jersey City", "NJ", "Custom", { url: "https://data.jerseycitynj.gov/explore/dataset/permits/" }),
   A("Hartford", "CT", "HARTFORD"),
   A("Detroit", "MI", "DETROIT"),
   A("Grand Rapids", "MI", "GRANDRAPIDS"),
   A("Columbus", "OH", "COLUMBUS"),
-  A("Cleveland", "OH", "CLEVELAND"),
+  S("Cleveland", "OH", "Custom", { url: "https://www.clevelandohio.gov/CityofCleveland/Home/Government/CityAgencies/BuildingHousing" }),
   A("Cincinnati", "OH", "CINCINNATI"),
   A("Milwaukee", "WI", "MILWAUKEE"),
-  A("St. Louis", "MO", "STLOUISMO"),
-  A("Kansas City", "MO", "KCMO"),
-  A("Salt Lake City", "UT", "SLC"),
-  A("Albuquerque", "NM", "ABQ"),
-  A("Tucson", "AZ", "TUCSON"),
-  A("Mesa", "AZ", "MESA"),
+  S("St. Louis", "MO", "Custom", { url: "https://www.stlouis-mo.gov/government/departments/public-safety/building/" }),
+  S("Kansas City", "MO", "Custom", { url: "https://www.kcmo.gov/city-hall/departments/city-planning-development" }),
+  A("Salt Lake City", "UT", "SLC", { planReviewUrl: "https://eplans.slcgov.com/ProjectDox/" }),
+  S("Albuquerque", "NM", "Custom", { url: "https://www.cabq.gov/planning/online-services" }),
+  S("Tucson", "AZ", "Custom", { url: "https://www.tucsonaz.gov/pdsd" }),
+  A("Mesa", "AZ", "MESA", { planReviewUrl: "https://eplan.mesaaz.gov/ProjectDox/" }),
   A("Clark County / Las Vegas", "NV", "CLARKCO"),
   A("Reno", "NV", "RENO"),
   A("Boise", "ID", "BOISE"),
-  A("Charleston", "SC", "CHARLESTON"),
-  A("Columbia", "SC", "COLUMBIASC"),
+  S("Charleston", "SC", "Custom", { url: "https://www.charleston-sc.gov/265/Permitting-Inspections" }),
+  S("Columbia", "SC", "Custom", { url: "https://www.columbiasc.gov/depts/planning-development-services/" }),
   A("Birmingham", "AL", "BIRMINGHAM"),
-  A("Memphis / Shelby County", "TN", "MEMPHIS"),
+  S("Memphis / Shelby County", "TN", "Custom", { url: "https://www.memphistn.gov/government/executive-division/permits-office/" }),
   A("Knoxville", "TN", "KNOXVILLE"),
-  A("Louisville", "KY", "LOUISVILLE"),
-  A("Providence", "RI", "PROVIDENCE"),
-  A("Portland", "ME", "PORTLANDME"),
-  A("Cambridge", "MA", "CAMBRIDGE"),
-  A("Anchorage", "AK", "ANCHORAGE"),
-  A("Honolulu", "HI", "HONOLULU"),
+  S("Louisville", "KY", "Custom", { url: "https://louisvilleky.gov/government/develop-louisville" }),
+  S("Providence", "RI", "Custom", { url: "https://www.providenceri.gov/inspection-standards/" }),
+  S("Portland", "ME", "Custom", { url: "https://www.portlandmaine.gov/253/Inspections" }),
+  S("Cambridge", "MA", "Custom", { url: "https://www.cambridgema.gov/inspection" }),
+  A("Anchorage", "AK", "anchorage"),
+  S("Honolulu", "HI", "Custom", { url: "https://www.honolulu.gov/dpp" }),
 
   // Accela — custom-hosted (non aca-prod)
   {
@@ -178,13 +205,10 @@ export const PORTAL_REGISTRY: PortalEntry[] = [
     addressSearch: (a) => `https://eservices.montgomerycountymd.gov/DPSPermitting/CitizenAccess/Cap/GlobalSearchResults.aspx?QueryText=${enc(a)}`,
     permitSearch: (n) => `https://eservices.montgomerycountymd.gov/DPSPermitting/CitizenAccess/Cap/GlobalSearchResults.aspx?QueryText=${encodeURIComponent(n.trim())}`,
   },
-  {
-    jurisdiction: "Arlington County", state: "VA", platform: "Accela",
-    url: "https://permits.arlingtonva.us/CitizenAccess/Default.aspx",
-    addressSearch: (a) => `https://permits.arlingtonva.us/CitizenAccess/Cap/GlobalSearchResults.aspx?QueryText=${enc(a)}`,
-    permitSearch: (n) => `https://permits.arlingtonva.us/CitizenAccess/Cap/GlobalSearchResults.aspx?QueryText=${encodeURIComponent(n.trim())}`,
-    notes: "Local mirror of Arlington's ACA instance.",
-  },
+  S("Arlington County (local mirror)", "VA", "Accela", {
+    url: "https://permitva.arlingtonva.us/CitizenAccess/",
+    notes: "Alternate deep link to Arlington's Permit VA portal.",
+  }),
   {
     jurisdiction: "Prince William County", state: "VA", platform: "Accela",
     url: "https://eservices.pwcgov.org/BuildingDevelopment/Default.aspx",
@@ -254,13 +278,13 @@ export const PORTAL_REGISTRY: PortalEntry[] = [
   { jurisdiction: "Arlington County (Permit Arlington)", state: "VA", platform: "ProjectDox", url: "https://permitva.arlingtonva.us/ProjectDox/index.aspx" },
   { jurisdiction: "Prince William County (ePlans)", state: "VA", platform: "ProjectDox", url: "https://eplans.pwcgov.org/ProjectDox/" },
   { jurisdiction: "San Diego (DSD ePlans)", state: "CA", platform: "ProjectDox", url: "https://plans.sandiego.gov/ProjectDox/" },
-  { jurisdiction: "Denver (E-Permits ePlans)", state: "CO", platform: "ProjectDox", url: "https://www.denvergov.org/edaps/" },
+  { jurisdiction: "Denver (E-Permits ePlans)", state: "CO", platform: "ProjectDox", url: "https://www.denvergov.org/Government/Agencies-Departments-Offices/Agencies-Departments-Offices-Directory/Community-Planning-and-Development/Denver-Development-Services/Help-with-permits" },
   { jurisdiction: "Aurora (ePlans)", state: "CO", platform: "ProjectDox", url: "https://eplan.auroragov.org/ProjectDox/" },
   { jurisdiction: "Palm Beach County (ePlans)", state: "FL", platform: "ProjectDox", url: "https://epzb.pbcgov.org/ProjectDox/" },
   { jurisdiction: "Orange County (ePlans)", state: "FL", platform: "ProjectDox", url: "https://fastrackepr.ocfl.net/ProjectDox/" },
   { jurisdiction: "Broward County (ePermits ePlans)", state: "FL", platform: "ProjectDox", url: "https://eplans.broward.org/ProjectDox/" },
   { jurisdiction: "Miami-Dade (ePlans)", state: "FL", platform: "ProjectDox", url: "https://eplans.miamidade.gov/ProjectDox/" },
-  { jurisdiction: "Chicago (E-Plan Review)", state: "IL", platform: "ProjectDox", url: "https://ipiweb.cityofchicago.org/EPlan/" },
+  { jurisdiction: "Chicago (E-Plan Review)", state: "IL", platform: "ProjectDox", url: "https://www.chicago.gov/city/en/depts/bldgs/provdrs/electronic_planreview.html" },
   { jurisdiction: "Louisville / Jefferson County (ePlans)", state: "KY", platform: "ProjectDox", url: "https://lojicplans.louisvilleky.gov/ProjectDox/" },
   { jurisdiction: "Nashville (ePlans)", state: "TN", platform: "ProjectDox", url: "https://plans.nashville.gov/ProjectDox/" },
   { jurisdiction: "Salt Lake City (ePlans)", state: "UT", platform: "ProjectDox", url: "https://eplans.slcgov.com/ProjectDox/" },
@@ -368,9 +392,9 @@ export const PORTAL_REGISTRY: PortalEntry[] = [
     notes: "DOB NOW for active permits; BIS for records.",
   },
   {
-    jurisdiction: "Washington, DC (eServices DCRA)", state: "DC", platform: "Custom",
-    url: "https://eservices.dcra.dc.gov/DCRAPermitApplicationSearch/",
-    addressSearch: (a) => `https://eservices.dcra.dc.gov/DCRAPermitApplicationSearch/Search/Permit?address=${enc(a)}`,
+    jurisdiction: "Washington, DC (DOB Permit Wizard)", state: "DC", platform: "Custom",
+    url: "https://dob.dc.gov/service/permit-wizard",
+    notes: "DCRA has been reorganized into DOB. Use Permit Wizard to reach the current permit portal.",
   },
   {
     jurisdiction: "Los Angeles (LADBS)", state: "CA", platform: "Custom",
@@ -399,7 +423,8 @@ export const PORTAL_REGISTRY: PortalEntry[] = [
   },
   {
     jurisdiction: "Philadelphia (eCLIPSE)", state: "PA", platform: "Custom",
-    url: "https://eclipse.phila.gov/phillylmsprod/int/lms/Login.aspx",
+    url: "https://www.phila.gov/departments/department-of-licenses-and-inspections/permits-and-certificates/",
+    notes: "Direct eCLIPSE login is unstable — this landing page redirects to the current portal.",
   },
   {
     jurisdiction: "Phoenix (PDD Search)", state: "AZ", platform: "Custom",
@@ -408,8 +433,7 @@ export const PORTAL_REGISTRY: PortalEntry[] = [
   },
   {
     jurisdiction: "Fairfax County (Plan & Build)", state: "VA", platform: "Custom",
-    url: "https://www.fairfaxcounty.gov/plan2build/permit-status",
-    addressSearch: (a) => `https://www.fairfaxcounty.gov/plan2build/permit-status?address=${enc(a)}`,
+    url: "https://www.fairfaxcounty.gov/landdevelopment/permits",
   },
   {
     jurisdiction: "Portland (PortlandMaps)", state: "OR", platform: "Custom",
