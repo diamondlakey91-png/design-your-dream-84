@@ -89,9 +89,20 @@ function ProjectDetail() {
         open={editOpen}
         onOpenChange={setEditOpen}
         project={project}
-        onSave={async (patch) => {
+        onSave={async (patch, typeIds) => {
           try {
-            await updateFn({ data: { id, ...patch } });
+            const { primary_project_type_id, additional_project_type_ids, ...rest } = patch;
+            await updateFn({ data: { id, ...rest } });
+            if (typeIds && typeIds.primaryId) {
+              await setTypeFn({
+                data: {
+                  project_id: id,
+                  primary_project_type_id: typeIds.primaryId,
+                  additional_project_type_ids: typeIds.additionalIds ?? [],
+                  source: "user_selected",
+                },
+              }).catch(() => {});
+            }
             toast.success("Project updated");
             setEditOpen(false);
             qc.invalidateQueries({ queryKey: ["project", id] });
@@ -101,6 +112,7 @@ function ProjectDetail() {
           }
         }}
       />
+
 
       {/* Tabs */}
       <nav className="sticky top-0 z-10 bg-background/95 backdrop-blur border-b border-border">
