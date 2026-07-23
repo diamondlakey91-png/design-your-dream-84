@@ -105,8 +105,29 @@ function JurisdictionsIndex() {
   const rows = listQ.data ?? [];
   const saved = savedQ.data ?? [];
   const savedIds = useMemo(() => new Set(saved.map((s) => s.jurisdiction_id)), [saved]);
-  const featured = rows.filter((r) => r.is_demo).slice(0, 5);
-  const others = rows.filter((r) => !r.is_demo);
+
+  // Client-side county filter — server already filters state; we narrow further by county.
+  const countyOptions = useMemo(() => {
+    const set = new Set<string>();
+    for (const r of rows) if (r.county) set.add(r.county);
+    return Array.from(set).sort((a, b) => a.localeCompare(b));
+  }, [rows]);
+  const filteredRows = useMemo(
+    () => (countyF ? rows.filter((r) => (r.county ?? "") === countyF) : rows),
+    [rows, countyF],
+  );
+  const featured = filteredRows.filter((r) => r.is_demo).slice(0, 5);
+  const others = filteredRows.filter((r) => !r.is_demo);
+  const totalResults = featured.length + others.length;
+
+  // Popular quick-pick counties users search for most often.
+  const QUICK_PICKS: Array<{ label: string; state: string; county: string }> = [
+    { label: "Anne Arundel County, MD", state: "MD", county: "Anne Arundel County" },
+    { label: "Montgomery County, MD", state: "MD", county: "Montgomery County" },
+    { label: "Prince George's County, MD", state: "MD", county: "Prince George's County" },
+    { label: "Arlington County, VA", state: "VA", county: "Arlington County" },
+    { label: "Fairfax County, VA", state: "VA", county: "Fairfax County" },
+  ];
 
   return (
     <div className="min-h-dvh bg-background">
