@@ -80,35 +80,100 @@ const GenInput = z.object({
   project_id: z.string().uuid().optional(),
 });
 
-async function tryFirecrawlContext(address: string, agentLabel: string): Promise<{ block: string; urls: string[] }> {
+async function tryFirecrawlContext(
+  address: string,
+  agentLabel: string,
+  agentDepartments: string[],
+  scopeNotes: string | undefined,
+): Promise<{ block: string; urls: string[] }> {
   const key = process.env.FIRECRAWL_API_KEY;
   if (!key) return { block: "", urls: [] };
   try {
-    const query = `${address} building permit ${agentLabel} requirements site:.gov OR site:.us`;
-    const results = await firecrawlSearch(key, query, 4);
-    if (results.length === 0) return { block: "", urls: [] };
-    // Only scrape 1 page — keeps total wall time under the Worker budget so the
-    // final UPDATE actually lands. The remaining URLs still get folded into `sources`.
-    const scraped: string[] = [];
-    const urls: string[] = [];
-    for (const r of results.slice(0, 1)) {
-      try {
-        const s = await firecrawlScrape(key, r.url);
-        if (s.markdown) {
-          scraped.push(`SOURCE: ${r.url}\nTITLE: ${s.title}\n${s.markdown.slice(0, 3000)}`);
-          urls.push(r.url);
-        }
-      } catch {
-        /* skip */
+    // Build a set of jurisdiction-anchored queries. We search per applicable
+    // department so the AI gets real, department-specific facts (fees, forms,
+    // review timelines, local amendments) instead of one generic hit.
+    const deptQueryMap: Record<string, string> = {
+      Building: "building permit application fees plan review",
+      Health: "health department plan review food service permit",
+      Fire: "fire marshal permit hood suppression alarm sprinkler",
+      "Planning/Zoning": "zoning use permit site plan review",
+      "Public Works": "right of way encroachment public works permit",
+      Utilities: "water sewer utility connection permit",
+      ADA: "accessibility path of travel accessibility review",
+      Environmental: "stormwater environmental review sediment erosion",
+      Sign: "sign permit ordinance requirements",
+      Historic: "historic preservation commission design review",
+    };
+    const deptSpecific = agentDepartments
+      .map((d) => deptQueryMap[d])
+      .filter(Boolean)
+      .slice(0, 4);
+    const baseQueries = [
+      `${address} ${agentLabel} permit requirements site:.gov OR site:.us`,
+      ...deptSpecific.map((q) => `${address} ${q} site:.gov OR site:.us`),
+    ];
+    if (scopeNotes && scopeNotes.length > 8) {
+      baseQueries.push(`${address} ${scopeNotes.slice(0, 120)} permit site:.gov OR site:.us`);
+    }
+
+    // Fan out searches in parallel; dedupe URLs, prefer .gov.
+    const searchResults = await Promise.all(
+      baseQueries.map((q) => firecrawlSearch(key, q, 4).catch(() => [])),
+    );
+    const seen = new Set<string>();
+    const ranked: { url: string; title: string }[] = [];
+    for (const bucket of searchResults) {
+      for (const r of bucket) {
+        if (!r?.url || seen.has(r.url)) continue;
+        seen.add(r.url);
+        ranked.push({ url: r.url, title: r.title ?? "" });
       }
     }
-    const otherUrls = results.map((r) => r.url).filter((u) => !urls.includes(u));
-    urls.push(...otherUrls);
+    // Rank .gov / .us first, then everything else.
+    ranked.sort((a, b) => {
+      const ag = /\.(gov|us)(\/|$)/i.test(a.url) ? 0 : 1;
+      const bg = /\.(gov|us)(\/|$)/i.test(b.url) ? 0 : 1;
+      return ag - bg;
+    });
+    if (ranked.length === 0) return { block: "", urls: [] };
+
+    // Scrape up to 4 pages in parallel — bounded so total wall time stays
+    // inside the Worker budget. Each scrape has its own timeout via a race.
+    const toScrape = ranked.slice(0, 4);
+    const scrapes = await Promise.all(
+      toScrape.map(async (r) => {
+        try {
+          const timeout = new Promise<null>((resolve) => setTimeout(() => resolve(null), 12000));
+          const s = await Promise.race([firecrawlScrape(key, r.url), timeout]);
+          if (!s || !s.markdown) return null;
+          return {
+            url: r.url,
+            title: s.title || r.title,
+            markdown: s.markdown.slice(0, 6000),
+          };
+        } catch {
+          return null;
+        }
+      }),
+    );
+    const scraped = scrapes.filter((s): s is NonNullable<typeof s> => !!s);
+    const urls = [
+      ...scraped.map((s) => s.url),
+      ...ranked.map((r) => r.url).filter((u) => !scraped.find((s) => s.url === u)),
+    ].slice(0, 12);
+
     if (scraped.length === 0) return { block: "", urls };
-    return {
-      block: `\n\n[LIVE JURISDICTION SEARCH — scraped ${scraped.length} pages]\n${scraped.join("\n\n---\n\n")}\n\nUse these excerpts to identify the exact department, phone/website, review timeline, and any local amendments. Cite the SOURCE url when you use a fact from it.`,
-      urls,
-    };
+
+    const block =
+      `\n\n[LIVE JURISDICTION RESEARCH — ${scraped.length} pages scraped from official sources]\n` +
+      scraped
+        .map(
+          (s, i) =>
+            `--- SOURCE ${i + 1} ---\nURL: ${s.url}\nTITLE: ${s.title}\n\n${s.markdown}`,
+        )
+        .join("\n\n") +
+      `\n\nMANDATE: Ground every department, code citation, fee, timeline, contact, and required document in the excerpts above. When you use a fact, put the SOURCE url in the "sources" array. If the excerpts contradict national defaults, prefer the local excerpt. Never fabricate a phone number, email, or fee — set fields to null when the excerpts don't cover them.`;
+    return { block, urls };
   } catch {
     return { block: "", urls: [] };
   }
