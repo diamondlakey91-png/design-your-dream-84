@@ -495,6 +495,60 @@ export type Database = {
           },
         ]
       }
+      intake_answers: {
+        Row: {
+          answer_choice: string | null
+          answer_value: string | null
+          created_at: string
+          document_id: string | null
+          id: string
+          project_id: string
+          question_key: string
+          source: string
+          updated_at: string
+          verified: boolean
+        }
+        Insert: {
+          answer_choice?: string | null
+          answer_value?: string | null
+          created_at?: string
+          document_id?: string | null
+          id?: string
+          project_id: string
+          question_key: string
+          source?: string
+          updated_at?: string
+          verified?: boolean
+        }
+        Update: {
+          answer_choice?: string | null
+          answer_value?: string | null
+          created_at?: string
+          document_id?: string | null
+          id?: string
+          project_id?: string
+          question_key?: string
+          source?: string
+          updated_at?: string
+          verified?: boolean
+        }
+        Relationships: [
+          {
+            foreignKeyName: "intake_answers_document_id_fkey"
+            columns: ["document_id"]
+            isOneToOne: false
+            referencedRelation: "project_documents"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "intake_answers_project_id_fkey"
+            columns: ["project_id"]
+            isOneToOne: false
+            referencedRelation: "projects"
+            referencedColumns: ["id"]
+          },
+        ]
+      }
       jurisdiction_confirmations: {
         Row: {
           city: string
@@ -1796,11 +1850,15 @@ export type Database = {
           construction_value_cents: number | null
           created_at: string
           dwelling_units: number | null
+          friendly_project_type: string | null
           id: string
+          intake_status: string
+          intake_step: number
           lat: number | null
           lng: number | null
           occupancy_existing: string | null
           occupancy_proposed: string | null
+          plain_scope: string | null
           project_id: string
           project_type: Database["public"]["Enums"]["scope_project_type"] | null
           residential_or_commercial:
@@ -1823,11 +1881,15 @@ export type Database = {
           construction_value_cents?: number | null
           created_at?: string
           dwelling_units?: number | null
+          friendly_project_type?: string | null
           id?: string
+          intake_status?: string
+          intake_step?: number
           lat?: number | null
           lng?: number | null
           occupancy_existing?: string | null
           occupancy_proposed?: string | null
+          plain_scope?: string | null
           project_id: string
           project_type?:
             | Database["public"]["Enums"]["scope_project_type"]
@@ -1852,11 +1914,15 @@ export type Database = {
           construction_value_cents?: number | null
           created_at?: string
           dwelling_units?: number | null
+          friendly_project_type?: string | null
           id?: string
+          intake_status?: string
+          intake_step?: number
           lat?: number | null
           lng?: number | null
           occupancy_existing?: string | null
           occupancy_proposed?: string | null
+          plain_scope?: string | null
           project_id?: string
           project_type?:
             | Database["public"]["Enums"]["scope_project_type"]
