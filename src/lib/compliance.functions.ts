@@ -87,13 +87,15 @@ async function tryFirecrawlContext(address: string, agentLabel: string): Promise
     const query = `${address} building permit ${agentLabel} requirements site:.gov OR site:.us`;
     const results = await firecrawlSearch(key, query, 4);
     if (results.length === 0) return { block: "", urls: [] };
+    // Only scrape 1 page — keeps total wall time under the Worker budget so the
+    // final UPDATE actually lands. The remaining URLs still get folded into `sources`.
     const scraped: string[] = [];
     const urls: string[] = [];
-    for (const r of results.slice(0, 2)) {
+    for (const r of results.slice(0, 1)) {
       try {
         const s = await firecrawlScrape(key, r.url);
         if (s.markdown) {
-          scraped.push(`SOURCE: ${r.url}\nTITLE: ${s.title}\n${s.markdown.slice(0, 3500)}`);
+          scraped.push(`SOURCE: ${r.url}\nTITLE: ${s.title}\n${s.markdown.slice(0, 3000)}`);
           urls.push(r.url);
         }
       } catch {
