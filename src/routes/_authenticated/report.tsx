@@ -4,10 +4,10 @@ import { useMutation, useQuery, useQueryClient } from "@tanstack/react-query";
 import { useServerFn } from "@tanstack/react-start";
 import { AppShell } from "@/components/AppShell";
 import { COMPLIANCE_AGENTS } from "@/lib/complianceAgents";
-import { generateComplianceReport, listComplianceReports, deleteComplianceReport } from "@/lib/compliance.functions";
+import { generateComplianceReport, listComplianceReports, deleteComplianceReport, exportComplianceReportPdf } from "@/lib/compliance.functions";
 import { JurisdictionAutocomplete } from "@/components/JurisdictionAutocomplete";
 import { toast } from "sonner";
-import { FileCheck2, Zap, MapPin, ChevronRight, Trash2, Sparkles, Timer, ShieldCheck } from "lucide-react";
+import { FileCheck2, Zap, MapPin, ChevronRight, Trash2, Sparkles, Timer, ShieldCheck, Download, Loader2 } from "lucide-react";
 
 export const Route = createFileRoute("/_authenticated/report")({
   head: () => ({
