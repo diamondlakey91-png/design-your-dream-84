@@ -122,7 +122,7 @@ export const PORTAL_REGISTRY: PortalEntry[] = [
   S("Alexandria", "VA", "Custom", { url: "https://www.alexandriava.gov/Permits" }),
   A("San Diego", "CA", "SANDIEGO", { planReviewUrl: "https://plans.sandiego.gov/ProjectDox/" }),
   A("Oakland", "CA", "OAKLAND"),
-  S("San Jose", "CA", "Custom", { url: "https://buildingpermits.sanjoseca.gov/CitizenAccess/" }),
+  S("San Jose", "CA", "Accela", { url: "https://buildingpermits.sanjoseca.gov/CitizenAccess/" }),
   A("Sacramento", "CA", "SACRAMENTO"),
   S("Long Beach", "CA", "Accela", { url: "https://lbpermits.longbeach.gov/CitizenAccess/" }),
   A("Anaheim", "CA", "ANAHEIM"),
