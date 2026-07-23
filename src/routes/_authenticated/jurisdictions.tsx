@@ -391,7 +391,7 @@ function RequestDrawer({ onClose }: { onClose: () => void }) {
             <Field label="State">
               <select value={form.state} onChange={(e) => setForm({ ...form, state: e.target.value })} className="input">
                 <option value="">Select</option>
-                {US_STATES.map((s) => <option key={s} value={s}>{s}</option>)}
+                {US_STATES.map(([code, label]) => <option key={code} value={code}>{code} — {label}</option>)}
               </select>
             </Field>
             <Field label="County">
