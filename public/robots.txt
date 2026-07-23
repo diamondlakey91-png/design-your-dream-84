@@ -1,0 +1,4 @@
+User-agent: *
+Allow: /
+
+Sitemap: https://permivio.lovable.app/sitemap.xml
