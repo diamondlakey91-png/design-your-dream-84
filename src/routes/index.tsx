@@ -170,8 +170,168 @@ function Landing() {
         </div>
       </section>
 
+      {/* Compliance Depth */}
+      <section className="relative mx-auto max-w-7xl px-6 py-24">
+        <div className="mx-auto max-w-2xl text-center">
+          <p className="font-mono text-[11px] uppercase tracking-[0.3em] text-blue-400/80">
+            Compliance depth
+          </p>
+          <h2 className="mt-3 bg-gradient-to-b from-white via-blue-100 to-blue-500 bg-clip-text text-3xl font-bold tracking-tight text-transparent md:text-4xl">
+            Research a reviewer will respect.
+          </h2>
+          <p className="mx-auto mt-4 max-w-xl text-pretty text-base text-blue-200/70">
+            Permivio runs multi-department research on every project — grounded in the exact jurisdiction, cited to code.
+          </p>
+        </div>
+
+        <div className="mt-14 grid gap-6 md:grid-cols-3">
+          {[
+            {
+              icon: MapPinCheck,
+              tint: "from-blue-500/25 to-blue-700/10 text-blue-300 ring-blue-500/40 shadow-[0_0_30px_-8px_rgba(59,130,246,0.55)]",
+              title: "Verified Jurisdiction Identification",
+              body: "Automatic detection of the correct building department — not just city or county, but the exact jurisdiction responsible for your project location.",
+              chip: {
+                label: "Example",
+                text: 'Identifies "Pikes Peak Regional Building Department" instead of just "Colorado Springs".',
+              },
+            },
+            {
+              icon: Building2,
+              tint: "from-violet-500/25 to-fuchsia-700/10 text-violet-300 ring-violet-500/40 shadow-[0_0_30px_-8px_rgba(139,92,246,0.55)]",
+              title: "Multi-Department Research",
+              body: "Comprehensive research across every relevant department in one report: building, health, fire, and ADA compliance requirements.",
+              bullets: [
+                "Building Department (structural)",
+                "Health Department (sanitation)",
+                "Fire Department (safety)",
+                "ADA Compliance (accessibility)",
+              ],
+            },
+            {
+              icon: BookOpen,
+              tint: "from-cyan-500/25 to-teal-700/10 text-cyan-300 ring-cyan-500/40 shadow-[0_0_30px_-8px_rgba(34,211,238,0.55)]",
+              title: "Code Citations & References",
+              body: "Direct references to IPC, ADA, FDA Food Code, and local amendments — with specific section numbers for easy verification.",
+              chip: {
+                label: "Citations include",
+                text: "International Plumbing Code (IPC) · 2010 ADA Standards · FDA Food Code · Local jurisdiction amendments.",
+              },
+            },
+          ].map((f) => (
+            <div
+              key={f.title}
+              className="group relative overflow-hidden rounded-2xl border border-blue-500/15 bg-gradient-to-b from-white/[0.04] to-white/[0.01] p-7 backdrop-blur transition hover:border-blue-500/30"
+            >
+              <div
+                aria-hidden
+                className="pointer-events-none absolute inset-x-0 top-0 h-px bg-gradient-to-r from-transparent via-blue-400/60 to-transparent opacity-0 transition group-hover:opacity-100"
+              />
+              <div
+                className={`mb-5 inline-flex size-11 items-center justify-center rounded-xl bg-gradient-to-br ring-1 ${f.tint}`}
+              >
+                <f.icon className="size-5" />
+              </div>
+              <h3 className="bg-gradient-to-r from-white to-blue-100 bg-clip-text text-lg font-semibold text-transparent">
+                {f.title}
+              </h3>
+              <p className="mt-3 text-sm leading-relaxed text-slate-400">{f.body}</p>
+
+              {f.bullets && (
+                <ul className="mt-5 space-y-2 text-sm text-blue-100/80">
+                  {f.bullets.map((b) => (
+                    <li key={b} className="flex items-center gap-2">
+                      <span className="size-1.5 rounded-full bg-blue-400 shadow-[0_0_8px_rgba(59,130,246,0.9)]" />
+                      {b}
+                    </li>
+                  ))}
+                </ul>
+              )}
+
+              {f.chip && (
+                <div className="mt-5 rounded-lg border border-blue-500/20 bg-blue-500/[0.06] p-3">
+                  <p className="text-[11px] font-semibold uppercase tracking-wider text-blue-300">
+                    {f.chip.label}
+                  </p>
+                  <p className="mt-1 text-xs leading-relaxed text-blue-100/75">{f.chip.text}</p>
+                </div>
+              )}
+            </div>
+          ))}
+        </div>
+      </section>
+
+      {/* How it works */}
+      <section className="relative border-t border-blue-500/10 py-24">
+        <div
+          aria-hidden
+          className="pointer-events-none absolute inset-0 -z-10"
+          style={{
+            background:
+              "radial-gradient(50rem 30rem at 50% 20%, rgba(59,130,246,0.12), transparent 60%), radial-gradient(40rem 30rem at 50% 100%, rgba(139,92,246,0.10), transparent 60%)",
+          }}
+        />
+        <div className="mx-auto max-w-7xl px-6">
+          <div className="mx-auto max-w-2xl text-center">
+            <p className="font-mono text-[11px] uppercase tracking-[0.3em] text-blue-400/80">
+              How it works
+            </p>
+            <h2 className="mt-3 bg-gradient-to-b from-white via-blue-100 to-blue-500 bg-clip-text text-3xl font-bold tracking-tight text-transparent md:text-4xl">
+              Three steps to complete permit compliance.
+            </h2>
+          </div>
+
+          <div className="mt-14 grid gap-6 md:grid-cols-3">
+            {[
+              {
+                step: "1",
+                icon: ClipboardList,
+                tint: "from-violet-500 to-blue-600 shadow-[0_0_40px_-8px_rgba(139,92,246,0.8)]",
+                title: "Enter Project Details",
+                body: "Provide the project address and project type. Smart autocomplete supports every major project category — new build, tenant fit-out, change of use, and more.",
+              },
+              {
+                step: "2",
+                icon: Zap,
+                tint: "from-blue-500 to-teal-500 shadow-[0_0_40px_-8px_rgba(59,130,246,0.8)]",
+                title: "AI Research",
+                body: "Our AI agents research jurisdiction requirements, codes, and compliance standards in real-time across multiple authoritative data sources.",
+              },
+              {
+                step: "3",
+                icon: CheckCircle2,
+                tint: "from-teal-400 to-cyan-500 shadow-[0_0_40px_-8px_rgba(45,212,191,0.8)]",
+                title: "Get Your Report",
+                body: "Receive a comprehensive PDF with every compliance requirement, verified contacts, phased timelines, and cost estimates — ready to submit.",
+              },
+            ].map((s) => (
+              <div
+                key={s.step}
+                className="group relative overflow-hidden rounded-2xl border border-blue-500/15 bg-gradient-to-b from-white/[0.04] to-white/[0.01] p-7 backdrop-blur transition hover:border-blue-500/30"
+              >
+                <div className="flex items-center gap-3">
+                  <div
+                    className={`inline-flex size-12 items-center justify-center rounded-xl bg-gradient-to-br text-white ${s.tint}`}
+                  >
+                    <s.icon className="size-5" />
+                  </div>
+                  <span className="font-mono text-4xl font-bold text-blue-500/20">
+                    0{s.step}
+                  </span>
+                </div>
+                <h3 className="mt-6 bg-gradient-to-r from-white to-blue-100 bg-clip-text text-lg font-semibold text-transparent">
+                  {s.title}
+                </h3>
+                <p className="mt-3 text-sm leading-relaxed text-slate-400">{s.body}</p>
+              </div>
+            ))}
+          </div>
+        </div>
+      </section>
+
       {/* CTA band */}
       <section className="relative overflow-hidden">
+
         <div
           aria-hidden
           className="pointer-events-none absolute inset-0 -z-10"
