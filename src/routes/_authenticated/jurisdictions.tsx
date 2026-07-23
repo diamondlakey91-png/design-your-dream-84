@@ -29,7 +29,19 @@ export const Route = createFileRoute("/_authenticated/jurisdictions")({
   component: JurisdictionsIndex,
 });
 
-const US_STATES = ["AL","AK","AZ","AR","CA","CO","CT","DE","DC","FL","GA","HI","ID","IL","IN","IA","KS","KY","LA","ME","MD","MA","MI","MN","MS","MO","MT","NE","NV","NH","NJ","NM","NY","NC","ND","OH","OK","OR","PA","RI","SC","SD","TN","TX","UT","VT","VA","WA","WV","WI","WY"];
+const US_STATES: Array<[string, string]> = [
+  ["AL","Alabama"],["AK","Alaska"],["AZ","Arizona"],["AR","Arkansas"],["CA","California"],
+  ["CO","Colorado"],["CT","Connecticut"],["DE","Delaware"],["DC","District of Columbia"],
+  ["FL","Florida"],["GA","Georgia"],["HI","Hawaii"],["ID","Idaho"],["IL","Illinois"],
+  ["IN","Indiana"],["IA","Iowa"],["KS","Kansas"],["KY","Kentucky"],["LA","Louisiana"],
+  ["ME","Maine"],["MD","Maryland"],["MA","Massachusetts"],["MI","Michigan"],["MN","Minnesota"],
+  ["MS","Mississippi"],["MO","Missouri"],["MT","Montana"],["NE","Nebraska"],["NV","Nevada"],
+  ["NH","New Hampshire"],["NJ","New Jersey"],["NM","New Mexico"],["NY","New York"],
+  ["NC","North Carolina"],["ND","North Dakota"],["OH","Ohio"],["OK","Oklahoma"],["OR","Oregon"],
+  ["PA","Pennsylvania"],["RI","Rhode Island"],["SC","South Carolina"],["SD","South Dakota"],
+  ["TN","Tennessee"],["TX","Texas"],["UT","Utah"],["VT","Vermont"],["VA","Virginia"],
+  ["WA","Washington"],["WV","West Virginia"],["WI","Wisconsin"],["WY","Wyoming"],
+];
 const TYPES = ["city", "county", "town", "borough", "parish", "township", "district", "state"];
 
 function JurisdictionsIndex() {
@@ -43,9 +55,19 @@ function JurisdictionsIndex() {
   const [q, setQ] = useState("");
   const [term, setTerm] = useState("");
   const [stateF, setStateF] = useState("");
+  const [countyF, setCountyF] = useState("");
   const [typeF, setTypeF] = useState("");
   const [verifiedOnly, setVerifiedOnly] = useState(false);
   const [requestOpen, setRequestOpen] = useState(false);
+
+  // Live search — debounce input so typing "anne arundel" filters as you go.
+  useEffect(() => {
+    const t = setTimeout(() => setTerm(q.trim()), 180);
+    return () => clearTimeout(t);
+  }, [q]);
+
+  // Reset county when state changes so we never leave a stale county filter behind.
+  useEffect(() => { setCountyF(""); }, [stateF]);
 
   const listQ = useQuery({
     queryKey: ["jurisdictions", term, stateF, typeF, verifiedOnly],
@@ -83,8 +105,29 @@ function JurisdictionsIndex() {
   const rows = listQ.data ?? [];
   const saved = savedQ.data ?? [];
   const savedIds = useMemo(() => new Set(saved.map((s) => s.jurisdiction_id)), [saved]);
-  const featured = rows.filter((r) => r.is_demo).slice(0, 5);
-  const others = rows.filter((r) => !r.is_demo);
+
+  // Client-side county filter — server already filters state; we narrow further by county.
+  const countyOptions = useMemo(() => {
+    const set = new Set<string>();
+    for (const r of rows) if (r.county) set.add(r.county);
+    return Array.from(set).sort((a, b) => a.localeCompare(b));
+  }, [rows]);
+  const filteredRows = useMemo(
+    () => (countyF ? rows.filter((r) => (r.county ?? "") === countyF) : rows),
+    [rows, countyF],
+  );
+  const featured = filteredRows.filter((r) => r.is_demo).slice(0, 5);
+  const others = filteredRows.filter((r) => !r.is_demo);
+  const totalResults = featured.length + others.length;
+
+  // Popular quick-pick counties users search for most often.
+  const QUICK_PICKS: Array<{ label: string; state: string; county: string }> = [
+    { label: "Anne Arundel County, MD", state: "MD", county: "Anne Arundel County" },
+    { label: "Montgomery County, MD", state: "MD", county: "Montgomery County" },
+    { label: "Prince George's County, MD", state: "MD", county: "Prince George's County" },
+    { label: "Arlington County, VA", state: "VA", county: "Arlington County" },
+    { label: "Fairfax County, VA", state: "VA", county: "Fairfax County" },
+  ];
 
   return (
     <div className="min-h-dvh bg-background">
@@ -134,9 +177,19 @@ function JurisdictionsIndex() {
                   <input
                     value={q}
                     onChange={(e) => setQ(e.target.value)}
-                    placeholder="Search address, city, county, ZIP, department, permit type…"
-                    className="w-full rounded-lg bg-card ring-1 ring-border pl-9 pr-3 py-2.5 text-sm outline-none focus:ring-brand"
+                    placeholder="Search by county, city, ZIP, department… (e.g. Anne Arundel)"
+                    className="w-full rounded-lg bg-card ring-1 ring-border pl-9 pr-9 py-2.5 text-sm outline-none focus:ring-brand"
                   />
+                  {q && (
+                    <button
+                      type="button"
+                      onClick={() => setQ("")}
+                      aria-label="Clear search"
+                      className="absolute right-2 top-1/2 -translate-y-1/2 p-1 rounded-md text-muted-foreground hover:text-foreground hover:bg-muted/50"
+                    >
+                      <X className="size-3.5" />
+                    </button>
+                  )}
                 </div>
                 <button
                   type="button"
@@ -157,15 +210,54 @@ function JurisdictionsIndex() {
                 </button>
               </form>
 
+              {/* Quick picks — one click to jump straight to a popular county */}
+              <div className="flex flex-wrap items-center gap-1.5">
+                <span className="text-[10px] font-mono uppercase tracking-widest text-muted-foreground mr-1">Quick picks</span>
+                {QUICK_PICKS.map((p) => {
+                  const active = stateF === p.state && countyF === p.county;
+                  return (
+                    <button
+                      key={p.label}
+                      type="button"
+                      onClick={() => {
+                        setQ(""); setTerm("");
+                        setStateF(p.state);
+                        // stateF change resets countyF via effect; set after next tick
+                        setTimeout(() => setCountyF(p.county), 0);
+                      }}
+                      className={`inline-flex items-center gap-1 rounded-full px-2.5 py-1 text-[11px] ring-1 transition ${
+                        active
+                          ? "bg-brand/10 text-brand ring-brand/40"
+                          : "bg-card ring-border text-muted-foreground hover:text-foreground hover:ring-brand/40"
+                      }`}
+                    >
+                      <Building2 className="size-3" /> {p.label}
+                    </button>
+                  );
+                })}
+              </div>
+
               {/* Filters */}
               <div className="flex flex-wrap gap-2 text-xs">
                 <select value={stateF} onChange={(e) => setStateF(e.target.value)}
-                  className="rounded-md bg-card ring-1 ring-border px-2 py-1.5">
+                  className="rounded-md bg-card ring-1 ring-border px-2 py-1.5 min-w-[10rem]"
+                  aria-label="Filter by state">
                   <option value="">All states</option>
-                  {US_STATES.map((s) => <option key={s} value={s}>{s}</option>)}
+                  {US_STATES.map(([code, label]) => <option key={code} value={code}>{code} — {label}</option>)}
+                </select>
+                <select
+                  value={countyF}
+                  onChange={(e) => setCountyF(e.target.value)}
+                  disabled={countyOptions.length === 0}
+                  className="rounded-md bg-card ring-1 ring-border px-2 py-1.5 min-w-[12rem] disabled:opacity-50"
+                  aria-label="Filter by county"
+                >
+                  <option value="">{countyOptions.length ? "All counties" : "No counties in view"}</option>
+                  {countyOptions.map((c) => <option key={c} value={c}>{c}</option>)}
                 </select>
                 <select value={typeF} onChange={(e) => setTypeF(e.target.value)}
-                  className="rounded-md bg-card ring-1 ring-border px-2 py-1.5 capitalize">
+                  className="rounded-md bg-card ring-1 ring-border px-2 py-1.5 capitalize"
+                  aria-label="Filter by jurisdiction type">
                   <option value="">All types</option>
                   {TYPES.map((t) => <option key={t} value={t}>{t}</option>)}
                 </select>
@@ -173,9 +265,12 @@ function JurisdictionsIndex() {
                   <input type="checkbox" checked={verifiedOnly} onChange={(e) => setVerifiedOnly(e.target.checked)} className="accent-emerald-500" />
                   Verified only
                 </label>
-                {(term || stateF || typeF || verifiedOnly) && (
+                <span className="inline-flex items-center gap-1 text-muted-foreground px-1 py-1.5">
+                  {listQ.isFetching ? "Searching…" : `${totalResults} result${totalResults === 1 ? "" : "s"}`}
+                </span>
+                {(term || stateF || countyF || typeF || verifiedOnly) && (
                   <button
-                    onClick={() => { setQ(""); setTerm(""); setStateF(""); setTypeF(""); setVerifiedOnly(false); }}
+                    onClick={() => { setQ(""); setTerm(""); setStateF(""); setCountyF(""); setTypeF(""); setVerifiedOnly(false); }}
                     className="inline-flex items-center gap-1 text-muted-foreground hover:text-foreground px-2 py-1.5"
                   >
                     <X className="size-3" /> Clear
@@ -379,7 +474,7 @@ function RequestDrawer({ onClose }: { onClose: () => void }) {
             <Field label="State">
               <select value={form.state} onChange={(e) => setForm({ ...form, state: e.target.value })} className="input">
                 <option value="">Select</option>
-                {US_STATES.map((s) => <option key={s} value={s}>{s}</option>)}
+                {US_STATES.map(([code, label]) => <option key={code} value={code}>{code} — {label}</option>)}
               </select>
             </Field>
             <Field label="County">
