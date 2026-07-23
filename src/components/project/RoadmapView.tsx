@@ -153,12 +153,20 @@ export function RoadmapView({ projectId }: { projectId: string }) {
 
   return (
     <div className="space-y-4">
+      <JurisdictionConfirmCard projectId={projectId} />
+
       <div className="rounded-lg border border-border bg-card p-4 flex items-start justify-between gap-4 flex-wrap">
         <div className="min-w-0">
           <h2 className="text-sm font-mono uppercase tracking-widest text-brand">Permit Roadmap</h2>
           <p className="text-xs text-muted-foreground mt-1">
             Deterministic baseline from Permivio's rule engine, enriched with live jurisdiction sources. Each item is labeled with its verification level.
           </p>
+          {!jurisdictionConfirmed && (
+            <p className="text-[11px] text-amber-400 mt-2 flex items-center gap-1.5">
+              <AlertTriangle className="size-3" />
+              Confirm the property jurisdiction above to unlock roadmap generation.
+            </p>
+          )}
           {hasRoadmap && r?.roadmap && (
             <p className="text-[11px] text-muted-foreground mt-2">
               Health {r.roadmap.health_score ?? "—"} · Confidence {Math.round((r.roadmap.confidence ?? 0) * 100)}% · {r.roadmap.prompt_version}
@@ -166,10 +174,11 @@ export function RoadmapView({ projectId }: { projectId: string }) {
           )}
         </div>
         <div className="flex flex-wrap items-center gap-2">
-          <Button variant="outline" size="sm" onClick={generate} disabled={!!busy}>
+          <Button variant="outline" size="sm" onClick={generate} disabled={!!busy || !jurisdictionConfirmed}>
             {hasRoadmap ? <RefreshCw className="size-4 mr-1.5" /> : <Sparkles className="size-4 mr-1.5" />}
             {hasRoadmap ? "Regenerate" : "Generate"}
           </Button>
+
           {hasRoadmap && (
             <>
               <Button size="sm" onClick={enrich} disabled={!!busy}>
