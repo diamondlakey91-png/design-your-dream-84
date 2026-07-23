@@ -114,6 +114,122 @@ async function tryFirecrawlContext(address: string, agentLabel: string): Promise
   }
 }
 
+// Normalize common AI drift so ReportSchema.parse succeeds.
+// eslint-disable-next-line @typescript-eslint/no-explicit-any
+function normalizeComplianceJson(input: unknown): any {
+  if (!input || typeof input !== "object") return input;
+  // eslint-disable-next-line @typescript-eslint/no-explicit-any
+  const r: any = { ...(input as any) };
+
+  // project_summary → summary / scope_recap
+  if (!r.summary && r.project_summary) {
+    const ps = r.project_summary;
+    if (typeof ps === "string") r.summary = ps;
+    else if (ps && typeof ps === "object") {
+      r.summary = r.summary ?? ps.summary ?? ps.executive_summary ?? ps.description ?? "";
+      r.scope_recap = r.scope_recap ?? ps.scope ?? ps.scope_recap ?? ps.scope_of_work ?? "";
+    }
+  }
+  r.summary = r.summary ?? r.executive_summary ?? r.overview ?? "";
+  r.scope_recap = r.scope_recap ?? r.scope ?? r.scope_of_work ?? "";
+
+  // official_department fallback
+  if (!r.official_department) {
+    r.official_department = r.lead_department ?? r.primary_department ?? r.jurisdiction ?? "Building Department";
+  }
+
+  // jurisdiction_state alt keys
+  r.jurisdiction_state = r.jurisdiction_state ?? r.state ?? r.state_code ?? undefined;
+
+  // jurisdiction fallback
+  if (!r.jurisdiction && r.jurisdiction_notes) r.jurisdiction = String(r.jurisdiction_notes).slice(0, 120);
+  r.jurisdiction = r.jurisdiction ?? r.authority ?? "Unknown jurisdiction";
+
+  // departments: normalize each entry's key names
+  if (Array.isArray(r.departments)) {
+    // eslint-disable-next-line @typescript-eslint/no-explicit-any
+    r.departments = r.departments.map((d: any) => {
+      if (!d || typeof d !== "object") return d;
+      return {
+        name: d.name ?? d.department ?? d.department_name ?? d.title ?? "Department",
+        authority_reason: d.authority_reason ?? d.reason ?? d.why ?? d.rationale ?? "",
+        required_reviews: Array.isArray(d.required_reviews) ? d.required_reviews : (Array.isArray(d.reviews) ? d.reviews : []),
+        required_documents: Array.isArray(d.required_documents) ? d.required_documents : (Array.isArray(d.documents) ? d.documents : []),
+        codes: Array.isArray(d.codes)
+          // eslint-disable-next-line @typescript-eslint/no-explicit-any
+          ? d.codes.map((c: any) => (typeof c === "string" ? { code: c, requirement: "" } : {
+              code: c?.code ?? c?.section ?? c?.citation ?? "",
+              requirement: c?.requirement ?? c?.description ?? c?.text ?? "",
+              discipline: c?.discipline ?? c?.category ?? undefined,
+            }))
+          : [],
+      };
+    });
+  } else {
+    r.departments = [];
+  }
+
+  // cost_estimate.breakdown must be an array
+  if (r.cost_estimate && typeof r.cost_estimate === "object") {
+    const ce = r.cost_estimate;
+    if (ce.breakdown && !Array.isArray(ce.breakdown)) {
+      // object like { "permit fees": {low, high}, ... } → array
+      ce.breakdown = Object.entries(ce.breakdown).map(([label, v]) => {
+        // eslint-disable-next-line @typescript-eslint/no-explicit-any
+        const val: any = v ?? {};
+        if (typeof val === "number") return { label, amount_usd_low: val, amount_usd_high: val };
+        return {
+          label,
+          amount_usd_low: val.low_usd ?? val.low ?? val.amount_usd_low ?? val.min,
+          amount_usd_high: val.high_usd ?? val.high ?? val.amount_usd_high ?? val.max,
+        };
+      });
+    }
+    if (!Array.isArray(ce.breakdown)) ce.breakdown = [];
+  } else {
+    r.cost_estimate = { breakdown: [] };
+  }
+
+  // wbs: coerce string ids & numeric defaults
+  if (Array.isArray(r.wbs)) {
+    // eslint-disable-next-line @typescript-eslint/no-explicit-any
+    r.wbs = r.wbs.map((t: any, i: number) => ({
+      id: String(t?.id ?? i + 1),
+      name: t?.name ?? t?.task ?? `Task ${i + 1}`,
+      phase: t?.phase ?? "General",
+      duration_days: Number(t?.duration_days ?? t?.duration ?? 1) || 1,
+      start_offset_days: Number(t?.start_offset_days ?? t?.start ?? 0) || 0,
+      depends_on: Array.isArray(t?.depends_on) ? t.depends_on.map(String) : [],
+      responsible: t?.responsible ?? undefined,
+    }));
+  }
+
+  // timeline defaults
+  if (Array.isArray(r.timeline)) {
+    // eslint-disable-next-line @typescript-eslint/no-explicit-any
+    r.timeline = r.timeline.map((t: any) => ({
+      phase: t?.phase ?? t?.name ?? "Phase",
+      duration_business_days: String(t?.duration_business_days ?? t?.duration ?? t?.days ?? ""),
+      responsible: t?.responsible ?? undefined,
+      note: t?.note ?? t?.notes ?? undefined,
+    }));
+  }
+
+  // contacts default
+  if (Array.isArray(r.contacts)) {
+    // eslint-disable-next-line @typescript-eslint/no-explicit-any
+    r.contacts = r.contacts.map((c: any) => ({
+      department: c?.department ?? c?.name ?? "Department",
+      name: c?.name ?? null,
+      phone: c?.phone ?? null,
+      email: c?.email ?? null,
+      website: c?.website ?? c?.url ?? null,
+      verified: Boolean(c?.verified ?? false),
+    }));
+  }
+
+  return r;
+
 export const generateComplianceReport = createServerFn({ method: "POST" })
   .middleware([requireSupabaseAuth])
   .inputValidator((data: unknown) => GenInput.parse(data))
