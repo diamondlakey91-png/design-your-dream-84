@@ -29,7 +29,10 @@ function ReportDetailPage() {
   const [exporting, setExporting] = useState<"standard" | "wbs" | null>(null);
   const [pdfUrl, setPdfUrl] = useState<string | null>(null);
   const [pdfLoading, setPdfLoading] = useState(false);
+  const [pdfError, setPdfError] = useState<string | null>(null);
+  const [pdfProgress, setPdfProgress] = useState(0);
   const [pdfData, setPdfData] = useState<{ base64: string; filename: string } | null>(null);
+  const [pdfAttempt, setPdfAttempt] = useState(0);
   const lastLoadedFormat = useRef<string | null>(null);
 
   const q = useQuery({
@@ -38,14 +41,27 @@ function ReportDetailPage() {
     refetchInterval: (query) => (query.state.data?.status === "generating" ? 2000 : false),
   });
 
+  const retryPdf = () => {
+    lastLoadedFormat.current = null;
+    setPdfError(null);
+    setPdfAttempt((n) => n + 1);
+  };
+
   // Auto-render PDF preview when report is ready or format toggles
   useEffect(() => {
     if (q.data?.status !== "completed") return;
     if (view !== "pdf") return;
-    if (lastLoadedFormat.current === format) return;
+    if (lastLoadedFormat.current === format && !pdfError) return;
     let cancelled = false;
+    let progressTimer: ReturnType<typeof setInterval> | null = null;
     (async () => {
       setPdfLoading(true);
+      setPdfError(null);
+      setPdfProgress(8);
+      // Simulated progress ramp — real generation is server-side and opaque
+      progressTimer = setInterval(() => {
+        setPdfProgress((p) => (p >= 90 ? p : p + Math.max(1, Math.round((92 - p) / 12))));
+      }, 350);
       try {
         const { pdf_base64, filename } = await pdfFn({ data: { id, format } });
         if (cancelled) return;
@@ -59,17 +75,24 @@ function ReportDetailPage() {
           return url;
         });
         setPdfData({ base64: pdf_base64, filename });
+        setPdfProgress(100);
         lastLoadedFormat.current = format;
       } catch (e) {
-        toast.error(e instanceof Error ? e.message : "Failed to render PDF");
+        if (cancelled) return;
+        const msg = e instanceof Error ? e.message : "Failed to render PDF";
+        setPdfError(msg);
+        toast.error(msg);
       } finally {
+        if (progressTimer) clearInterval(progressTimer);
         if (!cancelled) setPdfLoading(false);
       }
     })();
     return () => {
       cancelled = true;
+      if (progressTimer) clearInterval(progressTimer);
     };
-  }, [q.data?.status, view, format, id, pdfFn]);
+  }, [q.data?.status, view, format, id, pdfFn, pdfAttempt]);
+
 
   // Cleanup on unmount
   useEffect(() => () => { if (pdfUrl) URL.revokeObjectURL(pdfUrl); }, [pdfUrl]);
