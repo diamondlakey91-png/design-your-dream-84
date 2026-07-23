@@ -690,6 +690,73 @@ export type Database = {
           },
         ]
       }
+      permit_roadmaps: {
+        Row: {
+          authority_stack: Json
+          confidence: number | null
+          created_at: string
+          generated_by_model: string | null
+          health_score: number | null
+          id: string
+          jurisdiction_id: string | null
+          project_id: string
+          prompt_version: string | null
+          scope_id: string
+          summary: string | null
+          updated_at: string
+        }
+        Insert: {
+          authority_stack?: Json
+          confidence?: number | null
+          created_at?: string
+          generated_by_model?: string | null
+          health_score?: number | null
+          id?: string
+          jurisdiction_id?: string | null
+          project_id: string
+          prompt_version?: string | null
+          scope_id: string
+          summary?: string | null
+          updated_at?: string
+        }
+        Update: {
+          authority_stack?: Json
+          confidence?: number | null
+          created_at?: string
+          generated_by_model?: string | null
+          health_score?: number | null
+          id?: string
+          jurisdiction_id?: string | null
+          project_id?: string
+          prompt_version?: string | null
+          scope_id?: string
+          summary?: string | null
+          updated_at?: string
+        }
+        Relationships: [
+          {
+            foreignKeyName: "permit_roadmaps_jurisdiction_id_fkey"
+            columns: ["jurisdiction_id"]
+            isOneToOne: false
+            referencedRelation: "jurisdiction_profiles"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "permit_roadmaps_project_id_fkey"
+            columns: ["project_id"]
+            isOneToOne: false
+            referencedRelation: "projects"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "permit_roadmaps_scope_id_fkey"
+            columns: ["scope_id"]
+            isOneToOne: false
+            referencedRelation: "scope_of_work"
+            referencedColumns: ["id"]
+          },
+        ]
+      }
       permit_sync_history: {
         Row: {
           created_at: string
@@ -979,6 +1046,361 @@ export type Database = {
           },
         ]
       }
+      roadmap_agencies: {
+        Row: {
+          created_at: string
+          id: string
+          jurisdiction: string | null
+          level: Database["public"]["Enums"]["authority_level"] | null
+          name: string
+          phone: string | null
+          roadmap_id: string
+          role: string | null
+          source_id: string | null
+          url: string | null
+          verification: Database["public"]["Enums"]["verification_label"]
+        }
+        Insert: {
+          created_at?: string
+          id?: string
+          jurisdiction?: string | null
+          level?: Database["public"]["Enums"]["authority_level"] | null
+          name: string
+          phone?: string | null
+          roadmap_id: string
+          role?: string | null
+          source_id?: string | null
+          url?: string | null
+          verification?: Database["public"]["Enums"]["verification_label"]
+        }
+        Update: {
+          created_at?: string
+          id?: string
+          jurisdiction?: string | null
+          level?: Database["public"]["Enums"]["authority_level"] | null
+          name?: string
+          phone?: string | null
+          roadmap_id?: string
+          role?: string | null
+          source_id?: string | null
+          url?: string | null
+          verification?: Database["public"]["Enums"]["verification_label"]
+        }
+        Relationships: [
+          {
+            foreignKeyName: "roadmap_agencies_roadmap_id_fkey"
+            columns: ["roadmap_id"]
+            isOneToOne: false
+            referencedRelation: "permit_roadmaps"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "roadmap_agencies_source_id_fkey"
+            columns: ["source_id"]
+            isOneToOne: false
+            referencedRelation: "roadmap_sources"
+            referencedColumns: ["id"]
+          },
+        ]
+      }
+      roadmap_documents: {
+        Row: {
+          created_at: string
+          description: string | null
+          id: string
+          name: string
+          permit_id: string | null
+          required: boolean
+          roadmap_id: string
+          source_ids: string[]
+          verification: Database["public"]["Enums"]["verification_label"]
+        }
+        Insert: {
+          created_at?: string
+          description?: string | null
+          id?: string
+          name: string
+          permit_id?: string | null
+          required?: boolean
+          roadmap_id: string
+          source_ids?: string[]
+          verification?: Database["public"]["Enums"]["verification_label"]
+        }
+        Update: {
+          created_at?: string
+          description?: string | null
+          id?: string
+          name?: string
+          permit_id?: string | null
+          required?: boolean
+          roadmap_id?: string
+          source_ids?: string[]
+          verification?: Database["public"]["Enums"]["verification_label"]
+        }
+        Relationships: [
+          {
+            foreignKeyName: "roadmap_documents_permit_id_fkey"
+            columns: ["permit_id"]
+            isOneToOne: false
+            referencedRelation: "roadmap_permits"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "roadmap_documents_roadmap_id_fkey"
+            columns: ["roadmap_id"]
+            isOneToOne: false
+            referencedRelation: "permit_roadmaps"
+            referencedColumns: ["id"]
+          },
+        ]
+      }
+      roadmap_followups: {
+        Row: {
+          answered_at: string | null
+          answered_value: string | null
+          created_at: string
+          field_hint: string | null
+          id: string
+          question: string
+          roadmap_id: string
+        }
+        Insert: {
+          answered_at?: string | null
+          answered_value?: string | null
+          created_at?: string
+          field_hint?: string | null
+          id?: string
+          question: string
+          roadmap_id: string
+        }
+        Update: {
+          answered_at?: string | null
+          answered_value?: string | null
+          created_at?: string
+          field_hint?: string | null
+          id?: string
+          question?: string
+          roadmap_id?: string
+        }
+        Relationships: [
+          {
+            foreignKeyName: "roadmap_followups_roadmap_id_fkey"
+            columns: ["roadmap_id"]
+            isOneToOne: false
+            referencedRelation: "permit_roadmaps"
+            referencedColumns: ["id"]
+          },
+        ]
+      }
+      roadmap_permits: {
+        Row: {
+          agency: string | null
+          category: Database["public"]["Enums"]["permit_category"] | null
+          concurrent_with: string[]
+          created_at: string
+          critical_path: boolean
+          depends_on: string[]
+          fee_basis: string | null
+          fee_estimate_cents: number | null
+          id: string
+          level: Database["public"]["Enums"]["authority_level"] | null
+          likelihood: Database["public"]["Enums"]["permit_likelihood"]
+          name: string
+          notes: string | null
+          review_days_max: number | null
+          review_days_min: number | null
+          roadmap_id: string
+          sequence_order: number | null
+          source_ids: string[]
+          verification: Database["public"]["Enums"]["verification_label"]
+        }
+        Insert: {
+          agency?: string | null
+          category?: Database["public"]["Enums"]["permit_category"] | null
+          concurrent_with?: string[]
+          created_at?: string
+          critical_path?: boolean
+          depends_on?: string[]
+          fee_basis?: string | null
+          fee_estimate_cents?: number | null
+          id?: string
+          level?: Database["public"]["Enums"]["authority_level"] | null
+          likelihood?: Database["public"]["Enums"]["permit_likelihood"]
+          name: string
+          notes?: string | null
+          review_days_max?: number | null
+          review_days_min?: number | null
+          roadmap_id: string
+          sequence_order?: number | null
+          source_ids?: string[]
+          verification?: Database["public"]["Enums"]["verification_label"]
+        }
+        Update: {
+          agency?: string | null
+          category?: Database["public"]["Enums"]["permit_category"] | null
+          concurrent_with?: string[]
+          created_at?: string
+          critical_path?: boolean
+          depends_on?: string[]
+          fee_basis?: string | null
+          fee_estimate_cents?: number | null
+          id?: string
+          level?: Database["public"]["Enums"]["authority_level"] | null
+          likelihood?: Database["public"]["Enums"]["permit_likelihood"]
+          name?: string
+          notes?: string | null
+          review_days_max?: number | null
+          review_days_min?: number | null
+          roadmap_id?: string
+          sequence_order?: number | null
+          source_ids?: string[]
+          verification?: Database["public"]["Enums"]["verification_label"]
+        }
+        Relationships: [
+          {
+            foreignKeyName: "roadmap_permits_roadmap_id_fkey"
+            columns: ["roadmap_id"]
+            isOneToOne: false
+            referencedRelation: "permit_roadmaps"
+            referencedColumns: ["id"]
+          },
+        ]
+      }
+      roadmap_risks: {
+        Row: {
+          category: string | null
+          created_at: string
+          id: string
+          message: string
+          mitigation: string | null
+          roadmap_id: string
+          severity: Database["public"]["Enums"]["risk_severity"]
+        }
+        Insert: {
+          category?: string | null
+          created_at?: string
+          id?: string
+          message: string
+          mitigation?: string | null
+          roadmap_id: string
+          severity?: Database["public"]["Enums"]["risk_severity"]
+        }
+        Update: {
+          category?: string | null
+          created_at?: string
+          id?: string
+          message?: string
+          mitigation?: string | null
+          roadmap_id?: string
+          severity?: Database["public"]["Enums"]["risk_severity"]
+        }
+        Relationships: [
+          {
+            foreignKeyName: "roadmap_risks_roadmap_id_fkey"
+            columns: ["roadmap_id"]
+            isOneToOne: false
+            referencedRelation: "permit_roadmaps"
+            referencedColumns: ["id"]
+          },
+        ]
+      }
+      roadmap_sources: {
+        Row: {
+          created_at: string
+          id: string
+          kind: Database["public"]["Enums"]["source_kind"]
+          publisher: string | null
+          quote: string | null
+          retrieved_at: string | null
+          roadmap_id: string
+          title: string | null
+          url: string | null
+        }
+        Insert: {
+          created_at?: string
+          id?: string
+          kind?: Database["public"]["Enums"]["source_kind"]
+          publisher?: string | null
+          quote?: string | null
+          retrieved_at?: string | null
+          roadmap_id: string
+          title?: string | null
+          url?: string | null
+        }
+        Update: {
+          created_at?: string
+          id?: string
+          kind?: Database["public"]["Enums"]["source_kind"]
+          publisher?: string | null
+          quote?: string | null
+          retrieved_at?: string | null
+          roadmap_id?: string
+          title?: string | null
+          url?: string | null
+        }
+        Relationships: [
+          {
+            foreignKeyName: "roadmap_sources_roadmap_id_fkey"
+            columns: ["roadmap_id"]
+            isOneToOne: false
+            referencedRelation: "permit_roadmaps"
+            referencedColumns: ["id"]
+          },
+        ]
+      }
+      roadmap_verifications: {
+        Row: {
+          assigned_to: string | null
+          created_at: string
+          decided_at: string | null
+          evidence_url: string | null
+          id: string
+          item_id: string
+          item_table: string
+          notes: string | null
+          requested_by: string | null
+          roadmap_id: string
+          status: Database["public"]["Enums"]["verification_status"]
+          updated_at: string
+        }
+        Insert: {
+          assigned_to?: string | null
+          created_at?: string
+          decided_at?: string | null
+          evidence_url?: string | null
+          id?: string
+          item_id: string
+          item_table: string
+          notes?: string | null
+          requested_by?: string | null
+          roadmap_id: string
+          status?: Database["public"]["Enums"]["verification_status"]
+          updated_at?: string
+        }
+        Update: {
+          assigned_to?: string | null
+          created_at?: string
+          decided_at?: string | null
+          evidence_url?: string | null
+          id?: string
+          item_id?: string
+          item_table?: string
+          notes?: string | null
+          requested_by?: string | null
+          roadmap_id?: string
+          status?: Database["public"]["Enums"]["verification_status"]
+          updated_at?: string
+        }
+        Relationships: [
+          {
+            foreignKeyName: "roadmap_verifications_roadmap_id_fkey"
+            columns: ["roadmap_id"]
+            isOneToOne: false
+            referencedRelation: "permit_roadmaps"
+            referencedColumns: ["id"]
+          },
+        ]
+      }
       saved_jurisdictions: {
         Row: {
           created_at: string
@@ -1013,6 +1435,102 @@ export type Database = {
             columns: ["jurisdiction_id"]
             isOneToOne: false
             referencedRelation: "jurisdiction_profiles"
+            referencedColumns: ["id"]
+          },
+        ]
+      }
+      scope_of_work: {
+        Row: {
+          address: string | null
+          address_normalized: string | null
+          construction_type: string | null
+          construction_value_cents: number | null
+          created_at: string
+          dwelling_units: number | null
+          id: string
+          lat: number | null
+          lng: number | null
+          occupancy_existing: string | null
+          occupancy_proposed: string | null
+          project_id: string
+          project_type: Database["public"]["Enums"]["scope_project_type"] | null
+          residential_or_commercial:
+            | Database["public"]["Enums"]["res_or_com"]
+            | null
+          scope_text: string | null
+          sq_ft_affected: number | null
+          sq_ft_gross: number | null
+          status: Database["public"]["Enums"]["scope_status"]
+          target_open_date: string | null
+          target_start_date: string | null
+          trades: Json
+          updated_at: string
+          user_id: string
+        }
+        Insert: {
+          address?: string | null
+          address_normalized?: string | null
+          construction_type?: string | null
+          construction_value_cents?: number | null
+          created_at?: string
+          dwelling_units?: number | null
+          id?: string
+          lat?: number | null
+          lng?: number | null
+          occupancy_existing?: string | null
+          occupancy_proposed?: string | null
+          project_id: string
+          project_type?:
+            | Database["public"]["Enums"]["scope_project_type"]
+            | null
+          residential_or_commercial?:
+            | Database["public"]["Enums"]["res_or_com"]
+            | null
+          scope_text?: string | null
+          sq_ft_affected?: number | null
+          sq_ft_gross?: number | null
+          status?: Database["public"]["Enums"]["scope_status"]
+          target_open_date?: string | null
+          target_start_date?: string | null
+          trades?: Json
+          updated_at?: string
+          user_id: string
+        }
+        Update: {
+          address?: string | null
+          address_normalized?: string | null
+          construction_type?: string | null
+          construction_value_cents?: number | null
+          created_at?: string
+          dwelling_units?: number | null
+          id?: string
+          lat?: number | null
+          lng?: number | null
+          occupancy_existing?: string | null
+          occupancy_proposed?: string | null
+          project_id?: string
+          project_type?:
+            | Database["public"]["Enums"]["scope_project_type"]
+            | null
+          residential_or_commercial?:
+            | Database["public"]["Enums"]["res_or_com"]
+            | null
+          scope_text?: string | null
+          sq_ft_affected?: number | null
+          sq_ft_gross?: number | null
+          status?: Database["public"]["Enums"]["scope_status"]
+          target_open_date?: string | null
+          target_start_date?: string | null
+          trades?: Json
+          updated_at?: string
+          user_id?: string
+        }
+        Relationships: [
+          {
+            foreignKeyName: "scope_of_work_project_id_fkey"
+            columns: ["project_id"]
+            isOneToOne: true
+            referencedRelation: "projects"
             referencedColumns: ["id"]
           },
         ]
@@ -1129,9 +1647,60 @@ export type Database = {
         }
         Returns: boolean
       }
+      roadmap_visible: { Args: { _roadmap_id: string }; Returns: boolean }
     }
     Enums: {
       app_role: "admin" | "user"
+      authority_level:
+        | "city"
+        | "county"
+        | "state"
+        | "federal"
+        | "utility"
+        | "special_district"
+      permit_category:
+        | "zoning"
+        | "building"
+        | "electrical"
+        | "mechanical"
+        | "plumbing"
+        | "fire"
+        | "health"
+        | "site"
+        | "environmental"
+        | "row"
+        | "utility"
+        | "business_license"
+        | "sign"
+        | "tco"
+        | "co"
+        | "other"
+      permit_likelihood: "required" | "likely" | "conditional" | "not_required"
+      res_or_com: "residential" | "commercial" | "mixed_use"
+      risk_severity: "low" | "medium" | "high"
+      scope_project_type:
+        | "new_construction"
+        | "tenant_improvement"
+        | "change_of_occupancy"
+        | "addition"
+        | "alteration"
+        | "repair"
+        | "demolition"
+        | "shell"
+        | "core_and_shell"
+        | "other"
+      scope_status:
+        | "draft"
+        | "submitted"
+        | "analyzing"
+        | "needs_followup"
+        | "complete"
+      source_kind: "agency_site" | "code" | "ordinance" | "portal" | "other"
+      verification_label:
+        | "verified"
+        | "ai_assisted"
+        | "needs_agency_confirmation"
+      verification_status: "open" | "in_review" | "verified" | "rejected"
     }
     CompositeTypes: {
       [_ in never]: never
@@ -1260,6 +1829,61 @@ export const Constants = {
   public: {
     Enums: {
       app_role: ["admin", "user"],
+      authority_level: [
+        "city",
+        "county",
+        "state",
+        "federal",
+        "utility",
+        "special_district",
+      ],
+      permit_category: [
+        "zoning",
+        "building",
+        "electrical",
+        "mechanical",
+        "plumbing",
+        "fire",
+        "health",
+        "site",
+        "environmental",
+        "row",
+        "utility",
+        "business_license",
+        "sign",
+        "tco",
+        "co",
+        "other",
+      ],
+      permit_likelihood: ["required", "likely", "conditional", "not_required"],
+      res_or_com: ["residential", "commercial", "mixed_use"],
+      risk_severity: ["low", "medium", "high"],
+      scope_project_type: [
+        "new_construction",
+        "tenant_improvement",
+        "change_of_occupancy",
+        "addition",
+        "alteration",
+        "repair",
+        "demolition",
+        "shell",
+        "core_and_shell",
+        "other",
+      ],
+      scope_status: [
+        "draft",
+        "submitted",
+        "analyzing",
+        "needs_followup",
+        "complete",
+      ],
+      source_kind: ["agency_site", "code", "ordinance", "portal", "other"],
+      verification_label: [
+        "verified",
+        "ai_assisted",
+        "needs_agency_confirmation",
+      ],
+      verification_status: ["open", "in_review", "verified", "rejected"],
     },
   },
 } as const
