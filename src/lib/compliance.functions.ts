@@ -229,6 +229,9 @@ function normalizeComplianceJson(input: unknown): any {
   }
 
   return r;
+}
+
+
 
 export const generateComplianceReport = createServerFn({ method: "POST" })
   .middleware([requireSupabaseAuth])
