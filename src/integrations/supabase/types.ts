@@ -1849,6 +1849,9 @@ export type Database = {
           construction_type: string | null
           construction_value_cents: number | null
           created_at: string
+          due_diligence: Json | null
+          due_diligence_generated_at: string | null
+          due_diligence_model: string | null
           dwelling_units: number | null
           friendly_project_type: string | null
           id: string
@@ -1880,6 +1883,9 @@ export type Database = {
           construction_type?: string | null
           construction_value_cents?: number | null
           created_at?: string
+          due_diligence?: Json | null
+          due_diligence_generated_at?: string | null
+          due_diligence_model?: string | null
           dwelling_units?: number | null
           friendly_project_type?: string | null
           id?: string
@@ -1913,6 +1919,9 @@ export type Database = {
           construction_type?: string | null
           construction_value_cents?: number | null
           created_at?: string
+          due_diligence?: Json | null
+          due_diligence_generated_at?: string | null
+          due_diligence_model?: string | null
           dwelling_units?: number | null
           friendly_project_type?: string | null
           id?: string
