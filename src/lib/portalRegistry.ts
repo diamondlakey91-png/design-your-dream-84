@@ -114,7 +114,7 @@ export const PORTAL_REGISTRY: PortalEntry[] = [
   A("Greensboro", "NC", "GREENSBORO"),
   
   A("Howard County", "MD", "HOWARD"),
-  A("Anne Arundel County", "MD", "AACOUNTY"),
+  A("Anne Arundel County", "MD", "AACOUNTY_MD", { planReviewUrl: "https://epermit.aacounty.org/ProjectDox/" }),
   A("San Antonio", "TX", "SANANTONIO_TX"),
   A("Fort Worth", "TX", "FORTWORTH"),
   A("El Paso", "TX", "ELPASOTX"),
