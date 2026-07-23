@@ -60,18 +60,28 @@ export function useSubscription(): SubscriptionState {
 
   // Realtime: refetch on subscription changes for this user.
   useEffect(() => {
+    let cancelled = false;
     let channel: ReturnType<typeof supabase.channel> | null = null;
     (async () => {
       const { data: userData } = await supabase.auth.getUser();
       const userId = userData.user?.id;
-      if (!userId) return;
-      channel = supabase
-        .channel(`subs-${userId}`)
-        .on("postgres_changes", { event: "*", schema: "public", table: "subscriptions", filter: `user_id=eq.${userId}` },
-          () => setNonce((n) => n + 1))
-        .subscribe();
+      if (!userId || cancelled) return;
+      // Unique per-mount channel name avoids reusing an already-subscribed
+      // channel across StrictMode double-invokes (which throws "cannot add
+      // postgres_changes callbacks after subscribe()").
+      const ch = supabase.channel(`subs-${userId}-${crypto.randomUUID()}`);
+      ch.on(
+        "postgres_changes",
+        { event: "*", schema: "public", table: "subscriptions", filter: `user_id=eq.${userId}` },
+        () => setNonce((n) => n + 1),
+      ).subscribe();
+      if (cancelled) { supabase.removeChannel(ch); return; }
+      channel = ch;
     })();
-    return () => { if (channel) supabase.removeChannel(channel); };
+    return () => {
+      cancelled = true;
+      if (channel) supabase.removeChannel(channel);
+    };
   }, []);
 
   const tier = BETA_MODE ? BETA_TIER : getTier(row?.price_id);
