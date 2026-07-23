@@ -6,7 +6,7 @@ import { AppShell } from "@/components/AppShell";
 import { getComplianceReport, exportComplianceReportPdf } from "@/lib/compliance.functions";
 import { getAgent } from "@/lib/complianceAgents";
 import { toast } from "sonner";
-import { ArrowLeft, Download, ShieldCheck, Phone, Mail, Globe, AlertTriangle, Building2, DollarSign, Clock, ListChecks, BarChart3, FileText, Loader2 } from "lucide-react";
+import { ArrowLeft, Download, ShieldCheck, Phone, Mail, Globe, AlertTriangle, Building2, DollarSign, Clock, ListChecks, BarChart3, FileText, Loader2, RefreshCw } from "lucide-react";
 
 export const Route = createFileRoute("/_authenticated/report/$id")({
   head: () => ({
