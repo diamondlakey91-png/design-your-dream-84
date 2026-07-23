@@ -65,6 +65,7 @@ function Landing() {
         </div>
       </header>
 
+      <main>
       {/* Hero */}
       <section className="mx-auto max-w-7xl px-6 pt-8 pb-16 text-center md:pt-16">
         <p className="font-mono text-[11px] uppercase tracking-[0.3em] text-blue-400/80">
