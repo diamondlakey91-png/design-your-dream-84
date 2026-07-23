@@ -244,14 +244,28 @@ export function DueDiligenceReport({ projectId }: { projectId: string }) {
               size="sm"
               onClick={() => buildRoadmap.mutate()}
               disabled={buildRoadmap.isPending}
-              title="Builds permit matrix, agency matrix, checklist, tasks, review cycles, and timeline"
+              title={
+                hasRoadmap
+                  ? "Regenerates checklist, tasks, and timelines from the latest due diligence"
+                  : "Builds permit matrix, agency matrix, checklist, tasks, review cycles, and timeline"
+              }
+              variant={hasRoadmap ? "outline" : "default"}
             >
-              <ArrowRight className="size-4 mr-1.5" />
-              {buildRoadmap.isPending ? "Building roadmap…" : "Create Permit Roadmap"}
+              {hasRoadmap ? (
+                <RefreshCw className={`size-4 mr-1.5 ${buildRoadmap.isPending ? "animate-spin" : ""}`} />
+              ) : (
+                <ArrowRight className="size-4 mr-1.5" />
+              )}
+              {buildRoadmap.isPending
+                ? hasRoadmap ? "Rebuilding…" : "Building roadmap…"
+                : hasRoadmap ? "Rebuild roadmap" : "Create Permit Roadmap"}
             </Button>
             <p className="text-[10px] text-muted-foreground text-right leading-tight max-w-[14rem]">
-              Builds permits · agencies · checklist · tasks · review cycles · timeline
+              {hasRoadmap
+                ? "Refreshes permits · checklist · tasks · timeline from this report"
+                : "Builds permits · agencies · checklist · tasks · review cycles · timeline"}
             </p>
+
 
           </div>
         </div>
