@@ -102,7 +102,7 @@ export const generateDueDiligence = createServerFn({ method: "POST" })
 
     const { data: proj } = await supabase
       .from("projects")
-      .select("id, user_id, address, location")
+      .select("id, user_id, location")
       .eq("id", data.project_id)
       .maybeSingle();
     if (!proj || proj.user_id !== userId) throw new Error("Project not found");
