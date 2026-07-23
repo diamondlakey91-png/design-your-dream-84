@@ -177,9 +177,19 @@ function JurisdictionsIndex() {
                   <input
                     value={q}
                     onChange={(e) => setQ(e.target.value)}
-                    placeholder="Search address, city, county, ZIP, department, permit type…"
-                    className="w-full rounded-lg bg-card ring-1 ring-border pl-9 pr-3 py-2.5 text-sm outline-none focus:ring-brand"
+                    placeholder="Search by county, city, ZIP, department… (e.g. Anne Arundel)"
+                    className="w-full rounded-lg bg-card ring-1 ring-border pl-9 pr-9 py-2.5 text-sm outline-none focus:ring-brand"
                   />
+                  {q && (
+                    <button
+                      type="button"
+                      onClick={() => setQ("")}
+                      aria-label="Clear search"
+                      className="absolute right-2 top-1/2 -translate-y-1/2 p-1 rounded-md text-muted-foreground hover:text-foreground hover:bg-muted/50"
+                    >
+                      <X className="size-3.5" />
+                    </button>
+                  )}
                 </div>
                 <button
                   type="button"
@@ -200,15 +210,54 @@ function JurisdictionsIndex() {
                 </button>
               </form>
 
+              {/* Quick picks — one click to jump straight to a popular county */}
+              <div className="flex flex-wrap items-center gap-1.5">
+                <span className="text-[10px] font-mono uppercase tracking-widest text-muted-foreground mr-1">Quick picks</span>
+                {QUICK_PICKS.map((p) => {
+                  const active = stateF === p.state && countyF === p.county;
+                  return (
+                    <button
+                      key={p.label}
+                      type="button"
+                      onClick={() => {
+                        setQ(""); setTerm("");
+                        setStateF(p.state);
+                        // stateF change resets countyF via effect; set after next tick
+                        setTimeout(() => setCountyF(p.county), 0);
+                      }}
+                      className={`inline-flex items-center gap-1 rounded-full px-2.5 py-1 text-[11px] ring-1 transition ${
+                        active
+                          ? "bg-brand/10 text-brand ring-brand/40"
+                          : "bg-card ring-border text-muted-foreground hover:text-foreground hover:ring-brand/40"
+                      }`}
+                    >
+                      <Building2 className="size-3" /> {p.label}
+                    </button>
+                  );
+                })}
+              </div>
+
               {/* Filters */}
               <div className="flex flex-wrap gap-2 text-xs">
                 <select value={stateF} onChange={(e) => setStateF(e.target.value)}
-                  className="rounded-md bg-card ring-1 ring-border px-2 py-1.5">
+                  className="rounded-md bg-card ring-1 ring-border px-2 py-1.5 min-w-[10rem]"
+                  aria-label="Filter by state">
                   <option value="">All states</option>
-                  {US_STATES.map((s) => <option key={s} value={s}>{s}</option>)}
+                  {US_STATES.map(([code, label]) => <option key={code} value={code}>{code} — {label}</option>)}
+                </select>
+                <select
+                  value={countyF}
+                  onChange={(e) => setCountyF(e.target.value)}
+                  disabled={countyOptions.length === 0}
+                  className="rounded-md bg-card ring-1 ring-border px-2 py-1.5 min-w-[12rem] disabled:opacity-50"
+                  aria-label="Filter by county"
+                >
+                  <option value="">{countyOptions.length ? "All counties" : "No counties in view"}</option>
+                  {countyOptions.map((c) => <option key={c} value={c}>{c}</option>)}
                 </select>
                 <select value={typeF} onChange={(e) => setTypeF(e.target.value)}
-                  className="rounded-md bg-card ring-1 ring-border px-2 py-1.5 capitalize">
+                  className="rounded-md bg-card ring-1 ring-border px-2 py-1.5 capitalize"
+                  aria-label="Filter by jurisdiction type">
                   <option value="">All types</option>
                   {TYPES.map((t) => <option key={t} value={t}>{t}</option>)}
                 </select>
@@ -216,9 +265,12 @@ function JurisdictionsIndex() {
                   <input type="checkbox" checked={verifiedOnly} onChange={(e) => setVerifiedOnly(e.target.checked)} className="accent-emerald-500" />
                   Verified only
                 </label>
-                {(term || stateF || typeF || verifiedOnly) && (
+                <span className="inline-flex items-center gap-1 text-muted-foreground px-1 py-1.5">
+                  {listQ.isFetching ? "Searching…" : `${totalResults} result${totalResults === 1 ? "" : "s"}`}
+                </span>
+                {(term || stateF || countyF || typeF || verifiedOnly) && (
                   <button
-                    onClick={() => { setQ(""); setTerm(""); setStateF(""); setTypeF(""); setVerifiedOnly(false); }}
+                    onClick={() => { setQ(""); setTerm(""); setStateF(""); setCountyF(""); setTypeF(""); setVerifiedOnly(false); }}
                     className="inline-flex items-center gap-1 text-muted-foreground hover:text-foreground px-2 py-1.5"
                   >
                     <X className="size-3" /> Clear
