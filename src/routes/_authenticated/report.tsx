@@ -215,6 +215,30 @@ function ReportHubPage() {
                         <span>· {new Date(r.created_at).toLocaleString()}</span>
                       </div>
                     </Link>
+                    {r.status === "ready" && (
+                      <div className="hidden sm:flex items-center gap-1">
+                        <button
+                          onClick={() => downloadPdf(r.id, "standard")}
+                          disabled={pdfBusy === `${r.id}:standard`}
+                          className="inline-flex items-center gap-1 rounded-md border border-border bg-background px-2 py-1 text-[11px] text-muted-foreground hover:border-brand hover:text-brand disabled:opacity-40"
+                          aria-label="Download standard PDF"
+                          title="Download PDF (Standard)"
+                        >
+                          {pdfBusy === `${r.id}:standard` ? <Loader2 className="size-3.5 animate-spin" /> : <Download className="size-3.5" />}
+                          PDF
+                        </button>
+                        <button
+                          onClick={() => downloadPdf(r.id, "wbs")}
+                          disabled={pdfBusy === `${r.id}:wbs`}
+                          className="inline-flex items-center gap-1 rounded-md border border-border bg-background px-2 py-1 text-[11px] text-muted-foreground hover:border-brand hover:text-brand disabled:opacity-40"
+                          aria-label="Download WBS PDF"
+                          title="Download PDF (WBS / Gantt)"
+                        >
+                          {pdfBusy === `${r.id}:wbs` ? <Loader2 className="size-3.5 animate-spin" /> : <Download className="size-3.5" />}
+                          WBS
+                        </button>
+                      </div>
+                    )}
                     <button
                       onClick={() => {
                         if (confirm("Delete this report?")) del.mutate(r.id);
@@ -228,6 +252,11 @@ function ReportHubPage() {
                       <ChevronRight className="size-4" />
                     </Link>
                   </div>
+                </li>
+              ))}
+            </ul>
+          )}
+        </section>
                 </li>
               ))}
             </ul>
