@@ -510,8 +510,49 @@ export function buildRoadmapDraft(scope: ScopeInputForRules): RoadmapDraft {
   if (!scope.construction_value_cents) followups.push({ question: "What is the estimated construction value?", field_hint: "construction_value_cents" });
   if (!scope.sq_ft_affected && !scope.sq_ft_gross) followups.push({ question: "What is the square footage of the affected area?", field_hint: "sq_ft_affected" });
 
+  // ==== Verification downgrade when jurisdiction is not confirmed ====
+  // A ZIP or an unresolved municipality can never be treated as an authority.
+  // Force every permit, document, and agency to "needs_agency_confirmation" so
+  // the UI cannot present unresolved reviewers as AI-assisted or verified.
+  if (!confirmed) {
+    for (const p of permits) p.verification = NEEDS;
+    for (const d of documents) d.verification = NEEDS;
+  }
+  // Merge exact agency names when the caller supplied them via ctx.authorities.
+  if (ctx?.authorities?.length) {
+    const roleMap: Record<string, string> = {};
+    for (const a of ctx.authorities) roleMap[a.role] = a.official_name;
+    const roleForCategory = (c: PermitCategory): string | null => {
+      switch (c) {
+        case "building": case "electrical": case "mechanical": case "plumbing": return "building";
+        case "zoning": case "sign": return "planning_zoning";
+        case "fire": return "fire";
+        case "health": return "health";
+        case "site": return "public_works";
+        case "row": return "transportation_row";
+        case "environmental": return "environmental";
+        case "co": case "tco": return "building";
+        default: return null;
+      }
+    };
+    for (const p of permits) {
+      const role = roleForCategory(p.category);
+      if (role && roleMap[role]) p.agency = roleMap[role];
+    }
+    for (const a of agencies) {
+      const role = /building/i.test(a.role ?? "") ? "building"
+        : /zoning|planning|sign/i.test(a.role ?? "") ? "planning_zoning"
+        : /fire/i.test(a.role ?? "") ? "fire"
+        : /health|food/i.test(a.role ?? "") ? "health"
+        : /site|public works|grading/i.test(a.role ?? "") ? "public_works"
+        : null;
+      if (role && roleMap[role]) a.name = roleMap[role];
+    }
+  }
+
   // Confidence heuristic
   const filled = [
+
     scope.address, scope.residential_or_commercial, scope.project_type, scope.occupancy_proposed,
     scope.construction_value_cents, scope.sq_ft_affected ?? scope.sq_ft_gross, scope.scope_text,
   ].filter((x) => x != null && x !== "").length;
