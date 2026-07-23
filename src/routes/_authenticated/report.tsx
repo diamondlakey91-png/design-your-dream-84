@@ -8,6 +8,8 @@ import { generateComplianceReport, listComplianceReports, deleteComplianceReport
 import { JurisdictionAutocomplete } from "@/components/JurisdictionAutocomplete";
 import { toast } from "sonner";
 import { FileCheck2, Zap, MapPin, ChevronRight, Trash2, Sparkles, Timer, ShieldCheck, Download, Loader2 } from "lucide-react";
+import { ProjectTypeSelector } from "@/components/project-type/ProjectTypeSelector";
+import { useProjectTypes } from "@/hooks/useProjectTypes";
 
 export const Route = createFileRoute("/_authenticated/report")({
   head: () => ({
