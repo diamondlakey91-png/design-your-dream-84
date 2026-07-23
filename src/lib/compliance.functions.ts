@@ -331,7 +331,7 @@ export const generateComplianceReport = createServerFn({ method: "POST" })
       const [jCtx, hCtx, live] = await Promise.all([
         loadJurisdictionContextBlock(supabase, jHint),
         loadHealthAgencyContextBlock(supabase, jHint),
-        tryFirecrawlContext(data.address, agent.label),
+        tryFirecrawlContext(data.address, agent.label, agent.departments, data.scope_notes),
       ]);
 
       const schemaTemplate = `{
