@@ -5,6 +5,8 @@ import { useState } from "react";
 import { AppShell } from "@/components/AppShell";
 import { lookupPermitsByAddress, lookupUtilityCoordination } from "@/lib/permitLookup.functions";
 import { MapPin, Search, ExternalLink, Building2, Loader2, AlertCircle, ShieldCheck, ShieldAlert, ShieldQuestion, Info, Droplets, Flame, Zap, Cable, PhoneCall, CloudRain } from "lucide-react";
+import { ProjectTypeSelector } from "@/components/project-type/ProjectTypeSelector";
+import { useProjectTypes } from "@/hooks/useProjectTypes";
 
 export const Route = createFileRoute("/_authenticated/lookup")({
   component: LookupPage,
@@ -48,8 +50,10 @@ const KNOWN_JURISDICTIONS: string[] = [
 function LookupPage() {
   const [address, setAddress] = useState("");
   const [jurisdiction, setJurisdiction] = useState("");
+  const [primaryTypeId, setPrimaryTypeId] = useState<string | null>(null);
   const [result, setResult] = useState<LookupResult | null>(null);
   const [utility, setUtility] = useState<UtilityResult | null>(null);
+  const { byId } = useProjectTypes();
 
   const lookupFn = useServerFn(lookupPermitsByAddress);
   const utilityFn = useServerFn(lookupUtilityCoordination);
@@ -137,6 +141,20 @@ function LookupPage() {
             <p className="font-mono text-[10px] text-muted-foreground">
               Override auto-detection when the address city differs from the permitting authority.
             </p>
+          </div>
+          <div className="space-y-1.5">
+            <ProjectTypeSelector
+              mode="single"
+              value={{ primaryId: primaryTypeId }}
+              onChange={(v) => setPrimaryTypeId(v.primaryId ?? null)}
+              label="Project type (optional)"
+              helperText="Narrows the search so results emphasize permits matching this scope."
+            />
+            {primaryTypeId && byId.get(primaryTypeId) && (
+              <p className="font-mono text-[10px] text-muted-foreground">
+                Filtering for: {byId.get(primaryTypeId)?.client_label}
+              </p>
+            )}
           </div>
           <button
             type="submit"

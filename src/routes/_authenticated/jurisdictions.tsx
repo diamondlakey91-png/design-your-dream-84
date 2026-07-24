@@ -17,6 +17,8 @@ import {
 import { useEffect, useMemo, useState } from "react";
 import { toast } from "sonner";
 import { verifyMeta, type VerificationStatus } from "@/lib/verification";
+import { ProjectTypeSelector } from "@/components/project-type/ProjectTypeSelector";
+import { useProjectTypes } from "@/hooks/useProjectTypes";
 
 export const Route = createFileRoute("/_authenticated/jurisdictions")({
   head: () => ({
@@ -489,7 +491,7 @@ function RequestDrawer({ onClose }: { onClose: () => void }) {
               <input value={form.permit_type} onChange={(e) => setForm({ ...form, permit_type: e.target.value })} className="input" placeholder="Building, sign…" />
             </Field>
             <Field label="Project type">
-              <input value={form.project_type} onChange={(e) => setForm({ ...form, project_type: e.target.value })} className="input" placeholder="Tenant fit-out, new build…" />
+              <ProjectTypeField value={form.project_type} onChange={(v) => setForm({ ...form, project_type: v })} />
             </Field>
           </div>
           <Field label="Priority">
@@ -536,6 +538,25 @@ function Field({ label, children }: { label: string; children: React.ReactNode }
       <span className="block text-[11px] font-mono uppercase tracking-widest text-muted-foreground mb-1">{label}</span>
       {children}
     </label>
+  );
+}
+
+function ProjectTypeField({ value, onChange }: { value: string; onChange: (v: string) => void }) {
+  const { byId } = useProjectTypes();
+  const [primaryId, setPrimaryId] = useState<string | null>(null);
+  return (
+    <ProjectTypeSelector
+      mode="single"
+      value={{ primaryId }}
+      onChange={(v) => {
+        setPrimaryId(v.primaryId ?? null);
+        const t = v.primaryId ? byId.get(v.primaryId) : null;
+        onChange(t?.client_label ?? value);
+      }}
+      label=""
+      helperText=""
+      allowNotSure={false}
+    />
   );
 }
 

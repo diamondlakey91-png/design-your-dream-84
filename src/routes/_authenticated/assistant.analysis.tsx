@@ -17,6 +17,8 @@ import {
 } from "@/lib/permitAnalysis.functions";
 import { listProjects } from "@/lib/projects.functions";
 import { geocodeAddress } from "@/lib/geocoding.functions";
+import { ProjectTypeSelector } from "@/components/project-type/ProjectTypeSelector";
+import { useProjectTypes } from "@/hooks/useProjectTypes";
 
 const analysisSearchSchema = z.object({
   screen_set_id: fallback(z.string(), "").default(""),
@@ -455,7 +457,10 @@ function IntakeForm({ intake, onChange }: { intake: PermitIntake; onChange: (i: 
             <option value="mixed">Mixed use</option>
           </select>
         </label>
-        <Field label="Project type" value={intake.project_type} onChange={(v) => set("project_type", v)} placeholder="TI, new build, reno…" />
+        <label className="col-span-1">
+          <span className="block text-[10px] uppercase tracking-widest text-zinc-500 mb-1">Project type</span>
+          <AnalysisProjectTypePicker value={intake.project_type} onChange={(v) => set("project_type", v)} />
+        </label>
         <Field cols={1} label="Scope of work" textarea value={intake.scope} onChange={(v) => set("scope", v)} placeholder="Describe the work…" />
         <Field label="Occupancy / business" value={intake.occupancy_type} onChange={(v) => set("occupancy_type", v)} />
         <Field label="Square footage" value={intake.square_footage} onChange={(v) => set("square_footage", v)} />
@@ -763,5 +768,32 @@ function SourcesSection({ sources }: { sources: Array<Record<string, unknown>> }
         </ul>
       )}
     </div>
+  );
+}
+
+function AnalysisProjectTypePicker({ value, onChange }: { value: string; onChange: (v: string) => void }) {
+  const { byId, types } = useProjectTypes();
+  const [primaryId, setPrimaryId] = useState<string | null>(() => {
+    const match = types.find((t) => t.client_label === value);
+    return match?.id ?? null;
+  });
+  useEffect(() => {
+    if (!primaryId && value) {
+      const match = types.find((t) => t.client_label === value);
+      if (match) setPrimaryId(match.id);
+    }
+  }, [types, value, primaryId]);
+  return (
+    <ProjectTypeSelector
+      mode="single"
+      value={{ primaryId }}
+      onChange={(v) => {
+        setPrimaryId(v.primaryId ?? null);
+        const t = v.primaryId ? byId.get(v.primaryId) : null;
+        onChange(t?.client_label ?? "");
+      }}
+      label=""
+      helperText=""
+    />
   );
 }
