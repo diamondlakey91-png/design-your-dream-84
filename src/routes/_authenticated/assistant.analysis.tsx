@@ -457,7 +457,10 @@ function IntakeForm({ intake, onChange }: { intake: PermitIntake; onChange: (i: 
             <option value="mixed">Mixed use</option>
           </select>
         </label>
-        <Field label="Project type" value={intake.project_type} onChange={(v) => set("project_type", v)} placeholder="TI, new build, reno…" />
+        <label className="col-span-1">
+          <span className="block text-[10px] uppercase tracking-widest text-zinc-500 mb-1">Project type</span>
+          <AnalysisProjectTypePicker value={intake.project_type} onChange={(v) => set("project_type", v)} />
+        </label>
         <Field cols={1} label="Scope of work" textarea value={intake.scope} onChange={(v) => set("scope", v)} placeholder="Describe the work…" />
         <Field label="Occupancy / business" value={intake.occupancy_type} onChange={(v) => set("occupancy_type", v)} />
         <Field label="Square footage" value={intake.square_footage} onChange={(v) => set("square_footage", v)} />
