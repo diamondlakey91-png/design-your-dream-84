@@ -48,6 +48,7 @@ export function IntakeWizard({ projectId }: { projectId: string }) {
   const getAnswersFn = useServerFn(getIntakeAnswers);
   const finalizeFn = useServerFn(finalizeIntake);
   const genRoadmapFn = useServerFn(generateRoadmapFromRules);
+  const setTypeFn = useServerFn(setProjectTypeForProject);
 
   const scopeQ = useQuery({
     queryKey: ["scope", projectId],
