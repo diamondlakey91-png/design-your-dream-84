@@ -142,6 +142,20 @@ function LookupPage() {
               Override auto-detection when the address city differs from the permitting authority.
             </p>
           </div>
+          <div className="space-y-1.5">
+            <ProjectTypeSelector
+              mode="single"
+              value={{ primaryId: primaryTypeId }}
+              onChange={(v) => setPrimaryTypeId(v.primaryId ?? null)}
+              label="Project type (optional)"
+              helperText="Narrows the search so results emphasize permits matching this scope."
+            />
+            {primaryTypeId && byId.get(primaryTypeId) && (
+              <p className="font-mono text-[10px] text-muted-foreground">
+                Filtering for: {byId.get(primaryTypeId)?.client_label}
+              </p>
+            )}
+          </div>
           <button
             type="submit"
             disabled={mutation.isPending || !address.trim()}
