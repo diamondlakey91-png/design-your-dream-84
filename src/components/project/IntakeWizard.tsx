@@ -256,6 +256,31 @@ export function IntakeWizard({ projectId }: { projectId: string }) {
                 );
               })}
             </div>
+            <div className="pt-3 border-t border-border/60">
+              <ProjectTypeSelector
+                mode="primary_additional"
+                value={{ primaryId: primaryTypeId, additionalIds: additionalTypeIds }}
+                onChange={(v) => {
+                  const nextPrimary = v.primaryId ?? null;
+                  const nextAdditional = v.additionalIds ?? [];
+                  setPrimaryTypeId(nextPrimary);
+                  setAdditionalTypeIds(nextAdditional);
+                  setTypeFn({
+                    data: {
+                      project_id: projectId,
+                      primary_project_type_id: nextPrimary,
+                      additional_project_type_ids: nextAdditional,
+                      source: "user_selected",
+                    },
+                  }).then(() => {
+                    qc.invalidateQueries({ queryKey: ["scope", projectId] });
+                    qc.invalidateQueries({ queryKey: ["project", projectId] });
+                  }).catch((e) => toast.error(e instanceof Error ? e.message : "Save failed"));
+                }}
+                label="Refine with the shared project-type library"
+                helperText="Pick the closest official type — used across your roadmap, reports, and jurisdiction library. Add more if the work spans multiple types."
+              />
+            </div>
           </>
         )}
 
