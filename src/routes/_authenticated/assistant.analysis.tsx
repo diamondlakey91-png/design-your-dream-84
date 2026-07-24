@@ -17,6 +17,8 @@ import {
 } from "@/lib/permitAnalysis.functions";
 import { listProjects } from "@/lib/projects.functions";
 import { geocodeAddress } from "@/lib/geocoding.functions";
+import { ProjectTypeSelector } from "@/components/project-type/ProjectTypeSelector";
+import { useProjectTypes } from "@/hooks/useProjectTypes";
 
 const analysisSearchSchema = z.object({
   screen_set_id: fallback(z.string(), "").default(""),
