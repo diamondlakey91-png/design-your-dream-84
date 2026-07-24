@@ -491,7 +491,7 @@ function RequestDrawer({ onClose }: { onClose: () => void }) {
               <input value={form.permit_type} onChange={(e) => setForm({ ...form, permit_type: e.target.value })} className="input" placeholder="Building, sign…" />
             </Field>
             <Field label="Project type">
-              <input value={form.project_type} onChange={(e) => setForm({ ...form, project_type: e.target.value })} className="input" placeholder="Tenant fit-out, new build…" />
+              <ProjectTypeField value={form.project_type} onChange={(v) => setForm({ ...form, project_type: v })} />
             </Field>
           </div>
           <Field label="Priority">
