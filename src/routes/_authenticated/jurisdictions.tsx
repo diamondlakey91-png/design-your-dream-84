@@ -17,6 +17,8 @@ import {
 import { useEffect, useMemo, useState } from "react";
 import { toast } from "sonner";
 import { verifyMeta, type VerificationStatus } from "@/lib/verification";
+import { ProjectTypeSelector } from "@/components/project-type/ProjectTypeSelector";
+import { useProjectTypes } from "@/hooks/useProjectTypes";
 
 export const Route = createFileRoute("/_authenticated/jurisdictions")({
   head: () => ({
