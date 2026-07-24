@@ -117,7 +117,17 @@ function S(
 export const PORTAL_REGISTRY: PortalEntry[] = [
   // ================= Accela (largest footprint) =================
   A("Arlington County", "VA", "ARLINGTONCO", { planReviewUrl: "https://permitva.arlingtonva.us/ProjectDox/index.aspx" }),
-  A("Fairfax County", "VA", "fairfax", { planReviewUrl: "https://fidoprod.fairfaxcounty.gov/ProjectDox/" }),
+  {
+    jurisdiction: "Fairfax County",
+    state: "VA",
+    platform: "Accela",
+    url: "https://plus.fairfaxcounty.gov/CitizenAccess/Default.aspx",
+    addressSearch: (addr: string) =>
+      `https://plus.fairfaxcounty.gov/CitizenAccess/Cap/CapHome.aspx?module=Building&TabName=Building&TabList=Home%7C0%7CBuilding%7C1&searchText=${encodeURIComponent(addr.trim())}`,
+    permitSearch: (num: string) =>
+      `https://plus.fairfaxcounty.gov/CitizenAccess/Cap/GlobalSearchResults.aspx?QueryText=${encodeURIComponent(num.trim())}`,
+    planReviewUrl: "https://fidoprod.fairfaxcounty.gov/ProjectDox/",
+  },
   S("Loudoun County", "VA", "Custom", { url: "https://loudounpdx.loudoun.gov/", planReviewUrl: "https://loudounpdx.loudoun.gov/ProjectDox/" }),
   S("Alexandria", "VA", "Custom", { url: "https://www.alexandriava.gov/Permits" }),
   A("San Diego", "CA", "SANDIEGO", { planReviewUrl: "https://plans.sandiego.gov/ProjectDox/" }),
