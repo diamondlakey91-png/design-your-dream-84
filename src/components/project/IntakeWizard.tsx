@@ -65,6 +65,8 @@ export function IntakeWizard({ projectId }: { projectId: string }) {
   const [step, setStep] = useState<Step>(1);
   const [friendly, setFriendly] = useState<FriendlyProjectType | "">("");
   const [plainScope, setPlainScope] = useState("");
+  const [primaryTypeId, setPrimaryTypeId] = useState<string | null>(null);
+  const [additionalTypeIds, setAdditionalTypeIds] = useState<string[]>([]);
   const [localAnswers, setLocalAnswers] = useState<Record<string, AnswerChoice | string>>({});
   const [hydrated, setHydrated] = useState(false);
   const [busy, setBusy] = useState(false);
@@ -74,6 +76,8 @@ export function IntakeWizard({ projectId }: { projectId: string }) {
     if (hydrated || !scope) return;
     setFriendly((scope.friendly_project_type ?? "") as FriendlyProjectType | "");
     setPlainScope(scope.plain_scope ?? scope.scope_text ?? "");
+    setPrimaryTypeId(scope.primary_project_type_id ?? null);
+    setAdditionalTypeIds(Array.isArray(scope.additional_project_type_ids) ? scope.additional_project_type_ids : []);
     const savedStep = Math.min(5, Math.max(1, Number(scope.intake_step ?? 1))) as Step;
     setStep(savedStep);
     setHydrated(true);
