@@ -541,5 +541,24 @@ function Field({ label, children }: { label: string; children: React.ReactNode }
   );
 }
 
+function ProjectTypeField({ value, onChange }: { value: string; onChange: (v: string) => void }) {
+  const { byId } = useProjectTypes();
+  const [primaryId, setPrimaryId] = useState<string | null>(null);
+  return (
+    <ProjectTypeSelector
+      mode="single"
+      value={{ primaryId }}
+      onChange={(v) => {
+        setPrimaryId(v.primaryId ?? null);
+        const t = v.primaryId ? byId.get(v.primaryId) : null;
+        onChange(t?.client_label ?? value);
+      }}
+      label=""
+      helperText=""
+      allowNotSure={false}
+    />
+  );
+}
+
 // Building2 kept imported for potential future use; suppress unused warning
 void Building2;
