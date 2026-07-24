@@ -85,6 +85,15 @@ const CURATED_AUTHORITIES: Record<string, AuthorityCandidate[]> = {
     { role: "health", official_name: "Anne Arundel County Department of Health", responsibility: "Food service plan review — county health serves city addresses.", website: "https://health.aacounty.org", verification: "ai_assisted", source: null },
     { role: "historic", official_name: "Annapolis Historic Preservation Commission", responsibility: "Certificate of Approval for work in historic district.", website: "https://www.annapolis.gov/166/Historic-Preservation", verification: "ai_assisted", source: null },
   ],
+  "VA|Fairfax|": [
+    { role: "building", official_name: "Fairfax County Department of Land Development Services", department: "Building Plan Review / Permit Application Center", responsibility: "Primary AHJ for building, trade, and site permits countywide (outside incorporated towns).", website: "https://www.fairfaxcounty.gov/landdevelopment/", portal_url: "https://plus.fairfaxcounty.gov/CitizenAccess/Default.aspx", verification: "ai_assisted", source: { url: "https://plus.fairfaxcounty.gov/CitizenAccess/Default.aspx", title: "Fairfax County — PLUS Citizen Access", publisher: "Fairfax County, VA" } },
+    { role: "planning_zoning", official_name: "Fairfax County Department of Planning and Development", responsibility: "Zoning verification, use approvals, subdivision, and site design review.", website: "https://www.fairfaxcounty.gov/planning-development/", verification: "ai_assisted", source: null },
+    { role: "fire", official_name: "Fairfax County Fire Marshal's Office", responsibility: "Fire and life-safety plan review, fire alarm and suppression permits, inspections.", website: "https://www.fairfaxcounty.gov/fire-ems/fire-marshal", verification: "ai_assisted", source: null },
+    { role: "health", official_name: "Fairfax County Health Department", department: "Environmental Health", responsibility: "Food service plan review, well & septic, environmental health.", website: "https://www.fairfaxcounty.gov/health/", verification: "ai_assisted", source: null },
+    { role: "public_works", official_name: "Fairfax County Department of Public Works and Environmental Services", responsibility: "Grading, stormwater management, and utility engineering review.", website: "https://www.fairfaxcounty.gov/publicworks/", verification: "ai_assisted", source: null },
+    { role: "utility_water", official_name: "Fairfax Water", responsibility: "Water service and meter connections.", website: "https://www.fairfaxwater.org/", verification: "ai_assisted", source: null },
+    { role: "transportation_row", official_name: "Virginia Department of Transportation — NOVA District", responsibility: "State-maintained roads: entrance permits, ROW / land-use permits.", website: "https://www.virginiadot.org/", verification: "ai_assisted", source: null },
+  ],
 };
 
 function candidatesFor(state: string | null, county: string | null, municipality: string | null, incorporated: boolean): AuthorityCandidate[] {
