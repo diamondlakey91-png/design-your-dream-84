@@ -27,6 +27,8 @@ import {
 } from "@/lib/intakeQuestions";
 import { intakeStatusLabel } from "@/lib/statusLabels";
 import { JurisdictionConfirmCard } from "./JurisdictionConfirmCard";
+import { ProjectTypeSelector } from "@/components/project-type/ProjectTypeSelector";
+import { setProjectTypeForProject } from "@/lib/projectTypes.functions";
 
 type Step = 1 | 2 | 3 | 4 | 5;
 
