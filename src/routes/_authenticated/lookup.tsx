@@ -5,6 +5,8 @@ import { useState } from "react";
 import { AppShell } from "@/components/AppShell";
 import { lookupPermitsByAddress, lookupUtilityCoordination } from "@/lib/permitLookup.functions";
 import { MapPin, Search, ExternalLink, Building2, Loader2, AlertCircle, ShieldCheck, ShieldAlert, ShieldQuestion, Info, Droplets, Flame, Zap, Cable, PhoneCall, CloudRain } from "lucide-react";
+import { ProjectTypeSelector } from "@/components/project-type/ProjectTypeSelector";
+import { useProjectTypes } from "@/hooks/useProjectTypes";
 
 export const Route = createFileRoute("/_authenticated/lookup")({
   component: LookupPage,
