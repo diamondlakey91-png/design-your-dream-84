@@ -50,8 +50,10 @@ const KNOWN_JURISDICTIONS: string[] = [
 function LookupPage() {
   const [address, setAddress] = useState("");
   const [jurisdiction, setJurisdiction] = useState("");
+  const [primaryTypeId, setPrimaryTypeId] = useState<string | null>(null);
   const [result, setResult] = useState<LookupResult | null>(null);
   const [utility, setUtility] = useState<UtilityResult | null>(null);
+  const { byId } = useProjectTypes();
 
   const lookupFn = useServerFn(lookupPermitsByAddress);
   const utilityFn = useServerFn(lookupUtilityCoordination);
