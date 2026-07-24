@@ -770,3 +770,30 @@ function SourcesSection({ sources }: { sources: Array<Record<string, unknown>> }
     </div>
   );
 }
+
+function AnalysisProjectTypePicker({ value, onChange }: { value: string; onChange: (v: string) => void }) {
+  const { byId, types } = useProjectTypes();
+  const [primaryId, setPrimaryId] = useState<string | null>(() => {
+    const match = types.find((t) => t.client_label === value);
+    return match?.id ?? null;
+  });
+  useEffect(() => {
+    if (!primaryId && value) {
+      const match = types.find((t) => t.client_label === value);
+      if (match) setPrimaryId(match.id);
+    }
+  }, [types, value, primaryId]);
+  return (
+    <ProjectTypeSelector
+      mode="single"
+      value={{ primaryId }}
+      onChange={(v) => {
+        setPrimaryId(v.primaryId ?? null);
+        const t = v.primaryId ? byId.get(v.primaryId) : null;
+        onChange(t?.client_label ?? "");
+      }}
+      label=""
+      helperText=""
+    />
+  );
+}
