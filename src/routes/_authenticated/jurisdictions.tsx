@@ -19,6 +19,7 @@ import { toast } from "sonner";
 import { verifyMeta, type VerificationStatus } from "@/lib/verification";
 import { ProjectTypeSelector } from "@/components/project-type/ProjectTypeSelector";
 import { useProjectTypes } from "@/hooks/useProjectTypes";
+import { MdVaCoverageSection } from "@/components/jurisdictions/MdVaCoverageSection";
 
 export const Route = createFileRoute("/_authenticated/jurisdictions")({
   head: () => ({
@@ -155,6 +156,7 @@ function JurisdictionsIndex() {
             <nav className="sticky top-4 space-y-1 text-sm">
               <SideLink href="#browse" label="Browse" active />
               <SideLink href="#saved" label={`Saved (${saved.length})`} />
+              <SideLink href="#coverage" label="MD & VA coverage" />
               <SideLink href="#featured" label="Featured launch" />
               <SideLink href="#legend" label="Verification legend" />
               <button
@@ -292,6 +294,16 @@ function JurisdictionsIndex() {
                 </div>
               </section>
             )}
+
+            {/* Maryland & Virginia full coverage from the authority registry */}
+            <MdVaCoverageSection
+              term={term}
+              stateFilter={stateF}
+              researching={build.isPending}
+              onResearch={(name) => build.mutate(name)}
+            />
+
+
 
             {/* Saved */}
             {saved.length > 0 && (
