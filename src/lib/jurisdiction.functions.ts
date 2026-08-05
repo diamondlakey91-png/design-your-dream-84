@@ -265,7 +265,8 @@ export const getJurisdictionConfirmation = createServerFn({ method: "GET" })
     }
     const candidates = jurisdiction
       ? candidatesFor(jurisdiction.state, jurisdiction.county, jurisdiction.municipality, jurisdiction.incorporated)
-      : [];
+      : candidatesFor(confirmation.state, null, confirmation.city ?? null, true);
+
     return { confirmation, jurisdiction, candidates };
   });
 
