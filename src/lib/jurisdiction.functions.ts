@@ -184,13 +184,16 @@ export const resolveAddress = createServerFn({ method: "POST" })
       };
     }
 
+    const stateCode = (geo.state ?? data.state).toUpperCase();
+    const resolvedLocality = resolveLocality(stateCode, geo.county, geo.municipality) ?? "Unknown";
+
     // Upsert jurisdiction record
     // eslint-disable-next-line @typescript-eslint/no-explicit-any
     const juRes = await (supabase.from("jurisdictions") as any)
       .upsert(
         {
-          state: geo.state ?? data.state.toUpperCase(),
-          county: geo.county ?? "Unknown",
+          state: stateCode,
+          county: resolvedLocality,
           municipality: geo.incorporated ? geo.municipality : null,
           incorporated: geo.incorporated,
           centroid_lat: geo.lat,
@@ -205,14 +208,15 @@ export const resolveAddress = createServerFn({ method: "POST" })
     let jurisdiction = juRes.data;
     if (!jurisdiction) {
       const { data: found } = await supabase.from("jurisdictions").select("*")
-        .eq("state", geo.state ?? data.state.toUpperCase())
-        .eq("county", geo.county ?? "Unknown")
+        .eq("state", stateCode)
+        .eq("county", resolvedLocality)
         .is("municipality", geo.incorporated ? geo.municipality as unknown as null : null)
         .maybeSingle();
       if (found) jurisdiction = found;
     }
 
-    const cands = candidatesFor(geo.state, geo.county, geo.municipality, geo.incorporated);
+    const cands = candidatesFor(stateCode, geo.county ?? resolvedLocality, geo.municipality, geo.incorporated);
+
 
     // Upsert confirmation
     const confirmRow = {
