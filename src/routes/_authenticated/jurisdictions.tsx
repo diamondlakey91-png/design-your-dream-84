@@ -156,6 +156,7 @@ function JurisdictionsIndex() {
             <nav className="sticky top-4 space-y-1 text-sm">
               <SideLink href="#browse" label="Browse" active />
               <SideLink href="#saved" label={`Saved (${saved.length})`} />
+              <SideLink href="#coverage" label="MD & VA coverage" />
               <SideLink href="#featured" label="Featured launch" />
               <SideLink href="#legend" label="Verification legend" />
               <button
