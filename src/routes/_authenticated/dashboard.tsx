@@ -14,6 +14,8 @@ import { JurisdictionAutocomplete } from "@/components/JurisdictionAutocomplete"
 import { ProjectTypeSelector } from "@/components/project-type/ProjectTypeSelector";
 import { setProjectTypeForProject } from "@/lib/projectTypes.functions";
 import { useProjectTypes } from "@/hooks/useProjectTypes";
+import { IntakePipelineCard } from "@/components/dashboard/IntakePipelineCard";
+
 
 export const Route = createFileRoute("/_authenticated/dashboard")({
   head: () => ({
@@ -126,7 +128,10 @@ function Dashboard() {
             onRefresh={() => briefingQ.refetch()}
             hasProjects={projects.length > 0}
           />
+
+          <IntakePipelineCard projects={projects.map((p) => ({ id: p.id, name: p.name }))} />
           </div>
+
 
         {/* RIGHT column: Cycles + stats */}
         <div className="col-span-12 space-y-6 lg:col-span-8">
