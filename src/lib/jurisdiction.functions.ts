@@ -2,6 +2,8 @@ import { createServerFn } from "@tanstack/react-start";
 import { requireSupabaseAuth } from "@/integrations/supabase/auth-middleware";
 import { z } from "zod";
 import { geocode as gatewayGeocode } from "@/lib/geocoding.shared";
+import { buildMdVaAuthorities, canonicalMdVaLocality, isMdVaLocality } from "@/lib/mdVaAuthorities";
+
 
 // Structured address required. A ZIP code alone is never a jurisdiction.
 const AddressInput = z.object({
