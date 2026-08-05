@@ -312,14 +312,15 @@ export function buildMdVaAuthorities(
 export function isMdVaLocality(state: string | null, locality: string | null): boolean {
   if (!state || !locality) return false;
   const st = state.toUpperCase();
-  const clean = locality.replace(/\s+(County|City)$/i, "").trim();
+  const clean = locality.replace(/\s+County$/i, "").trim();
   if (st === "MD") {
     return MD_COUNTIES.some((c) => c.toLowerCase() === locality.toLowerCase() || c.toLowerCase() === clean.toLowerCase());
   }
   if (st === "VA") {
+    const cityClean = clean.replace(/\s+City$/i, "").trim();
     return (
       VA_COUNTIES.some((c) => c.toLowerCase() === clean.toLowerCase()) ||
-      VA_INDEPENDENT_CITIES.some((c) => c.toLowerCase() === clean.toLowerCase())
+      VA_INDEPENDENT_CITIES.some((c) => c.toLowerCase() === clean.toLowerCase() || c.toLowerCase() === cityClean.toLowerCase())
     );
   }
   return false;
