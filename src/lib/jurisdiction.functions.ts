@@ -2,6 +2,8 @@ import { createServerFn } from "@tanstack/react-start";
 import { requireSupabaseAuth } from "@/integrations/supabase/auth-middleware";
 import { z } from "zod";
 import { geocode as gatewayGeocode } from "@/lib/geocoding.shared";
+import { buildMdVaAuthorities, canonicalMdVaLocality, isMdVaLocality } from "@/lib/mdVaAuthorities";
+
 
 // Structured address required. A ZIP code alone is never a jurisdiction.
 const AddressInput = z.object({
@@ -96,15 +98,39 @@ const CURATED_AUTHORITIES: Record<string, AuthorityCandidate[]> = {
   ],
 };
 
+/**
+ * Resolve the AHJ locality (county, or VA independent city) from geocoder output.
+ * VA independent cities are their own AHJ and often come back with no county.
+ */
+function resolveLocality(state: string | null, county: string | null, municipality: string | null): string | null {
+  if (!state) return null;
+  const st = state.toUpperCase();
+  const fromCounty = county ? canonicalMdVaLocality(st, county) : null;
+  if (fromCounty) return fromCounty;
+  const fromCity = municipality ? canonicalMdVaLocality(st, municipality) : null;
+  if (fromCity) return fromCity;
+  return county ?? null;
+}
+
 function candidatesFor(state: string | null, county: string | null, municipality: string | null, incorporated: boolean): AuthorityCandidate[] {
-  if (!state || !county) return [];
-  if (incorporated && municipality) {
+  if (!state) return [];
+  if (incorporated && municipality && county) {
     const cityKey = `${state}|${county}|${municipality}`;
     if (CURATED_AUTHORITIES[cityKey]) return CURATED_AUTHORITIES[cityKey];
   }
-  const countyKey = `${state}|${county}|`;
-  return CURATED_AUTHORITIES[countyKey] ?? [];
+  if (county) {
+    const countyKey = `${state}|${county}|`;
+    if (CURATED_AUTHORITIES[countyKey]) return CURATED_AUTHORITIES[countyKey];
+  }
+
+  // MD / VA full coverage fallback — every locality in both states resolves.
+  const locality = resolveLocality(state, county, municipality);
+  if (locality && isMdVaLocality(state, locality)) {
+    return buildMdVaAuthorities(state, locality, incorporated ? municipality : null) as AuthorityCandidate[];
+  }
+  return [];
 }
+
 
 // ---------- Server functions ----------
 
@@ -158,13 +184,16 @@ export const resolveAddress = createServerFn({ method: "POST" })
       };
     }
 
+    const stateCode = (geo.state ?? data.state).toUpperCase();
+    const resolvedLocality = resolveLocality(stateCode, geo.county, geo.municipality) ?? "Unknown";
+
     // Upsert jurisdiction record
     // eslint-disable-next-line @typescript-eslint/no-explicit-any
     const juRes = await (supabase.from("jurisdictions") as any)
       .upsert(
         {
-          state: geo.state ?? data.state.toUpperCase(),
-          county: geo.county ?? "Unknown",
+          state: stateCode,
+          county: resolvedLocality,
           municipality: geo.incorporated ? geo.municipality : null,
           incorporated: geo.incorporated,
           centroid_lat: geo.lat,
@@ -179,14 +208,15 @@ export const resolveAddress = createServerFn({ method: "POST" })
     let jurisdiction = juRes.data;
     if (!jurisdiction) {
       const { data: found } = await supabase.from("jurisdictions").select("*")
-        .eq("state", geo.state ?? data.state.toUpperCase())
-        .eq("county", geo.county ?? "Unknown")
+        .eq("state", stateCode)
+        .eq("county", resolvedLocality)
         .is("municipality", geo.incorporated ? geo.municipality as unknown as null : null)
         .maybeSingle();
       if (found) jurisdiction = found;
     }
 
-    const cands = candidatesFor(geo.state, geo.county, geo.municipality, geo.incorporated);
+    const cands = candidatesFor(stateCode, geo.county ?? resolvedLocality, geo.municipality, geo.incorporated);
+
 
     // Upsert confirmation
     const confirmRow = {
@@ -235,7 +265,8 @@ export const getJurisdictionConfirmation = createServerFn({ method: "GET" })
     }
     const candidates = jurisdiction
       ? candidatesFor(jurisdiction.state, jurisdiction.county, jurisdiction.municipality, jurisdiction.incorporated)
-      : [];
+      : candidatesFor(confirmation.state, null, confirmation.city ?? null, true);
+
     return { confirmation, jurisdiction, candidates };
   });
 
