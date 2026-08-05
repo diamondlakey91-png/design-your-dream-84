@@ -96,15 +96,39 @@ const CURATED_AUTHORITIES: Record<string, AuthorityCandidate[]> = {
   ],
 };
 
+/**
+ * Resolve the AHJ locality (county, or VA independent city) from geocoder output.
+ * VA independent cities are their own AHJ and often come back with no county.
+ */
+function resolveLocality(state: string | null, county: string | null, municipality: string | null): string | null {
+  if (!state) return null;
+  const st = state.toUpperCase();
+  const fromCounty = county ? canonicalMdVaLocality(st, county) : null;
+  if (fromCounty) return fromCounty;
+  const fromCity = municipality ? canonicalMdVaLocality(st, municipality) : null;
+  if (fromCity) return fromCity;
+  return county ?? null;
+}
+
 function candidatesFor(state: string | null, county: string | null, municipality: string | null, incorporated: boolean): AuthorityCandidate[] {
-  if (!state || !county) return [];
-  if (incorporated && municipality) {
+  if (!state) return [];
+  if (incorporated && municipality && county) {
     const cityKey = `${state}|${county}|${municipality}`;
     if (CURATED_AUTHORITIES[cityKey]) return CURATED_AUTHORITIES[cityKey];
   }
-  const countyKey = `${state}|${county}|`;
-  return CURATED_AUTHORITIES[countyKey] ?? [];
+  if (county) {
+    const countyKey = `${state}|${county}|`;
+    if (CURATED_AUTHORITIES[countyKey]) return CURATED_AUTHORITIES[countyKey];
+  }
+
+  // MD / VA full coverage fallback — every locality in both states resolves.
+  const locality = resolveLocality(state, county, municipality);
+  if (locality && isMdVaLocality(state, locality)) {
+    return buildMdVaAuthorities(state, locality, incorporated ? municipality : null) as AuthorityCandidate[];
+  }
+  return [];
 }
+
 
 // ---------- Server functions ----------
 
