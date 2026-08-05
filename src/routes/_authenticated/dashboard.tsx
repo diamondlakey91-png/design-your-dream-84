@@ -126,7 +126,10 @@ function Dashboard() {
             onRefresh={() => briefingQ.refetch()}
             hasProjects={projects.length > 0}
           />
+
+          <IntakePipelineCard projects={projects.map((p) => ({ id: p.id, name: p.name }))} />
           </div>
+
 
         {/* RIGHT column: Cycles + stats */}
         <div className="col-span-12 space-y-6 lg:col-span-8">
