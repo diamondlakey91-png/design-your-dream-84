@@ -142,31 +142,31 @@ const KNOWN_SITES: Record<string, string> = {
   "VA|York": "https://www.yorkcounty.gov/154/Building-Regulation",
 
   // ---- Virginia independent cities ----
-  "VA|Alexandria": "https://www.alexandriava.gov/Permits",
-  "VA|Charlottesville": "https://www.charlottesville.gov/468/Building-Permits",
-  "VA|Chesapeake": "https://www.cityofchesapeake.net/153/Development-Permits",
-  "VA|Danville": "https://www.danvilleva.gov/152/Building-Inspections",
-  "VA|Fairfax": "https://www.fairfaxva.gov/government/public-works/permits-inspections",
-  "VA|Falls Church": "https://www.fallschurchva.gov/151/Permits",
-  "VA|Fredericksburg": "https://www.fredericksburgva.gov/151/Building-Development-Services",
-  "VA|Hampton": "https://hampton.gov/151/Codes-Compliance",
-  "VA|Harrisonburg": "https://www.harrisonburgva.gov/building-inspections",
-  "VA|Lynchburg": "https://www.lynchburgva.gov/building-safety",
-  "VA|Manassas": "https://www.manassasva.gov/government/departments/community-development",
-  "VA|Manassas Park": "https://www.cityofmanassaspark.us/151/Community-Development",
-  "VA|Newport News": "https://www.nnva.gov/151/Codes-Compliance",
-  "VA|Norfolk": "https://www.norfolk.gov/1157/Permits-Inspections",
-  "VA|Petersburg": "https://www.petersburgva.gov/151/Building-Inspections",
-  "VA|Portsmouth": "https://www.portsmouthva.gov/151/Permits-Inspections",
-  "VA|Richmond": "https://www.rva.gov/planning-development-review",
-  "VA|Roanoke": "https://www.roanokeva.gov/1013/Permits",
-  "VA|Salem": "https://www.salemva.gov/Departments/Community-Development",
-  "VA|Staunton": "https://www.staunton.va.us/departments/building-inspections",
-  "VA|Suffolk": "https://www.suffolkva.us/151/Planning-Community-Development",
-  "VA|Virginia Beach": "https://permits.virginiabeach.gov/",
-  "VA|Waynesboro": "https://www.waynesboro.va.us/151/Building-Inspections",
-  "VA|Williamsburg": "https://www.williamsburgva.gov/151/Codes-Compliance",
-  "VA|Winchester": "https://www.winchesterva.gov/zoning-inspections",
+  "VA|city:Alexandria": "https://www.alexandriava.gov/Permits",
+  "VA|city:Charlottesville": "https://www.charlottesville.gov/468/Building-Permits",
+  "VA|city:Chesapeake": "https://www.cityofchesapeake.net/153/Development-Permits",
+  "VA|city:Danville": "https://www.danvilleva.gov/152/Building-Inspections",
+  "VA|city:Fairfax": "https://www.fairfaxva.gov/government/public-works/permits-inspections",
+  "VA|city:Falls Church": "https://www.fallschurchva.gov/151/Permits",
+  "VA|city:Fredericksburg": "https://www.fredericksburgva.gov/151/Building-Development-Services",
+  "VA|city:Hampton": "https://hampton.gov/151/Codes-Compliance",
+  "VA|city:Harrisonburg": "https://www.harrisonburgva.gov/building-inspections",
+  "VA|city:Lynchburg": "https://www.lynchburgva.gov/building-safety",
+  "VA|city:Manassas": "https://www.manassasva.gov/government/departments/community-development",
+  "VA|city:Manassas Park": "https://www.cityofmanassaspark.us/151/Community-Development",
+  "VA|city:Newport News": "https://www.nnva.gov/151/Codes-Compliance",
+  "VA|city:Norfolk": "https://www.norfolk.gov/1157/Permits-Inspections",
+  "VA|city:Petersburg": "https://www.petersburgva.gov/151/Building-Inspections",
+  "VA|city:Portsmouth": "https://www.portsmouthva.gov/151/Permits-Inspections",
+  "VA|city:Richmond": "https://www.rva.gov/planning-development-review",
+  "VA|city:Roanoke": "https://www.roanokeva.gov/1013/Permits",
+  "VA|city:Salem": "https://www.salemva.gov/Departments/Community-Development",
+  "VA|city:Staunton": "https://www.staunton.va.us/departments/building-inspections",
+  "VA|city:Suffolk": "https://www.suffolkva.us/151/Planning-Community-Development",
+  "VA|city:Virginia Beach": "https://permits.virginiabeach.gov/",
+  "VA|city:Waynesboro": "https://www.waynesboro.va.us/151/Building-Inspections",
+  "VA|city:Williamsburg": "https://www.williamsburgva.gov/151/Codes-Compliance",
+  "VA|city:Winchester": "https://www.winchesterva.gov/zoning-inspections",
 };
 
 /** Health authority per state — Maryland is county-based, Virginia uses VDH districts. */
@@ -215,7 +215,8 @@ export function buildMdVaAuthorities(
   if (st !== "MD" && st !== "VA") return [];
 
   const label = countyLabel(st, locality);
-  const known = KNOWN_SITES[`${st}|${locality}`] ?? null;
+  const isCity = st === "VA" && VA_INDEPENDENT_CITIES.includes(locality as (typeof VA_INDEPENDENT_CITIES)[number]);
+  const known = KNOWN_SITES[`${st}|${isCity ? "city:" : ""}${locality}`] ?? null;
   const buildingSite = known ?? govSearchUrl(locality, st, "building permits department online portal");
 
   const out: GeneratedAuthority[] = [
