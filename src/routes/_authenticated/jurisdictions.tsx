@@ -293,6 +293,16 @@ function JurisdictionsIndex() {
               </section>
             )}
 
+            {/* Maryland & Virginia full coverage from the authority registry */}
+            <MdVaCoverageSection
+              term={term}
+              stateFilter={stateF}
+              researching={build.isPending}
+              onResearch={(name) => build.mutate(name)}
+            />
+
+
+
             {/* Saved */}
             {saved.length > 0 && (
               <section id="saved">
