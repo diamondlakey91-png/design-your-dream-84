@@ -19,6 +19,7 @@ import { toast } from "sonner";
 import { verifyMeta, type VerificationStatus } from "@/lib/verification";
 import { ProjectTypeSelector } from "@/components/project-type/ProjectTypeSelector";
 import { useProjectTypes } from "@/hooks/useProjectTypes";
+import { MdVaCoverageSection } from "@/components/jurisdictions/MdVaCoverageSection";
 
 export const Route = createFileRoute("/_authenticated/jurisdictions")({
   head: () => ({
