@@ -14,6 +14,8 @@ import { JurisdictionAutocomplete } from "@/components/JurisdictionAutocomplete"
 import { ProjectTypeSelector } from "@/components/project-type/ProjectTypeSelector";
 import { setProjectTypeForProject } from "@/lib/projectTypes.functions";
 import { useProjectTypes } from "@/hooks/useProjectTypes";
+import { IntakePipelineCard } from "@/components/dashboard/IntakePipelineCard";
+
 
 export const Route = createFileRoute("/_authenticated/dashboard")({
   head: () => ({
