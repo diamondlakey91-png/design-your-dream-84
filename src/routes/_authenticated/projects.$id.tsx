@@ -21,13 +21,14 @@ import { DeadlinesTab } from "@/components/project/DeadlinesTab";
 import { InspectionsTab } from "@/components/project/InspectionsTab";
 import { TimelineTab } from "@/components/project/TimelineTab";
 import { ScopeTab } from "@/components/project/ScopeTab";
+import { ResponseMatrixTab } from "@/components/project/ResponseMatrixTab";
 
 export const Route = createFileRoute("/_authenticated/projects/$id")({
   head: () => ({ meta: [{ title: "Project — Permivio" }, { name: "robots", content: "noindex" }] }),
   component: ProjectDetail,
 });
 
-type Tab = "overview" | "scope" | "checklist" | "docs" | "deadlines" | "inspections" | "timeline";
+type Tab = "overview" | "scope" | "checklist" | "docs" | "responses" | "deadlines" | "inspections" | "timeline";
 
 function ProjectDetail() {
   const { id } = Route.useParams();
@@ -117,7 +118,7 @@ function ProjectDetail() {
       {/* Tabs */}
       <nav className="sticky top-0 z-10 bg-background/95 backdrop-blur border-b border-border">
         <div className="flex overflow-x-auto">
-          {(["overview", "scope", "checklist", "docs", "deadlines", "inspections", "timeline"] as Tab[]).map((t) => (
+          {(["overview", "scope", "checklist", "docs", "responses", "deadlines", "inspections", "timeline"] as Tab[]).map((t) => (
             <button
               key={t}
               onClick={() => setTab(t)}
@@ -125,7 +126,7 @@ function ProjectDetail() {
                 tab === t ? "border-brand text-foreground" : "border-transparent text-muted-foreground"
               }`}
             >
-              {t}
+              {t === "responses" ? "response matrix" : t}
             </button>
           ))}
         </div>
@@ -138,6 +139,7 @@ function ProjectDetail() {
         {tab === "scope" && <ScopeTab projectId={id} defaultAddress={project.location} />}
         {tab === "checklist" && <ChecklistTab projectId={id} jurisdiction={project.jurisdiction} />}
         {tab === "docs" && <DocsTab projectId={id} userId={project.user_id} />}
+        {tab === "responses" && <ResponseMatrixTab projectId={id} projectName={project.name} />}
         {tab === "deadlines" && <DeadlinesTab projectId={id} />}
         {tab === "inspections" && <InspectionsTab projectId={id} userId={project.user_id} />}
         {tab === "timeline" && <TimelineTab projectId={id} />}
