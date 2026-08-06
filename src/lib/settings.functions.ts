@@ -103,14 +103,16 @@ export const savePortalCredential = createServerFn({ method: "POST" })
       .parse(input),
   )
   .handler(async ({ data, context }) => {
-    const { id, password, ...fields } = data;
-    const payload: Record<string, unknown> = {
-      ...fields,
-      portal_url: fields.portal_url || null,
-      jurisdiction: fields.jurisdiction || null,
-      notes: fields.notes || null,
+    const { id, password } = data;
+    const payload = {
+      label: data.label,
+      kind: data.kind,
+      username: data.username,
+      portal_url: data.portal_url || null,
+      jurisdiction: data.jurisdiction || null,
+      notes: data.notes || null,
+      ...(password ? { password_encrypted: await encryptSecret(password) } : {}),
     };
-    if (password) payload.password_encrypted = await encryptSecret(password);
 
     if (id) {
       const { error } = await context.supabase
@@ -130,6 +132,7 @@ export const savePortalCredential = createServerFn({ method: "POST" })
     if (error) throw new Error(error.message);
     return { id: row.id as string };
   });
+
 
 export const markPortalCredentialVerified = createServerFn({ method: "POST" })
   .middleware([requireSupabaseAuth])
