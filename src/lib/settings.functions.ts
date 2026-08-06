@@ -173,13 +173,24 @@ const CLEANUP_TABLES = {
 
 type CleanupKey = keyof typeof CLEANUP_TABLES;
 
+// Cleanup iterates table names dynamically, which the generated types can't narrow.
+type LooseQuery = {
+  select: (cols: string, opts?: Record<string, unknown>) => LooseQuery;
+  delete: () => LooseQuery;
+  eq: (col: string, val: unknown) => Promise<{ data: { id: string }[] | null; count: number | null; error: { message: string } | null }> & LooseQuery;
+};
+function looseClient(client: unknown) {
+  return client as { from: (table: string) => LooseQuery };
+}
+
 export const getCleanupCounts = createServerFn({ method: "GET" })
   .middleware([requireSupabaseAuth])
   .handler(async ({ context }) => {
     const entries = Object.entries(CLEANUP_TABLES) as [CleanupKey, string][];
     const counts: Record<string, number> = {};
+    const db = looseClient(context.supabase);
     for (const [key, table] of entries) {
-      const { count, error } = await context.supabase
+      const { count, error } = await db
         .from(table)
         .select("id", { count: "exact", head: true })
         .eq("user_id", context.userId);
@@ -202,9 +213,10 @@ export const runDataCleanup = createServerFn({ method: "POST" })
   )
   .handler(async ({ data, context }) => {
     const deleted: Record<string, number> = {};
+    const db = looseClient(context.supabase);
     for (const key of data.keys) {
       const table = CLEANUP_TABLES[key as CleanupKey];
-      const { data: rows, error } = await context.supabase
+      const { data: rows, error } = await db
         .from(table)
         .delete()
         .eq("user_id", context.userId)
