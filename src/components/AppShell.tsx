@@ -1,5 +1,5 @@
 import { Link, useLocation, useNavigate } from "@tanstack/react-router";
-import { Home, MessageSquare, Library, LogOut, MapPin, Building2 } from "lucide-react";
+import { Home, MessageSquare, Library, LogOut, MapPin, Building2, Settings } from "lucide-react";
 import { supabase } from "@/integrations/supabase/client";
 import { useQueryClient } from "@tanstack/react-query";
 import type { ReactNode } from "react";
@@ -38,10 +38,22 @@ export function AppShell({ children }: { children: ReactNode }) {
           <Link to="/dashboard" aria-label="Permivio home" className="shrink-0">
             <PermivioLogo />
           </Link>
-          <span className="font-mono text-[10px] uppercase tracking-widest text-muted-foreground">
-            Permit OS
-          </span>
+          <div className="flex items-center gap-3">
+            <span className="font-mono text-[10px] uppercase tracking-widest text-muted-foreground">
+              Permit OS
+            </span>
+            <Link
+              to="/settings"
+              aria-label="Workspace settings"
+              className={`rounded-lg border border-border p-1.5 transition-colors ${
+                active("/settings") ? "text-brand" : "text-muted-foreground hover:text-foreground"
+              }`}
+            >
+              <Settings className="size-4" />
+            </Link>
+          </div>
         </div>
+
       </header>
       <div className="mx-auto max-w-7xl px-4 pt-4 lg:px-8">
         <WelcomeBanner />
