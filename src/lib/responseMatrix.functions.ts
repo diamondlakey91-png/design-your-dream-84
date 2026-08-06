@@ -117,7 +117,21 @@ export const importCommentsFromDocuments = createServerFn({ method: "POST" })
     const seen = new Set((existing ?? []).map((r) => (r.comment_text ?? "").trim().toLowerCase()));
     let nextNo = (existing ?? []).reduce((m, r) => Math.max(m, r.comment_no ?? 0), 0) + 1;
 
-    const rows: Array<Record<string, unknown>> = [];
+    const rows: Array<{
+      user_id: string;
+      project_id: string;
+      document_id: string;
+      comment_no: number;
+      discipline: string;
+      sheet_reference: string | null;
+      code_reference: string | null;
+      severity: string;
+      verification: string;
+      comment_text: string;
+      response_text: string | null;
+      status: string;
+      source: string;
+    }> = [];
     for (const doc of docs ?? []) {
       const pr = doc.plan_review as {
         findings?: Array<{
