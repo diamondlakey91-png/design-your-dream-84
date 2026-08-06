@@ -83,7 +83,7 @@ export function ResponseMatrixTab({ projectId, projectName }: { projectId: strin
     onError: fail,
   });
   const patch = useMutation({
-    mutationFn: (v: Parameters<typeof updateFn>[0]["data"]) => updateFn({ data: v }),
+    mutationFn: (v: { id: string; status?: Status; response_text?: string; discipline?: string }) => updateFn({ data: v }),
     onSuccess: invalidate,
     onError: fail,
   });
