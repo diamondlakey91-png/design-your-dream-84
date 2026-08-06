@@ -174,10 +174,15 @@ const CLEANUP_TABLES = {
 type CleanupKey = keyof typeof CLEANUP_TABLES;
 
 // Cleanup iterates table names dynamically, which the generated types can't narrow.
-type LooseQuery = {
+type LooseResult = {
+  data: { id: string }[] | null;
+  count: number | null;
+  error: { message: string } | null;
+};
+type LooseQuery = PromiseLike<LooseResult> & {
   select: (cols: string, opts?: Record<string, unknown>) => LooseQuery;
   delete: () => LooseQuery;
-  eq: (col: string, val: unknown) => Promise<{ data: { id: string }[] | null; count: number | null; error: { message: string } | null }> & LooseQuery;
+  eq: (col: string, val: unknown) => LooseQuery;
 };
 function looseClient(client: unknown) {
   return client as { from: (table: string) => LooseQuery };
