@@ -7,7 +7,7 @@ const dec = new TextDecoder();
 async function getKey(): Promise<CryptoKey> {
   const raw = process.env["PORTAL_CRED_ENC_KEY"];
   if (!raw) throw new Error("Missing PORTAL_CRED_ENC_KEY");
-  const digest = await crypto.subtle.digest("SHA-256", enc.encode(raw));
+  const digest = await crypto.subtle.digest("SHA-256", enc.encode(raw) as unknown as BufferSource);
   return crypto.subtle.importKey("raw", digest, { name: "AES-GCM" }, false, [
     "encrypt",
     "decrypt",
@@ -30,7 +30,7 @@ function fromB64(value: string): Uint8Array {
 export async function encryptSecret(plain: string): Promise<string> {
   const key = await getKey();
   const iv = crypto.getRandomValues(new Uint8Array(12));
-  const ct = await crypto.subtle.encrypt({ name: "AES-GCM", iv }, key, enc.encode(plain));
+  const ct = await crypto.subtle.encrypt({ name: "AES-GCM", iv: iv as unknown as BufferSource }, key, enc.encode(plain));
   return `v1.${toB64(iv)}.${toB64(new Uint8Array(ct))}`;
 }
 
@@ -39,9 +39,9 @@ export async function decryptSecret(payload: string): Promise<string> {
   if (version !== "v1" || !ivB64 || !ctB64) throw new Error("Unrecognized secret format");
   const key = await getKey();
   const pt = await crypto.subtle.decrypt(
-    { name: "AES-GCM", iv: fromB64(ivB64) },
+    { name: "AES-GCM", iv: fromB64(ivB64) as unknown as BufferSource },
     key,
-    fromB64(ctB64),
+    fromB64(ctB64) as unknown as BufferSource,
   );
   return dec.decode(pt);
 }
