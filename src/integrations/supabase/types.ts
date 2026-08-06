@@ -254,6 +254,81 @@ export type Database = {
           },
         ]
       }
+      comment_responses: {
+        Row: {
+          assignee: string | null
+          code_reference: string | null
+          comment_no: number
+          comment_text: string
+          created_at: string
+          discipline: string
+          document_id: string | null
+          id: string
+          project_id: string
+          response_text: string | null
+          severity: string
+          sheet_reference: string | null
+          source: string
+          status: string
+          updated_at: string
+          user_id: string
+          verification: string
+        }
+        Insert: {
+          assignee?: string | null
+          code_reference?: string | null
+          comment_no?: number
+          comment_text: string
+          created_at?: string
+          discipline?: string
+          document_id?: string | null
+          id?: string
+          project_id: string
+          response_text?: string | null
+          severity?: string
+          sheet_reference?: string | null
+          source?: string
+          status?: string
+          updated_at?: string
+          user_id: string
+          verification?: string
+        }
+        Update: {
+          assignee?: string | null
+          code_reference?: string | null
+          comment_no?: number
+          comment_text?: string
+          created_at?: string
+          discipline?: string
+          document_id?: string | null
+          id?: string
+          project_id?: string
+          response_text?: string | null
+          severity?: string
+          sheet_reference?: string | null
+          source?: string
+          status?: string
+          updated_at?: string
+          user_id?: string
+          verification?: string
+        }
+        Relationships: [
+          {
+            foreignKeyName: "comment_responses_document_id_fkey"
+            columns: ["document_id"]
+            isOneToOne: false
+            referencedRelation: "project_documents"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "comment_responses_project_id_fkey"
+            columns: ["project_id"]
+            isOneToOne: false
+            referencedRelation: "projects"
+            referencedColumns: ["id"]
+          },
+        ]
+      }
       compliance_reports: {
         Row: {
           address: string
