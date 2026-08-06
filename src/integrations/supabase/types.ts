@@ -1237,6 +1237,51 @@ export type Database = {
           },
         ]
       }
+      portal_credentials: {
+        Row: {
+          created_at: string
+          id: string
+          jurisdiction: string | null
+          kind: string
+          label: string
+          last_verified_at: string | null
+          notes: string | null
+          password_encrypted: string | null
+          portal_url: string | null
+          updated_at: string
+          user_id: string
+          username: string
+        }
+        Insert: {
+          created_at?: string
+          id?: string
+          jurisdiction?: string | null
+          kind?: string
+          label: string
+          last_verified_at?: string | null
+          notes?: string | null
+          password_encrypted?: string | null
+          portal_url?: string | null
+          updated_at?: string
+          user_id: string
+          username: string
+        }
+        Update: {
+          created_at?: string
+          id?: string
+          jurisdiction?: string | null
+          kind?: string
+          label?: string
+          last_verified_at?: string | null
+          notes?: string | null
+          password_encrypted?: string | null
+          portal_url?: string | null
+          updated_at?: string
+          user_id?: string
+          username?: string
+        }
+        Relationships: []
+      }
       portal_mappings: {
         Row: {
           address_search_template: string | null
@@ -2295,6 +2340,84 @@ export type Database = {
           created_at?: string
           id?: string
           role?: Database["public"]["Enums"]["app_role"]
+          user_id?: string
+        }
+        Relationships: []
+      }
+      user_settings: {
+        Row: {
+          brand_accent_color: string
+          brand_address: string | null
+          brand_company_name: string | null
+          brand_contact_email: string | null
+          brand_contact_phone: string | null
+          brand_footer_note: string | null
+          brand_license_number: string | null
+          brand_logo_url: string | null
+          company: string | null
+          created_at: string
+          digest_frequency: string
+          full_name: string | null
+          id: string
+          job_title: string | null
+          notify_corrections: boolean
+          notify_deadlines: boolean
+          notify_email_digest: boolean
+          notify_inspections: boolean
+          notify_permit_status: boolean
+          phone: string | null
+          timezone: string
+          updated_at: string
+          user_id: string
+        }
+        Insert: {
+          brand_accent_color?: string
+          brand_address?: string | null
+          brand_company_name?: string | null
+          brand_contact_email?: string | null
+          brand_contact_phone?: string | null
+          brand_footer_note?: string | null
+          brand_license_number?: string | null
+          brand_logo_url?: string | null
+          company?: string | null
+          created_at?: string
+          digest_frequency?: string
+          full_name?: string | null
+          id?: string
+          job_title?: string | null
+          notify_corrections?: boolean
+          notify_deadlines?: boolean
+          notify_email_digest?: boolean
+          notify_inspections?: boolean
+          notify_permit_status?: boolean
+          phone?: string | null
+          timezone?: string
+          updated_at?: string
+          user_id: string
+        }
+        Update: {
+          brand_accent_color?: string
+          brand_address?: string | null
+          brand_company_name?: string | null
+          brand_contact_email?: string | null
+          brand_contact_phone?: string | null
+          brand_footer_note?: string | null
+          brand_license_number?: string | null
+          brand_logo_url?: string | null
+          company?: string | null
+          created_at?: string
+          digest_frequency?: string
+          full_name?: string | null
+          id?: string
+          job_title?: string | null
+          notify_corrections?: boolean
+          notify_deadlines?: boolean
+          notify_email_digest?: boolean
+          notify_inspections?: boolean
+          notify_permit_status?: boolean
+          phone?: string | null
+          timezone?: string
+          updated_at?: string
           user_id?: string
         }
         Relationships: []
