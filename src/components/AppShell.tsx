@@ -52,6 +52,7 @@ export function AppShell({ children }: { children: ReactNode }) {
               <Settings className="size-4" />
             </Link>
           </div>
+        </div>
 
       </header>
       <div className="mx-auto max-w-7xl px-4 pt-4 lg:px-8">
