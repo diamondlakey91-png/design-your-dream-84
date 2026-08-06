@@ -120,13 +120,13 @@ function ProjectDetail() {
         <div className="flex overflow-x-auto">
           {(["overview", "scope", "checklist", "docs", "responses", "deadlines", "inspections", "timeline"] as Tab[]).map((t) => (
             <button
-              key={t === "responses" ? "response matrix" : t}
+              key={t}
               onClick={() => setTab(t)}
               className={`px-4 py-3 text-xs font-mono uppercase tracking-widest whitespace-nowrap border-b-2 ${
                 tab === t ? "border-brand text-foreground" : "border-transparent text-muted-foreground"
               }`}
             >
-              {t}
+              {t === "responses" ? "response matrix" : t}
             </button>
           ))}
         </div>
