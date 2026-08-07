@@ -4,7 +4,7 @@ import { useServerFn } from "@tanstack/react-start";
 import { useMemo, useState } from "react";
 import { AppShell } from "@/components/AppShell";
 import { listProjects } from "@/lib/projects.functions";
-import { FileSignature, FolderKanban, LayoutGrid, List as ListIcon, Plus, RefreshCw, Search, Inbox, Loader2 } from "lucide-react";
+import { FileSignature, FolderKanban, Globe, LayoutGrid, List as ListIcon, Plus, RefreshCw, Search, Inbox, Loader2 } from "lucide-react";
 
 export const Route = createFileRoute("/_authenticated/projects/")({
   head: () => ({
