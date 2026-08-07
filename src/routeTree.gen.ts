@@ -28,6 +28,7 @@ import { Route as AuthenticatedAssistantRouteImport } from './routes/_authentica
 import { Route as Char91DotwellKnownChar93OauthProtectedResourceRouteImport } from './routes/[.well-known]/oauth-protected-resource'
 import { Route as Char91DotmcpChar93ListToolsRouteImport } from './routes/[.mcp]/list-tools'
 import { Route as AuthenticatedProjectsIndexRouteImport } from './routes/_authenticated/projects.index'
+import { Route as AuthenticatedHarvestIndexRouteImport } from './routes/_authenticated/harvest.index'
 import { Route as AuthenticatedFilingIndexRouteImport } from './routes/_authenticated/filing.index'
 import { Route as AuthenticatedAssistantIndexRouteImport } from './routes/_authenticated/assistant.index'
 import { Route as ShareReportsTokenRouteImport } from './routes/share.reports.$token'
@@ -145,6 +146,12 @@ const AuthenticatedProjectsIndexRoute =
   AuthenticatedProjectsIndexRouteImport.update({
     id: '/projects/',
     path: '/projects/',
+    getParentRoute: () => AuthenticatedRouteRoute,
+  } as any)
+const AuthenticatedHarvestIndexRoute =
+  AuthenticatedHarvestIndexRouteImport.update({
+    id: '/harvest/',
+    path: '/harvest/',
     getParentRoute: () => AuthenticatedRouteRoute,
   } as any)
 const AuthenticatedFilingIndexRoute =
@@ -290,6 +297,7 @@ export interface FileRoutesByFullPath {
   '/share/reports/$token': typeof ShareReportsTokenRoute
   '/assistant/': typeof AuthenticatedAssistantIndexRoute
   '/filing/': typeof AuthenticatedFilingIndexRoute
+  '/harvest/': typeof AuthenticatedHarvestIndexRoute
   '/projects/': typeof AuthenticatedProjectsIndexRoute
   '/assistant/screens/$id': typeof AuthenticatedAssistantScreensIdRoute
   '/api/public/hooks/refresh-linked-permits': typeof ApiPublicHooksRefreshLinkedPermitsRoute
@@ -327,6 +335,7 @@ export interface FileRoutesByTo {
   '/share/reports/$token': typeof ShareReportsTokenRoute
   '/assistant': typeof AuthenticatedAssistantIndexRoute
   '/filing': typeof AuthenticatedFilingIndexRoute
+  '/harvest': typeof AuthenticatedHarvestIndexRoute
   '/projects': typeof AuthenticatedProjectsIndexRoute
   '/assistant/screens/$id': typeof AuthenticatedAssistantScreensIdRoute
   '/api/public/hooks/refresh-linked-permits': typeof ApiPublicHooksRefreshLinkedPermitsRoute
@@ -368,6 +377,7 @@ export interface FileRoutesById {
   '/share/reports/$token': typeof ShareReportsTokenRoute
   '/_authenticated/assistant/': typeof AuthenticatedAssistantIndexRoute
   '/_authenticated/filing/': typeof AuthenticatedFilingIndexRoute
+  '/_authenticated/harvest/': typeof AuthenticatedHarvestIndexRoute
   '/_authenticated/projects/': typeof AuthenticatedProjectsIndexRoute
   '/_authenticated/assistant/screens/$id': typeof AuthenticatedAssistantScreensIdRoute
   '/api/public/hooks/refresh-linked-permits': typeof ApiPublicHooksRefreshLinkedPermitsRoute
@@ -409,6 +419,7 @@ export interface FileRouteTypes {
     | '/share/reports/$token'
     | '/assistant/'
     | '/filing/'
+    | '/harvest/'
     | '/projects/'
     | '/assistant/screens/$id'
     | '/api/public/hooks/refresh-linked-permits'
@@ -446,6 +457,7 @@ export interface FileRouteTypes {
     | '/share/reports/$token'
     | '/assistant'
     | '/filing'
+    | '/harvest'
     | '/projects'
     | '/assistant/screens/$id'
     | '/api/public/hooks/refresh-linked-permits'
@@ -486,6 +498,7 @@ export interface FileRouteTypes {
     | '/share/reports/$token'
     | '/_authenticated/assistant/'
     | '/_authenticated/filing/'
+    | '/_authenticated/harvest/'
     | '/_authenticated/projects/'
     | '/_authenticated/assistant/screens/$id'
     | '/api/public/hooks/refresh-linked-permits'
@@ -644,6 +657,13 @@ declare module '@tanstack/react-router' {
       path: '/projects'
       fullPath: '/projects/'
       preLoaderRoute: typeof AuthenticatedProjectsIndexRouteImport
+      parentRoute: typeof AuthenticatedRouteRoute
+    }
+    '/_authenticated/harvest/': {
+      id: '/_authenticated/harvest/'
+      path: '/harvest'
+      fullPath: '/harvest/'
+      preLoaderRoute: typeof AuthenticatedHarvestIndexRouteImport
       parentRoute: typeof AuthenticatedRouteRoute
     }
     '/_authenticated/filing/': {
@@ -860,6 +880,7 @@ interface AuthenticatedRouteRouteChildren {
   AuthenticatedInspectionsIdRoute: typeof AuthenticatedInspectionsIdRoute
   AuthenticatedProjectsIdRoute: typeof AuthenticatedProjectsIdRoute
   AuthenticatedFilingIndexRoute: typeof AuthenticatedFilingIndexRoute
+  AuthenticatedHarvestIndexRoute: typeof AuthenticatedHarvestIndexRoute
   AuthenticatedProjectsIndexRoute: typeof AuthenticatedProjectsIndexRoute
 }
 
@@ -878,6 +899,7 @@ const AuthenticatedRouteRouteChildren: AuthenticatedRouteRouteChildren = {
   AuthenticatedInspectionsIdRoute: AuthenticatedInspectionsIdRoute,
   AuthenticatedProjectsIdRoute: AuthenticatedProjectsIdRoute,
   AuthenticatedFilingIndexRoute: AuthenticatedFilingIndexRoute,
+  AuthenticatedHarvestIndexRoute: AuthenticatedHarvestIndexRoute,
   AuthenticatedProjectsIndexRoute: AuthenticatedProjectsIndexRoute,
 }
 
