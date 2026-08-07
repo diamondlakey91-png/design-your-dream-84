@@ -28,6 +28,7 @@ import { Route as AuthenticatedAssistantRouteImport } from './routes/_authentica
 import { Route as Char91DotwellKnownChar93OauthProtectedResourceRouteImport } from './routes/[.well-known]/oauth-protected-resource'
 import { Route as Char91DotmcpChar93ListToolsRouteImport } from './routes/[.mcp]/list-tools'
 import { Route as AuthenticatedProjectsIndexRouteImport } from './routes/_authenticated/projects.index'
+import { Route as AuthenticatedFilingIndexRouteImport } from './routes/_authenticated/filing.index'
 import { Route as AuthenticatedAssistantIndexRouteImport } from './routes/_authenticated/assistant.index'
 import { Route as ShareReportsTokenRouteImport } from './routes/share.reports.$token'
 import { Route as ApiChatStreamRouteImport } from './routes/api/chat.stream'
@@ -144,6 +145,12 @@ const AuthenticatedProjectsIndexRoute =
   AuthenticatedProjectsIndexRouteImport.update({
     id: '/projects/',
     path: '/projects/',
+    getParentRoute: () => AuthenticatedRouteRoute,
+  } as any)
+const AuthenticatedFilingIndexRoute =
+  AuthenticatedFilingIndexRouteImport.update({
+    id: '/filing/',
+    path: '/filing/',
     getParentRoute: () => AuthenticatedRouteRoute,
   } as any)
 const AuthenticatedAssistantIndexRoute =
@@ -282,6 +289,7 @@ export interface FileRoutesByFullPath {
   '/api/chat/stream': typeof ApiChatStreamRoute
   '/share/reports/$token': typeof ShareReportsTokenRoute
   '/assistant/': typeof AuthenticatedAssistantIndexRoute
+  '/filing/': typeof AuthenticatedFilingIndexRoute
   '/projects/': typeof AuthenticatedProjectsIndexRoute
   '/assistant/screens/$id': typeof AuthenticatedAssistantScreensIdRoute
   '/api/public/hooks/refresh-linked-permits': typeof ApiPublicHooksRefreshLinkedPermitsRoute
@@ -318,6 +326,7 @@ export interface FileRoutesByTo {
   '/api/chat/stream': typeof ApiChatStreamRoute
   '/share/reports/$token': typeof ShareReportsTokenRoute
   '/assistant': typeof AuthenticatedAssistantIndexRoute
+  '/filing': typeof AuthenticatedFilingIndexRoute
   '/projects': typeof AuthenticatedProjectsIndexRoute
   '/assistant/screens/$id': typeof AuthenticatedAssistantScreensIdRoute
   '/api/public/hooks/refresh-linked-permits': typeof ApiPublicHooksRefreshLinkedPermitsRoute
@@ -358,6 +367,7 @@ export interface FileRoutesById {
   '/api/chat/stream': typeof ApiChatStreamRoute
   '/share/reports/$token': typeof ShareReportsTokenRoute
   '/_authenticated/assistant/': typeof AuthenticatedAssistantIndexRoute
+  '/_authenticated/filing/': typeof AuthenticatedFilingIndexRoute
   '/_authenticated/projects/': typeof AuthenticatedProjectsIndexRoute
   '/_authenticated/assistant/screens/$id': typeof AuthenticatedAssistantScreensIdRoute
   '/api/public/hooks/refresh-linked-permits': typeof ApiPublicHooksRefreshLinkedPermitsRoute
@@ -398,6 +408,7 @@ export interface FileRouteTypes {
     | '/api/chat/stream'
     | '/share/reports/$token'
     | '/assistant/'
+    | '/filing/'
     | '/projects/'
     | '/assistant/screens/$id'
     | '/api/public/hooks/refresh-linked-permits'
@@ -434,6 +445,7 @@ export interface FileRouteTypes {
     | '/api/chat/stream'
     | '/share/reports/$token'
     | '/assistant'
+    | '/filing'
     | '/projects'
     | '/assistant/screens/$id'
     | '/api/public/hooks/refresh-linked-permits'
@@ -473,6 +485,7 @@ export interface FileRouteTypes {
     | '/api/chat/stream'
     | '/share/reports/$token'
     | '/_authenticated/assistant/'
+    | '/_authenticated/filing/'
     | '/_authenticated/projects/'
     | '/_authenticated/assistant/screens/$id'
     | '/api/public/hooks/refresh-linked-permits'
@@ -631,6 +644,13 @@ declare module '@tanstack/react-router' {
       path: '/projects'
       fullPath: '/projects/'
       preLoaderRoute: typeof AuthenticatedProjectsIndexRouteImport
+      parentRoute: typeof AuthenticatedRouteRoute
+    }
+    '/_authenticated/filing/': {
+      id: '/_authenticated/filing/'
+      path: '/filing'
+      fullPath: '/filing/'
+      preLoaderRoute: typeof AuthenticatedFilingIndexRouteImport
       parentRoute: typeof AuthenticatedRouteRoute
     }
     '/_authenticated/assistant/': {
@@ -839,6 +859,7 @@ interface AuthenticatedRouteRouteChildren {
   AuthenticatedAdminPortalsRoute: typeof AuthenticatedAdminPortalsRoute
   AuthenticatedInspectionsIdRoute: typeof AuthenticatedInspectionsIdRoute
   AuthenticatedProjectsIdRoute: typeof AuthenticatedProjectsIdRoute
+  AuthenticatedFilingIndexRoute: typeof AuthenticatedFilingIndexRoute
   AuthenticatedProjectsIndexRoute: typeof AuthenticatedProjectsIndexRoute
 }
 
@@ -856,6 +877,7 @@ const AuthenticatedRouteRouteChildren: AuthenticatedRouteRouteChildren = {
   AuthenticatedAdminPortalsRoute: AuthenticatedAdminPortalsRoute,
   AuthenticatedInspectionsIdRoute: AuthenticatedInspectionsIdRoute,
   AuthenticatedProjectsIdRoute: AuthenticatedProjectsIdRoute,
+  AuthenticatedFilingIndexRoute: AuthenticatedFilingIndexRoute,
   AuthenticatedProjectsIndexRoute: AuthenticatedProjectsIndexRoute,
 }
 
