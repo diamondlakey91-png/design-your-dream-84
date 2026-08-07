@@ -4,7 +4,7 @@ import { useServerFn } from "@tanstack/react-start";
 import { useMemo, useState } from "react";
 import { AppShell } from "@/components/AppShell";
 import { listProjects } from "@/lib/projects.functions";
-import { FolderKanban, LayoutGrid, List as ListIcon, Plus, RefreshCw, Search, Inbox, Loader2 } from "lucide-react";
+import { FileSignature, FolderKanban, LayoutGrid, List as ListIcon, Plus, RefreshCw, Search, Inbox, Loader2 } from "lucide-react";
 
 export const Route = createFileRoute("/_authenticated/projects/")({
   head: () => ({
@@ -84,7 +84,14 @@ function ProjectsPage() {
               <p className="truncate text-sm text-muted-foreground">Manage your permit projects and track their status.</p>
             </div>
           </div>
+          <Link
+            to="/filing"
+            className="inline-flex h-10 shrink-0 items-center gap-2 rounded-xl border border-border px-4 text-sm text-muted-foreground transition-colors hover:border-primary/40 hover:text-foreground"
+          >
+            <FileSignature className="size-4 text-primary" /> Permit Filing
+          </Link>
         </header>
+
 
         {/* Toolbar */}
         <div className="mt-7 rounded-3xl border border-border bg-card/60 p-4 backdrop-blur-xl sm:p-5">

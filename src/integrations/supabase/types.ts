@@ -1038,6 +1038,83 @@ export type Database = {
           },
         ]
       }
+      permit_filings: {
+        Row: {
+          applicant_of_record: string | null
+          approved_at: string | null
+          approved_by: string | null
+          confirmation_number: string | null
+          created_at: string
+          id: string
+          jurisdiction: string
+          notes: string | null
+          permit_type: string
+          portal_name: string | null
+          portal_url: string | null
+          preflight: Json
+          project_id: string | null
+          status: Database["public"]["Enums"]["permit_filing_status"]
+          status_source: string | null
+          submitted_at: string | null
+          target_submittal_date: string | null
+          title: string
+          updated_at: string
+          user_id: string
+        }
+        Insert: {
+          applicant_of_record?: string | null
+          approved_at?: string | null
+          approved_by?: string | null
+          confirmation_number?: string | null
+          created_at?: string
+          id?: string
+          jurisdiction?: string
+          notes?: string | null
+          permit_type?: string
+          portal_name?: string | null
+          portal_url?: string | null
+          preflight?: Json
+          project_id?: string | null
+          status?: Database["public"]["Enums"]["permit_filing_status"]
+          status_source?: string | null
+          submitted_at?: string | null
+          target_submittal_date?: string | null
+          title: string
+          updated_at?: string
+          user_id: string
+        }
+        Update: {
+          applicant_of_record?: string | null
+          approved_at?: string | null
+          approved_by?: string | null
+          confirmation_number?: string | null
+          created_at?: string
+          id?: string
+          jurisdiction?: string
+          notes?: string | null
+          permit_type?: string
+          portal_name?: string | null
+          portal_url?: string | null
+          preflight?: Json
+          project_id?: string | null
+          status?: Database["public"]["Enums"]["permit_filing_status"]
+          status_source?: string | null
+          submitted_at?: string | null
+          target_submittal_date?: string | null
+          title?: string
+          updated_at?: string
+          user_id?: string
+        }
+        Relationships: [
+          {
+            foreignKeyName: "permit_filings_project_id_fkey"
+            columns: ["project_id"]
+            isOneToOne: false
+            referencedRelation: "projects"
+            referencedColumns: ["id"]
+          },
+        ]
+      }
       permit_items: {
         Row: {
           application_fields: Json | null
@@ -2498,6 +2575,15 @@ export type Database = {
         | "tco"
         | "co"
         | "other"
+      permit_filing_status:
+        | "draft"
+        | "preflight"
+        | "awaiting_approval"
+        | "ready_to_submit"
+        | "submitted"
+        | "monitoring"
+        | "issued"
+        | "withdrawn"
       permit_likelihood: "required" | "likely" | "conditional" | "not_required"
       res_or_com: "residential" | "commercial" | "mixed_use"
       risk_severity: "low" | "medium" | "high"
@@ -2717,6 +2803,16 @@ export const Constants = {
         "tco",
         "co",
         "other",
+      ],
+      permit_filing_status: [
+        "draft",
+        "preflight",
+        "awaiting_approval",
+        "ready_to_submit",
+        "submitted",
+        "monitoring",
+        "issued",
+        "withdrawn",
       ],
       permit_likelihood: ["required", "likely", "conditional", "not_required"],
       res_or_com: ["residential", "commercial", "mixed_use"],
