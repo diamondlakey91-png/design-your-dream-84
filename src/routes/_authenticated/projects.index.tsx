@@ -84,12 +84,21 @@ function ProjectsPage() {
               <p className="truncate text-sm text-muted-foreground">Manage your permit projects and track their status.</p>
             </div>
           </div>
-          <Link
-            to="/filing"
-            className="inline-flex h-10 shrink-0 items-center gap-2 rounded-xl border border-border px-4 text-sm text-muted-foreground transition-colors hover:border-primary/40 hover:text-foreground"
-          >
-            <FileSignature className="size-4 text-primary" /> Permit Filing
-          </Link>
+          <div className="flex shrink-0 items-center gap-2">
+            <Link
+              to="/harvest"
+              className="inline-flex h-10 shrink-0 items-center gap-2 rounded-xl border border-border px-4 text-sm text-muted-foreground transition-colors hover:border-primary/40 hover:text-foreground"
+            >
+              <Globe className="size-4 text-primary" /> Portal Harvest
+            </Link>
+            <Link
+              to="/filing"
+              className="inline-flex h-10 shrink-0 items-center gap-2 rounded-xl border border-border px-4 text-sm text-muted-foreground transition-colors hover:border-primary/40 hover:text-foreground"
+            >
+              <FileSignature className="size-4 text-primary" /> Permit Filing
+            </Link>
+          </div>
+
         </header>
 
 
