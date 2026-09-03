@@ -268,7 +268,7 @@ function Landing() {
         </div>
       </section>
 
-      {/* How it works */}
+      {/* Why Permivio is different */}
       <section className="relative border-t border-blue-500/10 py-24">
         <div
           aria-hidden
@@ -281,60 +281,134 @@ function Landing() {
         <div className="mx-auto max-w-7xl px-6">
           <div className="mx-auto max-w-2xl text-center">
             <p className="font-mono text-[11px] uppercase tracking-[0.3em] text-blue-400/80">
-              How it works
+              Why Permivio
             </p>
             <h2 className="mt-3 bg-gradient-to-b from-white via-blue-100 to-blue-500 bg-clip-text text-3xl font-bold tracking-tight text-transparent md:text-4xl">
-              Three steps to complete permit compliance.
+              Permitting intelligence — not just permit search.
             </h2>
           </div>
 
-          <div className="mt-14 grid gap-6 md:grid-cols-3">
+          <div className="mt-14 grid gap-6 md:grid-cols-2 lg:grid-cols-3">
             {[
               {
-                step: "1",
-                icon: ClipboardList,
-                tint: "from-violet-500 to-blue-600 shadow-[0_0_40px_-8px_rgba(139,92,246,0.8)]",
-                title: "Enter Project Details",
-                body: "Provide the project address and project type. Smart autocomplete supports every major project category — new build, tenant fit-out, change of use, and more.",
+                icon: MapPinCheck,
+                title: "Exact property intelligence",
+                body: "Permivio works from the actual project property, jurisdiction, proposed use, and scope — not just generic ZIP-code information.",
               },
               {
-                step: "2",
-                icon: Zap,
-                tint: "from-blue-500 to-teal-500 shadow-[0_0_40px_-8px_rgba(59,130,246,0.8)]",
-                title: "AI Research",
-                body: "Our AI agents research jurisdiction requirements, codes, and compliance standards in real-time across multiple authoritative data sources.",
+                icon: Route,
+                title: "From feasibility to CO",
+                body: "Site Investigation → Project Setup → Permit Roadmap → Plans → QA/QC → Submission → Corrections → Utilities → Inspections → Certificate of Occupancy.",
               },
               {
-                step: "3",
-                icon: CheckCircle2,
-                tint: "from-teal-400 to-cyan-500 shadow-[0_0_40px_-8px_rgba(45,212,191,0.8)]",
-                title: "Get Your Report",
-                body: "Receive a comprehensive PDF with every compliance requirement, verified contacts, phased timelines, and cost estimates — ready to submit.",
+                icon: Layers,
+                title: "Plans + permits together",
+                body: "Permivio connects plan intelligence with jurisdiction and permitting requirements.",
               },
-            ].map((s) => (
+              {
+                icon: Sparkles,
+                title: "Project-specific AI",
+                body: "The AI uses the project address, scope, jurisdiction, documents, and current project information rather than asking you to explain the project again and again.",
+              },
+              {
+                icon: Users,
+                title: "Client-friendly project management",
+                body: "Clients see what is happening, what happens next, and what they need to do — while detailed technical information stays available for professionals.",
+              },
+              {
+                icon: ShieldCheck,
+                title: "Verified vs AI-assisted",
+                body: "Important findings clearly distinguish verified, AI-assisted, and needs-confirmation items, so nothing is mistaken for a final agency determination.",
+              },
+            ].map((d) => (
               <div
-                key={s.step}
+                key={d.title}
                 className="group relative overflow-hidden rounded-2xl border border-blue-500/15 bg-gradient-to-b from-white/[0.04] to-white/[0.01] p-7 backdrop-blur transition hover:border-blue-500/30"
               >
-                <div className="flex items-center gap-3">
-                  <div
-                    className={`inline-flex size-12 items-center justify-center rounded-xl bg-gradient-to-br text-white ${s.tint}`}
-                  >
-                    <s.icon className="size-5" />
-                  </div>
-                  <span className="font-mono text-4xl font-bold text-blue-500/20">
-                    0{s.step}
-                  </span>
+                <div
+                  aria-hidden
+                  className="pointer-events-none absolute inset-x-0 top-0 h-px bg-gradient-to-r from-transparent via-blue-400/60 to-transparent opacity-0 transition group-hover:opacity-100"
+                />
+                <div className="mb-5 inline-flex size-11 items-center justify-center rounded-xl bg-gradient-to-br from-blue-500/25 to-blue-700/10 text-blue-300 ring-1 ring-blue-500/40">
+                  <d.icon className="size-5" />
                 </div>
-                <h3 className="mt-6 bg-gradient-to-r from-white to-blue-100 bg-clip-text text-lg font-semibold text-transparent">
-                  {s.title}
+                <h3 className="bg-gradient-to-r from-white to-blue-100 bg-clip-text text-lg font-semibold text-transparent">
+                  {d.title}
                 </h3>
-                <p className="mt-3 text-sm leading-relaxed text-slate-400">{s.body}</p>
+                <p className="mt-3 text-sm leading-relaxed text-slate-400">{d.body}</p>
               </div>
             ))}
           </div>
         </div>
       </section>
+
+      {/* Demo preview */}
+      <section className="relative mx-auto max-w-7xl px-6 py-24">
+        <div className="mx-auto max-w-2xl text-center">
+          <p className="font-mono text-[11px] uppercase tracking-[0.3em] text-blue-400/80">See it in action</p>
+          <h2 className="mt-3 bg-gradient-to-b from-white via-blue-100 to-blue-500 bg-clip-text text-3xl font-bold tracking-tight text-transparent md:text-4xl">
+            Watch a project move from address to approval.
+          </h2>
+          <p className="mx-auto mt-4 max-w-xl text-pretty text-base text-blue-200/70">
+            A short walkthrough of a sample restaurant conversion — intake, feasibility, roadmap, plan review,
+            corrections, and the path to Certificate of Occupancy.
+          </p>
+        </div>
+
+        <div className="mx-auto mt-12 max-w-4xl overflow-hidden rounded-3xl border border-blue-500/15 bg-gradient-to-b from-white/[0.05] to-white/[0.01] backdrop-blur">
+          <div className="flex items-center gap-2 border-b border-blue-500/10 px-4 py-2.5">
+            <PermivioMark className="h-4 w-4" />
+            <span className="font-mono text-[10px] uppercase tracking-[0.25em] text-blue-300/80">Product demo</span>
+            <span className="ml-auto rounded-full border border-blue-500/25 bg-blue-500/10 px-2 py-0.5 text-[10px] text-blue-200">
+              Sample project
+            </span>
+          </div>
+          <div className="grid gap-4 p-6 sm:grid-cols-3">
+            {[
+              { k: "Property", v: "1420 Main Street" },
+              { k: "Project", v: "Restaurant tenant improvement" },
+              { k: "Result", v: "7 likely approvals · 3 documents needed" },
+            ].map((c) => (
+              <div key={c.k} className="rounded-xl border border-white/10 bg-white/[0.03] px-4 py-3">
+                <p className="font-mono text-[10px] uppercase tracking-[0.2em] text-slate-500">{c.k}</p>
+                <p className="mt-1 text-sm text-white">{c.v}</p>
+              </div>
+            ))}
+          </div>
+          <div className="border-t border-blue-500/10 px-6 py-5 text-center">
+            <Link
+              to="/demo"
+              className="inline-flex h-12 items-center gap-2 rounded-lg bg-gradient-to-r from-blue-500 to-blue-700 px-6 text-sm font-semibold text-white shadow-[0_10px_40px_-8px_rgba(59,130,246,0.6)]"
+            >
+              <Play className="size-4" /> View full demo
+            </Link>
+            <p className="mt-3 text-xs text-slate-500">
+              Illustrative sample content for a fictional project — not client data.
+            </p>
+          </div>
+        </div>
+      </section>
+
+      {/* Tools & Reports */}
+      <section className="relative border-y border-blue-500/15 bg-gradient-to-b from-blue-950/20 via-transparent to-blue-950/20">
+        <div className="mx-auto max-w-4xl px-6 py-20 text-center">
+          <h2 className="bg-gradient-to-b from-white via-blue-100 to-blue-500 bg-clip-text text-2xl font-bold tracking-tight text-transparent md:text-3xl">
+            Need help with only one part of your project?
+          </h2>
+          <p className="mx-auto mt-4 max-w-2xl text-pretty text-base text-blue-200/70">
+            Purchase individual reports and tools, or let Permivio manage the full permitting process.
+          </p>
+          <div className="mt-8">
+            <Link
+              to="/auth"
+              className="inline-flex h-12 items-center gap-2 rounded-lg border border-blue-500/30 bg-white/5 px-6 text-sm font-medium text-blue-100 backdrop-blur transition hover:bg-white/10"
+            >
+              Explore tools &amp; reports <ArrowRight className="size-4" />
+            </Link>
+          </div>
+        </div>
+      </section>
+
 
       {/* CTA band */}
       <section className="relative overflow-hidden">
