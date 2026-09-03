@@ -23,7 +23,7 @@ import {
  * Reads the same projects, checklist items, deadlines, inspections and documents
  * as the professional views — only the presentation is simpler.
  */
-export function ClientDashboard({ onCreateProject }: { onCreateProject: () => void }) {
+export function ClientDashboard() {
   const fn = useServerFn(getClientDashboard);
   const q = useQuery({ queryKey: ["client-dashboard"], queryFn: () => fn() });
   const clientName = firstName(q.data?.profile?.full_name ?? null);
@@ -93,7 +93,7 @@ export function ClientDashboard({ onCreateProject }: { onCreateProject: () => vo
   if (!model) return null;
 
   if (model.rows.length === 0) {
-    return <ClientEmptyState onCreateProject={onCreateProject} />;
+    return <ClientEmptyState />;
   }
 
   return (
@@ -263,7 +263,7 @@ export function dayLabel(iso: string) {
   }
 }
 
-function ClientEmptyState({ onCreateProject }: { onCreateProject: () => void }) {
+function ClientEmptyState() {
   return (
     <div className="rounded-3xl border border-border bg-card p-6 sm:p-10">
       <span className="inline-flex items-center gap-1.5 rounded-full border border-primary/40 bg-primary/10 px-3 py-1 text-xs font-medium text-primary">
@@ -275,12 +275,12 @@ function ClientEmptyState({ onCreateProject }: { onCreateProject: () => void }) 
         you'll likely need, the documents to gather, and your next steps — in plain language.
       </p>
       <div className="mt-6 flex flex-wrap gap-3">
-        <button
-          onClick={onCreateProject}
+        <Link
+          to="/start"
           className="inline-flex items-center gap-2 rounded-full bg-foreground px-5 py-2.5 text-sm font-semibold text-background transition-colors hover:bg-foreground/90"
         >
-          <Plus className="size-4" /> Start a project
-        </button>
+          <Plus className="size-4" /> Start a Project
+        </Link>
         <Link
           to="/property"
           className="inline-flex items-center gap-2 rounded-full border border-primary/40 bg-primary/10 px-5 py-2.5 text-sm font-semibold text-primary transition-colors hover:bg-primary/20"
