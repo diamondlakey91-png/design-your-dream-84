@@ -43,7 +43,7 @@ export const submitSirRequest = createServerFn({ method: "POST" })
       report_needed: data.reportNeeded || null,
       target_date: data.targetDate || null,
       notes: data.notes || null,
-    });
+    }).select("id").maybeSingle();
     if (error || !row) throw new Error("Could not submit your request. Please try again.");
 
     // Kick off real research immediately so the report shell is populated when a
