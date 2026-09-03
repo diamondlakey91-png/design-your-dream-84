@@ -9,8 +9,8 @@ export const FEASIBILITY_RATINGS: Array<{
   klass: string;
 }> = [
   { id: "green", label: "Green", definition: "Project appears generally feasible based on currently available information.", klass: "text-emerald-400 bg-emerald-500/10 ring-emerald-500/30" },
-  { id: "yellow", label: "Yellow", definition: "Project appears feasible but meaningful issues or approvals require resolution.", klass: "text-amber-400 bg-amber-500/10 ring-amber-500/30" },
-  { id: "orange", label: "Orange", definition: "Major constraints or discretionary approvals appear likely.", klass: "text-orange-400 bg-orange-500/10 ring-orange-500/30" },
+  { id: "yellow", label: "Yellow", definition: "Project appears feasible but meaningful issues or approvals require resolution.", klass: "text-sky-400 bg-sky-500/10 ring-sky-500/30" },
+  { id: "orange", label: "Orange", definition: "Major constraints or discretionary approvals appear likely.", klass: "text-sky-400 bg-sky-500/10 ring-sky-500/30" },
   { id: "red", label: "Red", definition: "Current information identifies significant feasibility concerns.", klass: "text-red-400 bg-red-500/10 ring-red-500/30" },
   { id: "gray", label: "Gray", definition: "Insufficient verified information.", klass: "text-muted-foreground bg-muted/40 ring-border" },
 ];
@@ -21,7 +21,7 @@ export function ratingMeta(id: string) {
 
 export const ZONING_CLASSIFICATIONS = [
   { id: "likely_permitted", label: "Likely permitted", klass: "text-emerald-400 bg-emerald-500/10 ring-emerald-500/30" },
-  { id: "conditional", label: "Conditional / special approval may be required", klass: "text-amber-400 bg-amber-500/10 ring-amber-500/30" },
+  { id: "conditional", label: "Conditional / special approval may be required", klass: "text-sky-400 bg-sky-500/10 ring-sky-500/30" },
   { id: "potentially_not_permitted", label: "Potentially not permitted", klass: "text-red-400 bg-red-500/10 ring-red-500/30" },
   { id: "needs_confirmation", label: "Needs jurisdiction confirmation", klass: "text-muted-foreground bg-muted/40 ring-border" },
 ] as const;

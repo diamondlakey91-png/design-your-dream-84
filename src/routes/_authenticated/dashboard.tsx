@@ -16,8 +16,6 @@ import { ProjectTypeSelector } from "@/components/project-type/ProjectTypeSelect
 import { setProjectTypeForProject } from "@/lib/projectTypes.functions";
 import { useProjectTypes } from "@/hooks/useProjectTypes";
 import { IntakePipelineCard } from "@/components/dashboard/IntakePipelineCard";
-import { useViewMode } from "@/hooks/useViewMode";
-import { ViewModeToggle } from "@/components/client/ViewModeToggle";
 import { ClientDashboard } from "@/components/client/ClientDashboard";
 import { getClientDashboard } from "@/lib/clientDashboard.functions";
 import { greeting, firstName } from "@/lib/clientView";
@@ -44,7 +42,7 @@ function Dashboard() {
     supabase.auth.getUser().then(({ data }) => setEmail(data.user?.email ?? null));
   }, []);
 
-  const { mode, setMode } = useViewMode();
+  const mode: "client" | "pro" = "client";
   const clientFn = useServerFn(getClientDashboard);
   const clientQ = useQuery({ queryKey: ["client-dashboard"], queryFn: () => clientFn() });
   const who = firstName(clientQ.data?.profile?.full_name ?? null, email);
@@ -87,7 +85,6 @@ function Dashboard() {
             : "Everything that needs your attention across permits, reviews, inspections, and closeout."
         }
         actions={<>
-          <ViewModeToggle mode={mode} onChange={setMode} />
           <div className="hidden flex-col items-end sm:flex">
             <span className="font-mono text-[10px] uppercase tracking-tight text-muted-foreground">Active</span>
             <span className="text-lg font-semibold text-foreground">
@@ -291,12 +288,12 @@ function DailyBriefingCard({
 
             {data.risks.length > 0 && (
               <div>
-                <div className="mb-1.5 flex items-center gap-1.5 font-mono text-[10px] uppercase tracking-widest text-[oklch(0.85_0.16_72)]">
+                <div className="mb-1.5 flex items-center gap-1.5 font-mono text-[10px] uppercase tracking-widest text-[oklch(0.66_0.19_258)]">
                   <AlertTriangle className="size-3" /> Risks
                 </div>
                 <ul className="space-y-1 text-xs text-muted-foreground">
                   {data.risks.slice(0, 3).map((r, i) => (
-                    <li key={i} className="flex gap-2"><span className="text-[oklch(0.85_0.16_72)]">›</span>{r}</li>
+                    <li key={i} className="flex gap-2"><span className="text-[oklch(0.66_0.19_258)]">›</span>{r}</li>
                   ))}
                 </ul>
               </div>
@@ -360,7 +357,7 @@ function HealthRing({ value }: { value: number }) {
 function MiniStat({ label, value, tone }: { label: string; value: string; tone: "default" | "signal" | "warn" }) {
   const color =
     tone === "signal" ? "text-[oklch(0.82_0.16_155)]" :
-    tone === "warn" ? "text-[oklch(0.85_0.16_72)]" :
+    tone === "warn" ? "text-[oklch(0.66_0.19_258)]" :
     "text-foreground";
   return (
     <div className="flex flex-col">
@@ -373,7 +370,7 @@ function MiniStat({ label, value, tone }: { label: string; value: string; tone: 
 function StatTile({ label, value, tone = "default" }: { label: string; value: string; tone?: "default" | "warn" | "danger" }) {
   const color =
     tone === "danger" ? "text-[oklch(0.78_0.20_27)]" :
-    tone === "warn" ? "text-[oklch(0.85_0.16_72)]" :
+    tone === "warn" ? "text-[oklch(0.66_0.19_258)]" :
     "text-foreground";
   return (
     <div className="rounded-2xl border border-border bg-card p-5 backdrop-blur-xl">
@@ -394,7 +391,7 @@ function ProjectRow({ project }: { project: {
   const dotClass =
     project.status?.toLowerCase().includes("issued") ? "bg-[oklch(0.75_0.16_155)]" :
     project.status?.toLowerCase().includes("review") ? "bg-primary" :
-    project.status?.toLowerCase().includes("hold") ? "bg-[oklch(0.85_0.16_72)]" :
+    project.status?.toLowerCase().includes("hold") ? "bg-[oklch(0.66_0.19_258)]" :
     "bg-muted-foreground";
   const queryClient = useQueryClient();
   const deleteFn = useServerFn(deleteProject);
@@ -473,7 +470,7 @@ function ProjectRow({ project }: { project: {
 function DeadlineRow({ title, project, due, days }: { title: string; project: string; due: string; days: number }) {
   const overdue = days < 0;
   const soon = days >= 0 && days <= 3;
-  const color = overdue ? "text-[oklch(0.78_0.20_27)]" : soon ? "text-[oklch(0.85_0.16_72)]" : "text-foreground";
+  const color = overdue ? "text-[oklch(0.78_0.20_27)]" : soon ? "text-[oklch(0.66_0.19_258)]" : "text-foreground";
   const label = overdue ? `${Math.abs(days)}d late` : days === 0 ? "Today" : `${days}d`;
   return (
     <div className="grid grid-cols-[minmax(0,1fr)_auto] items-center gap-4 px-6 py-4 sm:px-7">

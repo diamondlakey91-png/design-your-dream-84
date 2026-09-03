@@ -90,7 +90,7 @@ const STAGES = [
 const STATUS_STYLE: Record<string, string> = {
   draft: "border-border text-muted-foreground",
   preflight: "border-primary/40 text-primary",
-  awaiting_approval: "border-[oklch(0.85_0.16_72)]/50 text-[oklch(0.85_0.16_72)]",
+  awaiting_approval: "border-[oklch(0.66_0.19_258)]/50 text-[oklch(0.66_0.19_258)]",
   ready_to_submit: "border-primary/50 text-primary",
   submitted: "border-[oklch(0.7_0.16_290)]/50 text-[oklch(0.78_0.14_290)]",
   monitoring: "border-[oklch(0.7_0.16_290)]/50 text-[oklch(0.78_0.14_290)]",
@@ -214,7 +214,7 @@ function FilingPage() {
             label="Awaiting approval"
             value={stats.awaiting}
             hint={stats.awaiting ? "Needs a human sign-off" : "Nothing pending review"}
-            icon={<UserCheck className="size-4 text-[oklch(0.85_0.16_72)]" />}
+            icon={<UserCheck className="size-4 text-[oklch(0.66_0.19_258)]" />}
           />
           <Stat
             label="Live at portal"

@@ -359,7 +359,7 @@ export function SiteInvestigationTab({
           <div className="flex flex-wrap items-start justify-between gap-3 rounded-xl border border-border bg-card/40 p-4">
             <div className="max-w-2xl space-y-1 text-xs text-muted-foreground">
               <p className="flex items-start gap-2">
-                <ShieldAlert className="mt-0.5 size-4 shrink-0 text-amber-400" />
+                <ShieldAlert className="mt-0.5 size-4 shrink-0 text-sky-400" />
                 {SITE_INVESTIGATION_DISCLAIMER}
               </p>
               <p>{UTILITY_CAPACITY_CAVEAT}</p>

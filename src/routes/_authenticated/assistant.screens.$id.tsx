@@ -32,7 +32,7 @@ type AnalysisRow = {
 function severityDot(s: string | undefined) {
   const v = (s || "").toLowerCase();
   if (v === "red") return "bg-red-400";
-  if (v === "amber") return "bg-amber-400";
+  if (v === "amber") return "bg-sky-400";
   return "bg-sky-400";
 }
 

@@ -25,7 +25,7 @@ const STATUS_LABEL: Record<string, string> = {
 };
 const STATUS_COLOR: Record<string, string> = {
   open: "bg-muted text-muted-foreground",
-  in_progress: "bg-amber-500/15 text-amber-800 dark:text-amber-300",
+  in_progress: "bg-sky-500/15 text-sky-800 dark:text-sky-300",
   drafted: "bg-blue-500/15 text-blue-700 dark:text-blue-300",
   responded: "bg-brand/20 text-brand",
   resolved: "bg-emerald-500/15 text-emerald-700 dark:text-emerald-300",
@@ -33,7 +33,7 @@ const STATUS_COLOR: Record<string, string> = {
 };
 const SEVERITY_COLOR: Record<string, string> = {
   high: "bg-red-500/15 text-red-600 dark:text-red-400",
-  medium: "bg-amber-500/15 text-amber-800 dark:text-amber-300",
+  medium: "bg-sky-500/15 text-sky-800 dark:text-sky-300",
   low: "bg-emerald-500/15 text-emerald-700 dark:text-emerald-300",
 };
 const VERIFICATION_LABEL: Record<string, string> = {

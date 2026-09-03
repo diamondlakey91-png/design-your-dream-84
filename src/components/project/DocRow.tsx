@@ -198,12 +198,12 @@ export function DocRow({ doc, projectId, onDelete }: { doc: { id: string; name: 
                           <span className="text-[10px] font-mono text-brand">Local: {f.local_amendment}</span>
                         )}
                         {f.confidence && (
-                          <span className={`text-[10px] font-mono uppercase tracking-wider px-1.5 py-0.5 rounded ${f.confidence === "high" ? "bg-brand/10 text-brand" : f.confidence === "low" ? "bg-amber-500/15 text-amber-600" : "bg-muted text-muted-foreground"}`}>
+                          <span className={`text-[10px] font-mono uppercase tracking-wider px-1.5 py-0.5 rounded ${f.confidence === "high" ? "bg-brand/10 text-brand" : f.confidence === "low" ? "bg-sky-500/15 text-sky-600" : "bg-muted text-muted-foreground"}`}>
                             {f.confidence} conf
                           </span>
                         )}
                         {f.needs_manual_verification && (
-                          <span className="text-[10px] font-mono uppercase tracking-wider px-1.5 py-0.5 rounded bg-amber-500/15 text-amber-600">
+                          <span className="text-[10px] font-mono uppercase tracking-wider px-1.5 py-0.5 rounded bg-sky-500/15 text-sky-600">
                             verify manually
                           </span>
                         )}

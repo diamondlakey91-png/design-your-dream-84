@@ -71,8 +71,8 @@ const HEALTH: Record<Health, { label: string; className: string; dot: string }> 
   },
   stale: {
     label: "Stale",
-    className: "border-[oklch(0.85_0.16_72)]/50 text-[oklch(0.85_0.16_72)]",
-    dot: "bg-[oklch(0.85_0.16_72)]",
+    className: "border-[oklch(0.66_0.19_258)]/50 text-[oklch(0.66_0.19_258)]",
+    dot: "bg-[oklch(0.66_0.19_258)]",
   },
   partial: {
     label: "In progress",

@@ -53,7 +53,7 @@ export function InspectionsTab({ projectId, userId }: { projectId: string; userI
     scheduled: "bg-blue-500/15 text-blue-700 dark:text-blue-300",
     passed: "bg-emerald-500/15 text-emerald-700 dark:text-emerald-300",
     failed: "bg-destructive/15 text-destructive",
-    rescheduled: "bg-amber-500/15 text-amber-700 dark:text-amber-300",
+    rescheduled: "bg-sky-500/15 text-sky-700 dark:text-sky-300",
     canceled: "bg-muted text-muted-foreground",
   };
 

@@ -65,7 +65,7 @@ const ROLE_LABEL: Record<string, string> = {
 function verifChip(v: GeneratedAuthority["verification"]) {
   if (v === "verified") return { label: "Verified", klass: "bg-emerald-500/10 text-emerald-400 ring-emerald-500/30" };
   if (v === "ai_assisted") return { label: "AI Suggested", klass: "bg-blue-500/10 text-blue-400 ring-blue-500/30" };
-  return { label: "Needs Confirmation", klass: "bg-amber-500/10 text-amber-400 ring-amber-500/30" };
+  return { label: "Needs Confirmation", klass: "bg-sky-500/10 text-sky-400 ring-sky-500/30" };
 }
 
 export function MdVaCoverageSection({

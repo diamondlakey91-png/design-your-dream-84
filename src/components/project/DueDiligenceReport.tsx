@@ -32,7 +32,7 @@ const V_META: Record<V, { label: string; klass: string; Icon: typeof ShieldCheck
   },
   needs_confirmation: {
     label: "Needs confirmation",
-    klass: "text-amber-400 bg-amber-500/10 ring-amber-500/30",
+    klass: "text-sky-400 bg-sky-500/10 ring-sky-500/30",
     Icon: ShieldQuestion,
   },
 };

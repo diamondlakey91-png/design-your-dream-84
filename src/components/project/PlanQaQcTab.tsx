@@ -156,7 +156,7 @@ export function PlanQaQcTab({ projectId }: { projectId: string }) {
               </span>
             </label>
           ))}
-          {selected.length >= 8 && <p className="text-[11px] text-amber-400">Maximum of 8 documents per review run.</p>}
+          {selected.length >= 8 && <p className="text-[11px] text-sky-400">Maximum of 8 documents per review run.</p>}
         </div>
       </div>
 
@@ -301,7 +301,7 @@ export function PlanQaQcTab({ projectId }: { projectId: string }) {
 
           <div className="flex flex-wrap items-start justify-between gap-3 rounded-xl border border-border bg-card/40 p-4">
             <p className="flex max-w-2xl items-start gap-2 text-xs text-muted-foreground">
-              <ShieldAlert className="mt-0.5 size-4 shrink-0 text-amber-400" />
+              <ShieldAlert className="mt-0.5 size-4 shrink-0 text-sky-400" />
               {PERMIVIO_PROFESSIONAL_DISCLAIMER} PERMIVIO does not certify plans, approve designs, or replace jurisdiction review.
             </p>
             <ProfessionalReviewButton

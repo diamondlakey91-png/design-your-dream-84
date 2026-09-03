@@ -27,7 +27,7 @@ function VerifBadge({ v }: { v: Verification }) {
       ? "bg-emerald-500/10 text-emerald-400 border-emerald-500/30"
       : v === "ai_assisted"
       ? "bg-brand/10 text-brand border-brand/30"
-      : "bg-amber-500/10 text-amber-400 border-amber-500/30";
+      : "bg-sky-500/10 text-sky-400 border-sky-500/30";
   return (
     <span className={`text-[10px] font-mono uppercase tracking-wider px-1.5 py-0.5 rounded border ${cls}`}>
       {label}
@@ -42,7 +42,7 @@ function LikelihoodChip({ v }: { v: string }) {
       : v === "likely"
       ? "bg-brand/10 text-brand border-brand/30"
       : v === "conditional"
-      ? "bg-amber-500/10 text-amber-400 border-amber-500/30"
+      ? "bg-sky-500/10 text-sky-400 border-sky-500/30"
       : "bg-muted text-muted-foreground border-border";
   return <span className={`text-[10px] font-mono uppercase tracking-wider px-1.5 py-0.5 rounded border ${cls}`}>{v}</span>;
 }
@@ -162,7 +162,7 @@ export function RoadmapView({ projectId }: { projectId: string }) {
             Deterministic baseline from Permivio's rule engine, enriched with live jurisdiction sources. Each item is labeled with its verification level.
           </p>
           {!jurisdictionConfirmed && (
-            <p className="text-[11px] text-amber-400 mt-2 flex items-center gap-1.5">
+            <p className="text-[11px] text-sky-400 mt-2 flex items-center gap-1.5">
               <AlertTriangle className="size-3" />
               Confirm the property jurisdiction above to unlock roadmap generation.
             </p>
@@ -321,7 +321,7 @@ export function RoadmapView({ projectId }: { projectId: string }) {
                           rk.severity === "high"
                             ? "bg-red-500/10 text-red-400 border-red-500/30"
                             : rk.severity === "medium"
-                            ? "bg-amber-500/10 text-amber-400 border-amber-500/30"
+                            ? "bg-sky-500/10 text-sky-400 border-sky-500/30"
                             : "bg-muted text-muted-foreground border-border"
                         }`}
                       >

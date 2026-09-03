@@ -20,7 +20,7 @@ const STATUS_LABEL: Record<string, string> = {
 const STATUS_COLOR: Record<string, string> = {
   not_started: "bg-muted text-muted-foreground",
   submitted: "bg-blue-500/15 text-blue-700 dark:text-blue-300",
-  under_review: "bg-amber-500/15 text-amber-800 dark:text-amber-300",
+  under_review: "bg-sky-500/15 text-sky-800 dark:text-sky-300",
   approved: "bg-emerald-500/15 text-emerald-700 dark:text-emerald-300",
   issued: "bg-brand/20 text-brand",
   n_a: "bg-zinc-500/15 text-zinc-600 dark:text-zinc-400 line-through",

@@ -19,8 +19,8 @@ export function verifyMeta(status: string | null | undefined): { label: string; 
   const map: Record<VerificationStatus, { label: string; klass: string; icon: typeof ShieldCheck }> = {
     verified:            { label: "Verified",            klass: "text-emerald-400 bg-emerald-500/10 ring-emerald-500/30", icon: ShieldCheck },
     recently_verified:   { label: "Recently verified",   klass: "text-emerald-400 bg-emerald-500/10 ring-emerald-500/30", icon: ShieldCheck },
-    review_recommended:  { label: "Review recommended",  klass: "text-amber-400 bg-amber-500/10 ring-amber-500/30",       icon: ShieldAlert },
-    limited:             { label: "Limited information", klass: "text-amber-400 bg-amber-500/10 ring-amber-500/30",       icon: ShieldAlert },
+    review_recommended:  { label: "Review recommended",  klass: "text-sky-400 bg-sky-500/10 ring-sky-500/30",       icon: ShieldAlert },
+    limited:             { label: "Limited information", klass: "text-sky-400 bg-sky-500/10 ring-sky-500/30",       icon: ShieldAlert },
     unverified:          { label: "Unverified",          klass: "text-muted-foreground bg-muted/40 ring-border",           icon: ShieldQuestion },
     source_unavailable:  { label: "Source unavailable",  klass: "text-red-400 bg-red-500/10 ring-red-500/30",              icon: ShieldAlert },
     demo:                { label: "Demonstration data",  klass: "text-brand bg-brand/10 ring-brand/30",                    icon: Info },
