@@ -68,10 +68,18 @@ export const Route = createFileRoute("/_authenticated/settings")({
   ),
 });
 
-type TabKey = "profile" | "security" | "notifications" | "credentials" | "branding" | "cleanup";
+type TabKey =
+  | "profile"
+  | "team"
+  | "security"
+  | "notifications"
+  | "credentials"
+  | "branding"
+  | "cleanup";
 
 const TABS: { key: TabKey; label: string; icon: typeof User }[] = [
   { key: "profile", label: "Profile", icon: User },
+  { key: "team", label: "Organization & Team", icon: Users },
   { key: "security", label: "Security", icon: Lock },
   { key: "notifications", label: "Notifications", icon: Bell },
   { key: "credentials", label: "Portal Credentials", icon: KeyRound },
