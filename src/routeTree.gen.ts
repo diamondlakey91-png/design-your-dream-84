@@ -43,6 +43,7 @@ import { Route as AuthenticatedAssistantScreensRouteImport } from './routes/_aut
 import { Route as AuthenticatedAssistantAnalysisRouteImport } from './routes/_authenticated/assistant.analysis'
 import { Route as AuthenticatedAssistantThreadIdRouteImport } from './routes/_authenticated/assistant.$threadId'
 import { Route as AuthenticatedAdminToolsRouteImport } from './routes/_authenticated/admin.tools'
+import { Route as AuthenticatedAdminSirRouteImport } from './routes/_authenticated/admin.sir'
 import { Route as AuthenticatedAdminPortalsRouteImport } from './routes/_authenticated/admin.portals'
 import { Route as AuthenticatedAdminHealthPortalsRouteImport } from './routes/_authenticated/admin.health-portals'
 import { Route as Char91DotmcpChar93InvokeToolToolRouteImport } from './routes/[.mcp]/invoke-tool/$tool'
@@ -234,6 +235,11 @@ const AuthenticatedAdminToolsRoute = AuthenticatedAdminToolsRouteImport.update({
   path: '/admin/tools',
   getParentRoute: () => AuthenticatedRouteRoute,
 } as any)
+const AuthenticatedAdminSirRoute = AuthenticatedAdminSirRouteImport.update({
+  id: '/admin/sir',
+  path: '/admin/sir',
+  getParentRoute: () => AuthenticatedRouteRoute,
+} as any)
 const AuthenticatedAdminPortalsRoute =
   AuthenticatedAdminPortalsRouteImport.update({
     id: '/admin/portals',
@@ -306,6 +312,7 @@ export interface FileRoutesByFullPath {
   '/.mcp/invoke-tool/$tool': typeof Char91DotmcpChar93InvokeToolToolRoute
   '/admin/health-portals': typeof AuthenticatedAdminHealthPortalsRoute
   '/admin/portals': typeof AuthenticatedAdminPortalsRoute
+  '/admin/sir': typeof AuthenticatedAdminSirRoute
   '/admin/tools': typeof AuthenticatedAdminToolsRoute
   '/assistant/$threadId': typeof AuthenticatedAssistantThreadIdRoute
   '/assistant/analysis': typeof AuthenticatedAssistantAnalysisRoute
@@ -348,6 +355,7 @@ export interface FileRoutesByTo {
   '/.mcp/invoke-tool/$tool': typeof Char91DotmcpChar93InvokeToolToolRoute
   '/admin/health-portals': typeof AuthenticatedAdminHealthPortalsRoute
   '/admin/portals': typeof AuthenticatedAdminPortalsRoute
+  '/admin/sir': typeof AuthenticatedAdminSirRoute
   '/admin/tools': typeof AuthenticatedAdminToolsRoute
   '/assistant/$threadId': typeof AuthenticatedAssistantThreadIdRoute
   '/assistant/analysis': typeof AuthenticatedAssistantAnalysisRoute
@@ -392,6 +400,7 @@ export interface FileRoutesById {
   '/.mcp/invoke-tool/$tool': typeof Char91DotmcpChar93InvokeToolToolRoute
   '/_authenticated/admin/health-portals': typeof AuthenticatedAdminHealthPortalsRoute
   '/_authenticated/admin/portals': typeof AuthenticatedAdminPortalsRoute
+  '/_authenticated/admin/sir': typeof AuthenticatedAdminSirRoute
   '/_authenticated/admin/tools': typeof AuthenticatedAdminToolsRoute
   '/_authenticated/assistant/$threadId': typeof AuthenticatedAssistantThreadIdRoute
   '/_authenticated/assistant/analysis': typeof AuthenticatedAssistantAnalysisRoute
@@ -437,6 +446,7 @@ export interface FileRouteTypes {
     | '/.mcp/invoke-tool/$tool'
     | '/admin/health-portals'
     | '/admin/portals'
+    | '/admin/sir'
     | '/admin/tools'
     | '/assistant/$threadId'
     | '/assistant/analysis'
@@ -479,6 +489,7 @@ export interface FileRouteTypes {
     | '/.mcp/invoke-tool/$tool'
     | '/admin/health-portals'
     | '/admin/portals'
+    | '/admin/sir'
     | '/admin/tools'
     | '/assistant/$threadId'
     | '/assistant/analysis'
@@ -522,6 +533,7 @@ export interface FileRouteTypes {
     | '/.mcp/invoke-tool/$tool'
     | '/_authenticated/admin/health-portals'
     | '/_authenticated/admin/portals'
+    | '/_authenticated/admin/sir'
     | '/_authenticated/admin/tools'
     | '/_authenticated/assistant/$threadId'
     | '/_authenticated/assistant/analysis'
@@ -801,6 +813,13 @@ declare module '@tanstack/react-router' {
       preLoaderRoute: typeof AuthenticatedAdminToolsRouteImport
       parentRoute: typeof AuthenticatedRouteRoute
     }
+    '/_authenticated/admin/sir': {
+      id: '/_authenticated/admin/sir'
+      path: '/admin/sir'
+      fullPath: '/admin/sir'
+      preLoaderRoute: typeof AuthenticatedAdminSirRouteImport
+      parentRoute: typeof AuthenticatedRouteRoute
+    }
     '/_authenticated/admin/portals': {
       id: '/_authenticated/admin/portals'
       path: '/admin/portals'
@@ -936,6 +955,7 @@ interface AuthenticatedRouteRouteChildren {
   AuthenticatedToolsRoute: typeof AuthenticatedToolsRoute
   AuthenticatedAdminHealthPortalsRoute: typeof AuthenticatedAdminHealthPortalsRoute
   AuthenticatedAdminPortalsRoute: typeof AuthenticatedAdminPortalsRoute
+  AuthenticatedAdminSirRoute: typeof AuthenticatedAdminSirRoute
   AuthenticatedAdminToolsRoute: typeof AuthenticatedAdminToolsRoute
   AuthenticatedInspectionsIdRoute: typeof AuthenticatedInspectionsIdRoute
   AuthenticatedProjectsIdRoute: typeof AuthenticatedProjectsIdRoute
@@ -957,6 +977,7 @@ const AuthenticatedRouteRouteChildren: AuthenticatedRouteRouteChildren = {
   AuthenticatedToolsRoute: AuthenticatedToolsRoute,
   AuthenticatedAdminHealthPortalsRoute: AuthenticatedAdminHealthPortalsRoute,
   AuthenticatedAdminPortalsRoute: AuthenticatedAdminPortalsRoute,
+  AuthenticatedAdminSirRoute: AuthenticatedAdminSirRoute,
   AuthenticatedAdminToolsRoute: AuthenticatedAdminToolsRoute,
   AuthenticatedInspectionsIdRoute: AuthenticatedInspectionsIdRoute,
   AuthenticatedProjectsIdRoute: AuthenticatedProjectsIdRoute,

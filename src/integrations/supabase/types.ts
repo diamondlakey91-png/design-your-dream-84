@@ -3235,6 +3235,13 @@ export type Database = {
           phone: string | null
           project_stage: string | null
           report_needed: string | null
+          research: Json | null
+          research_error: string | null
+          research_model: string | null
+          research_sources: Json | null
+          research_status: string
+          researched_at: string | null
+          resolved_jurisdiction: Json | null
           role: string | null
           site_address: string | null
           status: string
@@ -3255,6 +3262,13 @@ export type Database = {
           phone?: string | null
           project_stage?: string | null
           report_needed?: string | null
+          research?: Json | null
+          research_error?: string | null
+          research_model?: string | null
+          research_sources?: Json | null
+          research_status?: string
+          researched_at?: string | null
+          resolved_jurisdiction?: Json | null
           role?: string | null
           site_address?: string | null
           status?: string
@@ -3275,6 +3289,13 @@ export type Database = {
           phone?: string | null
           project_stage?: string | null
           report_needed?: string | null
+          research?: Json | null
+          research_error?: string | null
+          research_model?: string | null
+          research_sources?: Json | null
+          research_status?: string
+          researched_at?: string | null
+          resolved_jurisdiction?: Json | null
           role?: string | null
           site_address?: string | null
           status?: string
