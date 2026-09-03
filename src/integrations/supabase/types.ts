@@ -3856,6 +3856,8 @@ export type Database = {
         Row: {
           approx_size: string | null
           company: string | null
+          compiled_at: string | null
+          compiled_report: Json | null
           created_at: string
           email: string
           existing_building: string | null
@@ -3868,6 +3870,8 @@ export type Database = {
           parcel_apn: string | null
           phone: string | null
           project_stage: string | null
+          qa_report: Json | null
+          qa_status: string
           report_needed: string | null
           research: Json | null
           research_audit: Json | null
@@ -3877,6 +3881,7 @@ export type Database = {
           research_status: string
           researched_at: string | null
           resolved_jurisdiction: Json | null
+          review_stage: string
           review_status: string
           reviewed_at: string | null
           reviewed_by: string | null
@@ -3886,11 +3891,14 @@ export type Database = {
           role: string | null
           site_address: string | null
           status: string
+          submitted_for_review_at: string | null
           target_date: string | null
         }
         Insert: {
           approx_size?: string | null
           company?: string | null
+          compiled_at?: string | null
+          compiled_report?: Json | null
           created_at?: string
           email: string
           existing_building?: string | null
@@ -3903,6 +3911,8 @@ export type Database = {
           parcel_apn?: string | null
           phone?: string | null
           project_stage?: string | null
+          qa_report?: Json | null
+          qa_status?: string
           report_needed?: string | null
           research?: Json | null
           research_audit?: Json | null
@@ -3912,6 +3922,7 @@ export type Database = {
           research_status?: string
           researched_at?: string | null
           resolved_jurisdiction?: Json | null
+          review_stage?: string
           review_status?: string
           reviewed_at?: string | null
           reviewed_by?: string | null
@@ -3921,11 +3932,14 @@ export type Database = {
           role?: string | null
           site_address?: string | null
           status?: string
+          submitted_for_review_at?: string | null
           target_date?: string | null
         }
         Update: {
           approx_size?: string | null
           company?: string | null
+          compiled_at?: string | null
+          compiled_report?: Json | null
           created_at?: string
           email?: string
           existing_building?: string | null
@@ -3938,6 +3952,8 @@ export type Database = {
           parcel_apn?: string | null
           phone?: string | null
           project_stage?: string | null
+          qa_report?: Json | null
+          qa_status?: string
           report_needed?: string | null
           research?: Json | null
           research_audit?: Json | null
@@ -3947,6 +3963,7 @@ export type Database = {
           research_status?: string
           researched_at?: string | null
           resolved_jurisdiction?: Json | null
+          review_stage?: string
           review_status?: string
           reviewed_at?: string | null
           reviewed_by?: string | null
@@ -3956,6 +3973,7 @@ export type Database = {
           role?: string | null
           site_address?: string | null
           status?: string
+          submitted_for_review_at?: string | null
           target_date?: string | null
         }
         Relationships: []

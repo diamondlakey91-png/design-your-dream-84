@@ -26,6 +26,7 @@ import {
   type SirFindingReviews,
 } from "@/lib/sirReport";
 import { finalizeSirReview, generateSirReportPdf, reviewSirFinding } from "@/lib/sir.functions";
+import { SirQaGatePanel } from "@/components/sir/SirQaGatePanel";
 
 /* eslint-disable @typescript-eslint/no-explicit-any */
 
@@ -284,6 +285,9 @@ export function SirReportView({ row }: { row: any }) {
           </p>
         )}
       </div>
+
+      {/* Lead SIR Agent compile + QA/QC gate */}
+      <SirQaGatePanel row={row} />
 
       {/* Executive snapshot */}
       <div className="rounded-xl border border-white/10 bg-white/[0.02] p-4">
