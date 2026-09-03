@@ -184,6 +184,7 @@ function ProjectDetail() {
         {tab === "inspections" && <InspectionsTab projectId={id} userId={project.user_id} />}
         {tab === "timeline" && <TimelineTab projectId={id} />}
       </div>
+      </>}
     </AppShell>
   );
 }
