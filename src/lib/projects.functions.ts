@@ -3,6 +3,62 @@ import { requireSupabaseAuth } from "@/integrations/supabase/auth-middleware";
 import { z } from "zod";
 import { getEntitlement, requireProjectQuota } from "@/lib/entitlements";
 
+type Db = { from: (t: string) => any };
+
+/**
+ * Every project belongs to an organization so teammates share one project record.
+ * Reuses the caller's existing organization; only creates one when they have none.
+ */
+async function resolveOrganizationId(supabase: Db, userId: string): Promise<string | null> {
+  const { data: membership } = await supabase
+    .from("organization_members")
+    .select("organization_id")
+    .eq("user_id", userId)
+    .order("created_at", { ascending: true })
+    .limit(1);
+  if (membership && membership.length > 0) return membership[0].organization_id as string;
+
+  const { data: org, error } = await supabase
+    .from("organizations")
+    .insert({
+      name: "My Organization",
+      slug: `org-${userId.replace(/-/g, "")}`,
+      kind: "client",
+      created_by: userId,
+    })
+    .select("id")
+    .single();
+  if (error || !org) return null;
+
+  await supabase
+    .from("organization_members")
+    .insert({ organization_id: org.id, user_id: userId, role: "org_admin" });
+  return org.id as string;
+}
+
+/** Owner, or an organization teammate whose role is not a plain client. */
+async function assertProjectWriteAccess(supabase: Db, userId: string, projectId: string) {
+  const { data: project } = await supabase
+    .from("projects")
+    .select("id, user_id, organization_id")
+    .eq("id", projectId)
+    .maybeSingle();
+  if (!project) throw new Error("Project not found");
+  if (project.user_id === userId) return project;
+  if (project.organization_id) {
+    const { data: member } = await supabase
+      .from("organization_members")
+      .select("role")
+      .eq("organization_id", project.organization_id)
+      .eq("user_id", userId)
+      .neq("role", "client")
+      .limit(1);
+    if (member && member.length > 0) return project;
+  }
+  throw new Error("Forbidden");
+}
+
+
 // ---- Projects ----
 export const listProjects = createServerFn({ method: "GET" })
   .middleware([requireSupabaseAuth])
