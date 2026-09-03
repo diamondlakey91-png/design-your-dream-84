@@ -19,6 +19,7 @@ import { Route as AuthenticatedRouteRouteImport } from './routes/_authenticated/
 import { Route as IndexRouteImport } from './routes/index'
 import { Route as CheckoutReturnRouteImport } from './routes/checkout.return'
 import { Route as AuthenticatedToolsRouteImport } from './routes/_authenticated/tools'
+import { Route as AuthenticatedStartRouteImport } from './routes/_authenticated/start'
 import { Route as AuthenticatedSettingsRouteImport } from './routes/_authenticated/settings'
 import { Route as AuthenticatedReportRouteImport } from './routes/_authenticated/report'
 import { Route as AuthenticatedPropertyRouteImport } from './routes/_authenticated/property'
@@ -104,6 +105,11 @@ const CheckoutReturnRoute = CheckoutReturnRouteImport.update({
 const AuthenticatedToolsRoute = AuthenticatedToolsRouteImport.update({
   id: '/tools',
   path: '/tools',
+  getParentRoute: () => AuthenticatedRouteRoute,
+} as any)
+const AuthenticatedStartRoute = AuthenticatedStartRouteImport.update({
+  id: '/start',
+  path: '/start',
   getParentRoute: () => AuthenticatedRouteRoute,
 } as any)
 const AuthenticatedSettingsRoute = AuthenticatedSettingsRouteImport.update({
@@ -334,6 +340,7 @@ export interface FileRoutesByFullPath {
   '/property': typeof AuthenticatedPropertyRoute
   '/report': typeof AuthenticatedReportRouteWithChildren
   '/settings': typeof AuthenticatedSettingsRoute
+  '/start': typeof AuthenticatedStartRoute
   '/tools': typeof AuthenticatedToolsRoute
   '/checkout/return': typeof CheckoutReturnRoute
   '/.lovable/oauth/consent': typeof DotlovableOauthConsentRoute
@@ -381,6 +388,7 @@ export interface FileRoutesByTo {
   '/property': typeof AuthenticatedPropertyRoute
   '/report': typeof AuthenticatedReportRouteWithChildren
   '/settings': typeof AuthenticatedSettingsRoute
+  '/start': typeof AuthenticatedStartRoute
   '/tools': typeof AuthenticatedToolsRoute
   '/checkout/return': typeof CheckoutReturnRoute
   '/.lovable/oauth/consent': typeof DotlovableOauthConsentRoute
@@ -430,6 +438,7 @@ export interface FileRoutesById {
   '/_authenticated/property': typeof AuthenticatedPropertyRoute
   '/_authenticated/report': typeof AuthenticatedReportRouteWithChildren
   '/_authenticated/settings': typeof AuthenticatedSettingsRoute
+  '/_authenticated/start': typeof AuthenticatedStartRoute
   '/_authenticated/tools': typeof AuthenticatedToolsRoute
   '/checkout/return': typeof CheckoutReturnRoute
   '/.lovable/oauth/consent': typeof DotlovableOauthConsentRoute
@@ -480,6 +489,7 @@ export interface FileRouteTypes {
     | '/property'
     | '/report'
     | '/settings'
+    | '/start'
     | '/tools'
     | '/checkout/return'
     | '/.lovable/oauth/consent'
@@ -527,6 +537,7 @@ export interface FileRouteTypes {
     | '/property'
     | '/report'
     | '/settings'
+    | '/start'
     | '/tools'
     | '/checkout/return'
     | '/.lovable/oauth/consent'
@@ -575,6 +586,7 @@ export interface FileRouteTypes {
     | '/_authenticated/property'
     | '/_authenticated/report'
     | '/_authenticated/settings'
+    | '/_authenticated/start'
     | '/_authenticated/tools'
     | '/checkout/return'
     | '/.lovable/oauth/consent'
@@ -694,6 +706,13 @@ declare module '@tanstack/react-router' {
       path: '/tools'
       fullPath: '/tools'
       preLoaderRoute: typeof AuthenticatedToolsRouteImport
+      parentRoute: typeof AuthenticatedRouteRoute
+    }
+    '/_authenticated/start': {
+      id: '/_authenticated/start'
+      path: '/start'
+      fullPath: '/start'
+      preLoaderRoute: typeof AuthenticatedStartRouteImport
       parentRoute: typeof AuthenticatedRouteRoute
     }
     '/_authenticated/settings': {
@@ -1034,6 +1053,7 @@ interface AuthenticatedRouteRouteChildren {
   AuthenticatedPropertyRoute: typeof AuthenticatedPropertyRoute
   AuthenticatedReportRoute: typeof AuthenticatedReportRouteWithChildren
   AuthenticatedSettingsRoute: typeof AuthenticatedSettingsRoute
+  AuthenticatedStartRoute: typeof AuthenticatedStartRoute
   AuthenticatedToolsRoute: typeof AuthenticatedToolsRoute
   AuthenticatedAdminHealthPortalsRoute: typeof AuthenticatedAdminHealthPortalsRoute
   AuthenticatedAdminPortalsRoute: typeof AuthenticatedAdminPortalsRoute
@@ -1058,6 +1078,7 @@ const AuthenticatedRouteRouteChildren: AuthenticatedRouteRouteChildren = {
   AuthenticatedPropertyRoute: AuthenticatedPropertyRoute,
   AuthenticatedReportRoute: AuthenticatedReportRouteWithChildren,
   AuthenticatedSettingsRoute: AuthenticatedSettingsRoute,
+  AuthenticatedStartRoute: AuthenticatedStartRoute,
   AuthenticatedToolsRoute: AuthenticatedToolsRoute,
   AuthenticatedAdminHealthPortalsRoute: AuthenticatedAdminHealthPortalsRoute,
   AuthenticatedAdminPortalsRoute: AuthenticatedAdminPortalsRoute,
