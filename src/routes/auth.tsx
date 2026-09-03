@@ -5,6 +5,7 @@ import { useEffect, useState } from "react";
 import { supabase } from "@/integrations/supabase/client";
 import { lovable } from "@/integrations/lovable/index";
 import { toast } from "sonner";
+import { PermivioMark } from "@/components/PermivioMark";
 import { ArrowLeft } from "lucide-react";
 
 const authSearchSchema = z.object({
@@ -106,10 +107,8 @@ function AuthPage() {
         </Link>
 
         <div className="mb-8 flex items-center gap-2">
-          <div className="grid size-9 place-items-center rounded-lg bg-brand">
-            <div className="size-4 rounded-sm border-2 border-ink/30" />
-          </div>
-          <span className="text-lg font-semibold">Permivio</span>
+          <PermivioMark className="h-9 w-9" />
+          <span className="text-lg font-semibold tracking-tight">PERMIVIO</span>
         </div>
 
         <p className="font-mono text-[11px] uppercase tracking-widest text-muted-foreground">

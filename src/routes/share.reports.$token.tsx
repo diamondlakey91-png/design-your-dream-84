@@ -4,6 +4,7 @@ import { useMutation } from "@tanstack/react-query";
 import { useEffect, useState } from "react";
 import { getSharedBatchReport } from "@/lib/reportShares.functions";
 import { ShieldCheck, Lock, AlertTriangle } from "lucide-react";
+import { PermivioMark } from "@/components/PermivioMark";
 
 export const Route = createFileRoute("/share/reports/$token")({
   head: () => ({ meta: [
@@ -154,7 +155,13 @@ function SharedReportPage() {
 function Shell({ children }: { children: React.ReactNode }) {
   return (
     <div className="min-h-screen bg-background text-foreground">
-      <div className="max-w-3xl mx-auto px-6 py-10">{children}</div>
+      <div className="max-w-3xl mx-auto px-6 py-10">
+        <div className="mb-8 flex items-center gap-2.5">
+          <PermivioMark className="h-7 w-7" />
+          <span className="text-base font-semibold tracking-tight">PERMIVIO</span>
+        </div>
+        {children}
+      </div>
     </div>
   );
 }
