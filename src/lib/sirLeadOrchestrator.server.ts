@@ -116,15 +116,25 @@ export function compileSirReport(research: any, audit?: any): SirCompiledReport 
   };
 }
 
+// Only unambiguous assertions of compliance / approval / certainty. Ordinary
+// descriptive permitting language ("plans must be approved by the fire
+// marshal") is expected in a draft and must not trip the gate.
 const BANNED_CLAIMS = [
-  "code compliant",
-  "code-compliant",
+  "is code compliant",
+  "is code-compliant",
+  "code compliant.",
   "fully compliant",
+  "meets all code",
+  "meets all applicable code",
   "engineering approved",
-  "approved by the",
-  "guaranteed",
+  "engineer approved",
+  "is guaranteed",
+  "guaranteed approval",
   "permit is approved",
+  "permit has been approved",
   "certified compliant",
+  "no permits are required",
+  "zoning is confirmed compliant",
 ];
 
 /** Run the deterministic QA/QC gate over a compiled SIR draft. */
@@ -155,15 +165,16 @@ export function runSirQaGate(
   });
 
   // 2. Jurisdiction resolved.
-  const jurisdictionOk = !!research?.ahj_summary && list(research?.authorities).length !== 0
-    ? true
-    : Array.isArray(research?.authorities) && research.authorities.length > 0;
+  const authorities = Array.isArray(research?.jurisdiction?.authorities) ? research.jurisdiction.authorities : [];
+  const jurisdictionOk = authorities.length > 0 && !!research?.jurisdiction?.ahj_summary;
   add({
     id: "jurisdiction_resolved",
     label: "Authority having jurisdiction identified",
     status: jurisdictionOk ? "pass" : "fail",
     severity: "blocker",
-    detail: jurisdictionOk ? "At least one controlling agency is named for the site." : "No controlling agency was resolved — the draft cannot go to review.",
+    detail: jurisdictionOk
+      ? `${authorities.length} controlling agenc${authorities.length === 1 ? "y" : "ies"} named with an AHJ summary.`
+      : "No controlling agency or AHJ summary was resolved — the draft cannot go to review.",
   });
 
   // 3. Permit matrix is not empty.
