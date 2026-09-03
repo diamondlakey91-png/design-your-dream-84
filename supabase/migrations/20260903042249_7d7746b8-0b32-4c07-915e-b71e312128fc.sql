@@ -1,0 +1,1 @@
+ALTER TABLE public.qaqc_reviews ADD COLUMN IF NOT EXISTS inventory_gaps jsonb NOT NULL DEFAULT '{}'::jsonb;

@@ -1,9 +1,10 @@
-import { useState } from "react";
+import { useRef, useState } from "react";
 import { useServerFn } from "@tanstack/react-start";
 import { useMutation, useQuery, useQueryClient } from "@tanstack/react-query";
 import { toast } from "sonner";
-import { Sparkles, FileDown, Trash2, ListPlus, ShieldAlert } from "lucide-react";
-import { listDocuments } from "@/lib/documents.functions";
+import { Sparkles, FileDown, Trash2, ListPlus, ShieldAlert, Upload } from "lucide-react";
+import { supabase } from "@/integrations/supabase/client";
+import { listDocuments, registerDocument } from "@/lib/documents.functions";
 import {
   runQaQcReview,
   listQaQcReviews,
@@ -19,9 +20,12 @@ import { QaQcFindingList, type QaQcFindingRow } from "@/components/project/QaQcF
 import { ProfessionalReviewButton } from "@/components/project/ProfessionalReviewButton";
 import { Input } from "@/components/ui/input";
 
-export function PlanQaQcTab({ projectId }: { projectId: string }) {
+export function PlanQaQcTab({ projectId, userId }: { projectId: string; userId: string }) {
   const qc = useQueryClient();
   const docsFn = useServerFn(listDocuments);
+  const registerFn = useServerFn(registerDocument);
+  const fileRef = useRef<HTMLInputElement>(null);
+  const [uploading, setUploading] = useState(false);
   const listFn = useServerFn(listQaQcReviews);
   const getFn = useServerFn(getQaQcReview);
   const runFn = useServerFn(runQaQcReview);
@@ -55,6 +59,31 @@ export function PlanQaQcTab({ projectId }: { projectId: string }) {
   const planDocs = (docs.data ?? []).filter(
     (d) => d.mime_type === "application/pdf" || (d.mime_type ?? "").startsWith("image/") || d.name.toLowerCase().endsWith(".pdf"),
   );
+
+  const onUploadPlans = async (files: FileList) => {
+    setUploading(true);
+    const added: string[] = [];
+    try {
+      for (const file of Array.from(files)) {
+        const path = `${userId}/${projectId}/${Date.now()}-${file.name.replace(/[^\w.-]/g, "_")}`;
+        const { error } = await supabase.storage.from("project-docs").upload(path, file, { upsert: false });
+        if (error) throw error;
+        const doc = await registerFn({
+          data: { project_id: projectId, name: file.name, storage_path: path, mime_type: file.type, size_bytes: file.size },
+        });
+        const id = (doc as { id?: string } | null)?.id;
+        if (id) added.push(id);
+      }
+      await qc.invalidateQueries({ queryKey: ["docs", projectId] });
+      setSelected((prev) => [...prev, ...added].slice(0, 8));
+      toast.success(`${added.length} plan file(s) uploaded and selected`);
+    } catch (e) {
+      toast.error(e instanceof Error ? e.message : "Upload failed");
+    } finally {
+      setUploading(false);
+      if (fileRef.current) fileRef.current.value = "";
+    }
+  };
 
   const run = useMutation({
     mutationFn: () => runFn({ data: { project_id: projectId, document_ids: selected, revision_label: revision || "Rev A" } }),
@@ -110,6 +139,16 @@ export function PlanQaQcTab({ projectId }: { projectId: string }) {
   const findings = (d?.findings ?? []) as QaQcFindingRow[];
   const sheets = (d?.sheets ?? []) as QaQcSheetRow[];
   const sevCount = (s: string) => findings.filter((f) => f.severity === s && !f.resolved).length;
+  const missingSheets = sheets.filter((s) => s.index_state === "missing_from_upload");
+  const gaps = (d?.review?.inventory_gaps ?? {}) as Record<string, string[] | undefined>;
+  const gapBlocks = [
+    { label: "On the drawing index but not uploaded", items: gaps['index_sheets_not_uploaded'] ?? [] },
+    { label: "Uploaded but not listed on the index", items: gaps['uploaded_sheets_not_indexed'] ?? [] },
+    { label: "Duplicate sheet numbers", items: gaps['duplicate_sheet_numbers'] ?? [] },
+    { label: "Gaps in sheet numbering", items: gaps['missing_number_sequences'] ?? [] },
+    { label: "Disciplines with no sheets in this set", items: gaps['missing_disciplines'] ?? [] },
+    { label: "Conflicting dates across the set", items: gaps['conflicting_dates'] ?? [] },
+  ];
 
   return (
     <div className="space-y-6">
@@ -125,6 +164,21 @@ export function PlanQaQcTab({ projectId }: { projectId: string }) {
             </p>
           </div>
           <div className="flex items-center gap-2">
+            <input
+              ref={fileRef}
+              type="file"
+              multiple
+              accept="application/pdf,image/*"
+              className="hidden"
+              onChange={(e) => e.target.files?.length && onUploadPlans(e.target.files)}
+            />
+            <button
+              onClick={() => fileRef.current?.click()}
+              disabled={uploading}
+              className="inline-flex items-center gap-1.5 rounded-lg border border-border px-3 py-2 text-[11px] font-mono uppercase tracking-wider hover:border-brand hover:text-brand disabled:opacity-50"
+            >
+              <Upload className="size-3.5" /> {uploading ? "Uploading…" : "Upload plan set"}
+            </button>
             <Input value={revision} onChange={(e) => setRevision(e.target.value)} className="h-9 w-28" placeholder="Rev A" />
             <button
               onClick={() => run.mutate()}
@@ -139,7 +193,9 @@ export function PlanQaQcTab({ projectId }: { projectId: string }) {
         <div className="mt-3 space-y-1.5">
           {docs.isLoading && <p className="text-sm text-muted-foreground">Loading documents…</p>}
           {!docs.isLoading && planDocs.length === 0 && (
-            <p className="text-sm text-muted-foreground">Upload plan sheets in the Docs tab first (PDF or image).</p>
+            <p className="text-sm text-muted-foreground">
+              Upload a plan set above (PDF or image sheets) — uploads are saved to this project's documents.
+            </p>
           )}
           {planDocs.slice(0, 30).map((doc) => (
             <label key={doc.id} className="flex items-center gap-2 rounded-lg border border-border/60 px-3 py-2 text-xs">
@@ -257,6 +313,31 @@ export function PlanQaQcTab({ projectId }: { projectId: string }) {
           {/* Inventory */}
           <div className="space-y-2">
             <p className="text-[11px] font-mono uppercase tracking-wider text-muted-foreground">Drawing set inventory</p>
+            <div className="flex flex-wrap gap-2 text-[11px] font-mono uppercase tracking-wider">
+              <span className="rounded-lg border border-border px-2.5 py-1.5 text-muted-foreground">{sheets.length} sheets detected</span>
+              <span
+                className={`rounded-lg border px-2.5 py-1.5 ${
+                  missingSheets.length ? "border-red-500/40 text-red-400" : "border-border text-muted-foreground"
+                }`}
+              >
+                {missingSheets.length} missing sheet{missingSheets.length === 1 ? "" : "s"}
+              </span>
+            </div>
+            {gapBlocks.some((b) => b.items.length > 0) && (
+              <div className="rounded-xl border border-sky-500/30 bg-sky-500/5 p-4">
+                <p className="text-[11px] font-mono uppercase tracking-wider text-sky-400">Set completeness gaps (AI-identified — verify against your issued set)</p>
+                <ul className="mt-2 space-y-1 text-xs">
+                  {gapBlocks
+                    .filter((b) => b.items.length > 0)
+                    .map((b) => (
+                      <li key={b.label}>
+                        <span className="text-foreground">{b.label}:</span>{" "}
+                        <span className="text-muted-foreground">{b.items.join(", ")}</span>
+                      </li>
+                    ))}
+                </ul>
+              </div>
+            )}
             <QaQcInventoryTable sheets={sheets} />
           </div>
 

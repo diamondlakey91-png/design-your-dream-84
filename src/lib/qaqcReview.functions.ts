@@ -482,6 +482,14 @@ Return JSON: { "findings": [{ "severity": "critical|high|medium|low|informationa
 
       await sb.from("qaqc_reviews").update({
         status: "complete",
+        inventory_gaps: {
+          index_sheets_not_uploaded: inventory.index_sheets_not_uploaded,
+          uploaded_sheets_not_indexed: inventory.uploaded_sheets_not_indexed,
+          duplicate_sheet_numbers: inventory.duplicate_sheet_numbers,
+          missing_number_sequences: inventory.missing_number_sequences,
+          missing_disciplines: inventory.missing_disciplines,
+          conflicting_dates: inventory.conflicting_dates,
+        } as never,
         jurisdiction_snapshot: {
           jurisdiction: jurisdiction || null,
           state,
@@ -699,6 +707,18 @@ export const generateQaQcReportPdf = createServerFn({ method: "POST" })
     const missing = (sheets.data ?? []).filter((s: { index_state: string }) => s.index_state === "missing_from_upload");
     heading("Missing / duplicate sheets");
     text(missing.length ? missing.map((s: { sheet_number: string }) => s.sheet_number).join(", ") : "None identified.");
+    const gaps = (review.inventory_gaps ?? {}) as Record<string, string[] | undefined>;
+    for (const [label, key] of [
+      ["On the drawing index but not uploaded", "index_sheets_not_uploaded"],
+      ["Uploaded but not listed on the index", "uploaded_sheets_not_indexed"],
+      ["Duplicate sheet numbers", "duplicate_sheet_numbers"],
+      ["Gaps in sheet numbering", "missing_number_sequences"],
+      ["Disciplines with no sheets in this set", "missing_disciplines"],
+      ["Conflicting dates across the set", "conflicting_dates"],
+    ] as Array<[string, string]>) {
+      const list = gaps[key] ?? [];
+      if (list.length) text(`- ${label}: ${list.join(", ")}`);
+    }
 
     const bySev = (sev: string) => (findings.data ?? []).filter((f: { severity: string }) => f.severity === sev);
     for (const sev of ["critical", "high", "medium", "low", "informational"]) {

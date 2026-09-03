@@ -46,7 +46,26 @@ export const getClientDashboard = createServerFn({ method: "GET" })
     const firstError = [projects.error, items.error, deadlines.error, inspections.error, docs.error, activity.error].find(Boolean);
     if (firstError) throw new Error(firstError.message);
 
+    // Purchased tools & reports for this client, newest first. Statuses come
+    // straight from the order records — never inferred in the browser.
+    const orders = await context.supabase
+      .from("service_orders")
+      .select("id,project_id,product_id,status,delivery_tier,amount_cents,currency,created_at")
+      .eq("user_id", context.userId)
+      .order("created_at", { ascending: false })
+      .limit(8);
+
+    const productIds = [...new Set((orders.data ?? []).map((o) => o.product_id).filter(Boolean))] as string[];
+    const orderProducts = productIds.length
+      ? await context.supabase.from("service_products").select("id,client_title,product_key").in("id", productIds)
+      : { data: [] as Array<{ id: string; client_title: string; product_key: string }> };
+
     return {
+      orders: (orders.data ?? []).map((o) => ({
+        ...o,
+        product_title:
+          (orderProducts.data ?? []).find((p) => p.id === o.product_id)?.client_title ?? "Permivio report",
+      })),
       profile: { full_name: profile.data?.full_name ?? null, company: profile.data?.company ?? null },
       projects: projects.data ?? [],
       items: items.data ?? [],

@@ -1,5 +1,5 @@
 import { Link } from "@tanstack/react-router";
-import { ArrowRight, Info, MapPin, Building2, Clock } from "lucide-react";
+import { ArrowRight, Info, MapPin, Building2, Clock, Compass } from "lucide-react";
 import { formatDistanceToNow, isToday, format, parseISO } from "date-fns";
 import {
   TONE_CLASSES,
@@ -72,13 +72,23 @@ export function ClientProjectCard({ project, signals }: { project: ClientProject
         <span className="inline-flex items-center gap-1.5 text-xs text-muted-foreground">
           <Clock className="size-3.5" /> Last updated {updatedLabel(project.updated_at)}
         </span>
-        <Link
-          to="/projects/$id"
-          params={{ id: project.id }}
-          className="inline-flex items-center gap-1.5 rounded-full bg-foreground px-4 py-2 text-sm font-semibold text-background transition-colors hover:bg-foreground/90"
-        >
-          View project <ArrowRight className="size-4" />
-        </Link>
+        <span className="flex flex-wrap items-center gap-2">
+          <Link
+            to="/projects/$id"
+            params={{ id: project.id }}
+            search={{ tab: "site" }}
+            className="inline-flex items-center gap-1.5 rounded-full border border-primary/40 bg-primary/10 px-4 py-2 text-sm font-semibold text-primary transition-colors hover:bg-primary/20"
+          >
+            <Compass className="size-4" /> Site Investigation
+          </Link>
+          <Link
+            to="/projects/$id"
+            params={{ id: project.id }}
+            className="inline-flex items-center gap-1.5 rounded-full bg-foreground px-4 py-2 text-sm font-semibold text-background transition-colors hover:bg-foreground/90"
+          >
+            View project <ArrowRight className="size-4" />
+          </Link>
+        </span>
       </div>
     </div>
   );

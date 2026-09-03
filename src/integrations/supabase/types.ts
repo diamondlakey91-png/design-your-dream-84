@@ -1892,6 +1892,7 @@ export type Database = {
           error: string | null
           executive_summary: string | null
           id: string
+          inventory_gaps: Json
           jurisdiction_snapshot: Json
           missing_documents: Json
           model: string | null
@@ -1916,6 +1917,7 @@ export type Database = {
           error?: string | null
           executive_summary?: string | null
           id?: string
+          inventory_gaps?: Json
           jurisdiction_snapshot?: Json
           missing_documents?: Json
           model?: string | null
@@ -1940,6 +1942,7 @@ export type Database = {
           error?: string | null
           executive_summary?: string | null
           id?: string
+          inventory_gaps?: Json
           jurisdiction_snapshot?: Json
           missing_documents?: Json
           model?: string | null

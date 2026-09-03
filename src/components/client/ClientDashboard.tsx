@@ -5,7 +5,7 @@ import { useServerFn } from "@tanstack/react-start";
 import { ArrowRight, CheckCircle2, Loader2, MapPinned, Plus, Sparkles } from "lucide-react";
 import { format, isToday, isYesterday, parseISO } from "date-fns";
 import { getClientDashboard } from "@/lib/clientDashboard.functions";
-import { money } from "@/lib/toolsCatalog";
+import { money, statusTone, ORDER_STATUS_LABEL, TIER_COPY } from "@/lib/toolsCatalog";
 import { ClientAttentionList } from "@/components/client/ClientAttentionList";
 import { ClientProjectCard } from "@/components/client/ClientProjectCard";
 import {
@@ -34,6 +34,15 @@ export function ClientDashboard({ onCreateProject }: { onCreateProject: () => vo
     base_price_cents: number;
     currency: string;
     turnaround_estimate: string | null;
+  }>;
+  const orders = (q.data?.orders ?? []) as Array<{
+    id: string;
+    product_title: string;
+    status: string;
+    delivery_tier: string;
+    amount_cents: number | null;
+    currency: string | null;
+    created_at: string;
   }>;
 
   const model = useMemo(() => {
@@ -179,6 +188,44 @@ export function ClientDashboard({ onCreateProject }: { onCreateProject: () => vo
           >
             Browse tools &amp; reports
           </Link>
+
+          {orders.length > 0 && (
+            <div className="mt-6 border-t border-border pt-5">
+              <div className="flex flex-wrap items-center justify-between gap-2">
+                <h3 className="text-sm font-semibold text-foreground">Your orders</h3>
+                <Link to="/tools" className="inline-flex items-center gap-1 text-xs font-medium text-muted-foreground hover:text-foreground">
+                  All purchases <ArrowRight className="size-3.5" />
+                </Link>
+              </div>
+              <ul className="mt-3 divide-y divide-border overflow-hidden rounded-2xl border border-border bg-background/40">
+                {orders.map((o) => {
+                  const tone = statusTone(o.status);
+                  const toneClass =
+                    tone === "green"
+                      ? "border-emerald-500/40 bg-emerald-500/10 text-emerald-400"
+                      : tone === "red"
+                        ? "border-destructive/40 bg-destructive/10 text-destructive"
+                        : tone === "blue"
+                          ? "border-primary/40 bg-primary/10 text-primary"
+                          : "border-border bg-muted/40 text-muted-foreground";
+                  return (
+                    <li key={o.id} className="flex flex-wrap items-center justify-between gap-2 px-4 py-3">
+                      <div className="min-w-0">
+                        <p className="truncate text-sm text-foreground">{o.product_title}</p>
+                        <p className="mt-0.5 text-xs text-muted-foreground">
+                          {TIER_COPY[o.delivery_tier as keyof typeof TIER_COPY]?.label ?? o.delivery_tier} · {dayLabel(o.created_at)}
+                          {o.amount_cents ? ` · ${money(o.amount_cents, o.currency ?? "usd")}` : ""}
+                        </p>
+                      </div>
+                      <span className={`shrink-0 rounded-full border px-3 py-1 text-xs font-medium ${toneClass}`}>
+                        {ORDER_STATUS_LABEL[o.status] ?? o.status}
+                      </span>
+                    </li>
+                  );
+                })}
+              </ul>
+            </div>
+          )}
         </div>
       </section>
 

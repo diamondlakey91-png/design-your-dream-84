@@ -180,7 +180,7 @@ function ProjectDetail() {
         )}
         {tab === "checklist" && <ChecklistTab projectId={id} jurisdiction={project.jurisdiction} />}
         {tab === "docs" && <DocsTab projectId={id} userId={project.user_id} />}
-        {tab === "planqaqc" && <PlanQaQcTab projectId={id} />}
+        {tab === "planqaqc" && <PlanQaQcTab projectId={id} userId={project.user_id} />}
         {tab === "qaqc" && <QaQcTab projectId={id} />}
         {tab === "responses" && <ResponseMatrixTab projectId={id} projectName={project.name} />}
         {tab === "deadlines" && <DeadlinesTab projectId={id} />}
