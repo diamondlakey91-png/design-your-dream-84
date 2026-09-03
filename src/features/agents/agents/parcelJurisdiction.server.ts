@@ -259,7 +259,7 @@ export async function runParcelJurisdictionAgent(input: {
   try {
     g = await geocode(input.address.trim());
   } catch (e) {
-    throw new AgentError("retryable", `Address lookup failed: ${(e as Error).message}`);
+    throw new AgentError("temporary", `Address lookup failed: ${(e as Error).message}`);
   }
 
   const geo = {
@@ -308,7 +308,7 @@ export async function runParcelJurisdictionAgent(input: {
       max_tokens: def.model.maxOutputTokens ?? 12000,
     });
   } catch (e) {
-    throw new AgentError("retryable", `Jurisdiction analysis failed: ${(e as Error).message}`);
+    throw new AgentError("temporary", `Jurisdiction analysis failed: ${(e as Error).message}`);
   }
 
   const byKey = new Map(evidence.map((e) => [e.source_key, e]));
