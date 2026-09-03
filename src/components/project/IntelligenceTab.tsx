@@ -2,6 +2,7 @@ import { useQuery } from "@tanstack/react-query";
 import { useServerFn } from "@tanstack/react-start";
 import { getProjectIntelligence } from "@/lib/projectIntelligence.functions";
 import { HEALTH_LABEL, PARTY_LABEL, type ResponsibleParty } from "@/lib/projectIntelligence";
+import { ProjectReportsCard } from "@/components/project/ProjectReportsCard";
 import { AlertTriangle, CheckCircle2, Circle, Clock, FileWarning, GitBranch, Layers, ShieldCheck, Users } from "lucide-react";
 
 function Card({ title, icon, children, right }: { title: string; icon?: React.ReactNode; children: React.ReactNode; right?: React.ReactNode }) {
@@ -32,7 +33,7 @@ export function IntelligenceTab({ projectId }: { projectId: string }) {
   if (q.isLoading) return <p className="text-sm text-muted-foreground">Building project intelligence…</p>;
   if (q.error || !q.data) return <p className="text-sm text-muted-foreground">Intelligence unavailable: {q.error instanceof Error ? q.error.message : "unknown error"}</p>;
 
-  const { core, criticalPath, responsibility, readiness, missingDocuments, health, revisions, openingReadiness } = q.data;
+  const { core, criticalPath, responsibility, readiness, missingDocuments, health, revisions, openingReadiness, reports } = q.data;
 
   return (
     <div className="space-y-6">
@@ -199,6 +200,8 @@ export function IntelligenceTab({ projectId }: { projectId: string }) {
           )}
         </Card>
       </div>
+
+      <ProjectReportsCard projectId={projectId} orders={reports.orders} versions={reports.versions} />
 
       {/* Revisions + opening readiness */}
       <div className="grid gap-4 lg:grid-cols-2">
