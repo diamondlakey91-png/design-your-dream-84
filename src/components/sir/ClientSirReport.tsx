@@ -8,6 +8,7 @@ import {
   SIR_REPORT_DISCLAIMER,
   type SirFindingReviews,
 } from "@/lib/sirReport";
+import { ratingMeta } from "@/lib/siteInvestigationConfig";
 
 const VERIFICATION_STYLE: Record<string, string> = {
   verified: "border-green-500/30 bg-green-500/10 text-green-300",

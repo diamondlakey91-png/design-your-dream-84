@@ -76,7 +76,7 @@ function SirWorkspacePage() {
 
   const briefsQ = useQuery({
     queryKey: ["sir-briefs"],
-    queryFn: () => listFn(),
+    queryFn: () => listFn({ data: { kind: "sir" } }),
     // While a brief is researching, keep the stage badges moving.
     refetchInterval: (q) =>
       (q.state.data ?? []).some((r) => r.research_status === "queued" || r.research_status === "running") ? 10_000 : false,
