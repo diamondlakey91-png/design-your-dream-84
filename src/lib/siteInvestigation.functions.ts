@@ -693,6 +693,38 @@ export const generateSiteInvestigationPdf = createServerFn({ method: "POST" })
       text(`- ${t.phase}: ${t.duration || "TBD"}${t.depends_on ? ` (after ${t.depends_on})` : ""}${t.notes ? ` — ${t.notes}` : ""}`);
     }
 
+    if ((rk.data ?? []).length) {
+      heading("Risk matrix");
+      for (const r of rk.data ?? []) {
+        text(`- ${riskCategoryMeta(r.category).label} · ${riskLevelMeta(r.level).label}${r.parcel_label ? ` · ${r.parcel_label}` : ""}`, { b: true, gap: 1 });
+        if (r.why) text(`   Why it matters: ${r.why}`, { gap: 1 });
+        if (r.supporting_info) text(`   Supporting information: ${r.supporting_info}`, { gap: 1 });
+        if (r.mitigation) text(`   Mitigation: ${r.mitigation}`, { gap: 1 });
+        text(`   Status: ${String(r.verification).replace(/_/g, " ")}`, { size: 8, color: [0.35, 0.38, 0.44], gap: 1 });
+      }
+    }
+
+    heading("Potential deal killers");
+    const dks = (inv.deal_killers ?? []) as Array<{ issue: string; why: string; supporting_info?: string; resolution_path?: string; verification: string }>;
+    if (!dks.length) text(NO_DEAL_KILLERS_TEXT);
+    for (const d of dks) {
+      text(`- ${d.issue}`, { b: true, gap: 1 });
+      if (d.why) text(`   Why: ${d.why}`, { gap: 1 });
+      if (d.supporting_info) text(`   Supporting information: ${d.supporting_info}`, { gap: 1 });
+      if (d.resolution_path) text(`   Possible resolution path: ${d.resolution_path}`, { gap: 1 });
+      text(`   Status: ${String(d.verification).replace(/_/g, " ")}`, { size: 8, color: [0.35, 0.38, 0.44], gap: 1 });
+    }
+
+    const dd = (inv.due_diligence ?? []) as Array<{ item: string; priority: string; why: string; responsible_party?: string }>;
+    if (dd.length) {
+      heading("Outstanding due diligence");
+      for (const d of dd) {
+        text(`- ${d.item} [${ddPriorityMeta(d.priority).label}]`, { b: true, gap: 1 });
+        if (d.why) text(`   Why: ${d.why}`, { gap: 1 });
+        if (d.responsible_party) text(`   Typically handled by: ${d.responsible_party}`, { gap: 1 });
+      }
+    }
+
     heading("Official sources");
     for (const s of (inv.sources ?? []) as Array<{ url: string; title: string }>) text(`- ${s.title || s.url}: ${s.url}`, { size: 8 });
 
