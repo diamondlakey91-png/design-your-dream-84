@@ -41,6 +41,7 @@ import { Route as AuthenticatedProjectsIdRouteImport } from './routes/_authentic
 import { Route as AuthenticatedJurisdictionsSlugRouteImport } from './routes/_authenticated/jurisdictions.$slug'
 import { Route as AuthenticatedInspectionsIdRouteImport } from './routes/_authenticated/inspections.$id'
 import { Route as AuthenticatedAssistantScreensRouteImport } from './routes/_authenticated/assistant.screens'
+import { Route as AuthenticatedAssistantPermitsRouteImport } from './routes/_authenticated/assistant.permits'
 import { Route as AuthenticatedAssistantAnalysisRouteImport } from './routes/_authenticated/assistant.analysis'
 import { Route as AuthenticatedAssistantThreadIdRouteImport } from './routes/_authenticated/assistant.$threadId'
 import { Route as AuthenticatedAdminToolsRouteImport } from './routes/_authenticated/admin.tools'
@@ -224,6 +225,12 @@ const AuthenticatedAssistantScreensRoute =
     path: '/screens',
     getParentRoute: () => AuthenticatedAssistantRoute,
   } as any)
+const AuthenticatedAssistantPermitsRoute =
+  AuthenticatedAssistantPermitsRouteImport.update({
+    id: '/permits',
+    path: '/permits',
+    getParentRoute: () => AuthenticatedAssistantRoute,
+  } as any)
 const AuthenticatedAssistantAnalysisRoute =
   AuthenticatedAssistantAnalysisRouteImport.update({
     id: '/analysis',
@@ -323,6 +330,7 @@ export interface FileRoutesByFullPath {
   '/admin/tools': typeof AuthenticatedAdminToolsRoute
   '/assistant/$threadId': typeof AuthenticatedAssistantThreadIdRoute
   '/assistant/analysis': typeof AuthenticatedAssistantAnalysisRoute
+  '/assistant/permits': typeof AuthenticatedAssistantPermitsRoute
   '/assistant/screens': typeof AuthenticatedAssistantScreensRouteWithChildren
   '/inspections/$id': typeof AuthenticatedInspectionsIdRoute
   '/jurisdictions/$slug': typeof AuthenticatedJurisdictionsSlugRoute
@@ -367,6 +375,7 @@ export interface FileRoutesByTo {
   '/admin/tools': typeof AuthenticatedAdminToolsRoute
   '/assistant/$threadId': typeof AuthenticatedAssistantThreadIdRoute
   '/assistant/analysis': typeof AuthenticatedAssistantAnalysisRoute
+  '/assistant/permits': typeof AuthenticatedAssistantPermitsRoute
   '/inspections/$id': typeof AuthenticatedInspectionsIdRoute
   '/jurisdictions/$slug': typeof AuthenticatedJurisdictionsSlugRoute
   '/projects/$id': typeof AuthenticatedProjectsIdRoute
@@ -413,6 +422,7 @@ export interface FileRoutesById {
   '/_authenticated/admin/tools': typeof AuthenticatedAdminToolsRoute
   '/_authenticated/assistant/$threadId': typeof AuthenticatedAssistantThreadIdRoute
   '/_authenticated/assistant/analysis': typeof AuthenticatedAssistantAnalysisRoute
+  '/_authenticated/assistant/permits': typeof AuthenticatedAssistantPermitsRoute
   '/_authenticated/assistant/screens': typeof AuthenticatedAssistantScreensRouteWithChildren
   '/_authenticated/inspections/$id': typeof AuthenticatedInspectionsIdRoute
   '/_authenticated/jurisdictions/$slug': typeof AuthenticatedJurisdictionsSlugRoute
@@ -460,6 +470,7 @@ export interface FileRouteTypes {
     | '/admin/tools'
     | '/assistant/$threadId'
     | '/assistant/analysis'
+    | '/assistant/permits'
     | '/assistant/screens'
     | '/inspections/$id'
     | '/jurisdictions/$slug'
@@ -504,6 +515,7 @@ export interface FileRouteTypes {
     | '/admin/tools'
     | '/assistant/$threadId'
     | '/assistant/analysis'
+    | '/assistant/permits'
     | '/inspections/$id'
     | '/jurisdictions/$slug'
     | '/projects/$id'
@@ -549,6 +561,7 @@ export interface FileRouteTypes {
     | '/_authenticated/admin/tools'
     | '/_authenticated/assistant/$threadId'
     | '/_authenticated/assistant/analysis'
+    | '/_authenticated/assistant/permits'
     | '/_authenticated/assistant/screens'
     | '/_authenticated/inspections/$id'
     | '/_authenticated/jurisdictions/$slug'
@@ -812,6 +825,13 @@ declare module '@tanstack/react-router' {
       preLoaderRoute: typeof AuthenticatedAssistantScreensRouteImport
       parentRoute: typeof AuthenticatedAssistantRoute
     }
+    '/_authenticated/assistant/permits': {
+      id: '/_authenticated/assistant/permits'
+      path: '/permits'
+      fullPath: '/assistant/permits'
+      preLoaderRoute: typeof AuthenticatedAssistantPermitsRouteImport
+      parentRoute: typeof AuthenticatedAssistantRoute
+    }
     '/_authenticated/assistant/analysis': {
       id: '/_authenticated/assistant/analysis'
       path: '/analysis'
@@ -919,6 +939,7 @@ const AuthenticatedAssistantScreensRouteWithChildren =
 interface AuthenticatedAssistantRouteChildren {
   AuthenticatedAssistantThreadIdRoute: typeof AuthenticatedAssistantThreadIdRoute
   AuthenticatedAssistantAnalysisRoute: typeof AuthenticatedAssistantAnalysisRoute
+  AuthenticatedAssistantPermitsRoute: typeof AuthenticatedAssistantPermitsRoute
   AuthenticatedAssistantScreensRoute: typeof AuthenticatedAssistantScreensRouteWithChildren
   AuthenticatedAssistantIndexRoute: typeof AuthenticatedAssistantIndexRoute
 }
@@ -927,6 +948,7 @@ const AuthenticatedAssistantRouteChildren: AuthenticatedAssistantRouteChildren =
   {
     AuthenticatedAssistantThreadIdRoute: AuthenticatedAssistantThreadIdRoute,
     AuthenticatedAssistantAnalysisRoute: AuthenticatedAssistantAnalysisRoute,
+    AuthenticatedAssistantPermitsRoute: AuthenticatedAssistantPermitsRoute,
     AuthenticatedAssistantScreensRoute:
       AuthenticatedAssistantScreensRouteWithChildren,
     AuthenticatedAssistantIndexRoute: AuthenticatedAssistantIndexRoute,
