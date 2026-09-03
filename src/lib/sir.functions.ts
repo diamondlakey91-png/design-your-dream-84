@@ -1,5 +1,6 @@
 import { createServerFn } from "@tanstack/react-start";
 import { z } from "zod";
+import { requireSupabaseAuth } from "@/integrations/supabase/auth-middleware";
 
 const sirRequestSchema = z.object({
   name: z.string().trim().min(1, "Name is required").max(200),
