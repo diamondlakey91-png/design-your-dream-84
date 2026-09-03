@@ -1,0 +1,199 @@
+import { createServerFn } from "@tanstack/react-start";
+import { requireSupabaseAuth } from "@/integrations/supabase/auth-middleware";
+import { z } from "zod";
+import { createStripeClient, getStripeErrorMessage, type StripeEnv } from "@/lib/stripe.server";
+
+/** Catalog + purchase state for the client-facing Tools & Reports area. */
+export const getToolsOverview = createServerFn({ method: "GET" })
+  .middleware([requireSupabaseAuth])
+  .handler(async ({ context }) => {
+    const { supabase, userId } = context;
+    const [products, projects, orders, entitlements, versions, requests] = await Promise.all([
+      supabase.from("service_products").select("*").eq("active", true).order("display_order"),
+      supabase.from("projects").select("id,name,location,project_type,status,current_stage,jurisdiction,updated_at").order("created_at", { ascending: false }),
+      supabase.from("service_orders").select("*").eq("user_id", userId).order("created_at", { ascending: false }),
+      supabase.from("service_entitlements").select("*").eq("user_id", userId).eq("entitlement_status", "active"),
+      supabase.from("service_report_versions").select("*").eq("user_id", userId).order("created_at", { ascending: false }),
+      supabase.from("service_upgrade_requests").select("*").eq("user_id", userId).order("created_at", { ascending: false }),
+    ]);
+    if (products.error) throw new Error(products.error.message);
+    return {
+      products: products.data ?? [],
+      projects: projects.data ?? [],
+      orders: orders.data ?? [],
+      entitlements: entitlements.data ?? [],
+      versions: versions.data ?? [],
+      requests: requests.data ?? [],
+    };
+  });
+
+const OrderInput = z.object({
+  productId: z.string().uuid(),
+  projectId: z.string().uuid().nullable().optional(),
+  deliveryTier: z.enum(["ai_assisted", "professional_review"]),
+  rush: z.boolean().default(false),
+  clientNotes: z.string().max(2000).optional(),
+  returnUrl: z.string().url(),
+  environment: z.enum(["sandbox", "live"]),
+});
+
+type OrderResult = { orderId: string; clientSecret: string } | { error: string };
+
+/**
+ * Creates a real order row (status = payment_required) and a Stripe Checkout
+ * session for it. The order is only marked paid — and an entitlement granted —
+ * by the verified Stripe webhook, never by the browser.
+ */
+export const createServiceOrder = createServerFn({ method: "POST" })
+  .middleware([requireSupabaseAuth])
+  .inputValidator((input: unknown) => OrderInput.parse(input))
+  .handler(async ({ data, context }): Promise<OrderResult> => {
+    const { supabase, userId } = context;
+    const { data: product, error: pErr } = await supabase
+      .from("service_products")
+      .select("*")
+      .eq("id", data.productId)
+      .eq("active", true)
+      .maybeSingle();
+    if (pErr || !product) return { error: "That service is not available right now." };
+
+    // Server-side pricing — never trust an amount from the browser.
+    let amount =
+      data.deliveryTier === "professional_review"
+        ? product.professional_review_price_cents ?? product.base_price_cents
+        : product.base_price_cents;
+    if (data.rush && product.rush_price_cents) amount += product.rush_price_cents;
+    if (amount <= 0) return { error: "This service is not priced yet. Please contact Permivio." };
+
+    const { data: order, error: oErr } = await supabase
+      .from("service_orders")
+      .insert({
+        user_id: userId,
+        project_id: data.projectId ?? null,
+        product_id: product.id,
+        delivery_tier: data.deliveryTier,
+        status: "payment_required",
+        amount_cents: amount,
+        currency: product.currency,
+        rush: data.rush,
+        environment: data.environment,
+        client_notes: data.clientNotes ?? null,
+      })
+      .select("id")
+      .single();
+    if (oErr || !order) return { error: "We couldn't start that order. Please try again." };
+
+    await supabase.from("service_order_items").insert({
+      order_id: order.id,
+      product_id: product.id,
+      delivery_tier: data.deliveryTier,
+      quantity: 1,
+      unit_amount_cents: amount,
+      label: product.client_title,
+    });
+
+    try {
+      const stripe = createStripeClient(data.environment as StripeEnv);
+      const session = await stripe.checkout.sessions.create({
+        mode: "payment",
+        ui_mode: "embedded_page",
+        return_url: data.returnUrl,
+        line_items: [
+          {
+            quantity: 1,
+            price_data: {
+              currency: product.currency,
+              unit_amount: amount,
+              product_data: {
+                name:
+                  data.deliveryTier === "professional_review"
+                    ? `${product.client_title} — Professionally Reviewed`
+                    : `${product.client_title} — AI-Assisted`,
+              },
+            },
+          },
+        ],
+        metadata: { userId, orderId: order.id, kind: "service_order" },
+      });
+      await supabase.from("service_orders").update({ stripe_session_id: session.id }).eq("id", order.id);
+      return { orderId: order.id, clientSecret: session.client_secret ?? "" };
+    } catch (error) {
+      return { error: getStripeErrorMessage(error) };
+    }
+  });
+
+const UpgradeInput = z.object({
+  projectId: z.string().uuid().nullable().optional(),
+  preferredContact: z.string().max(40).optional(),
+  contactValue: z.string().max(200).optional(),
+  desiredTimeline: z.string().max(200).optional(),
+  notes: z.string().max(4000).optional(),
+});
+
+/** "Have Permivio handle this project" — creates a service request on the project. */
+export const requestFullService = createServerFn({ method: "POST" })
+  .middleware([requireSupabaseAuth])
+  .inputValidator((input: unknown) => UpgradeInput.parse(input))
+  .handler(async ({ data, context }) => {
+    const { supabase, userId } = context;
+    const { error } = await supabase.from("service_upgrade_requests").insert({
+      user_id: userId,
+      project_id: data.projectId ?? null,
+      request_type: "full_service",
+      preferred_contact: data.preferredContact ?? null,
+      contact_value: data.contactValue ?? null,
+      desired_timeline: data.desiredTimeline ?? null,
+      notes: data.notes ?? null,
+    });
+    if (error) throw new Error(error.message);
+    if (data.projectId) {
+      await supabase.from("activity").insert({
+        project_id: data.projectId,
+        user_id: userId,
+        description: "Full-service permitting requested",
+      });
+    }
+    return { ok: true };
+  });
+
+/** Admin-only pricing/visibility update. */
+export const updateServiceProduct = createServerFn({ method: "POST" })
+  .middleware([requireSupabaseAuth])
+  .inputValidator((input: unknown) =>
+    z
+      .object({
+        id: z.string().uuid(),
+        base_price_cents: z.number().int().min(0).max(100_000_00).optional(),
+        professional_review_price_cents: z.number().int().min(0).max(100_000_00).nullable().optional(),
+        rush_price_cents: z.number().int().min(0).max(100_000_00).nullable().optional(),
+        turnaround_estimate: z.string().max(120).nullable().optional(),
+        active: z.boolean().optional(),
+        display_order: z.number().int().min(0).max(999).optional(),
+      })
+      .parse(input),
+  )
+  .handler(async ({ data, context }) => {
+    const { supabase, userId } = context;
+    const { data: isAdmin } = await supabase.rpc("has_role", { _user_id: userId, _role: "admin" });
+    if (!isAdmin) throw new Error("Forbidden");
+    const { id, ...patch } = data;
+    const { error } = await supabase.from("service_products").update(patch).eq("id", id);
+    if (error) throw new Error(error.message);
+    return { ok: true };
+  });
+
+/** Admin-only order list for Tools & Reports management. */
+export const listServiceOrdersAdmin = createServerFn({ method: "GET" })
+  .middleware([requireSupabaseAuth])
+  .handler(async ({ context }) => {
+    const { supabase, userId } = context;
+    const { data: isAdmin } = await supabase.rpc("has_role", { _user_id: userId, _role: "admin" });
+    if (!isAdmin) throw new Error("Forbidden");
+    const { data, error } = await supabase
+      .from("service_orders")
+      .select("*, service_products(client_title)")
+      .order("created_at", { ascending: false })
+      .limit(200);
+    if (error) throw new Error(error.message);
+    return data ?? [];
+  });
