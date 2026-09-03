@@ -476,7 +476,6 @@ Return JSON: { "findings": [{ "severity": "critical|high|medium|low|informationa
         submission_issues: results.flatMap((r) => r.submission_issues),
         recommended_actions: results.flatMap((r) => r.recommended_actions),
         needs_professional_confirmation: results.flatMap((r) => r.needs_professional_confirmation),
-        inventory_summary: undefined,
       }).eq("id", review.id);
 
       await sb.from("activity").insert({
