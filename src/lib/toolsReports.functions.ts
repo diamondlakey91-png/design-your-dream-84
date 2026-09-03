@@ -197,3 +197,96 @@ export const listServiceOrdersAdmin = createServerFn({ method: "GET" })
     if (error) throw new Error(error.message);
     return data ?? [];
   });
+
+/** Admin-only full catalog (including inactive products). */
+export const listServiceProductsAdmin = createServerFn({ method: "GET" })
+  .middleware([requireSupabaseAuth])
+  .handler(async ({ context }) => {
+    const { supabase, userId } = context;
+    const { data: isAdmin } = await supabase.rpc("has_role", { _user_id: userId, _role: "admin" });
+    if (!isAdmin) throw new Error("Forbidden");
+    const { data, error } = await supabase.from("service_products").select("*").order("display_order");
+    if (error) throw new Error(error.message);
+    return data ?? [];
+  });
+
+const ProductInput = z.object({
+  id: z.string().uuid().optional(),
+  product_key: z.string().min(2).max(80).regex(/^[a-z0-9_]+$/, "Use lowercase letters, numbers and underscores"),
+  name: z.string().min(2).max(160),
+  client_title: z.string().min(2).max(160),
+  client_question: z.string().max(300).nullable().optional(),
+  description: z.string().min(2).max(2000),
+  category: z.string().min(2).max(80),
+  base_price_cents: z.number().int().min(0).max(100_000_00),
+  professional_review_price_cents: z.number().int().min(0).max(100_000_00).nullable().optional(),
+  rush_price_cents: z.number().int().min(0).max(100_000_00).nullable().optional(),
+  turnaround_estimate: z.string().max(120).nullable().optional(),
+  deliverables: z.array(z.string().max(300)).max(30).default([]),
+  supports_professional_review: z.boolean().default(true),
+  active: z.boolean().default(true),
+  display_order: z.number().int().min(0).max(999).default(0),
+});
+
+/** Admin-only create/update of a Tools & Reports product. */
+export const upsertServiceProduct = createServerFn({ method: "POST" })
+  .middleware([requireSupabaseAuth])
+  .inputValidator((input: unknown) => ProductInput.parse(input))
+  .handler(async ({ data, context }) => {
+    const { supabase, userId } = context;
+    const { data: isAdmin } = await supabase.rpc("has_role", { _user_id: userId, _role: "admin" });
+    if (!isAdmin) throw new Error("Forbidden");
+    const { id, ...row } = data;
+    const payload = {
+      ...row,
+      client_question: row.client_question ?? null,
+      professional_review_price_cents: row.professional_review_price_cents ?? null,
+      rush_price_cents: row.rush_price_cents ?? null,
+      turnaround_estimate: row.turnaround_estimate ?? null,
+      deliverables: row.deliverables as never,
+    };
+    if (id) {
+      const { error } = await supabase.from("service_products").update(payload).eq("id", id);
+      if (error) throw new Error(error.message);
+      return { ok: true, id };
+    }
+    const { data: inserted, error } = await supabase.from("service_products").insert(payload).select("id").single();
+    if (error) throw new Error(error.message);
+    return { ok: true, id: inserted.id as string };
+  });
+
+/** Admin-only order status management. Payment status is never set here. */
+export const updateServiceOrderAdmin = createServerFn({ method: "POST" })
+  .middleware([requireSupabaseAuth])
+  .inputValidator((input: unknown) =>
+    z
+      .object({
+        id: z.string().uuid(),
+        status: z.enum([
+          "paid",
+          "processing",
+          "waiting_client",
+          "ai_in_progress",
+          "professional_review",
+          "ready",
+          "delivered",
+          "cancelled",
+          "refunded",
+        ]),
+      })
+      .parse(input),
+  )
+  .handler(async ({ data, context }) => {
+    const { supabase, userId } = context;
+    const { data: isAdmin } = await supabase.rpc("has_role", { _user_id: userId, _role: "admin" });
+    if (!isAdmin) throw new Error("Forbidden");
+    const { error } = await supabase
+      .from("service_orders")
+      .update({
+        status: data.status,
+        delivered_at: data.status === "delivered" ? new Date().toISOString() : null,
+      })
+      .eq("id", data.id);
+    if (error) throw new Error(error.message);
+    return { ok: true };
+  });
