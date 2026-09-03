@@ -1,11 +1,10 @@
-import { createFileRoute } from "@tanstack/react-router";
+import { createFileRoute, useNavigate } from "@tanstack/react-router";
 import { useMemo, useState } from "react";
 import { useQuery } from "@tanstack/react-query";
 import { useServerFn } from "@tanstack/react-start";
 import { Loader2 } from "lucide-react";
 import { PermivioPageHeader } from "@/components/PermivioPageHeader";
 import { ServiceProductCard } from "@/components/tools/ServiceProductCard";
-import { ServiceCheckoutDialog } from "@/components/tools/ServiceCheckoutDialog";
 import { FullServiceDialog } from "@/components/tools/FullServiceDialog";
 import { PurchasedServicesList, type ReportVersion } from "@/components/tools/PurchasedServicesList";
 import { getToolsOverview } from "@/lib/toolsReports.functions";
@@ -40,14 +39,14 @@ export const Route = createFileRoute("/_authenticated/tools")({
 });
 
 function ToolsAndReportsPage() {
+  const navigate = useNavigate();
   const fetchOverview = useServerFn(getToolsOverview);
-  const { data, isLoading, refetch } = useQuery({
+  const { data, isLoading } = useQuery({
     queryKey: ["tools-overview"],
     queryFn: () => fetchOverview(),
   });
 
   const [projectId, setProjectId] = useState<string>("");
-  const [checkout, setCheckout] = useState<{ product: ServiceProduct; tier: DeliveryTier } | null>(null);
   const [fullService, setFullService] = useState(false);
 
   const products = (data?.products ?? []) as unknown as ServiceProduct[];
@@ -141,7 +140,12 @@ function ToolsAndReportsPage() {
                 key={product.id}
                 product={product}
                 recommendation={rec}
-                onBuy={(tier) => setCheckout({ product, tier })}
+                onBuy={(tier) =>
+                  navigate({
+                    to: "/tools/checkout",
+                    search: { product: product.product_key, tier, project: projectId, rush: false, order_id: undefined },
+                  })
+                }
                 onFullService={() => setFullService(true)}
               />
             ))}
@@ -161,17 +165,6 @@ function ToolsAndReportsPage() {
 
       <p className="rounded-3xl border border-border bg-card/60 p-5 text-xs text-muted-foreground">{DISCLAIMER}</p>
 
-      {checkout && (
-        <ServiceCheckoutDialog
-          product={checkout.product}
-          tier={checkout.tier}
-          project={project}
-          onClose={() => {
-            setCheckout(null);
-            void refetch();
-          }}
-        />
-      )}
       {fullService && <FullServiceDialog project={project} onClose={() => setFullService(false)} />}
     </div>
   );

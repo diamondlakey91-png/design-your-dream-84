@@ -36,6 +36,7 @@ import { Route as AuthenticatedFilingIndexRouteImport } from './routes/_authenti
 import { Route as AuthenticatedAssistantIndexRouteImport } from './routes/_authenticated/assistant.index'
 import { Route as ShareReportsTokenRouteImport } from './routes/share.reports.$token'
 import { Route as ApiChatStreamRouteImport } from './routes/api/chat.stream'
+import { Route as AuthenticatedToolsCheckoutRouteImport } from './routes/_authenticated/tools_.checkout'
 import { Route as AuthenticatedReportIdRouteImport } from './routes/_authenticated/report.$id'
 import { Route as AuthenticatedProjectsIdRouteImport } from './routes/_authenticated/projects.$id'
 import { Route as AuthenticatedJurisdictionsSlugRouteImport } from './routes/_authenticated/jurisdictions.$slug'
@@ -197,6 +198,12 @@ const ApiChatStreamRoute = ApiChatStreamRouteImport.update({
   path: '/api/chat/stream',
   getParentRoute: () => rootRouteImport,
 } as any)
+const AuthenticatedToolsCheckoutRoute =
+  AuthenticatedToolsCheckoutRouteImport.update({
+    id: '/tools_/checkout',
+    path: '/tools/checkout',
+    getParentRoute: () => AuthenticatedRouteRoute,
+  } as any)
 const AuthenticatedReportIdRoute = AuthenticatedReportIdRouteImport.update({
   id: '/$id',
   path: '/$id',
@@ -336,6 +343,7 @@ export interface FileRoutesByFullPath {
   '/jurisdictions/$slug': typeof AuthenticatedJurisdictionsSlugRoute
   '/projects/$id': typeof AuthenticatedProjectsIdRoute
   '/report/$id': typeof AuthenticatedReportIdRoute
+  '/tools/checkout': typeof AuthenticatedToolsCheckoutRoute
   '/api/chat/stream': typeof ApiChatStreamRoute
   '/share/reports/$token': typeof ShareReportsTokenRoute
   '/assistant/': typeof AuthenticatedAssistantIndexRoute
@@ -380,6 +388,7 @@ export interface FileRoutesByTo {
   '/jurisdictions/$slug': typeof AuthenticatedJurisdictionsSlugRoute
   '/projects/$id': typeof AuthenticatedProjectsIdRoute
   '/report/$id': typeof AuthenticatedReportIdRoute
+  '/tools/checkout': typeof AuthenticatedToolsCheckoutRoute
   '/api/chat/stream': typeof ApiChatStreamRoute
   '/share/reports/$token': typeof ShareReportsTokenRoute
   '/assistant': typeof AuthenticatedAssistantIndexRoute
@@ -428,6 +437,7 @@ export interface FileRoutesById {
   '/_authenticated/jurisdictions/$slug': typeof AuthenticatedJurisdictionsSlugRoute
   '/_authenticated/projects/$id': typeof AuthenticatedProjectsIdRoute
   '/_authenticated/report/$id': typeof AuthenticatedReportIdRoute
+  '/_authenticated/tools_/checkout': typeof AuthenticatedToolsCheckoutRoute
   '/api/chat/stream': typeof ApiChatStreamRoute
   '/share/reports/$token': typeof ShareReportsTokenRoute
   '/_authenticated/assistant/': typeof AuthenticatedAssistantIndexRoute
@@ -476,6 +486,7 @@ export interface FileRouteTypes {
     | '/jurisdictions/$slug'
     | '/projects/$id'
     | '/report/$id'
+    | '/tools/checkout'
     | '/api/chat/stream'
     | '/share/reports/$token'
     | '/assistant/'
@@ -520,6 +531,7 @@ export interface FileRouteTypes {
     | '/jurisdictions/$slug'
     | '/projects/$id'
     | '/report/$id'
+    | '/tools/checkout'
     | '/api/chat/stream'
     | '/share/reports/$token'
     | '/assistant'
@@ -567,6 +579,7 @@ export interface FileRouteTypes {
     | '/_authenticated/jurisdictions/$slug'
     | '/_authenticated/projects/$id'
     | '/_authenticated/report/$id'
+    | '/_authenticated/tools_/checkout'
     | '/api/chat/stream'
     | '/share/reports/$token'
     | '/_authenticated/assistant/'
@@ -790,6 +803,13 @@ declare module '@tanstack/react-router' {
       preLoaderRoute: typeof ApiChatStreamRouteImport
       parentRoute: typeof rootRouteImport
     }
+    '/_authenticated/tools_/checkout': {
+      id: '/_authenticated/tools_/checkout'
+      path: '/tools/checkout'
+      fullPath: '/tools/checkout'
+      preLoaderRoute: typeof AuthenticatedToolsCheckoutRouteImport
+      parentRoute: typeof AuthenticatedRouteRoute
+    }
     '/_authenticated/report/$id': {
       id: '/_authenticated/report/$id'
       path: '/$id'
@@ -1001,6 +1021,7 @@ interface AuthenticatedRouteRouteChildren {
   AuthenticatedAdminToolsRoute: typeof AuthenticatedAdminToolsRoute
   AuthenticatedInspectionsIdRoute: typeof AuthenticatedInspectionsIdRoute
   AuthenticatedProjectsIdRoute: typeof AuthenticatedProjectsIdRoute
+  AuthenticatedToolsCheckoutRoute: typeof AuthenticatedToolsCheckoutRoute
   AuthenticatedFilingIndexRoute: typeof AuthenticatedFilingIndexRoute
   AuthenticatedHarvestIndexRoute: typeof AuthenticatedHarvestIndexRoute
   AuthenticatedProjectsIndexRoute: typeof AuthenticatedProjectsIndexRoute
@@ -1023,6 +1044,7 @@ const AuthenticatedRouteRouteChildren: AuthenticatedRouteRouteChildren = {
   AuthenticatedAdminToolsRoute: AuthenticatedAdminToolsRoute,
   AuthenticatedInspectionsIdRoute: AuthenticatedInspectionsIdRoute,
   AuthenticatedProjectsIdRoute: AuthenticatedProjectsIdRoute,
+  AuthenticatedToolsCheckoutRoute: AuthenticatedToolsCheckoutRoute,
   AuthenticatedFilingIndexRoute: AuthenticatedFilingIndexRoute,
   AuthenticatedHarvestIndexRoute: AuthenticatedHarvestIndexRoute,
   AuthenticatedProjectsIndexRoute: AuthenticatedProjectsIndexRoute,

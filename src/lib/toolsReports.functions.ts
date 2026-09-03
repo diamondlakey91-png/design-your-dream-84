@@ -97,7 +97,7 @@ export const createServiceOrder = createServerFn({ method: "POST" })
       const session = await stripe.checkout.sessions.create({
         mode: "payment",
         ui_mode: "embedded_page",
-        return_url: data.returnUrl,
+        return_url: `${data.returnUrl}${data.returnUrl.includes("?") ? "&" : "?"}order_id=${order.id}&session_id={CHECKOUT_SESSION_ID}`,
         line_items: [
           {
             quantity: 1,
@@ -289,4 +289,50 @@ export const updateServiceOrderAdmin = createServerFn({ method: "POST" })
       .eq("id", data.id);
     if (error) throw new Error(error.message);
     return { ok: true };
+  });
+
+const CheckoutContextInput = z.object({ product_key: z.string().max(80) });
+
+/** Everything the /tools/checkout page needs for one product. */
+export const getCheckoutContext = createServerFn({ method: "GET" })
+  .middleware([requireSupabaseAuth])
+  .inputValidator((input: unknown) => CheckoutContextInput.parse(input))
+  .handler(async ({ data, context }) => {
+    const { supabase } = context;
+    const [product, projects] = await Promise.all([
+      supabase.from("service_products").select("*").eq("product_key", data.product_key).eq("active", true).maybeSingle(),
+      supabase.from("projects").select("id,name,location,project_type,status,jurisdiction").order("created_at", { ascending: false }),
+    ]);
+    if (product.error) throw new Error(product.error.message);
+    return { product: product.data, projects: projects.data ?? [] };
+  });
+
+/** Post-payment state for one order: paid?, delivery stage, saved report versions. */
+export const getOrderState = createServerFn({ method: "GET" })
+  .middleware([requireSupabaseAuth])
+  .inputValidator((input: unknown) => z.object({ order_id: z.string().uuid() }).parse(input))
+  .handler(async ({ data, context }) => {
+    const { supabase, userId } = context;
+    const { data: order, error } = await supabase
+      .from("service_orders")
+      .select("id,product_id,project_id,delivery_tier,status,amount_cents,currency,rush,created_at,delivered_at")
+      .eq("id", data.order_id)
+      .eq("user_id", userId)
+      .maybeSingle();
+    if (error) throw new Error(error.message);
+    if (!order) return { order: null, product_title: null, versions: [] };
+    const [product, versions] = await Promise.all([
+      supabase.from("service_products").select("client_title,name,turnaround_estimate").eq("id", order.product_id).maybeSingle(),
+      supabase
+        .from("service_report_versions")
+        .select("id,title,summary,version,delivery_tier,reviewed_at,created_at")
+        .eq("order_id", order.id)
+        .order("version", { ascending: false }),
+    ]);
+    return {
+      order,
+      product_title: product.data?.client_title ?? product.data?.name ?? "Purchased service",
+      turnaround: product.data?.turnaround_estimate ?? null,
+      versions: versions.data ?? [],
+    };
   });
