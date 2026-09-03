@@ -1,4 +1,5 @@
 import { createFileRoute, Link, useNavigate } from "@tanstack/react-router";
+import { PermivioPageHeader } from "@/components/PermivioPageHeader";
 import { useMutation, useQuery, useQueryClient } from "@tanstack/react-query";
 import { useServerFn } from "@tanstack/react-start";
 import { AppShell } from "@/components/AppShell";
@@ -64,19 +65,12 @@ function Dashboard() {
   return (
     <AppShell>
       {/* Header */}
-      <header className="grid grid-cols-[minmax(0,1fr)_auto] items-end gap-4 px-6 pt-10 pb-6 lg:px-2">
-        <div className="min-w-0">
-          <div className="mb-2 flex items-center gap-2">
-            <span className="size-2 rounded-full bg-primary shadow-[0_0_10px_oklch(0.66_0.19_258/0.9)]" />
-            <span className="font-mono text-[10px] font-medium uppercase tracking-widest text-muted-foreground">
-              {email ? `Signed in · ${email}` : "System Live"}
-            </span>
-          </div>
-          <h1 className="truncate text-3xl font-bold tracking-tight text-foreground sm:text-4xl">
-            Command Center
-          </h1>
-        </div>
-        <div className="flex shrink-0 items-center gap-3">
+      <div className="px-6 pt-8 pb-6 lg:px-2">
+      <PermivioPageHeader
+        eyebrow={email ? `Signed in · ${email}` : "System Live"}
+        title="Command Center"
+        subtitle="Everything that needs your attention across permits, reviews, inspections, and closeout."
+        actions={<>
           <div className="hidden flex-col items-end sm:flex">
             <span className="font-mono text-[10px] uppercase tracking-tight text-muted-foreground">Active</span>
             <span className="text-lg font-semibold text-foreground">
@@ -96,8 +90,9 @@ function Dashboard() {
           >
             <Plus className="size-4" /> New project
           </button>
-        </div>
-      </header>
+        </>}
+      />
+      </div>
 
       {/* Main grid */}
       <div className="grid grid-cols-12 gap-6 px-4 pb-8 lg:px-2">

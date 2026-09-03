@@ -1,4 +1,5 @@
 import { createFileRoute, Link, useNavigate } from "@tanstack/react-router";
+import { PermivioPageHeader } from "@/components/PermivioPageHeader";
 import { zodValidator, fallback } from "@tanstack/zod-adapter";
 import { z } from "zod";
 import { useEffect, useMemo, useState } from "react";
@@ -126,12 +127,10 @@ function HealthPortalsPage() {
     <AppShell>
       <div className="px-4 pt-6 space-y-5">
         <header className="space-y-1">
-          <div className="flex items-center gap-2 text-brand">
-            <HeartPulse className="size-5" />
-            <span className="font-mono text-[10px] uppercase tracking-widest">Health &amp; Environmental Agencies</span>
-          </div>
-          <div className="flex items-start justify-between gap-3">
-            <h1 className="text-2xl font-semibold tracking-tight">Health / Environmental Agency Directory</h1>
+          <PermivioPageHeader
+            eyebrow="Health & Environmental Agencies"
+            title="Health / Environmental Agency Directory"
+            actions={<>
             {adminQ.data === true && (
               <Link
                 to="/admin/health-portals"

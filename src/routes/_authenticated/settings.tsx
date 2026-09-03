@@ -1,4 +1,5 @@
 import { createFileRoute, useRouter } from "@tanstack/react-router";
+import { PermivioPageHeader } from "@/components/PermivioPageHeader";
 import { useServerFn } from "@tanstack/react-start";
 import { useMutation, useQuery, useQueryClient } from "@tanstack/react-query";
 import { useEffect, useState } from "react";
@@ -209,16 +210,11 @@ function SettingsPage() {
   return (
     <AppShell>
       <div className="space-y-6 px-4 py-6 lg:px-0">
-        <header className="space-y-2">
-          <div className="inline-flex items-center gap-2 rounded-full border border-border bg-background/60 px-3 py-1 font-mono text-[10px] uppercase tracking-widest text-brand">
-            <Settings2 className="size-3" /> Workspace
-          </div>
-          <h1 className="text-2xl font-semibold tracking-tight">Settings</h1>
-          <p className="max-w-3xl text-sm text-muted-foreground">
-            Manage your profile, security, notifications, portal logins, report branding, and data
-            cleanup — for both permit expediting and utility coordination work.
-          </p>
-        </header>
+        <PermivioPageHeader
+          eyebrow="Workspace"
+          title="Settings"
+          subtitle="Manage your profile, security, notifications, portal logins, report branding, and data cleanup — for both permit expediting and utility coordination work."
+        />
 
         {/* Tab rail */}
         <nav

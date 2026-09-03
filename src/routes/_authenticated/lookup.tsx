@@ -1,4 +1,5 @@
 import { createFileRoute, useRouter } from "@tanstack/react-router";
+import { PermivioPageHeader } from "@/components/PermivioPageHeader";
 import { useServerFn } from "@tanstack/react-start";
 import { useMutation } from "@tanstack/react-query";
 import { useState } from "react";
@@ -81,14 +82,11 @@ function LookupPage() {
     <AppShell>
       <div className="px-5 pt-6 pb-8 space-y-6">
         <header className="space-y-1">
-          <div className="flex items-center gap-2 text-brand">
-            <MapPin className="size-4" />
-            <span className="font-mono text-[10px] uppercase tracking-widest">Live Address Lookup</span>
-          </div>
-          <h1 className="text-2xl font-semibold tracking-tight">Pull live permits by address</h1>
-          <p className="text-sm text-muted-foreground">
-            Enter any US address. Permivio finds the jurisdiction's official permit portal and pulls live records tied to that address.
-          </p>
+          <PermivioPageHeader
+            eyebrow="Live Address Lookup"
+            title="Pull live permits by address"
+            subtitle="Enter any US address. Permivio finds the jurisdiction's official permit portal and pulls live records tied to that address."
+          />
           <a
             href="/portals"
             className="inline-flex items-center gap-1.5 text-xs text-brand hover:underline"
