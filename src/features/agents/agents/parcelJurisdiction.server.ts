@@ -10,6 +10,7 @@
 
 import { z } from "zod";
 import { geocode } from "@/lib/geocoding.shared";
+import { resolveAuthoritativeGeography, type AuthoritativeGeography } from "@/lib/govGis.server";
 import { firecrawlSearch, firecrawlScrape } from "@/lib/firecrawl.shared";
 import { callGeminiJSON } from "@/lib/ai.shared";
 import { agentOutputSchema, findingSourceRefSchema, parseAgentOutput, type AgentOutput } from "../schemas";
@@ -133,6 +134,8 @@ export type ParcelJurisdictionResult = {
     postalCode: string | null;
     locationType: string;
   };
+  /** Boundary facts read from official government GIS, not from a model. */
+  geography: AuthoritativeGeography;
   evidence: RetrievedEvidence[];
   searchLeads: Array<{ url: string; title: string }>;
   promptVersion: string;
@@ -174,11 +177,19 @@ export async function gatherParcelJurisdictionEvidence(args: {
   county: string | null;
   state: string | null;
   parcelId: string | null;
+  /** Governing municipality from official boundary data (null = unincorporated). */
+  controllingPlace?: string | null;
+  /** Extra evidence already retrieved from authoritative GIS services. */
+  seedEvidence?: RetrievedEvidence[];
 }): Promise<{ evidence: RetrievedEvidence[]; leads: Array<{ url: string; title: string }> }> {
+  const seed = args.seedEvidence ?? [];
   const key = process.env['FIRECRAWL_API_KEY'];
-  if (!key) return { evidence: [], leads: [] };
+  if (!key) return { evidence: seed, leads: [] };
   const { address, postalCity, county, state, parcelId } = args;
-  const city = postalCity ?? "";
+  // Search the municipality the boundary data says controls — never the
+  // mailing city. Unincorporated sites search the county instead.
+  const controlling = args.controllingPlace === undefined ? postalCity : args.controllingPlace;
+  const city = controlling ?? "";
   const cnty = county ?? "";
   const st = state ?? "";
 
@@ -205,10 +216,11 @@ export async function gatherParcelJurisdictionEvidence(args: {
   // Prefer official hosts for retrieval; keep the rest as non-evidence leads.
   const ranked = [...unique].sort((a, b) => Number(OFFICIAL_HOST.test(b.url)) - Number(OFFICIAL_HOST.test(a.url)));
   const targets = ranked.slice(0, 12);
+  const offset = seed.length;
 
   const evidence = await Promise.all(
     targets.map(async (t, i): Promise<RetrievedEvidence> => {
-      const source_key = `S${i + 1}`;
+      const source_key = `S${offset + i + 1}`;
       const title = t.title ?? "";
       try {
         const s = await firecrawlScrape(key, t.url);
@@ -235,7 +247,7 @@ export async function gatherParcelJurisdictionEvidence(args: {
     }),
   );
 
-  return { evidence, leads: ranked.slice(12).map((l) => ({ url: l.url, title: l.title ?? "" })) };
+  return { evidence: [...seed, ...evidence], leads: ranked.slice(12).map((l) => ({ url: l.url, title: l.title ?? "" })) };
 }
 
 function isVerifiable(e: RetrievedEvidence | undefined) {
@@ -274,13 +286,57 @@ export async function runParcelJurisdictionAgent(input: {
     locationType: g.location_type,
   };
 
+  // Authoritative boundary databases first: they decide which jurisdiction
+  // the rest of the research targets.
+  const geography = await resolveAuthoritativeGeography({
+    address: geo.formattedAddress,
+    lat: geo.lat,
+    lng: geo.lng,
+    postalCity: geo.postalCity,
+  });
+
+  const govEvidence: RetrievedEvidence[] = geography.evidence.map((e) => ({
+    source_key: e.source_key,
+    url: e.url,
+    title: e.title,
+    retrieved: e.retrieved,
+    excerpt: e.excerpt,
+    guessedType: e.kind,
+  }));
+
+  const authoritativeCounty = geography.census?.county ?? geography.fcc?.countyName ?? geo.county;
+  const authoritativeState = geography.census?.state ?? geo.state;
+  const controllingPlace = geography.determination.authoritative
+    ? geography.determination.incorporation_status === "unincorporated_county"
+      ? null
+      : geography.determination.place_in_control
+    : geo.postalCity;
+
   const { evidence, leads } = await gatherParcelJurisdictionEvidence({
     address: geo.formattedAddress,
     postalCity: geo.postalCity,
-    county: geo.county,
-    state: geo.state,
+    county: authoritativeCounty,
+    state: authoritativeState,
     parcelId: input.parcelId ?? null,
+    controllingPlace,
+    seedEvidence: govEvidence,
   });
+
+  const boundaryBrief = [
+    geography.determination.note,
+    geography.census
+      ? `Official record (Census TIGER, source G1): incorporated place = ${geography.census.place ? geography.census.place.name : "NONE (unincorporated)"}; county = ${geography.census.county ?? "unknown"}; state = ${geography.census.state ?? "unknown"}; county subdivision = ${geography.census.countySubdivision?.name ?? "none"}.`
+      : null,
+    geography.flood
+      ? `FEMA NFHL (source G3): flood zone ${geography.flood.zone}${geography.flood.sfha ? " — inside a Special Flood Hazard Area, floodplain review applies" : ""}.`
+      : null,
+    geography.unavailable.length
+      ? `Services that could not be reached this run (treat those aspects as unconfirmed): ${geography.unavailable.join("; ")}.`
+      : null,
+    "Cite G1/G2/G3 for these facts. Route permitting functions to the authority that actually governs this boundary, then confirm each department from its own official page.",
+  ]
+    .filter(Boolean)
+    .join("\n");
 
   const prompt = buildParcelJurisdictionPrompt({
     rawAddress: input.address.trim(),
@@ -289,6 +345,7 @@ export async function runParcelJurisdictionAgent(input: {
     scope: input.scope ?? "Not provided.",
     clientObjective: input.clientObjective ?? "Confirm the property, parcel and every authority with jurisdiction.",
     knownParcelId: input.parcelId ?? null,
+    authoritativeBoundary: boundaryBrief,
     evidence: evidence.map((e) => ({
       source_key: e.source_key,
       url: e.url,
