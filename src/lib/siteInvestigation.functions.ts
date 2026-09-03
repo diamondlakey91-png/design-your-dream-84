@@ -116,6 +116,50 @@ const SiSchema = z.object({
   sources: z.array(z.object({ url: z.string(), title: z.string().default("") })).max(40).default([]),
 });
 
+type SiOut = z.infer<typeof SiSchema>;
+
+const ParcelInput = z.object({
+  label: z.string().max(60).optional(),
+  parcel_number: z.string().max(80).optional(),
+  address: z.string().max(300).optional(),
+  acreage: z.number().nonnegative().max(100000).optional(),
+  phase: z.string().max(80).optional(),
+  notes: z.string().max(600).optional(),
+});
+
+/** Investigation planner — decides complexity, depth and which research modules apply. */
+export const planSiteInvestigation = createServerFn({ method: "POST" })
+  .middleware([requireSupabaseAuth])
+  .inputValidator((d: unknown) =>
+    z.object({
+      project_id: z.string().uuid(),
+      project_type_label: z.string().max(200).default(""),
+      scope_text: z.string().max(6000).default(""),
+      parcels: z.array(ParcelInput).max(40).default([]),
+      acreage: z.number().nonnegative().max(100000).optional(),
+      building_sf: z.number().nonnegative().max(10000000).optional(),
+    }).parse(d),
+  )
+  .handler(async ({ data, context }) => {
+    const sb = context.supabase;
+    const [{ data: project }, { data: scopeRows }] = await Promise.all([
+      sb.from("projects").select("project_type, jurisdiction").eq("id", data.project_id).maybeSingle(),
+      sb.from("scope_of_work").select("*").eq("project_id", data.project_id).order("created_at", { ascending: false }).limit(1),
+    ]);
+    const scope = (scopeRows ?? [])[0] as Record<string, unknown> | undefined;
+    const parcelAcreage = data.parcels.reduce((sum, p) => sum + (p.acreage ?? 0), 0);
+    const plan = buildInvestigationPlan({
+      projectTypeLabel: data.project_type_label || String(scope?.['friendly_project_type'] ?? project?.project_type ?? ""),
+      scopeText: data.scope_text || String(scope?.['plain_scope'] ?? scope?.['scope_text'] ?? ""),
+      parcelCount: Math.max(1, data.parcels.length),
+      acreage: data.acreage ?? (parcelAcreage > 0 ? parcelAcreage : null),
+      buildingSf: data.building_sf ?? (scope?.['sq_ft_gross'] ? Number(scope['sq_ft_gross']) : null),
+      existingUse: (scope?.['occupancy_existing'] as string | null) ?? null,
+      proposedUse: (scope?.['occupancy_proposed'] as string | null) ?? null,
+    });
+    return { plan, recommended_depth_label: depthMeta(plan.recommended_depth).label };
+  });
+
 // eslint-disable-next-line @typescript-eslint/no-explicit-any
 async function gatherSiteResearch(jurisdiction: string, state: string, address: string, projectType: string) {
   const key = process.env['FIRECRAWL_API_KEY'];
