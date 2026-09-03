@@ -104,7 +104,8 @@ export function PlanQaQcTab({ projectId }: { projectId: string }) {
     onError: (e) => toast.error(e instanceof Error ? e.message : "PDF export failed"),
   });
 
-  const d = review.data;
+  // eslint-disable-next-line @typescript-eslint/no-explicit-any
+  const d = review.data as any;
   const rm = d?.review ? readinessMeta(d.review.readiness_category) : null;
   const findings = (d?.findings ?? []) as QaQcFindingRow[];
   const sheets = (d?.sheets ?? []) as QaQcSheetRow[];

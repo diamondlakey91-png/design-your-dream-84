@@ -111,7 +111,8 @@ export function SiteInvestigationTab({
     onError: (e) => toast.error(e instanceof Error ? e.message : "PDF export failed"),
   });
 
-  const d = inv.data;
+  // eslint-disable-next-line @typescript-eslint/no-explicit-any
+  const d = inv.data as any;
   const rating = d?.investigation ? ratingMeta(d.investigation.feasibility_rating) : null;
 
   return (
