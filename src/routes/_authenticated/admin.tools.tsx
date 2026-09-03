@@ -7,6 +7,7 @@ import { Plus, Save, X, ShieldAlert, Search, Pencil, EyeOff, Eye } from "lucide-
 import { AppShell } from "@/components/AppShell";
 import { PermivioPageHeader } from "@/components/PermivioPageHeader";
 import { useIsAdmin } from "@/hooks/useIsAdmin";
+import type { Database } from "@/integrations/supabase/types";
 import {
   listServiceProductsAdmin,
   upsertServiceProduct,

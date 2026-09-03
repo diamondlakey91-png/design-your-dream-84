@@ -71,6 +71,7 @@ const TOOLS: NavLink[] = [
 const SERVICES: NavLink = { to: "/tools", label: "Services & Tools", icon: ShoppingBag };
 const SUPPORT: NavLink = { to: "/assistant", label: "Messages & Support", icon: MessageSquare };
 const ADMIN: NavLink[] = [
+  { to: "/admin/tools", label: "Admin · Tools & Reports", icon: ShoppingBag },
   { to: "/admin/portals", label: "Admin · Portals", icon: ShieldCheck },
   { to: "/admin/health-portals", label: "Admin · Health Portals", icon: ShieldCheck },
   { to: "/admin/sir", label: "Admin · SIR Requests", icon: ShieldCheck },
