@@ -494,11 +494,17 @@ Open questions from the lead agent: ${plan.open_questions.join("; ") || "(none)"
 
   // 3 — Citation gate + audit tally per agent.
   let before = audit.citation_downgrades.length;
-  const authorities = (landUse?.authorities ?? []).map((a) => ({
-    ...a,
-    website: a.website ?? null,
-    verification: a.website && hostOf(a.website) && allowed.has(hostOf(a.website)!) ? a.verification : a.verification === "verified" ? "ai_assisted" : a.verification,
-  }));
+  const authorities = (landUse?.authorities ?? []).map((a) => {
+    // An agency URL only survives when it is an official page we actually
+    // retrieved — a model-supplied search-engine link is not a source.
+    const host = a.website ? hostOf(a.website) : null;
+    const backed = Boolean(host && allowed.has(host));
+    return {
+      ...a,
+      website: backed ? (a.website as string) : null,
+      verification: backed ? a.verification : a.verification === "verified" ? "ai_assisted" : a.verification,
+    };
+  });
   const zoning = landUse
     ? gateCitation(landUse.zoning, `zoning district ${landUse.zoning.district ?? "unknown"}`, "land_use", allowed, audit)
     : {
