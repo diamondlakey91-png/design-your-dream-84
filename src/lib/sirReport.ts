@@ -77,6 +77,17 @@ const asVerification = (v: unknown): SirVerification =>
 
 const label = (s: unknown) => String(s ?? "").replace(/_/g, " ");
 
+/**
+ * Permivio's authority library falls back to a government site-search link so a
+ * user can locate an office. That is a lookup aid, never a citation, so it is
+ * not presented as a source on the report or in the PDF.
+ */
+const citableSource = (url: unknown): string | null => {
+  const u = typeof url === "string" ? url.trim() : "";
+  if (!u) return null;
+  return /(^https?:\/\/(www\.)?(google|bing|duckduckgo|yahoo)\.)|[?&]q=/i.test(u) ? null : u;
+};
+
 /* eslint-disable @typescript-eslint/no-explicit-any */
 
 /** Build the four-section, dynamic-module report from a research record. */
@@ -97,7 +108,7 @@ export function buildSirReport(research: any): SirCoverageSection[] {
         detail: a.responsibility ?? "",
         meta: [a.role].filter(Boolean),
         verification: asVerification(a.verification),
-        source: a.website ?? null,
+        source: citableSource(a.website),
       })),
     });
   }
@@ -114,7 +125,7 @@ export function buildSirReport(research: any): SirCoverageSection[] {
           detail: research.zoning.rationale ?? "",
           meta: ["Zoning & allowable use"],
           verification: asVerification(research.zoning.verification),
-          source: research.zoning.source_url ?? null,
+          source: citableSource(research.zoning.source_url),
         },
         ...((research.zoning.items_to_confirm ?? []) as string[]).map((s, i) => ({
           id: `zoning:confirm:${i}`,
@@ -139,7 +150,7 @@ export function buildSirReport(research: any): SirCoverageSection[] {
         detail: p.notes ?? "",
         meta: [p.agency, label(p.likelihood)].filter(Boolean),
         verification: asVerification(p.verification),
-        source: p.source_url ?? null,
+        source: citableSource(p.source_url),
       })),
     });
   }
@@ -156,7 +167,7 @@ export function buildSirReport(research: any): SirCoverageSection[] {
         detail: [p.notes, p.depends_on ? `Depends on: ${p.depends_on}` : null].filter(Boolean).join("\n"),
         meta: [p.agency, p.category, label(p.likelihood)].filter(Boolean),
         verification: asVerification(p.verification),
-        source: p.source_url ?? null,
+        source: citableSource(p.source_url),
       })),
     });
   }
@@ -171,7 +182,7 @@ export function buildSirReport(research: any): SirCoverageSection[] {
         detail: p.notes ?? "",
         meta: [label(p.likelihood)],
         verification: asVerification(p.verification),
-        source: p.source_url ?? null,
+        source: citableSource(p.source_url),
       })),
     });
   }
@@ -186,7 +197,7 @@ export function buildSirReport(research: any): SirCoverageSection[] {
         detail: c.applies_because ?? "",
         meta: ["Adopted code research — not a compliance determination"],
         verification: asVerification(c.verification),
-        source: c.source_url ?? null,
+        source: citableSource(c.source_url),
       })),
     });
   }
@@ -201,7 +212,7 @@ export function buildSirReport(research: any): SirCoverageSection[] {
         detail: f.amount_or_basis ?? "",
         meta: [f.agency, "Confirm current schedule with the agency before budgeting"].filter(Boolean),
         verification: asVerification(f.verification),
-        source: f.source_url ?? null,
+        source: citableSource(f.source_url),
       })),
     });
   }
@@ -239,7 +250,7 @@ export function buildSirReport(research: any): SirCoverageSection[] {
         detail: u.coordination_required ?? "",
         meta: ["Capacity is never confirmed without a written availability letter"],
         verification: asVerification(u.verification),
-        source: u.source_url ?? null,
+        source: citableSource(u.source_url),
       })),
     });
   }
@@ -254,7 +265,7 @@ export function buildSirReport(research: any): SirCoverageSection[] {
         detail: a.requirement ?? "",
         meta: [a.authority].filter(Boolean),
         verification: asVerification(a.verification),
-        source: a.source_url ?? null,
+        source: citableSource(a.source_url),
       })),
     });
   }
@@ -269,7 +280,7 @@ export function buildSirReport(research: any): SirCoverageSection[] {
         detail: e.implication ?? "",
         meta: [e.deal_killer ? "Potential deal-killer" : null].filter(Boolean) as string[],
         verification: asVerification(e.verification),
-        source: e.source_url ?? null,
+        source: citableSource(e.source_url),
       })),
     });
   }
