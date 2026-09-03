@@ -1,5 +1,5 @@
 import { Link } from "@tanstack/react-router";
-import { ArrowRight, Info, MapPin, Building2, Clock } from "lucide-react";
+import { ArrowRight, Info, MapPin, Building2, Clock, Compass } from "lucide-react";
 import { formatDistanceToNow, isToday, format, parseISO } from "date-fns";
 import {
   TONE_CLASSES,
