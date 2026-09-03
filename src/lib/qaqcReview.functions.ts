@@ -685,7 +685,14 @@ export const generateQaQcReportPdf = createServerFn({ method: "POST" })
     const heading = (s: string) => { if (y < 110) newPage(); y -= 6; text(s, { size: 12, b: true, color: [0.05, 0.3, 0.75], gap: 6 }); };
 
     text("PERMIVIO", { size: 18, b: true, color: [0.05, 0.3, 0.75], gap: 2 });
-    text("Pre-Submission Plan QA/QC Report", { size: 14, b: true, gap: 8 });
+    text("Pre-Submission Plan QA/QC Report", { size: 14, b: true, gap: 6 });
+    if (professionallyReviewed) {
+      text("PROFESSIONALLY REVIEWED", { size: 11, b: true, color: [0.05, 0.45, 0.3], gap: 2 });
+      text(`Reviewer: ${professionalReviewRow?.reviewer_name ?? ""} · ${new Date(professionalReviewRow.reviewed_at ?? professionalReviewRow.updated_at).toLocaleDateString()}`, { size: 9, gap: 3 });
+      text("A Permivio reviewer has reviewed this report. Professional review does not convert pre-submission QA/QC into a jurisdiction determination, code-compliance certification, or engineering approval.", { size: 8, color: [0.35, 0.38, 0.44], gap: 6 });
+    } else {
+      text("AI-ASSISTED QA/QC - NOT YET PROFESSIONALLY REVIEWED", { size: 10, b: true, color: [0.55, 0.15, 0.15], gap: 6 });
+    }
     text(`Project: ${project?.name ?? ""}`);
     text(`Address: ${project?.location ?? ""}`);
     text(`Jurisdiction: ${review.jurisdiction_snapshot?.jurisdiction ?? project?.jurisdiction ?? "unconfirmed"}`);
