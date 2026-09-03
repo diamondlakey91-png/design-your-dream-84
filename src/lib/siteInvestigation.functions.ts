@@ -493,7 +493,7 @@ export const listSiteInvestigations = createServerFn({ method: "GET" })
   .handler(async ({ data, context }) => {
     const { data: rows } = await context.supabase
       .from("site_investigations")
-      .select("id, address, project_type_label, feasibility_rating, status, created_at, report_number, error")
+      .select("id, address, project_type_label, feasibility_rating, status, created_at, report_number, error, version, report_depth, complexity_level, complexity_label, progress_step, parcel_count")
       .eq("project_id", data.project_id)
       .order("created_at", { ascending: false });
     return { investigations: rows ?? [] };
