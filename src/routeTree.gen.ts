@@ -37,6 +37,7 @@ import { Route as AuthenticatedReportsIndexRouteImport } from './routes/_authent
 import { Route as AuthenticatedProjectsIndexRouteImport } from './routes/_authenticated/projects.index'
 import { Route as AuthenticatedHarvestIndexRouteImport } from './routes/_authenticated/harvest.index'
 import { Route as AuthenticatedFilingIndexRouteImport } from './routes/_authenticated/filing.index'
+import { Route as AuthenticatedFeasibilityIndexRouteImport } from './routes/_authenticated/feasibility.index'
 import { Route as AuthenticatedAssistantIndexRouteImport } from './routes/_authenticated/assistant.index'
 import { Route as ShareReportsTokenRouteImport } from './routes/share.reports.$token'
 import { Route as ApiChatStreamRouteImport } from './routes/api/chat.stream'
@@ -207,6 +208,12 @@ const AuthenticatedFilingIndexRoute =
   AuthenticatedFilingIndexRouteImport.update({
     id: '/filing/',
     path: '/filing/',
+    getParentRoute: () => AuthenticatedRouteRoute,
+  } as any)
+const AuthenticatedFeasibilityIndexRoute =
+  AuthenticatedFeasibilityIndexRouteImport.update({
+    id: '/feasibility/',
+    path: '/feasibility/',
     getParentRoute: () => AuthenticatedRouteRoute,
   } as any)
 const AuthenticatedAssistantIndexRoute =
@@ -388,6 +395,7 @@ export interface FileRoutesByFullPath {
   '/api/chat/stream': typeof ApiChatStreamRoute
   '/share/reports/$token': typeof ShareReportsTokenRoute
   '/assistant/': typeof AuthenticatedAssistantIndexRoute
+  '/feasibility/': typeof AuthenticatedFeasibilityIndexRoute
   '/filing/': typeof AuthenticatedFilingIndexRoute
   '/harvest/': typeof AuthenticatedHarvestIndexRoute
   '/projects/': typeof AuthenticatedProjectsIndexRoute
@@ -439,6 +447,7 @@ export interface FileRoutesByTo {
   '/api/chat/stream': typeof ApiChatStreamRoute
   '/share/reports/$token': typeof ShareReportsTokenRoute
   '/assistant': typeof AuthenticatedAssistantIndexRoute
+  '/feasibility': typeof AuthenticatedFeasibilityIndexRoute
   '/filing': typeof AuthenticatedFilingIndexRoute
   '/harvest': typeof AuthenticatedHarvestIndexRoute
   '/projects': typeof AuthenticatedProjectsIndexRoute
@@ -494,6 +503,7 @@ export interface FileRoutesById {
   '/api/chat/stream': typeof ApiChatStreamRoute
   '/share/reports/$token': typeof ShareReportsTokenRoute
   '/_authenticated/assistant/': typeof AuthenticatedAssistantIndexRoute
+  '/_authenticated/feasibility/': typeof AuthenticatedFeasibilityIndexRoute
   '/_authenticated/filing/': typeof AuthenticatedFilingIndexRoute
   '/_authenticated/harvest/': typeof AuthenticatedHarvestIndexRoute
   '/_authenticated/projects/': typeof AuthenticatedProjectsIndexRoute
@@ -549,6 +559,7 @@ export interface FileRouteTypes {
     | '/api/chat/stream'
     | '/share/reports/$token'
     | '/assistant/'
+    | '/feasibility/'
     | '/filing/'
     | '/harvest/'
     | '/projects/'
@@ -600,6 +611,7 @@ export interface FileRouteTypes {
     | '/api/chat/stream'
     | '/share/reports/$token'
     | '/assistant'
+    | '/feasibility'
     | '/filing'
     | '/harvest'
     | '/projects'
@@ -654,6 +666,7 @@ export interface FileRouteTypes {
     | '/api/chat/stream'
     | '/share/reports/$token'
     | '/_authenticated/assistant/'
+    | '/_authenticated/feasibility/'
     | '/_authenticated/filing/'
     | '/_authenticated/harvest/'
     | '/_authenticated/projects/'
@@ -881,6 +894,13 @@ declare module '@tanstack/react-router' {
       path: '/filing'
       fullPath: '/filing/'
       preLoaderRoute: typeof AuthenticatedFilingIndexRouteImport
+      parentRoute: typeof AuthenticatedRouteRoute
+    }
+    '/_authenticated/feasibility/': {
+      id: '/_authenticated/feasibility/'
+      path: '/feasibility'
+      fullPath: '/feasibility/'
+      preLoaderRoute: typeof AuthenticatedFeasibilityIndexRouteImport
       parentRoute: typeof AuthenticatedRouteRoute
     }
     '/_authenticated/assistant/': {
@@ -1141,6 +1161,7 @@ interface AuthenticatedRouteRouteChildren {
   AuthenticatedReportsIdRoute: typeof AuthenticatedReportsIdRoute
   AuthenticatedSirIdRoute: typeof AuthenticatedSirIdRoute
   AuthenticatedToolsCheckoutRoute: typeof AuthenticatedToolsCheckoutRoute
+  AuthenticatedFeasibilityIndexRoute: typeof AuthenticatedFeasibilityIndexRoute
   AuthenticatedFilingIndexRoute: typeof AuthenticatedFilingIndexRoute
   AuthenticatedHarvestIndexRoute: typeof AuthenticatedHarvestIndexRoute
   AuthenticatedProjectsIndexRoute: typeof AuthenticatedProjectsIndexRoute
@@ -1170,6 +1191,7 @@ const AuthenticatedRouteRouteChildren: AuthenticatedRouteRouteChildren = {
   AuthenticatedReportsIdRoute: AuthenticatedReportsIdRoute,
   AuthenticatedSirIdRoute: AuthenticatedSirIdRoute,
   AuthenticatedToolsCheckoutRoute: AuthenticatedToolsCheckoutRoute,
+  AuthenticatedFeasibilityIndexRoute: AuthenticatedFeasibilityIndexRoute,
   AuthenticatedFilingIndexRoute: AuthenticatedFilingIndexRoute,
   AuthenticatedHarvestIndexRoute: AuthenticatedHarvestIndexRoute,
   AuthenticatedProjectsIndexRoute: AuthenticatedProjectsIndexRoute,
