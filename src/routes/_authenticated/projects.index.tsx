@@ -126,11 +126,11 @@ function ProjectsPage() {
                 {projectsQ.isFetching ? <Loader2 className="size-4 animate-spin" /> : <RefreshCw className="size-4" />}
               </button>
               <Link
-                to="/dashboard"
+                to="/start"
                 className="inline-flex h-10 items-center gap-1.5 rounded-xl px-4 text-sm font-semibold text-primary-foreground"
                 style={{ background: "linear-gradient(90deg, oklch(0.66 0.19 258), oklch(0.68 0.19 305))" }}
               >
-                <Plus className="size-4" /> New Project
+                <Plus className="size-4" /> Start a Project
               </Link>
             </div>
           </div>

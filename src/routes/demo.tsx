@@ -486,6 +486,7 @@ function DemoPage() {
           <div className="mt-6 flex flex-wrap items-center justify-center gap-3">
             <Link
               to="/auth"
+              search={{ next: "/start" }}
               className="inline-flex h-12 items-center gap-2 rounded-lg bg-gradient-to-r from-blue-500 to-blue-700 px-6 text-sm font-semibold text-white shadow-[0_10px_40px_-8px_rgba(59,130,246,0.6)]"
             >
               Start a project <ArrowRight className="size-4" />
