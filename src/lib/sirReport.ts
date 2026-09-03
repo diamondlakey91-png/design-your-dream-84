@@ -114,6 +114,7 @@ export function buildSirReport(research: any): SirCoverageSection[] {
           detail: research.zoning.rationale ?? "",
           meta: ["Zoning & allowable use"],
           verification: asVerification(research.zoning.verification),
+          source: research.zoning.source_url ?? null,
         },
         ...((research.zoning.items_to_confirm ?? []) as string[]).map((s, i) => ({
           id: `zoning:confirm:${i}`,
@@ -138,6 +139,7 @@ export function buildSirReport(research: any): SirCoverageSection[] {
         detail: p.notes ?? "",
         meta: [p.agency, label(p.likelihood)].filter(Boolean),
         verification: asVerification(p.verification),
+        source: p.source_url ?? null,
       })),
     });
   }
@@ -154,6 +156,7 @@ export function buildSirReport(research: any): SirCoverageSection[] {
         detail: [p.notes, p.depends_on ? `Depends on: ${p.depends_on}` : null].filter(Boolean).join("\n"),
         meta: [p.agency, p.category, label(p.likelihood)].filter(Boolean),
         verification: asVerification(p.verification),
+        source: p.source_url ?? null,
       })),
     });
   }
@@ -168,6 +171,7 @@ export function buildSirReport(research: any): SirCoverageSection[] {
         detail: p.notes ?? "",
         meta: [label(p.likelihood)],
         verification: asVerification(p.verification),
+        source: p.source_url ?? null,
       })),
     });
   }
@@ -205,6 +209,7 @@ export function buildSirReport(research: any): SirCoverageSection[] {
         detail: u.coordination_required ?? "",
         meta: ["Capacity is never confirmed without a written availability letter"],
         verification: asVerification(u.verification),
+        source: u.source_url ?? null,
       })),
     });
   }
@@ -369,6 +374,9 @@ export function effectiveFindingText(finding: SirFinding, review?: SirFindingRev
 
 export const SIR_REPORT_DISCLAIMER =
   "This Site Investigation Report is permitting research and decision support based on published agency material. It is not a jurisdiction determination, zoning verification, survey, engineering opinion, or legal advice. Items marked for agency confirmation must be verified with the authority having jurisdiction. Utility capacity is never confirmed without a written availability letter from the provider.";
+
+export const SIR_AI_RESEARCH_DISCLAIMER =
+  "This research was produced by Permivio's Lead Project Intelligence Agent, which coordinates specialist research agents over published agency and utility-provider material. A finding is only labelled verified when it cites an official source page retrieved during this research pass; anything the agents inferred is labelled AI assisted, and anything the record could not establish is labelled needs confirmation rather than filled in. No finding in this report is a jurisdiction determination.";
 
 export const SIR_PROFESSIONAL_REVIEW_NOTE =
   "A Permivio reviewer has reviewed each finding in this report and recorded an approve, modify or reject decision. Professional review does not convert research into a jurisdiction determination, code-compliance certification, or engineering approval.";

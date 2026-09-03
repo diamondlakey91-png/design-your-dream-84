@@ -1,0 +1,1 @@
+ALTER TABLE public.sir_requests ADD COLUMN IF NOT EXISTS research_audit jsonb;
