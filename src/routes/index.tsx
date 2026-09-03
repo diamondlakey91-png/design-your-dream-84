@@ -125,6 +125,146 @@ function Landing() {
         </div>
       </section>
 
+      {/* Beginner-friendly three steps */}
+      <section className="relative mx-auto max-w-7xl px-6 pb-8 pt-4">
+        <div className="mx-auto max-w-2xl text-center">
+          <p className="font-mono text-[11px] uppercase tracking-[0.3em] text-blue-400/80">Simple to start</p>
+          <h2 className="mt-3 bg-gradient-to-b from-white via-blue-100 to-blue-500 bg-clip-text text-3xl font-bold tracking-tight text-transparent md:text-4xl">
+            Built for people who aren&apos;t permitting experts.
+          </h2>
+          <p className="mx-auto mt-4 max-w-xl text-pretty text-base text-blue-200/70">
+            Enter an address. Tell us what you&apos;re planning. Permivio handles the permitting intelligence behind the
+            scenes.
+          </p>
+        </div>
+
+        <div className="mt-12 grid gap-6 md:grid-cols-3">
+          {[
+            {
+              step: "1",
+              icon: MapPinCheck,
+              title: "Enter your property",
+              body: "Start with the address. Permivio confirms the property and the agencies that have a say in your project.",
+            },
+            {
+              step: "2",
+              icon: ClipboardList,
+              title: "Tell us what you're planning",
+              body: "In plain language — a new restaurant, an office fit-out, a sign, an addition. No permitting vocabulary required.",
+            },
+            {
+              step: "3",
+              icon: Route,
+              title: "Permivio builds your project path",
+              body: "You get the likely approvals, the documents to gather, the order things happen in, and what needs attention first.",
+            },
+          ].map((s) => (
+            <div
+              key={s.step}
+              className="group relative overflow-hidden rounded-2xl border border-blue-500/15 bg-gradient-to-b from-white/[0.04] to-white/[0.01] p-7 backdrop-blur transition hover:border-blue-500/30"
+            >
+              <div className="flex items-center gap-3">
+                <div className="inline-flex size-12 items-center justify-center rounded-xl bg-gradient-to-br from-blue-500 to-blue-700 text-white shadow-[0_0_40px_-8px_rgba(59,130,246,0.8)]">
+                  <s.icon className="size-5" />
+                </div>
+                <span className="font-mono text-4xl font-bold text-blue-500/20">0{s.step}</span>
+              </div>
+              <h3 className="mt-6 bg-gradient-to-r from-white to-blue-100 bg-clip-text text-lg font-semibold text-transparent">
+                {s.title}
+              </h3>
+              <p className="mt-3 text-sm leading-relaxed text-slate-400">{s.body}</p>
+            </div>
+          ))}
+        </div>
+      </section>
+
+      {/* Capability snippets */}
+      <section className="relative mx-auto max-w-7xl px-6 py-24">
+        <div className="mx-auto max-w-2xl text-center">
+          <p className="font-mono text-[11px] uppercase tracking-[0.3em] text-blue-400/80">Capabilities</p>
+          <h2 className="mt-3 bg-gradient-to-b from-white via-blue-100 to-blue-500 bg-clip-text text-3xl font-bold tracking-tight text-transparent md:text-4xl">
+            One platform. Your entire permitting path.
+          </h2>
+        </div>
+
+        <div className="mt-14 grid gap-6 md:grid-cols-2 lg:grid-cols-3">
+          {[
+            {
+              icon: MapPinCheck,
+              name: "Site Investigation",
+              question: "Can I build this here?",
+              body: "Research zoning, jurisdiction, utilities, development requirements, likely approvals, major risks, and feasibility for the exact property and proposed project.",
+              cta: "Explore site investigation",
+              to: "/site-investigation" as const,
+            },
+            {
+              icon: Route,
+              name: "Permit Roadmap",
+              question: "What do I need to get approved?",
+              body: "See likely permits, agencies, required documents, dependencies, submission sequence, and estimated project timeline.",
+              cta: "See permit roadmap",
+              to: "/auth" as const,
+            },
+            {
+              icon: FileSearch,
+              name: "Plan QA/QC",
+              question: "Are my plans ready?",
+              body: "Review architectural and engineering plans for missing information, coordination problems, major potential code concerns, and jurisdiction submission issues.",
+              cta: "Explore plan review",
+              to: "/auth" as const,
+            },
+            {
+              icon: MessagesSquare,
+              name: "Corrections Intelligence",
+              question: "I received permit comments. What do they mean?",
+              body: "Upload reviewer comments and Permivio organizes them, explains what needs to change, assigns the responsible discipline, and creates the resubmission path.",
+              cta: "See correction analysis",
+              to: "/auth" as const,
+            },
+            {
+              icon: ClipboardList,
+              name: "Project Tracking",
+              question: "Where does everything stand?",
+              body: "Track permits, review cycles, outstanding items, utilities, inspections, project milestones, deadlines, and Certificate of Occupancy readiness.",
+              cta: "See project tracking",
+              to: "/auth" as const,
+            },
+            {
+              icon: Layers,
+              name: "Site + Utility Intelligence",
+              question: "What could affect my project?",
+              body: "Identify site-development considerations, utilities, access, entitlement concerns, long-lead coordination items, and other potential project constraints.",
+              cta: "Explore project intelligence",
+              to: "/auth" as const,
+            },
+          ].map((c) => (
+            <div
+              key={c.name}
+              className="group relative flex flex-col overflow-hidden rounded-2xl border border-blue-500/15 bg-gradient-to-b from-white/[0.04] to-white/[0.01] p-7 backdrop-blur transition hover:border-blue-500/30"
+            >
+              <div
+                aria-hidden
+                className="pointer-events-none absolute inset-x-0 top-0 h-px bg-gradient-to-r from-transparent via-blue-400/60 to-transparent opacity-0 transition group-hover:opacity-100"
+              />
+              <div className="mb-5 inline-flex size-11 items-center justify-center rounded-xl bg-gradient-to-br from-blue-500/25 to-blue-700/10 text-blue-300 ring-1 ring-blue-500/40 shadow-[0_0_30px_-8px_rgba(59,130,246,0.55)]">
+                <c.icon className="size-5" />
+              </div>
+              <h3 className="bg-gradient-to-r from-white to-blue-100 bg-clip-text text-lg font-semibold text-transparent">
+                {c.name}
+              </h3>
+              <p className="mt-2 text-sm font-medium text-blue-200/90">&ldquo;{c.question}&rdquo;</p>
+              <p className="mt-3 text-sm leading-relaxed text-slate-400">{c.body}</p>
+              <Link
+                to={c.to}
+                className="mt-6 inline-flex items-center gap-1.5 text-sm font-semibold text-blue-300 transition hover:text-blue-100"
+              >
+                {c.cta} <ArrowRight className="size-4" />
+              </Link>
+            </div>
+          ))}
+        </div>
+      </section>
+
       {/* Feature strip */}
       <section
         id="features"
