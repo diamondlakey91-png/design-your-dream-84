@@ -46,6 +46,824 @@ export type Database = {
           },
         ]
       }
+      agent_client_questions: {
+        Row: {
+          agent_key: string
+          agent_run_id: string
+          answer: string | null
+          answered_at: string | null
+          answered_by: string | null
+          blocking: boolean
+          created_at: string
+          id: string
+          question: string
+          question_key: string
+          who_can_answer: string | null
+          why_it_matters: string
+        }
+        Insert: {
+          agent_key: string
+          agent_run_id: string
+          answer?: string | null
+          answered_at?: string | null
+          answered_by?: string | null
+          blocking?: boolean
+          created_at?: string
+          id?: string
+          question: string
+          question_key: string
+          who_can_answer?: string | null
+          why_it_matters?: string
+        }
+        Update: {
+          agent_key?: string
+          agent_run_id?: string
+          answer?: string | null
+          answered_at?: string | null
+          answered_by?: string | null
+          blocking?: boolean
+          created_at?: string
+          id?: string
+          question?: string
+          question_key?: string
+          who_can_answer?: string | null
+          why_it_matters?: string
+        }
+        Relationships: [
+          {
+            foreignKeyName: "agent_client_questions_agent_run_id_fkey"
+            columns: ["agent_run_id"]
+            isOneToOne: false
+            referencedRelation: "agent_runs"
+            referencedColumns: ["id"]
+          },
+        ]
+      }
+      agent_conflicts: {
+        Row: {
+          affects: string[]
+          agent_run_id: string
+          conflict_type: string
+          created_at: string
+          description: string
+          finding_ids: string[]
+          id: string
+          resolution_notes: string | null
+          resolution_status: string
+          resolved_at: string | null
+          resolved_by: string | null
+          severity: string
+          source_ids: string[]
+        }
+        Insert: {
+          affects?: string[]
+          agent_run_id: string
+          conflict_type: string
+          created_at?: string
+          description: string
+          finding_ids?: string[]
+          id?: string
+          resolution_notes?: string | null
+          resolution_status?: string
+          resolved_at?: string | null
+          resolved_by?: string | null
+          severity?: string
+          source_ids?: string[]
+        }
+        Update: {
+          affects?: string[]
+          agent_run_id?: string
+          conflict_type?: string
+          created_at?: string
+          description?: string
+          finding_ids?: string[]
+          id?: string
+          resolution_notes?: string | null
+          resolution_status?: string
+          resolved_at?: string | null
+          resolved_by?: string | null
+          severity?: string
+          source_ids?: string[]
+        }
+        Relationships: [
+          {
+            foreignKeyName: "agent_conflicts_agent_run_id_fkey"
+            columns: ["agent_run_id"]
+            isOneToOne: false
+            referencedRelation: "agent_runs"
+            referencedColumns: ["id"]
+          },
+        ]
+      }
+      agent_definitions: {
+        Row: {
+          active: boolean
+          agent_key: string
+          client_visible_output_allowed: boolean
+          concurrency_safe: boolean
+          created_at: string
+          dependencies: string[]
+          description: string
+          human_review_required: boolean
+          id: string
+          max_attempts: number
+          model: Json
+          name: string
+          optional_inputs: string[]
+          output_schema: string
+          phases: string[]
+          prompt_version: string
+          required_inputs: string[]
+          service_products: string[]
+          timeout_ms: number
+          tools_allowed: string[]
+          updated_at: string
+          version: string
+        }
+        Insert: {
+          active?: boolean
+          agent_key: string
+          client_visible_output_allowed?: boolean
+          concurrency_safe?: boolean
+          created_at?: string
+          dependencies?: string[]
+          description: string
+          human_review_required?: boolean
+          id?: string
+          max_attempts?: number
+          model?: Json
+          name: string
+          optional_inputs?: string[]
+          output_schema?: string
+          phases?: string[]
+          prompt_version?: string
+          required_inputs?: string[]
+          service_products?: string[]
+          timeout_ms?: number
+          tools_allowed?: string[]
+          updated_at?: string
+          version: string
+        }
+        Update: {
+          active?: boolean
+          agent_key?: string
+          client_visible_output_allowed?: boolean
+          concurrency_safe?: boolean
+          created_at?: string
+          dependencies?: string[]
+          description?: string
+          human_review_required?: boolean
+          id?: string
+          max_attempts?: number
+          model?: Json
+          name?: string
+          optional_inputs?: string[]
+          output_schema?: string
+          phases?: string[]
+          prompt_version?: string
+          required_inputs?: string[]
+          service_products?: string[]
+          timeout_ms?: number
+          tools_allowed?: string[]
+          updated_at?: string
+          version?: string
+        }
+        Relationships: []
+      }
+      agent_finding_sources: {
+        Row: {
+          agent_finding_id: string
+          agent_source_id: string
+          created_at: string
+          id: string
+          primary_source: boolean
+          support_description: string | null
+          supporting_excerpt: string | null
+        }
+        Insert: {
+          agent_finding_id: string
+          agent_source_id: string
+          created_at?: string
+          id?: string
+          primary_source?: boolean
+          support_description?: string | null
+          supporting_excerpt?: string | null
+        }
+        Update: {
+          agent_finding_id?: string
+          agent_source_id?: string
+          created_at?: string
+          id?: string
+          primary_source?: boolean
+          support_description?: string | null
+          supporting_excerpt?: string | null
+        }
+        Relationships: [
+          {
+            foreignKeyName: "agent_finding_sources_agent_finding_id_fkey"
+            columns: ["agent_finding_id"]
+            isOneToOne: false
+            referencedRelation: "agent_findings"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "agent_finding_sources_agent_source_id_fkey"
+            columns: ["agent_source_id"]
+            isOneToOne: false
+            referencedRelation: "agent_sources"
+            referencedColumns: ["id"]
+          },
+        ]
+      }
+      agent_findings: {
+        Row: {
+          agency: string | null
+          agent_key: string
+          agent_run_id: string
+          agent_task_id: string | null
+          analysis: string
+          applicability: string
+          category: string
+          client_visible: boolean
+          confidence: string
+          confirmation_required: boolean
+          cost_impact: string | null
+          created_at: string
+          finding: string
+          finding_key: string
+          geographic_scope: string | null
+          id: string
+          module: string
+          recommendation: string | null
+          responsible_party: string | null
+          review_action: string | null
+          reviewed_at: string | null
+          reviewed_by: string | null
+          risk_level: string
+          schedule_impact: string | null
+          superseded_by: string | null
+          title: string
+          updated_at: string
+          verification_status: string
+        }
+        Insert: {
+          agency?: string | null
+          agent_key: string
+          agent_run_id: string
+          agent_task_id?: string | null
+          analysis?: string
+          applicability?: string
+          category?: string
+          client_visible?: boolean
+          confidence?: string
+          confirmation_required?: boolean
+          cost_impact?: string | null
+          created_at?: string
+          finding: string
+          finding_key: string
+          geographic_scope?: string | null
+          id?: string
+          module: string
+          recommendation?: string | null
+          responsible_party?: string | null
+          review_action?: string | null
+          reviewed_at?: string | null
+          reviewed_by?: string | null
+          risk_level?: string
+          schedule_impact?: string | null
+          superseded_by?: string | null
+          title: string
+          updated_at?: string
+          verification_status?: string
+        }
+        Update: {
+          agency?: string | null
+          agent_key?: string
+          agent_run_id?: string
+          agent_task_id?: string | null
+          analysis?: string
+          applicability?: string
+          category?: string
+          client_visible?: boolean
+          confidence?: string
+          confirmation_required?: boolean
+          cost_impact?: string | null
+          created_at?: string
+          finding?: string
+          finding_key?: string
+          geographic_scope?: string | null
+          id?: string
+          module?: string
+          recommendation?: string | null
+          responsible_party?: string | null
+          review_action?: string | null
+          reviewed_at?: string | null
+          reviewed_by?: string | null
+          risk_level?: string
+          schedule_impact?: string | null
+          superseded_by?: string | null
+          title?: string
+          updated_at?: string
+          verification_status?: string
+        }
+        Relationships: [
+          {
+            foreignKeyName: "agent_findings_agent_run_id_fkey"
+            columns: ["agent_run_id"]
+            isOneToOne: false
+            referencedRelation: "agent_runs"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "agent_findings_agent_task_id_fkey"
+            columns: ["agent_task_id"]
+            isOneToOne: false
+            referencedRelation: "agent_tasks"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "agent_findings_superseded_by_fkey"
+            columns: ["superseded_by"]
+            isOneToOne: false
+            referencedRelation: "agent_findings"
+            referencedColumns: ["id"]
+          },
+        ]
+      }
+      agent_quality_checks: {
+        Row: {
+          agent_run_id: string
+          blocking: boolean
+          check_key: string
+          created_at: string
+          detail: string | null
+          id: string
+          label: string
+          status: string
+        }
+        Insert: {
+          agent_run_id: string
+          blocking?: boolean
+          check_key: string
+          created_at?: string
+          detail?: string | null
+          id?: string
+          label: string
+          status?: string
+        }
+        Update: {
+          agent_run_id?: string
+          blocking?: boolean
+          check_key?: string
+          created_at?: string
+          detail?: string | null
+          id?: string
+          label?: string
+          status?: string
+        }
+        Relationships: [
+          {
+            foreignKeyName: "agent_quality_checks_agent_run_id_fkey"
+            columns: ["agent_run_id"]
+            isOneToOne: false
+            referencedRelation: "agent_runs"
+            referencedColumns: ["id"]
+          },
+        ]
+      }
+      agent_review_actions: {
+        Row: {
+          action: string
+          agent_finding_id: string | null
+          agent_run_id: string
+          created_at: string
+          id: string
+          notes: string | null
+          reviewer_id: string | null
+          reviewer_name: string | null
+          stage: string
+        }
+        Insert: {
+          action: string
+          agent_finding_id?: string | null
+          agent_run_id: string
+          created_at?: string
+          id?: string
+          notes?: string | null
+          reviewer_id?: string | null
+          reviewer_name?: string | null
+          stage?: string
+        }
+        Update: {
+          action?: string
+          agent_finding_id?: string | null
+          agent_run_id?: string
+          created_at?: string
+          id?: string
+          notes?: string | null
+          reviewer_id?: string | null
+          reviewer_name?: string | null
+          stage?: string
+        }
+        Relationships: [
+          {
+            foreignKeyName: "agent_review_actions_agent_finding_id_fkey"
+            columns: ["agent_finding_id"]
+            isOneToOne: false
+            referencedRelation: "agent_findings"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "agent_review_actions_agent_run_id_fkey"
+            columns: ["agent_run_id"]
+            isOneToOne: false
+            referencedRelation: "agent_runs"
+            referencedColumns: ["id"]
+          },
+        ]
+      }
+      agent_runs: {
+        Row: {
+          blocking_question_count: number
+          client_stage: string
+          completed_at: string | null
+          context_snapshot: Json
+          created_at: string
+          delivered_at: string | null
+          failure_reason: string | null
+          id: string
+          organization_id: string | null
+          professional_review_required: boolean
+          progress_percent: number
+          project_id: string | null
+          qa_status: string
+          requested_by: string | null
+          requested_deliverable: string
+          review_stage: string
+          revision: number
+          service_order_id: string | null
+          sir_request_id: string | null
+          started_at: string | null
+          status: string
+          supersedes_run_id: string | null
+          total_credits_reserved: number
+          total_credits_used: number
+          total_estimated_cost: number
+          updated_at: string
+          workflow_key: string
+          workflow_version: string
+        }
+        Insert: {
+          blocking_question_count?: number
+          client_stage?: string
+          completed_at?: string | null
+          context_snapshot?: Json
+          created_at?: string
+          delivered_at?: string | null
+          failure_reason?: string | null
+          id?: string
+          organization_id?: string | null
+          professional_review_required?: boolean
+          progress_percent?: number
+          project_id?: string | null
+          qa_status?: string
+          requested_by?: string | null
+          requested_deliverable?: string
+          review_stage?: string
+          revision?: number
+          service_order_id?: string | null
+          sir_request_id?: string | null
+          started_at?: string | null
+          status?: string
+          supersedes_run_id?: string | null
+          total_credits_reserved?: number
+          total_credits_used?: number
+          total_estimated_cost?: number
+          updated_at?: string
+          workflow_key: string
+          workflow_version?: string
+        }
+        Update: {
+          blocking_question_count?: number
+          client_stage?: string
+          completed_at?: string | null
+          context_snapshot?: Json
+          created_at?: string
+          delivered_at?: string | null
+          failure_reason?: string | null
+          id?: string
+          organization_id?: string | null
+          professional_review_required?: boolean
+          progress_percent?: number
+          project_id?: string | null
+          qa_status?: string
+          requested_by?: string | null
+          requested_deliverable?: string
+          review_stage?: string
+          revision?: number
+          service_order_id?: string | null
+          sir_request_id?: string | null
+          started_at?: string | null
+          status?: string
+          supersedes_run_id?: string | null
+          total_credits_reserved?: number
+          total_credits_used?: number
+          total_estimated_cost?: number
+          updated_at?: string
+          workflow_key?: string
+          workflow_version?: string
+        }
+        Relationships: [
+          {
+            foreignKeyName: "agent_runs_organization_id_fkey"
+            columns: ["organization_id"]
+            isOneToOne: false
+            referencedRelation: "organizations"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "agent_runs_project_id_fkey"
+            columns: ["project_id"]
+            isOneToOne: false
+            referencedRelation: "projects"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "agent_runs_supersedes_run_id_fkey"
+            columns: ["supersedes_run_id"]
+            isOneToOne: false
+            referencedRelation: "agent_runs"
+            referencedColumns: ["id"]
+          },
+        ]
+      }
+      agent_sources: {
+        Row: {
+          accessed_at: string | null
+          agent_run_id: string
+          agent_task_id: string | null
+          authority_level: string
+          code_section: string | null
+          created_at: string
+          effective_date: string | null
+          geographic_scope: string | null
+          id: string
+          map_layer: string | null
+          page_reference: string | null
+          publisher: string
+          retrieved: boolean
+          source_key: string
+          source_type: string
+          stale: boolean
+          title: string
+          uploaded_document_id: string | null
+          url: string | null
+        }
+        Insert: {
+          accessed_at?: string | null
+          agent_run_id: string
+          agent_task_id?: string | null
+          authority_level?: string
+          code_section?: string | null
+          created_at?: string
+          effective_date?: string | null
+          geographic_scope?: string | null
+          id?: string
+          map_layer?: string | null
+          page_reference?: string | null
+          publisher: string
+          retrieved?: boolean
+          source_key: string
+          source_type: string
+          stale?: boolean
+          title: string
+          uploaded_document_id?: string | null
+          url?: string | null
+        }
+        Update: {
+          accessed_at?: string | null
+          agent_run_id?: string
+          agent_task_id?: string | null
+          authority_level?: string
+          code_section?: string | null
+          created_at?: string
+          effective_date?: string | null
+          geographic_scope?: string | null
+          id?: string
+          map_layer?: string | null
+          page_reference?: string | null
+          publisher?: string
+          retrieved?: boolean
+          source_key?: string
+          source_type?: string
+          stale?: boolean
+          title?: string
+          uploaded_document_id?: string | null
+          url?: string | null
+        }
+        Relationships: [
+          {
+            foreignKeyName: "agent_sources_agent_run_id_fkey"
+            columns: ["agent_run_id"]
+            isOneToOne: false
+            referencedRelation: "agent_runs"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "agent_sources_agent_task_id_fkey"
+            columns: ["agent_task_id"]
+            isOneToOne: false
+            referencedRelation: "agent_tasks"
+            referencedColumns: ["id"]
+          },
+        ]
+      }
+      agent_tasks: {
+        Row: {
+          agent_key: string
+          agent_run_id: string
+          agent_version: string
+          attempt: number
+          completed_at: string | null
+          created_at: string
+          dependencies: string[]
+          error: string | null
+          id: string
+          input_snapshot: Json | null
+          max_attempts: number
+          model: string | null
+          optional: boolean
+          output_snapshot: Json | null
+          parallel_group: number
+          prompt_version: string
+          sequence: number
+          started_at: string | null
+          status: string
+          updated_at: string
+        }
+        Insert: {
+          agent_key: string
+          agent_run_id: string
+          agent_version?: string
+          attempt?: number
+          completed_at?: string | null
+          created_at?: string
+          dependencies?: string[]
+          error?: string | null
+          id?: string
+          input_snapshot?: Json | null
+          max_attempts?: number
+          model?: string | null
+          optional?: boolean
+          output_snapshot?: Json | null
+          parallel_group?: number
+          prompt_version?: string
+          sequence?: number
+          started_at?: string | null
+          status?: string
+          updated_at?: string
+        }
+        Update: {
+          agent_key?: string
+          agent_run_id?: string
+          agent_version?: string
+          attempt?: number
+          completed_at?: string | null
+          created_at?: string
+          dependencies?: string[]
+          error?: string | null
+          id?: string
+          input_snapshot?: Json | null
+          max_attempts?: number
+          model?: string | null
+          optional?: boolean
+          output_snapshot?: Json | null
+          parallel_group?: number
+          prompt_version?: string
+          sequence?: number
+          started_at?: string | null
+          status?: string
+          updated_at?: string
+        }
+        Relationships: [
+          {
+            foreignKeyName: "agent_tasks_agent_run_id_fkey"
+            columns: ["agent_run_id"]
+            isOneToOne: false
+            referencedRelation: "agent_runs"
+            referencedColumns: ["id"]
+          },
+        ]
+      }
+      agent_usage_ledger: {
+        Row: {
+          agent_run_id: string
+          agent_task_id: string | null
+          charge_key: string
+          created_at: string
+          credits_used: number
+          document_pages: number
+          entry_type: string
+          estimated_cost: number
+          id: string
+          input_units: number
+          model: string | null
+          organization_id: string | null
+          output_units: number
+          research_calls: number
+        }
+        Insert: {
+          agent_run_id: string
+          agent_task_id?: string | null
+          charge_key: string
+          created_at?: string
+          credits_used?: number
+          document_pages?: number
+          entry_type?: string
+          estimated_cost?: number
+          id?: string
+          input_units?: number
+          model?: string | null
+          organization_id?: string | null
+          output_units?: number
+          research_calls?: number
+        }
+        Update: {
+          agent_run_id?: string
+          agent_task_id?: string | null
+          charge_key?: string
+          created_at?: string
+          credits_used?: number
+          document_pages?: number
+          entry_type?: string
+          estimated_cost?: number
+          id?: string
+          input_units?: number
+          model?: string | null
+          organization_id?: string | null
+          output_units?: number
+          research_calls?: number
+        }
+        Relationships: [
+          {
+            foreignKeyName: "agent_usage_ledger_agent_run_id_fkey"
+            columns: ["agent_run_id"]
+            isOneToOne: false
+            referencedRelation: "agent_runs"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "agent_usage_ledger_agent_task_id_fkey"
+            columns: ["agent_task_id"]
+            isOneToOne: false
+            referencedRelation: "agent_tasks"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "agent_usage_ledger_organization_id_fkey"
+            columns: ["organization_id"]
+            isOneToOne: false
+            referencedRelation: "organizations"
+            referencedColumns: ["id"]
+          },
+        ]
+      }
+      agent_workflows: {
+        Row: {
+          active: boolean
+          configuration: Json
+          created_at: string
+          id: string
+          name: string
+          service_product_key: string | null
+          updated_at: string
+          version: string
+          workflow_key: string
+        }
+        Insert: {
+          active?: boolean
+          configuration?: Json
+          created_at?: string
+          id?: string
+          name: string
+          service_product_key?: string | null
+          updated_at?: string
+          version: string
+          workflow_key: string
+        }
+        Update: {
+          active?: boolean
+          configuration?: Json
+          created_at?: string
+          id?: string
+          name?: string
+          service_product_key?: string | null
+          updated_at?: string
+          version?: string
+          workflow_key?: string
+        }
+        Relationships: []
+      }
       authorities: {
         Row: {
           created_at: string
@@ -4523,6 +5341,7 @@ export type Database = {
       [_ in never]: never
     }
     Functions: {
+      can_access_agent_run: { Args: { _run_id: string }; Returns: boolean }
       can_access_project: { Args: { _project_id: string }; Returns: boolean }
       can_write_project: { Args: { _project_id: string }; Returns: boolean }
       has_active_subscription: {
@@ -4543,6 +5362,7 @@ export type Database = {
         }
         Returns: boolean
       }
+      is_agent_reviewer: { Args: { _org_id: string }; Returns: boolean }
       is_org_member: { Args: { _org_id: string }; Returns: boolean }
       roadmap_visible: { Args: { _roadmap_id: string }; Returns: boolean }
     }
