@@ -641,14 +641,17 @@ export const generateQaQcReportPdf = createServerFn({ method: "POST" })
   .inputValidator((d: unknown) => z.object({ review_id: z.string().uuid() }).parse(d))
   .handler(async ({ data, context }) => {
     const sb = context.supabase;
-    const [r, sheets, findings] = await Promise.all([
+    const [r, sheets, findings, professionalReview] = await Promise.all([
       sb.from("qaqc_reviews").select("*").eq("id", data.review_id).maybeSingle(),
       sb.from("qaqc_sheets").select("*").eq("review_id", data.review_id).order("sort_order", { ascending: true }),
       sb.from("qaqc_findings").select("*").eq("review_id", data.review_id).order("finding_no", { ascending: true }),
+      sb.from("professional_reviews").select("*").eq("target_type", "qaqc_review").eq("target_id", data.review_id).order("created_at", { ascending: false }).limit(1).maybeSingle(),
     ]);
     // eslint-disable-next-line @typescript-eslint/no-explicit-any
     const review = r.data as any;
     if (!review) throw new Error("Review not found");
+    const professionalReviewRow = professionalReview.data;
+    const professionallyReviewed = professionalReviewRow?.status === "completed";
     const { data: project } = await sb.from("projects").select("name, location, jurisdiction, project_type").eq("id", review.project_id).maybeSingle();
 
     const { PDFDocument, StandardFonts, rgb } = await import("pdf-lib");
@@ -682,7 +685,14 @@ export const generateQaQcReportPdf = createServerFn({ method: "POST" })
     const heading = (s: string) => { if (y < 110) newPage(); y -= 6; text(s, { size: 12, b: true, color: [0.05, 0.3, 0.75], gap: 6 }); };
 
     text("PERMIVIO", { size: 18, b: true, color: [0.05, 0.3, 0.75], gap: 2 });
-    text("Pre-Submission Plan QA/QC Report", { size: 14, b: true, gap: 8 });
+    text("Pre-Submission Plan QA/QC Report", { size: 14, b: true, gap: 6 });
+    if (professionallyReviewed) {
+      text("PROFESSIONALLY REVIEWED", { size: 11, b: true, color: [0.05, 0.45, 0.3], gap: 2 });
+      text(`Reviewer: ${professionalReviewRow?.reviewer_name ?? ""} · ${new Date(professionalReviewRow.reviewed_at ?? professionalReviewRow.updated_at).toLocaleDateString()}`, { size: 9, gap: 3 });
+      text("A Permivio reviewer has reviewed this report. Professional review does not convert pre-submission QA/QC into a jurisdiction determination, code-compliance certification, or engineering approval.", { size: 8, color: [0.35, 0.38, 0.44], gap: 6 });
+    } else {
+      text("AI-ASSISTED QA/QC - NOT YET PROFESSIONALLY REVIEWED", { size: 10, b: true, color: [0.55, 0.15, 0.15], gap: 6 });
+    }
     text(`Project: ${project?.name ?? ""}`);
     text(`Address: ${project?.location ?? ""}`);
     text(`Jurisdiction: ${review.jurisdiction_snapshot?.jurisdiction ?? project?.jurisdiction ?? "unconfirmed"}`);
