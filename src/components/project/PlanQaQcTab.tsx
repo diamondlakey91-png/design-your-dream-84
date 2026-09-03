@@ -303,6 +303,31 @@ export function PlanQaQcTab({ projectId, userId }: { projectId: string; userId: 
           {/* Inventory */}
           <div className="space-y-2">
             <p className="text-[11px] font-mono uppercase tracking-wider text-muted-foreground">Drawing set inventory</p>
+            <div className="flex flex-wrap gap-2 text-[11px] font-mono uppercase tracking-wider">
+              <span className="rounded-lg border border-border px-2.5 py-1.5 text-muted-foreground">{sheets.length} sheets detected</span>
+              <span
+                className={`rounded-lg border px-2.5 py-1.5 ${
+                  missingSheets.length ? "border-red-500/40 text-red-400" : "border-border text-muted-foreground"
+                }`}
+              >
+                {missingSheets.length} missing sheet{missingSheets.length === 1 ? "" : "s"}
+              </span>
+            </div>
+            {gapBlocks.some((b) => b.items.length > 0) && (
+              <div className="rounded-xl border border-sky-500/30 bg-sky-500/5 p-4">
+                <p className="text-[11px] font-mono uppercase tracking-wider text-sky-400">Set completeness gaps (AI-identified — verify against your issued set)</p>
+                <ul className="mt-2 space-y-1 text-xs">
+                  {gapBlocks
+                    .filter((b) => b.items.length > 0)
+                    .map((b) => (
+                      <li key={b.label}>
+                        <span className="text-foreground">{b.label}:</span>{" "}
+                        <span className="text-muted-foreground">{b.items.join(", ")}</span>
+                      </li>
+                    ))}
+                </ul>
+              </div>
+            )}
             <QaQcInventoryTable sheets={sheets} />
           </div>
 
