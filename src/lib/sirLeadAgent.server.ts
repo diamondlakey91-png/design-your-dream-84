@@ -224,6 +224,64 @@ const DecisionSchema = z.object({
   recommended_next_steps: looseList(400, 12),
 });
 
+const CodesSchema = z.object({
+  codes: z
+    .array(
+      z.object({
+        discipline: looseString(80),
+        code_and_edition: looseString(200),
+        applies_because: looseString(600),
+        verification: Verification,
+        ...Cited,
+      }),
+    )
+    .max(14),
+  review_notes: looseList(400, 8),
+});
+
+const AccessSchema = z.object({
+  access: z
+    .array(
+      z.object({
+        item: looseString(160),
+        authority: looseText(160),
+        requirement: looseString(600),
+        verification: Verification,
+        ...Cited,
+      }),
+    )
+    .max(12),
+});
+
+const EnvironmentalSchema = z.object({
+  environmental: z
+    .array(
+      z.object({
+        constraint: looseString(160),
+        status: looseEnum(["present", "possible", "not_indicated", "needs_confirmation"] as const, "needs_confirmation"),
+        implication: looseString(600),
+        deal_killer: z.boolean().optional(),
+        verification: Verification,
+        ...Cited,
+      }),
+    )
+    .max(14),
+});
+
+const FeeSchema = z.object({
+  fees: z
+    .array(
+      z.object({
+        item: looseString(160),
+        agency: looseText(160),
+        amount_or_basis: looseString(300),
+        verification: Verification,
+        ...Cited,
+      }),
+    )
+    .max(16),
+});
+
 /* ------------------------------------------------------------------ helpers */
 
 function hostOf(url: string): string | null {
@@ -379,7 +437,7 @@ Open questions from the lead agent: ${plan.open_questions.join("; ") || "(none)"
     }
   };
 
-  const [landUse, permitPath, site, decision] = await Promise.all([
+  const [landUse, permitPath, site, codesRes, accessRes, envRes, feeRes, decision] = await Promise.all([
     settle("land_use", "Jurisdiction, zoning & entitlements", () =>
       ask(
         `You are the JURISDICTION & LAND USE AGENT.\n\n${facts}\n\n${assignment}\n\n${evidence}\n\nIdentify every authority having jurisdiction, research the zoning district and whether the intended use is permitted, and list entitlement / site-development approvals. Never state a final zoning determination.\n\nReturn JSON: { "ahj_summary": "", "authorities": [{"role":"","official_name":"","responsibility":"","website":null,"verification":""}], "jurisdiction_verification": "", "zoning": {"district":null,"use_conclusion":"","rationale":"","items_to_confirm":[],"verification":"","source_url":null}, "entitlements": [{"name":"","agency":"","category":"","likelihood":"","notes":null,"verification":"","source_url":null}] }`,
@@ -396,6 +454,34 @@ Open questions from the lead agent: ${plan.open_questions.join("; ") || "(none)"
       ask(
         `You are the SITE & INFRASTRUCTURE AGENT.\n\n${facts}\n\n${assignment}\n\n${evidence}\n\nIdentify the utility providers and the coordination each requires, plus site constraints visible in agency records. Capacity is never confirmed without a written availability letter.\n\nReturn JSON: { "utilities": [{"utility":"","provider":null,"coordination_required":"","verification":"","source_url":null}], "site_constraints": [] }`,
         SiteSchema,
+      ),
+    ),
+    settle("building_fire_health", "Building, fire & health codes", () =>
+      ask(
+        `You are the BUILDING, FIRE & HEALTH CODE AGENT.\n\n${facts}\n\n${assignment}\n\n${evidence}\n\nIdentify the code editions this jurisdiction has adopted that govern this project (building, residential, fire, mechanical, electrical, plumbing, energy, accessibility, and health/food-service where the use requires it), and why each applies to THIS scope. Do not state whether the project complies.\n\nReturn JSON: { "codes": [{"discipline":"","code_and_edition":"","applies_because":"","verification":"","source_url":null}], "review_notes": [] }`,
+        CodesSchema,
+        9000,
+      ),
+    ),
+    settle("transportation_access", "Transportation & site access", () =>
+      ask(
+        `You are the TRANSPORTATION & ACCESS AGENT.\n\n${facts}\n\n${assignment}\n\n${evidence}\n\nIdentify roadway jurisdiction for the fronting street(s), driveway/entrance permit and right-of-way requirements, traffic study or trip-generation triggers, sidewalk/streetscape obligations, and fire-apparatus access requirements that apply to this use. Name the controlling authority for each.\n\nReturn JSON: { "access": [{"item":"","authority":null,"requirement":"","verification":"","source_url":null}] }`,
+        AccessSchema,
+        9000,
+      ),
+    ),
+    settle("environmental_constraints", "Environmental constraints", () =>
+      ask(
+        `You are the ENVIRONMENTAL CONSTRAINTS AGENT.\n\n${facts}\n\n${assignment}\n\n${evidence}\n\nAssess floodplain, stormwater management, wetlands/waters, forest or tree protection, critical/resource protection areas, steep slopes, historic review and known contamination review that could apply at this site. Use "present" only when an official source states it for this location; otherwise "possible" or "needs_confirmation". Mark deal_killer true only for a constraint that could prevent the intended use.\n\nReturn JSON: { "environmental": [{"constraint":"","status":"present|possible|not_indicated|needs_confirmation","implication":"","deal_killer":false,"verification":"","source_url":null}] }`,
+        EnvironmentalSchema,
+        9000,
+      ),
+    ),
+    settle("fee_schedule", "Fees & cost exposure", () =>
+      ask(
+        `You are the FEE SCHEDULE AGENT.\n\n${facts}\n\n${assignment}\n\n${evidence}\n\nResearch the published fee basis for the approvals this project needs (permit fees, plan review, impact/development fees, utility connection or availability fees, right-of-way fees). Copy amounts or the calculation basis ONLY from the supplied evidence; never estimate a dollar figure. When no published schedule was retrieved, emit the item with amount_or_basis describing what must be requested and verification needs_confirmation.\n\nReturn JSON: { "fees": [{"item":"","agency":null,"amount_or_basis":"","verification":"","source_url":null}] }`,
+        FeeSchema,
+        9000,
       ),
     ),
     settle("risk_decision", "Schedule, risk & decision support", () =>
@@ -437,8 +523,33 @@ Open questions from the lead agent: ${plan.open_questions.join("; ") || "(none)"
   const utilities = (site?.utilities ?? []).map((u, i) => gateCitation(u, u.utility || `utility ${i}`, "site_infrastructure", allowed, audit));
   if (site) audit.agents.push(tally("site_infrastructure", "Site & infrastructure", utilities, before, audit));
 
+  before = audit.citation_downgrades.length;
+  const codes = (codesRes?.codes ?? []).map((c, i) => gateCitation(c, c.code_and_edition || `code ${i}`, "building_fire_health", allowed, audit));
+  if (codesRes) audit.agents.push(tally("building_fire_health", "Building, fire & health codes", codes, before, audit));
+
+  before = audit.citation_downgrades.length;
+  const access = (accessRes?.access ?? []).map((a, i) => gateCitation(a, a.item || `access item ${i}`, "transportation_access", allowed, audit));
+  if (accessRes) audit.agents.push(tally("transportation_access", "Transportation & site access", access, before, audit));
+
+  before = audit.citation_downgrades.length;
+  const environmental = (envRes?.environmental ?? []).map((e, i) => gateCitation(e, e.constraint || `constraint ${i}`, "environmental_constraints", allowed, audit));
+  if (envRes) audit.agents.push(tally("environmental_constraints", "Environmental constraints", environmental, before, audit));
+
+  before = audit.citation_downgrades.length;
+  const fees = (feeRes?.fees ?? []).map((f, i) => gateCitation(f, f.item || `fee ${i}`, "fee_schedule", allowed, audit));
+  if (feeRes) audit.agents.push(tally("fee_schedule", "Fees & cost exposure", fees, before, audit));
+
   const risks = [
     ...(decision?.risks ?? []),
+    // A constraint the environmental agent flags as a potential deal-killer is
+    // carried into the risk matrix so it cannot be missed in the report.
+    ...environmental
+      .filter((e) => e.deal_killer || e.status === "present")
+      .map((e) => ({
+        title: `${e.constraint}${e.deal_killer ? " (potential deal-killer)" : ""}`.slice(0, 200),
+        severity: (e.deal_killer ? "high" : "medium") as "high" | "medium",
+        why: e.implication.slice(0, 600),
+      })),
     ...(site?.site_constraints ?? []).map((c) => ({ title: c.slice(0, 200), severity: "medium" as const, why: "Site constraint identified in agency records — confirm with the authority having jurisdiction." })),
   ];
   if (decision) {
@@ -473,11 +584,15 @@ Open questions from the lead agent: ${plan.open_questions.join("; ") || "(none)"
     zoning: { ...zoning, items_to_confirm: clip(zoning.items_to_confirm, 300) },
     permits,
     utilities,
+    codes,
+    access,
+    environmental,
+    fees,
     timeline: decision?.timeline ?? [],
     research_scope: clip(plan.research_scope, 200),
     turnaround: plan.turnaround,
     risks,
-    open_questions: clip([...plan.open_questions, ...(permitPath?.review_notes ?? [])].slice(0, 15), 300),
+    open_questions: clip([...plan.open_questions, ...(permitPath?.review_notes ?? []), ...(codesRes?.review_notes ?? [])].slice(0, 15), 300),
     recommended_next_steps: clip(decision?.recommended_next_steps ?? [], 300),
     sources,
   });
