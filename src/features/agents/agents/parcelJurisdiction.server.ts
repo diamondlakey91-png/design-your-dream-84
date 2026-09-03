@@ -435,25 +435,62 @@ export async function runParcelJurisdictionAgent(input: {
   const overlays = (raw.overlays_and_districts ?? []).map((o) => gate(o, `overlay ${o.name}`));
   let addressNormalization = gate(raw.address_normalization, "address normalization");
 
-  // Postal-city guard: control may never be asserted from the mailing address.
-  const postal = (geo.postalCity ?? "").toLowerCase();
-  const place = (addressNormalization.place_in_control ?? "").toLowerCase();
-  const boundaryEvidence = addressNormalization.source_refs.some((r) => {
-    const e = byKey.get(r.source_key);
-    return !!e && e.retrieved && (e.guessedType === "official_gis_or_parcel_data" || e.guessedType === "official_zoning_map" || e.guessedType === "official_agency_instruction");
-  });
-  if (postal && place && place.includes(postal) && !boundaryEvidence) {
-    downgrades.push(
-      "Controlling place matches the postal city without retrieved boundary evidence — flagged undetermined for confirmation.",
-    );
+  // Boundary truth comes from the official GIS record, not the model. When a
+  // government boundary service answered, its determination is authoritative
+  // and overwrites whatever the model concluded.
+  const d = geography.determination;
+  if (d.authoritative) {
+    const refs = addressNormalization.source_refs.filter((r) => byKey.has(r.source_key));
+    if (!refs.some((r) => r.source_key === "G1")) {
+      refs.unshift({
+        source_key: "G1",
+        supporting_excerpt: null,
+        support_description: "Census TIGER boundary query at the site coordinates.",
+        primary_source: true,
+      });
+    }
+    if (
+      addressNormalization.incorporation_status !== d.incorporation_status ||
+      (d.place_in_control ?? "").toLowerCase() !== (addressNormalization.place_in_control ?? "").toLowerCase()
+    ) {
+      downgrades.push(
+        `Controlling authority replaced with the official boundary record: ${d.place_in_control ?? "unincorporated county"} (${d.incorporation_status}).`,
+      );
+    }
     addressNormalization = {
       ...addressNormalization,
-      incorporation_status: "undetermined",
-      postal_city_is_controlling: null,
-      verification_status: "pending_confirmation",
-      postal_city_note: `${addressNormalization.postal_city_note} Permivio could not retrieve an official corporate-limit or parcel record confirming that ${geo.postalCity} controls this parcel; the mailing address alone does not establish jurisdiction. Confirm corporate-limit status with the county GIS/assessor and the municipal planning office before relying on this.`,
+      place_in_control: d.place_in_control,
+      incorporation_status: d.incorporation_status,
+      postal_city_is_controlling: d.postal_city_is_controlling,
+      county: geography.census?.county ?? addressNormalization.county,
+      state: geography.census?.state ?? addressNormalization.state,
+      verification_status: "verified",
+      confidence: "high",
+      postal_city_note: d.note,
+      source_refs: refs,
     };
+  } else {
+    // Postal-city guard: control may never be asserted from the mailing address.
+    const postal = (geo.postalCity ?? "").toLowerCase();
+    const place = (addressNormalization.place_in_control ?? "").toLowerCase();
+    const boundaryEvidence = addressNormalization.source_refs.some((r) => {
+      const e = byKey.get(r.source_key);
+      return !!e && e.retrieved && (e.guessedType === "official_gis_or_parcel_data" || e.guessedType === "official_zoning_map" || e.guessedType === "official_agency_instruction");
+    });
+    if (postal && place && place.includes(postal) && !boundaryEvidence) {
+      downgrades.push(
+        "Controlling place matches the postal city without retrieved boundary evidence — flagged undetermined for confirmation.",
+      );
+      addressNormalization = {
+        ...addressNormalization,
+        incorporation_status: "undetermined",
+        postal_city_is_controlling: null,
+        verification_status: "pending_confirmation",
+        postal_city_note: `${addressNormalization.postal_city_note} Permivio could not retrieve an official corporate-limit or parcel record confirming that ${geo.postalCity} controls this parcel; the mailing address alone does not establish jurisdiction. Confirm corporate-limit status with the county GIS/assessor and the municipal planning office before relying on this.`,
+      };
+    }
   }
+
 
   const matrix = (raw.jurisdiction_matrix ?? []).map((m) => gate(m, `matrix ${m.function}`));
   // Guarantee every permitting function appears, even when unresolved.
