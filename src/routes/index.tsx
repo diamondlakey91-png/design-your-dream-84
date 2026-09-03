@@ -87,6 +87,11 @@ function Landing() {
           Intelligent Permitting. Faster Approvals. Stronger Projects.
         </p>
 
+        <p className="mx-auto mt-6 max-w-3xl text-pretty text-base text-slate-300 md:text-lg">
+          From property research to permit approval — know what your project needs, what comes next, and what could
+          hold it up.
+        </p>
+
         <div className="mt-10 flex flex-wrap items-center justify-center gap-3">
           <Link
             to="/auth"
@@ -94,12 +99,12 @@ function Landing() {
           >
             Start a project <ArrowRight className="size-4" />
           </Link>
-          <a
-            href="#features"
-            className="inline-flex h-12 items-center rounded-lg border border-blue-500/30 bg-white/5 px-6 text-sm font-medium text-blue-100 backdrop-blur transition hover:bg-white/10"
+          <Link
+            to="/demo"
+            className="inline-flex h-12 items-center gap-2 rounded-lg border border-blue-500/30 bg-white/5 px-6 text-sm font-medium text-blue-100 backdrop-blur transition hover:bg-white/10"
           >
-            See how it works
-          </a>
+            <Play className="size-4" /> View demo
+          </Link>
         </div>
 
         {/* Device mockup */}
