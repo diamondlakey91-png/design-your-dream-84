@@ -56,7 +56,9 @@ export const submitSirRequest = createServerFn({ method: "POST" })
     });
     try {
       // Keep the worker alive for the background pass when the runtime supports it.
-      const { waitUntil } = (await import("cloudflare:workers")) as unknown as { waitUntil?: (p: Promise<unknown>) => void };
+      const mod = (await import(/* @vite-ignore */ "cloudflare:workers")) as unknown as { waitUntil?: (p: Promise<unknown>) => void };
+      const waitUntil = mod.waitUntil;
+
       if (typeof waitUntil === "function") waitUntil(work);
     } catch {
       void work;
