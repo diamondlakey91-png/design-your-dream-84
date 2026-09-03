@@ -38,9 +38,9 @@ export function ClientDashboard({ onCreateProject }: { onCreateProject: () => vo
   const orders = (q.data?.orders ?? []) as Array<{
     id: string;
     product_title: string;
-    order_status: string;
+    status: string;
     delivery_tier: string;
-    total_price_cents: number | null;
+    amount_cents: number | null;
     currency: string | null;
     created_at: string;
   }>;
@@ -199,7 +199,7 @@ export function ClientDashboard({ onCreateProject }: { onCreateProject: () => vo
               </div>
               <ul className="mt-3 divide-y divide-border overflow-hidden rounded-2xl border border-border bg-background/40">
                 {orders.map((o) => {
-                  const tone = statusTone(o.order_status);
+                  const tone = statusTone(o.status);
                   const toneClass =
                     tone === "green"
                       ? "border-emerald-500/40 bg-emerald-500/10 text-emerald-400"
@@ -214,11 +214,11 @@ export function ClientDashboard({ onCreateProject }: { onCreateProject: () => vo
                         <p className="truncate text-sm text-foreground">{o.product_title}</p>
                         <p className="mt-0.5 text-xs text-muted-foreground">
                           {TIER_COPY[o.delivery_tier as keyof typeof TIER_COPY]?.label ?? o.delivery_tier} · {dayLabel(o.created_at)}
-                          {o.total_price_cents ? ` · ${money(o.total_price_cents, o.currency ?? "usd")}` : ""}
+                          {o.amount_cents ? ` · ${money(o.amount_cents, o.currency ?? "usd")}` : ""}
                         </p>
                       </div>
                       <span className={`shrink-0 rounded-full border px-3 py-1 text-xs font-medium ${toneClass}`}>
-                        {ORDER_STATUS_LABEL[o.order_status] ?? o.order_status}
+                        {ORDER_STATUS_LABEL[o.status] ?? o.status}
                       </span>
                     </li>
                   );

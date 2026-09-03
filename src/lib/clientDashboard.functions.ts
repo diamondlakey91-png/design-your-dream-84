@@ -50,7 +50,7 @@ export const getClientDashboard = createServerFn({ method: "GET" })
     // straight from the order records — never inferred in the browser.
     const orders = await context.supabase
       .from("service_orders")
-      .select("id,project_id,product_id,order_status,delivery_tier,total_price_cents,currency,created_at")
+      .select("id,project_id,product_id,status,delivery_tier,amount_cents,currency,created_at")
       .eq("user_id", context.userId)
       .order("created_at", { ascending: false })
       .limit(8);
