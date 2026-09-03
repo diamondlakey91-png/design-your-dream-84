@@ -587,11 +587,13 @@ export const generateSiteInvestigationPdf = createServerFn({ method: "POST" })
   )
   .handler(async ({ data, context }) => {
     const sb = context.supabase;
-    const [i, f, p, settings] = await Promise.all([
+    const [i, f, p, settings, rk, pc] = await Promise.all([
       sb.from("site_investigations").select("*").eq("id", data.investigation_id).maybeSingle(),
       sb.from("site_investigation_findings").select("*").eq("investigation_id", data.investigation_id).order("sort_order", { ascending: true }),
       sb.from("site_investigation_permits").select("*").eq("investigation_id", data.investigation_id).order("sequence_order", { ascending: true }),
       sb.from("user_settings").select("brand_company_name, brand_license_number, brand_contact_email, brand_contact_phone, brand_footer_note").eq("user_id", context.userId).maybeSingle(),
+      sb.from("site_investigation_risks").select("*").eq("investigation_id", data.investigation_id).order("sort_order", { ascending: true }),
+      sb.from("site_investigation_parcels").select("*").eq("investigation_id", data.investigation_id).order("sort_order", { ascending: true }),
     ]);
     // eslint-disable-next-line @typescript-eslint/no-explicit-any
     const inv = i.data as any;
