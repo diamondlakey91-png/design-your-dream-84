@@ -290,6 +290,8 @@ export type SirRequestRow = {
   report_needed: string | null;
   target_date: string | null;
   notes: string | null;
+  /** Which product this brief produces; feasibility adds the go/no-go pass. */
+  report_kind?: string | null;
 };
 
 /** Full research pass for one request: jurisdiction → official sources → structured scope. */
