@@ -82,9 +82,9 @@ function ProjectDetail() {
         <PermivioPageHeader
           backTo="/dashboard"
           backLabel="Sites"
-          eyebrow={`ID ${project.id.slice(0, 8).toUpperCase()} · ${project.status.toUpperCase()}`}
+          eyebrow={showPro ? `ID ${project.id.slice(0, 8).toUpperCase()} · ${project.status.toUpperCase()}` : "Your project"}
           context={project.name}
-          title="Project Workspace"
+          title={showPro ? "Project Workspace" : "Project"}
           subtitle={
             <span className="flex flex-wrap gap-x-3 gap-y-1">
               {project.jurisdiction && <span className="inline-flex items-center gap-1"><Landmark className="size-3.5" />{project.jurisdiction}</span>}

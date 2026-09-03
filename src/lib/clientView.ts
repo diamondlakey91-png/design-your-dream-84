@@ -279,6 +279,19 @@ function classifyAsk(item: ClientPermitItem): { action: AttentionActionKind; tab
   };
 }
 
+/**
+ * Only ask the client for things a client can actually hand over: documents,
+ * signatures, fees, and project facts. Permits, approvals, and inspections are
+ * PERMIVIO's work and never appear as client to-dos.
+ */
+function isClientDeliverable(item: ClientPermitItem) {
+  const n = `${item.name} ${item.category}`.toLowerCase();
+  const clientish = /plan|drawing|survey|sheet|calc|report|photo|fee|payment|invoice|sign|authorization|notariz|affidavit|agent|scope|equipment|contractor|contact|information|list|form|application/;
+  const ahjWork = /permit|approval|inspection|certificate of occupancy|c of o|review|clearance|license/;
+  if (clientish.test(n)) return true;
+  return !ahjWork.test(n);
+}
+
 /** Everything PERMIVIO is waiting on from the client, across one or all projects. */
 export function attentionItems(project: ClientProjectInput, signals: ClientSignals): AttentionItem[] {
   const out: AttentionItem[] = [];
@@ -287,6 +300,7 @@ export function attentionItems(project: ClientProjectInput, signals: ClientSigna
 
   for (const item of signals.items) {
     if (!item.required || item.status !== "not_started") continue;
+    if (!isClientDeliverable(item)) continue; // permits/approvals are PERMIVIO's job, not the client's
     const ask = classifyAsk(item);
     const overdue = item.due_date ? new Date(item.due_date) < today : false;
     out.push({
