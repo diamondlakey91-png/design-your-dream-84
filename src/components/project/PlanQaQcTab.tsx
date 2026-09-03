@@ -20,9 +20,12 @@ import { QaQcFindingList, type QaQcFindingRow } from "@/components/project/QaQcF
 import { ProfessionalReviewButton } from "@/components/project/ProfessionalReviewButton";
 import { Input } from "@/components/ui/input";
 
-export function PlanQaQcTab({ projectId }: { projectId: string }) {
+export function PlanQaQcTab({ projectId, userId }: { projectId: string; userId: string }) {
   const qc = useQueryClient();
   const docsFn = useServerFn(listDocuments);
+  const registerFn = useServerFn(registerDocument);
+  const fileRef = useRef<HTMLInputElement>(null);
+  const [uploading, setUploading] = useState(false);
   const listFn = useServerFn(listQaQcReviews);
   const getFn = useServerFn(getQaQcReview);
   const runFn = useServerFn(runQaQcReview);
