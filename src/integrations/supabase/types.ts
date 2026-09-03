@@ -3928,18 +3928,27 @@ export type Database = {
           complexity_multiplier: number
           created_at: string
           currency: string
+          custom_quote_required: boolean
           deliverables: Json
           description: string
           display_order: number
           eligibility_rules: Json
+          full_scope: Json
           id: string
+          is_recommended: boolean
           name: string
           product_key: string
           professional_review_price_cents: number | null
+          professional_review_required: boolean
           recommended_phases: Json
+          recommended_project_type: string | null
+          report_subtitle: string | null
           residential_price_cents: number | null
+          review_addon_price_cents: number | null
+          rush_addon_price_cents: number | null
           rush_price_cents: number | null
           sheet_pricing_rules: Json
+          starting_price_cents: number | null
           supports_professional_review: boolean
           turnaround_estimate: string | null
           updated_at: string
@@ -3954,18 +3963,27 @@ export type Database = {
           complexity_multiplier?: number
           created_at?: string
           currency?: string
+          custom_quote_required?: boolean
           deliverables?: Json
           description: string
           display_order?: number
           eligibility_rules?: Json
+          full_scope?: Json
           id?: string
+          is_recommended?: boolean
           name: string
           product_key: string
           professional_review_price_cents?: number | null
+          professional_review_required?: boolean
           recommended_phases?: Json
+          recommended_project_type?: string | null
+          report_subtitle?: string | null
           residential_price_cents?: number | null
+          review_addon_price_cents?: number | null
+          rush_addon_price_cents?: number | null
           rush_price_cents?: number | null
           sheet_pricing_rules?: Json
+          starting_price_cents?: number | null
           supports_professional_review?: boolean
           turnaround_estimate?: string | null
           updated_at?: string
@@ -3980,18 +3998,27 @@ export type Database = {
           complexity_multiplier?: number
           created_at?: string
           currency?: string
+          custom_quote_required?: boolean
           deliverables?: Json
           description?: string
           display_order?: number
           eligibility_rules?: Json
+          full_scope?: Json
           id?: string
+          is_recommended?: boolean
           name?: string
           product_key?: string
           professional_review_price_cents?: number | null
+          professional_review_required?: boolean
           recommended_phases?: Json
+          recommended_project_type?: string | null
+          report_subtitle?: string | null
           residential_price_cents?: number | null
+          review_addon_price_cents?: number | null
+          rush_addon_price_cents?: number | null
           rush_price_cents?: number | null
           sheet_pricing_rules?: Json
+          starting_price_cents?: number | null
           supports_professional_review?: boolean
           turnaround_estimate?: string | null
           updated_at?: string
@@ -4003,12 +4030,18 @@ export type Database = {
           created_at: string
           delivery_tier: Database["public"]["Enums"]["service_delivery_tier"]
           id: string
+          issued_at: string | null
           order_id: string | null
           payload: Json | null
+          pdf_filename: string | null
+          pdf_path: string | null
           product_id: string
           project_id: string | null
+          report_number: string | null
           reviewed_at: string | null
           reviewed_by: string | null
+          reviewer_name: string | null
+          reviewer_title: string | null
           source_id: string | null
           source_table: string | null
           summary: string | null
@@ -4021,12 +4054,18 @@ export type Database = {
           created_at?: string
           delivery_tier?: Database["public"]["Enums"]["service_delivery_tier"]
           id?: string
+          issued_at?: string | null
           order_id?: string | null
           payload?: Json | null
+          pdf_filename?: string | null
+          pdf_path?: string | null
           product_id: string
           project_id?: string | null
+          report_number?: string | null
           reviewed_at?: string | null
           reviewed_by?: string | null
+          reviewer_name?: string | null
+          reviewer_title?: string | null
           source_id?: string | null
           source_table?: string | null
           summary?: string | null
@@ -4039,12 +4078,18 @@ export type Database = {
           created_at?: string
           delivery_tier?: Database["public"]["Enums"]["service_delivery_tier"]
           id?: string
+          issued_at?: string | null
           order_id?: string | null
           payload?: Json | null
+          pdf_filename?: string | null
+          pdf_path?: string | null
           product_id?: string
           project_id?: string | null
+          report_number?: string | null
           reviewed_at?: string | null
           reviewed_by?: string | null
+          reviewer_name?: string | null
+          reviewer_title?: string | null
           source_id?: string | null
           source_table?: string | null
           summary?: string | null

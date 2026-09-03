@@ -61,11 +61,18 @@ const PRIMARY_PRO: NavLink[] = [
 /** Reports & tools shown to every signed-in user. */
 const TOOLS_CLIENT: NavLink[] = [
   {
-    to: "/assistant/screens",
-    label: "Site Investigation Reports",
-    icon: Building2,
-    description: "Feasibility & site screening",
+    to: "/reports",
+    label: "My Reports",
+    icon: FileCheck2,
+    description: "Purchased reports, progress & PDF downloads",
   },
+  {
+    to: "/assistant/screens",
+    label: "Candidate Site Comparisons",
+    icon: Building2,
+    description: "Compare multiple candidate sites",
+  },
+
   {
     to: "/plan-qaqc",
     label: "Plan QA/QC Report",

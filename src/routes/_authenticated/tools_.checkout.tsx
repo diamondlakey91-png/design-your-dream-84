@@ -1,4 +1,4 @@
-import { useEffect, useMemo, useState } from "react";
+import { useEffect, useState } from "react";
 import { createFileRoute, Link, useNavigate } from "@tanstack/react-router";
 import { useQuery } from "@tanstack/react-query";
 import { useServerFn } from "@tanstack/react-start";
@@ -67,15 +67,22 @@ function CheckoutPage() {
   const [error, setError] = useState<string | null>(null);
   const [busy, setBusy] = useState(false);
 
-  const amount = useMemo(() => {
-    if (!product) return 0;
-    let total =
-      tier === "professional_review"
-        ? product.professional_review_price_cents ?? product.base_price_cents
-        : product.base_price_cents;
-    if (rush && product.rush_price_cents) total += product.rush_price_cents;
-    return total;
-  }, [product, tier, rush]);
+  const quoteKey = `${tier}${rush ? "_rush" : ""}` as
+    | "ai_assisted"
+    | "ai_assisted_rush"
+    | "professional_review"
+    | "professional_review_rush";
+  const quote = ctx.data?.quotes ? ctx.data.quotes[quoteKey] : null;
+  const amount = quote?.total_cents ?? 0;
+  const customQuote = Boolean(product?.custom_quote_required);
+  const rushAmount = product ? product.rush_addon_price_cents ?? product.rush_price_cents ?? null : null;
+
+  useEffect(() => {
+    if (product?.professional_review_required) setTier("professional_review");
+  }, [product?.professional_review_required]);
+
+
+
 
   const startPayment = async () => {
     if (!product) return;
@@ -153,11 +160,10 @@ function CheckoutPage() {
                 <Section title="Delivery level">
                   <div className="grid gap-3 sm:grid-cols-2">
                     {(["ai_assisted", "professional_review"] as DeliveryTier[]).map((t) => {
-                      const disabled = t === "professional_review" && !product.supports_professional_review;
-                      const price =
-                        t === "professional_review"
-                          ? product.professional_review_price_cents ?? product.base_price_cents
-                          : product.base_price_cents;
+                      const disabled =
+                        (t === "professional_review" && !product.supports_professional_review) ||
+                        (t === "ai_assisted" && Boolean(product.professional_review_required));
+                      const q = ctx.data?.quotes?.[t];
                       return (
                         <button
                           key={t}
@@ -173,13 +179,15 @@ function CheckoutPage() {
                             {TIER_COPY[t].label}
                           </span>
                           <span className="mt-1 block text-xs text-muted-foreground">{TIER_COPY[t].blurb}</span>
-                          <span className="mt-2 block text-sm font-semibold text-foreground">{money(price, product.currency)}</span>
+                          <span className="mt-2 block text-sm font-semibold text-foreground">
+                            {customQuote ? "Custom scope" : money(q?.total_cents ?? 0, product.currency)}
+                          </span>
                         </button>
                       );
                     })}
                   </div>
 
-                  {product.rush_price_cents ? (
+                  {rushAmount ? (
                     <label className="mt-4 flex items-start gap-3 rounded-2xl border border-border bg-background/40 p-4 text-sm">
                       <input
                         type="checkbox"
@@ -190,12 +198,13 @@ function CheckoutPage() {
                       <span>
                         <span className="font-medium text-foreground">Move me to the front of the queue</span>
                         <span className="mt-0.5 block text-xs text-muted-foreground">
-                          Adds {money(product.rush_price_cents, product.currency)} for expedited handling.
+                          Adds {money(rushAmount, product.currency)} for expedited handling.
                         </span>
                       </span>
                     </label>
                   ) : null}
                 </Section>
+
 
                 <Section title="Where this report belongs">
                   <label htmlFor="checkout-project" className="text-xs text-muted-foreground">
@@ -248,11 +257,29 @@ function CheckoutPage() {
                 <Row label="Report" value={product.client_title} />
                 <Row label="Delivery" value={TIER_COPY[tier].label} />
                 <Row label="Project" value={projects.find((p) => p.id === projectId)?.name ?? "Not linked yet"} />
-                {rush && product.rush_price_cents ? <Row label="Expedited" value={money(product.rush_price_cents, product.currency)} /> : null}
-                <div className="border-t border-border pt-2">
-                  <Row label="Total due today" value={money(amount, product.currency)} strong />
+                <div className="space-y-2 border-t border-border pt-2">
+                  {customQuote ? (
+                    <Row
+                      label="Scope & price"
+                      value={
+                        product.starting_price_cents
+                          ? `Confirmed with you — from ${money(product.starting_price_cents, product.currency)}`
+                          : "Confirmed with you before work begins"
+                      }
+                    />
+                  ) : (
+                    (quote?.lines ?? []).map((line) => (
+                      <Row key={line.label} label={line.label} value={money(line.amount_cents, product.currency)} />
+                    ))
+                  )}
                 </div>
+                {!customQuote && (
+                  <div className="border-t border-border pt-2">
+                    <Row label="Total due today" value={money(amount, product.currency)} strong />
+                  </div>
+                )}
               </dl>
+
 
               {error && <p className="mt-4 rounded-2xl border border-destructive/40 bg-destructive/10 p-3 text-xs text-foreground">{error}</p>}
 

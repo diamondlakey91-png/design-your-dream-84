@@ -2,6 +2,8 @@ import { createServerFn } from "@tanstack/react-start";
 import { requireSupabaseAuth } from "@/integrations/supabase/auth-middleware";
 import { z } from "zod";
 import { createStripeClient, getStripeErrorMessage, type StripeEnv } from "@/lib/stripe.server";
+import { priceBreakdown, type ServiceProduct } from "@/lib/toolsCatalog";
+
 
 /** Catalog + purchase state for the client-facing Tools & Reports area. */
 export const getToolsOverview = createServerFn({ method: "GET" })
@@ -57,13 +59,21 @@ export const createServiceOrder = createServerFn({ method: "POST" })
       .maybeSingle();
     if (pErr || !product) return { error: "That service is not available right now." };
 
+    if (product.custom_quote_required) {
+      return {
+        error:
+          "This report is scoped with you before work begins. Request a custom scope and a Permivio permitting professional will confirm the scope and price.",
+      };
+    }
+    if (product.professional_review_required && data.deliveryTier !== "professional_review") {
+      return { error: "This report always includes professional review. Please choose the professionally reviewed option." };
+    }
+
     // Server-side pricing — never trust an amount from the browser.
-    let amount =
-      data.deliveryTier === "professional_review"
-        ? product.professional_review_price_cents ?? product.base_price_cents
-        : product.base_price_cents;
-    if (data.rush && product.rush_price_cents) amount += product.rush_price_cents;
+    const quote = priceBreakdown(product as unknown as ServiceProduct, data.deliveryTier, data.rush);
+    const amount = quote.total_cents;
     if (amount <= 0) return { error: "This service is not priced yet. Please contact Permivio." };
+
 
     const { data: order, error: oErr } = await supabase
       .from("service_orders")
@@ -83,14 +93,18 @@ export const createServiceOrder = createServerFn({ method: "POST" })
       .single();
     if (oErr || !order) return { error: "We couldn't start that order. Please try again." };
 
-    await supabase.from("service_order_items").insert({
-      order_id: order.id,
-      product_id: product.id,
-      delivery_tier: data.deliveryTier,
-      quantity: 1,
-      unit_amount_cents: amount,
-      label: product.client_title,
-    });
+    // One row per priced line so the client's receipt matches the quote exactly.
+    await supabase.from("service_order_items").insert(
+      quote.lines.map((line) => ({
+        order_id: order.id,
+        product_id: product.id,
+        delivery_tier: data.deliveryTier,
+        quantity: 1,
+        unit_amount_cents: line.amount_cents,
+        label: line.label,
+      })),
+    );
+
 
     try {
       const stripe = createStripeClient(data.environment as StripeEnv);
@@ -304,8 +318,19 @@ export const getCheckoutContext = createServerFn({ method: "GET" })
       supabase.from("projects").select("id,name,location,project_type,status,jurisdiction").order("created_at", { ascending: false }),
     ]);
     if (product.error) throw new Error(product.error.message);
-    return { product: product.data, projects: projects.data ?? [] };
+    const p = product.data as unknown as ServiceProduct | null;
+    // Authoritative price lines — the checkout page never computes its own totals.
+    const quotes = p
+      ? {
+          ai_assisted: priceBreakdown(p, "ai_assisted", false),
+          ai_assisted_rush: priceBreakdown(p, "ai_assisted", true),
+          professional_review: priceBreakdown(p, "professional_review", false),
+          professional_review_rush: priceBreakdown(p, "professional_review", true),
+        }
+      : null;
+    return { product: product.data, projects: projects.data ?? [], quotes };
   });
+
 
 /** Post-payment state for one order: paid?, delivery stage, saved report versions. */
 export const getOrderState = createServerFn({ method: "GET" })
