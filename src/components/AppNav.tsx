@@ -74,6 +74,12 @@ const TOOLS_CLIENT: NavLink[] = [
   },
 
   {
+    to: "/sir",
+    label: "Site Investigation",
+    icon: MapPinned,
+    description: "Submit a brief, track research, download the report",
+  },
+  {
     to: "/plan-qaqc",
     label: "Plan QA/QC Report",
     icon: FileSearch,
