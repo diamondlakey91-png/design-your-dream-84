@@ -73,6 +73,7 @@ const SUPPORT: NavLink = { to: "/assistant", label: "Messages & Support", icon: 
 const ADMIN: NavLink[] = [
   { to: "/admin/portals", label: "Admin · Portals", icon: ShieldCheck },
   { to: "/admin/health-portals", label: "Admin · Health Portals", icon: ShieldCheck },
+  { to: "/admin/sir", label: "Admin · SIR Requests", icon: ShieldCheck },
   { to: "/harvest", label: "Admin · Portal Harvest", icon: Wrench },
 ];
 
