@@ -5,15 +5,12 @@ import {
   CheckCircle2,
   ChevronLeft,
   ChevronRight,
-  ClipboardList,
   FileSearch,
   Loader2,
   MapPinCheck,
   Pause,
   Play,
   RotateCcw,
-  ShieldCheck,
-  Sparkles,
   Volume2,
   VolumeX,
   X,
@@ -573,5 +570,3 @@ function DemoVideo({ videoRef, muted }: { videoRef: React.RefObject<HTMLVideoEle
     </section>
   );
 }
-
-export { ClipboardList, Sparkles, ShieldCheck };
