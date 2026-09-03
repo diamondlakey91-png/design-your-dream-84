@@ -1,4 +1,5 @@
 import { createFileRoute, Link, useNavigate } from "@tanstack/react-router";
+import { PermivioPageHeader } from "@/components/PermivioPageHeader";
 import { useMutation, useQuery, useQueryClient } from "@tanstack/react-query";
 import { useServerFn } from "@tanstack/react-start";
 import {
@@ -121,12 +122,15 @@ function JurisdictionDetail() {
         <header className="px-4 md:px-8 pt-5 pb-5 border-b border-border relative overflow-hidden">
           <div className="pointer-events-none absolute -top-24 -left-24 size-72 rounded-full bg-blue-500/10 blur-3xl" />
           <div className="pointer-events-none absolute -top-16 right-0 size-64 rounded-full bg-violet-500/10 blur-3xl" />
-          <div className="relative flex items-start gap-3">
-            <Link to="/jurisdictions" className="mt-1 text-muted-foreground hover:text-foreground" aria-label="Back">
-              <ArrowLeft className="size-4" />
-            </Link>
-            <div className="flex-1 min-w-0">
-              <h1 className="text-xl md:text-2xl font-semibold truncate">{p.name}</h1>
+          <div className="relative">
+            <PermivioPageHeader
+              backTo="/jurisdictions"
+              backLabel="Library"
+              eyebrow="Jurisdiction Research"
+              context={p.name}
+              title="Jurisdiction Profile"
+            />
+            <div className="mt-3 flex-1 min-w-0">
               <div className="text-[11px] font-mono uppercase tracking-widest text-muted-foreground mt-1">
                 {p.jurisdiction_type || "jurisdiction"}
                 {p.county && ` · ${p.county}`}

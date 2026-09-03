@@ -1,4 +1,5 @@
 import { createFileRoute, Link } from "@tanstack/react-router";
+import { PermivioPageHeader } from "@/components/PermivioPageHeader";
 import { useMutation, useQuery, useQueryClient } from "@tanstack/react-query";
 import { useServerFn } from "@tanstack/react-start";
 import { useMemo, useState } from "react";
@@ -130,7 +131,7 @@ function AdminPortalsPage() {
             <ShieldAlert className="size-5" />
             <span className="font-mono text-[10px] uppercase tracking-widest">Admin · Portal Mappings</span>
           </div>
-          <h1 className="text-2xl font-semibold tracking-tight">Jurisdiction → Portal Mappings</h1>
+          <PermivioPageHeader eyebrow="Admin" title="Jurisdiction → Portal Mappings" />
           <p className="text-sm text-muted-foreground">
             Add new agencies and edit portal links without shipping code. DB entries override the {PORTAL_REGISTRY.length} built-in
             mappings on <code className="rounded bg-card px-1 text-[11px]">(jurisdiction, state, platform)</code>.

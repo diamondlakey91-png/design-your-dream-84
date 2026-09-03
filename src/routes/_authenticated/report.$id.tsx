@@ -1,4 +1,5 @@
 import { createFileRoute, Link } from "@tanstack/react-router";
+import { PermivioPageHeader } from "@/components/PermivioPageHeader";
 import { useEffect, useRef, useState } from "react";
 import { useQuery } from "@tanstack/react-query";
 import { useServerFn } from "@tanstack/react-start";
@@ -175,15 +176,12 @@ function ReportDetailPage() {
 
         {/* Header */}
         <header className="rounded-xl border border-border bg-gradient-to-br from-brand/10 via-card to-card p-5 space-y-3">
-          <div className="flex items-center gap-2 text-brand text-[10px] font-mono uppercase tracking-widest">
-            <span>{agent.emoji}</span>
-            <span>{agent.label}</span>
-            {typeof r.confidence === "number" && (
-              <span className="ml-2 rounded-full border border-brand/40 px-2 py-0.5">Confidence {(r.confidence * 100).toFixed(0)}%</span>
-            )}
-          </div>
-          <h1 className="text-2xl font-semibold tracking-tight">{r.address}</h1>
-          <p className="text-sm text-muted-foreground">{r.project_type} · {report.jurisdiction}{report.jurisdiction_state ? `, ${report.jurisdiction_state}` : ""} · Authority: {report.official_department}</p>
+          <PermivioPageHeader
+            eyebrow={<>{agent.label}{typeof r.confidence === "number" ? ` · Confidence ${(r.confidence * 100).toFixed(0)}%` : ""}</>}
+            context={r.address}
+            title="Compliance Report"
+            subtitle={`${r.project_type} · ${report.jurisdiction}${report.jurisdiction_state ? `, ${report.jurisdiction_state}` : ""} · Authority: ${report.official_department}`}
+          />
           {report.summary && <p className="text-sm">{report.summary}</p>}
 
           <div className="flex flex-wrap items-center gap-2 pt-2">

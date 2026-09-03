@@ -1,4 +1,5 @@
 import { createFileRoute, Link } from "@tanstack/react-router";
+import { PermivioPageHeader } from "@/components/PermivioPageHeader";
 import { useMutation, useQuery, useQueryClient } from "@tanstack/react-query";
 import { useServerFn } from "@tanstack/react-start";
 import { useMemo, useState } from "react";
@@ -202,19 +203,11 @@ function HarvestPage() {
   return (
     <AppShell>
       <div className="mx-auto w-full max-w-7xl px-4 pb-24 pt-8 sm:px-6">
-        <header className="flex flex-wrap items-end justify-between gap-4">
-          <div className="max-w-3xl">
-            <p className="font-mono text-[11px] uppercase tracking-[0.22em] text-muted-foreground">
-              Portal harvest
-            </p>
-            <h1 className="mt-2 text-3xl font-semibold tracking-tight sm:text-4xl">
-              Operational monitoring for county and provider portals.
-            </h1>
-            <p className="mt-2 text-sm text-muted-foreground">
-              Track harvest health across linked projects, then open any row for portal detail.
-              Every status comes from a recorded check — nothing is simulated.
-            </p>
-          </div>
+        <PermivioPageHeader
+          eyebrow="Portal harvest"
+          title="Operational monitoring for county and provider portals."
+          subtitle="Track harvest health across linked projects, then open any row for portal detail. Every status comes from a recorded check — nothing is simulated."
+          actions={<>
           <button
             type="button"
             onClick={() => q.refetch()}

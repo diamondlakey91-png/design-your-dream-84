@@ -1,4 +1,5 @@
 import { createFileRoute, Link } from "@tanstack/react-router";
+import { PermivioPageHeader } from "@/components/PermivioPageHeader";
 import { useMutation, useQuery, useQueryClient } from "@tanstack/react-query";
 import { useServerFn } from "@tanstack/react-start";
 import {
@@ -140,10 +141,11 @@ function JurisdictionsIndex() {
           <div className="pointer-events-none absolute -top-24 -left-24 size-72 rounded-full bg-blue-500/10 blur-3xl" />
           <div className="pointer-events-none absolute -top-16 right-0 size-64 rounded-full bg-violet-500/10 blur-3xl" />
           <div className="relative">
-            <h1 className="text-2xl md:text-3xl font-semibold tracking-tight">Jurisdiction Library</h1>
-            <p className="text-sm text-muted-foreground mt-1 max-w-2xl">
-              Find the agencies, portals, requirements, and approval paths connected to any U.S. project location.
-            </p>
+            <PermivioPageHeader
+              eyebrow="Jurisdiction Research"
+              title="Jurisdiction Library"
+              subtitle="Find the agencies, portals, requirements, and approval paths connected to any U.S. project location."
+            />
             <p className="text-[11px] font-mono uppercase tracking-widest text-muted-foreground/70 mt-2">
               National jurisdiction coverage planned — verified jurisdictions are added continuously.
             </p>

@@ -1,4 +1,5 @@
 import { createFileRoute, Link } from "@tanstack/react-router";
+import { PermivioPageHeader } from "@/components/PermivioPageHeader";
 import { useMutation, useQuery, useQueryClient } from "@tanstack/react-query";
 import { useServerFn } from "@tanstack/react-start";
 import { useMemo, useState } from "react";
@@ -157,22 +158,18 @@ function FilingPage() {
   return (
     <AppShell>
       <div className="mx-auto w-full max-w-7xl px-4 py-8 sm:px-6 lg:px-8">
-        <header className="grid gap-4 lg:grid-cols-[minmax(0,1fr)_auto] lg:items-end">
-          <div className="min-w-0">
-            <p className="font-mono text-[11px] uppercase tracking-[0.2em] text-muted-foreground">
-              Permit Filing
-            </p>
-            <h1 className="mt-1 flex flex-wrap items-center gap-3 text-2xl font-semibold text-foreground sm:text-3xl">
+        <header className="grid gap-4">
+          <PermivioPageHeader
+            eyebrow="Permit Filing"
+            title={<span className="flex flex-wrap items-center gap-3">
               Filing workflow
               <span className="rounded-full border border-primary/40 px-3 py-1 font-mono text-[10px] uppercase tracking-widest text-primary">
                 Human approved
               </span>
-            </h1>
-            <p className="mt-2 max-w-2xl text-sm text-muted-foreground">
-              Multi-jurisdiction filing workspace: pre-flight checks, a required human approval
-              step, manual portal submission with a deep link, and status monitoring with a named
-              source.
-            </p>
+            </span>}
+            subtitle="Multi-jurisdiction filing workspace: pre-flight checks, a required human approval step, manual portal submission with a deep link, and status monitoring with a named source."
+          />
+          <div className="min-w-0">
           </div>
           <div className="flex flex-wrap items-center gap-2">
             <button
