@@ -7,6 +7,7 @@ import { Plus, Save, X, ShieldAlert, Search, Pencil, EyeOff, Eye } from "lucide-
 import { AppShell } from "@/components/AppShell";
 import { PermivioPageHeader } from "@/components/PermivioPageHeader";
 import { useIsAdmin } from "@/hooks/useIsAdmin";
+import type { Database } from "@/integrations/supabase/types";
 import {
   listServiceProductsAdmin,
   upsertServiceProduct,
@@ -31,6 +32,8 @@ export const Route = createFileRoute("/_authenticated/admin/tools")({
     ],
   }),
 });
+
+type AdminProduct = Database["public"]["Tables"]["service_products"]["Row"];
 
 type ProductForm = {
   id?: string;
@@ -162,9 +165,9 @@ function AdminToolsPage() {
 
   const filtered = useMemo(() => {
     const q = query.trim().toLowerCase();
-    const rows = (productsQ.data ?? []) as unknown as Array<Record<string, string | number | boolean | null>>;
+    const rows = (productsQ.data ?? []) as unknown as AdminProduct[];
     if (!q) return rows;
-    return rows.filter((r) => `${r['name']} ${r['client_title']} ${r['product_key']} ${r['category']}`.toLowerCase().includes(q));
+    return rows.filter((r) => `${r.name} ${r.client_title} ${r.product_key} ${r.category}`.toLowerCase().includes(q));
   }, [productsQ.data, query]);
 
   if (adminQ.isLoading) {
@@ -347,56 +350,56 @@ function AdminToolsPage() {
             ) : (
               <div className="space-y-2">
                 {filtered.map((p) => (
-                  <div key={String(p['id'])} className="rounded-xl border border-border bg-card/60 p-4">
+                  <div key={p.id} className="rounded-xl border border-border bg-card/60 p-4">
                     <div className="flex flex-wrap items-start justify-between gap-3">
                       <div>
                         <div className="flex flex-wrap items-center gap-2">
-                          <p className="text-sm font-semibold">{String(p['client_title'])}</p>
+                          <p className="text-sm font-semibold">{p.client_title}</p>
                           <span className="rounded-full bg-muted/40 px-2 py-0.5 text-[10px] font-mono uppercase tracking-wider text-muted-foreground ring-1 ring-border">
-                            {String(p['category'])}
+                            {p.category}
                           </span>
                           <span
                             className={`inline-flex items-center gap-1 rounded-full px-2 py-0.5 text-[10px] font-mono uppercase tracking-wider ring-1 ${
-                              p['active'] ? toneClass['blue'] : toneClass['gray']
+                              p.active ? toneClass['blue'] : toneClass['gray']
                             }`}
                           >
-                            {p['active'] ? <Eye className="size-3" /> : <EyeOff className="size-3" />}
-                            {p['active'] ? "live" : "hidden"}
+                            {p.active ? <Eye className="size-3" /> : <EyeOff className="size-3" />}
+                            {p.active ? "live" : "hidden"}
                           </span>
                         </div>
                         <p className="mt-1 font-mono text-[10px] uppercase tracking-wider text-muted-foreground">
-                          {String(p['product_key'])} · order {String(p['display_order'])}
+                          {p.product_key} · order {String(p.display_order)}
                         </p>
-                        <p className="mt-1 max-w-2xl text-xs text-muted-foreground">{String(p['description'])}</p>
+                        <p className="mt-1 max-w-2xl text-xs text-muted-foreground">{p.description}</p>
                         <p className="mt-1.5 text-xs">
-                          {money(Number(p['base_price_cents']), String(p['currency'] ?? "usd"))} base
-                          {p['professional_review_price_cents']
-                            ? ` · ${money(Number(p['professional_review_price_cents']), String(p['currency'] ?? "usd"))} professionally reviewed`
+                          {money(p.base_price_cents, p.currency)} base
+                          {p.professional_review_price_cents
+                            ? ` · ${money(p.professional_review_price_cents ?? 0, p.currency)} professionally reviewed`
                             : ""}
-                          {p['rush_price_cents'] ? ` · +${money(Number(p['rush_price_cents']), String(p['currency'] ?? "usd"))} rush` : ""}
-                          {p['turnaround_estimate'] ? ` · ${String(p['turnaround_estimate'])}` : ""}
+                          {p.rush_price_cents ? ` · +${money(p.rush_price_cents ?? 0, p.currency)} rush` : ""}
+                          {p.turnaround_estimate ? ` · ${p.turnaround_estimate}` : ""}
                         </p>
                       </div>
                       <button
                         onClick={() =>
                           setForm({
-                            id: String(p['id']),
-                            product_key: String(p['product_key']),
-                            name: String(p['name']),
-                            client_title: String(p['client_title']),
-                            client_question: p['client_question'] ? String(p['client_question']) : "",
-                            description: String(p['description']),
-                            category: String(p['category']),
-                            base_price: String(Number(p['base_price_cents']) / 100),
-                            professional_review_price: p['professional_review_price_cents']
-                              ? String(Number(p['professional_review_price_cents']) / 100)
+                            id: p.id,
+                            product_key: p.product_key,
+                            name: p.name,
+                            client_title: p.client_title,
+                            client_question: p.client_question ?? "",
+                            description: p.description,
+                            category: p.category,
+                            base_price: String(p.base_price_cents / 100),
+                            professional_review_price: p.professional_review_price_cents
+                              ? String((p.professional_review_price_cents ?? 0) / 100)
                               : "",
-                            rush_price: p['rush_price_cents'] ? String(Number(p['rush_price_cents']) / 100) : "",
-                            turnaround_estimate: p['turnaround_estimate'] ? String(p['turnaround_estimate']) : "",
-                            deliverables: Array.isArray(p['deliverables']) ? (p['deliverables'] as string[]).join("\n") : "",
-                            supports_professional_review: !!p['supports_professional_review'],
-                            active: !!p['active'],
-                            display_order: String(p['display_order'] ?? 0),
+                            rush_price: p.rush_price_cents ? String((p.rush_price_cents ?? 0) / 100) : "",
+                            turnaround_estimate: p.turnaround_estimate ?? "",
+                            deliverables: Array.isArray(p.deliverables) ? (p.deliverables as string[]).join("\n") : "",
+                            supports_professional_review: !!p.supports_professional_review,
+                            active: !!p.active,
+                            display_order: String(p.display_order),
                           })
                         }
                         className="inline-flex items-center gap-1.5 rounded-lg border border-border px-2.5 py-1.5 text-[11px] font-mono uppercase tracking-wider hover:border-brand hover:text-brand"
