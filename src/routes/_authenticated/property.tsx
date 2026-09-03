@@ -1,4 +1,5 @@
 import { createFileRoute, useRouter } from "@tanstack/react-router";
+import { PermivioPageHeader } from "@/components/PermivioPageHeader";
 import { useServerFn } from "@tanstack/react-start";
 import { useMutation } from "@tanstack/react-query";
 import { useEffect, useRef, useState } from "react";
@@ -56,17 +57,11 @@ function PropertyPage() {
     <AppShell>
       <div className="px-4 py-6 lg:px-0 space-y-6">
         {/* Header */}
-        <header className="space-y-2">
-          <div className="inline-flex items-center gap-2 rounded-full border border-border bg-background/60 px-3 py-1 text-[10px] font-mono uppercase tracking-widest text-brand">
-            <Sparkles className="size-3" /> Property Intelligence
-          </div>
-          <h1 className="text-2xl font-semibold tracking-tight">Any address → a permit-ready profile.</h1>
-          <p className="text-sm text-muted-foreground max-w-2xl">
-            Enter a U.S. address. Permivio geocodes it, resolves the jurisdiction, and generates a jurisdiction-anchored
-            summary of authorities, utilities, likely permits, and site constraints. Verified facts are marked; anything
-            AI-inferred is flagged for you to confirm.
-          </p>
-        </header>
+        <PermivioPageHeader
+          eyebrow="Property Intelligence"
+          title="Any address → a permit-ready profile."
+          subtitle="Enter a U.S. address. Permivio geocodes it, resolves the jurisdiction, and generates a jurisdiction-anchored summary of authorities, utilities, likely permits, and site constraints. Verified facts are marked; anything AI-inferred is flagged for you to confirm."
+        />
 
         {/* Search */}
         <form onSubmit={submit} className="rounded-2xl border border-border bg-card/60 p-4 shadow-sm backdrop-blur">

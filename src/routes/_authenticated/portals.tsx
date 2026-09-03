@@ -1,4 +1,5 @@
 import { createFileRoute, Link, useNavigate } from "@tanstack/react-router";
+import { PermivioPageHeader } from "@/components/PermivioPageHeader";
 import { zodValidator, fallback } from "@tanstack/zod-adapter";
 import { z } from "zod";
 import { useEffect, useMemo, useState } from "react";
@@ -123,12 +124,10 @@ function PortalsPage() {
     <AppShell>
       <div className="px-4 pt-6 space-y-5">
         <header className="space-y-1">
-          <div className="flex items-center gap-2 text-brand">
-            <Building2 className="size-5" />
-            <span className="font-mono text-[10px] uppercase tracking-widest">Permit Portals</span>
-          </div>
-          <div className="flex items-start justify-between gap-3">
-            <h1 className="text-2xl font-semibold tracking-tight">Nationwide Portal Directory</h1>
+          <PermivioPageHeader
+            eyebrow="Permit Portals"
+            title="Nationwide Portal Directory"
+            actions={<>
             {adminQ.data === true && (
               <Link
                 to="/admin/portals"
@@ -137,7 +136,8 @@ function PortalsPage() {
                 <ShieldAlert className="size-3.5" /> Manage mappings
               </Link>
             )}
-          </div>
+            </>}
+          />
           <p className="text-sm text-muted-foreground">
             Direct links to {allEntries.length}+ live municipal permit portals. Search by jurisdiction, filter by
             platform, or pre-fill any portal with an address or permit number.

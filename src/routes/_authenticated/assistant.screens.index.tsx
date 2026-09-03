@@ -1,4 +1,5 @@
 import { createFileRoute, Link } from "@tanstack/react-router";
+import { PermivioPageHeader } from "@/components/PermivioPageHeader";
 import { useMutation, useQuery, useQueryClient } from "@tanstack/react-query";
 import { useServerFn } from "@tanstack/react-start";
 import { useState } from "react";
@@ -48,16 +49,11 @@ function ScreensPage() {
       </header>
 
       <div className="mx-auto max-w-5xl px-4 sm:px-6 py-6 space-y-4">
-        <div>
-          <div className="flex items-center gap-2 text-sky-300/80">
-            <Layers className="size-5" />
-            <span className="font-mono text-[10px] uppercase tracking-widest">Site Screening</span>
-          </div>
-          <h1 className="text-2xl font-semibold tracking-tight mt-1">Candidate Site Comparisons</h1>
-          <p className="text-sm text-zinc-400 mt-1">
-            Screen multiple candidate sites side by side before committing to a tracked project for any of them.
-          </p>
-        </div>
+        <PermivioPageHeader
+          eyebrow="Site Screening"
+          title="Candidate Site Comparisons"
+          subtitle="Screen multiple candidate sites side by side before committing to a tracked project for any of them."
+        />
 
         {q.isLoading && <div className="text-sm text-zinc-400">Loading…</div>}
 

@@ -1,4 +1,5 @@
 import { createFileRoute, Link, useNavigate } from "@tanstack/react-router";
+import { PermivioPageHeader } from "@/components/PermivioPageHeader";
 import { zodValidator, fallback } from "@tanstack/zod-adapter";
 import { z } from "zod";
 import { useMutation, useQuery, useQueryClient } from "@tanstack/react-query";
@@ -527,9 +528,12 @@ function SummaryCard({ title, jurisdiction, analysis, intake }: {
   const assumptions = Array.isArray(s.assumptions) ? (s.assumptions as string[]) : [];
   return (
     <div className="rounded-2xl bg-gradient-to-br from-sky-500/10 via-violet-500/5 to-transparent ring-1 ring-white/10 p-5">
-      <div className="text-[11px] font-mono uppercase tracking-widest text-sky-300/80">Project summary</div>
-      <h1 className="text-xl font-semibold mt-1">{title}</h1>
-      <div className="text-sm text-zinc-400 mt-0.5">{jurisdiction || "Jurisdiction unspecified"}</div>
+      <PermivioPageHeader
+        eyebrow="Project summary"
+        context={title}
+        title="Structured Permit Analysis"
+        subtitle={jurisdiction || "Jurisdiction unspecified"}
+      />
       <div className="grid sm:grid-cols-2 gap-x-6 gap-y-1.5 mt-3 text-sm">
         <div><span className="text-zinc-500">Type:</span> {String(s.project_type ?? intake.project_type ?? "—")}</div>
         <div><span className="text-zinc-500">Proposed use:</span> {String(s.proposed_use ?? intake.proposed_use ?? "—")}</div>

@@ -1,4 +1,5 @@
 import { createFileRoute, Link, useNavigate } from "@tanstack/react-router";
+import { PermivioPageHeader } from "@/components/PermivioPageHeader";
 import { useState } from "react";
 import { useMutation, useQuery, useQueryClient } from "@tanstack/react-query";
 import { useServerFn } from "@tanstack/react-start";
@@ -86,17 +87,11 @@ function ReportHubPage() {
   return (
     <AppShell>
       <div className="px-4 pt-6 space-y-6">
-        <header className="space-y-1">
-          <div className="flex items-center gap-2 text-brand">
-            <FileCheck2 className="size-5" />
-            <span className="font-mono text-[10px] uppercase tracking-widest">Compliance Report</span>
-          </div>
-          <h1 className="text-2xl font-semibold tracking-tight">One-shot permit compliance research</h1>
-          <p className="text-sm text-muted-foreground max-w-2xl">
-            Address + project type → jurisdiction identification, applicable departments, code citations, verified contacts,
-            timeline, cost estimate, and a work-breakdown Gantt. Ready in a couple of minutes.
-          </p>
-        </header>
+        <PermivioPageHeader
+          eyebrow="Compliance Report"
+          title="One-shot permit compliance research"
+          subtitle="Address + project type → jurisdiction identification, applicable departments, code citations, verified contacts, timeline, cost estimate, and a work-breakdown Gantt. Ready in a couple of minutes."
+        />
 
         {/* Stat pills */}
         <div className="grid grid-cols-3 gap-2">

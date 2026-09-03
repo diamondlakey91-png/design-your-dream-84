@@ -1,4 +1,5 @@
 import { createFileRoute, Link } from "@tanstack/react-router";
+import { PermivioPageHeader } from "@/components/PermivioPageHeader";
 import { useMutation, useQuery, useQueryClient } from "@tanstack/react-query";
 import { useServerFn } from "@tanstack/react-start";
 import { useMemo, useState } from "react";
@@ -141,7 +142,7 @@ function AdminHealthPortalsPage() {
             <ShieldAlert className="size-5" />
             <span className="font-mono text-[10px] uppercase tracking-widest">Admin · Health/Environmental Mappings</span>
           </div>
-          <h1 className="text-2xl font-semibold tracking-tight">Jurisdiction → Health/Environmental Agency Mappings</h1>
+          <PermivioPageHeader eyebrow="Admin" title="Jurisdiction → Health/Environmental Agency Mappings" />
           <p className="text-sm text-muted-foreground">
             Add new health departments and environmental agencies (septic/OSSF, well permitting, food service, wetlands/stormwater)
             without shipping code. DB entries override the {HEALTH_AGENCY_REGISTRY.length} built-in
