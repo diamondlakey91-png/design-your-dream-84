@@ -12,18 +12,85 @@ export type ServiceProduct = {
   product_key: string;
   name: string;
   client_title: string;
+  report_subtitle?: string | null;
   client_question: string | null;
   description: string;
   category: string;
   base_price_cents: number;
   currency: string;
+  /** Additional cost to add professional review on top of the base report. */
+  review_addon_price_cents?: number | null;
+  /** Legacy column: the professionally reviewed TOTAL. */
   professional_review_price_cents: number | null;
   rush_price_cents: number | null;
+  rush_addon_price_cents?: number | null;
+  custom_quote_required?: boolean;
+  professional_review_required?: boolean;
+  starting_price_cents?: number | null;
+  recommended_project_type?: string | null;
+  is_recommended?: boolean;
+  full_scope?: unknown;
   turnaround_estimate: string | null;
   supports_professional_review: boolean;
   deliverables: unknown;
   display_order: number;
 };
+
+export type PriceLine = { label: string; amount_cents: number };
+export type PriceBreakdown = {
+  lines: PriceLine[];
+  total_cents: number;
+  currency: string;
+  custom_quote: boolean;
+};
+
+/** Additional cost of professional review for a product (add-on, not total). */
+export function reviewAddonCents(product: ServiceProduct): number | null {
+  if (product.review_addon_price_cents != null) return product.review_addon_price_cents;
+  if (product.professional_review_price_cents != null)
+    return Math.max(product.professional_review_price_cents - product.base_price_cents, 0);
+  return null;
+}
+
+export function rushAddonCents(product: ServiceProduct): number | null {
+  return product.rush_addon_price_cents ?? product.rush_price_cents ?? null;
+}
+
+/** Professionally reviewed total for a product. */
+export function reviewTotalCents(product: ServiceProduct): number | null {
+  const addon = reviewAddonCents(product);
+  return addon == null ? null : product.base_price_cents + addon;
+}
+
+/**
+ * Single source of truth for what an order costs. The same function is used on
+ * the server when the real amount is charged, so displayed and charged totals
+ * can never disagree.
+ */
+export function priceBreakdown(
+  product: ServiceProduct,
+  tier: DeliveryTier,
+  rush = false,
+): PriceBreakdown {
+  const currency = product.currency ?? "usd";
+  if (product.custom_quote_required) {
+    return { lines: [], total_cents: 0, currency, custom_quote: true };
+  }
+  const lines: PriceLine[] = [{ label: `${product.client_title} — base report`, amount_cents: product.base_price_cents }];
+  if (tier === "professional_review") {
+    const addon = reviewAddonCents(product);
+    if (addon) lines.push({ label: "Professional review add-on", amount_cents: addon });
+  }
+  const rushAmount = rushAddonCents(product);
+  if (rush && rushAmount) lines.push({ label: "Expedited handling", amount_cents: rushAmount });
+  return {
+    lines,
+    total_cents: lines.reduce((sum, l) => sum + l.amount_cents, 0),
+    currency,
+    custom_quote: false,
+  };
+}
+
 
 export type ServiceOrder = {
   id: string;
