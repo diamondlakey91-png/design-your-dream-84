@@ -377,7 +377,12 @@ function Landing() {
             <PermivioMark className="h-5 w-5" />
             <span>© Permivio</span>
           </div>
-          <span>Intelligent Permitting.</span>
+          <div className="flex items-center gap-6">
+            <Link to="/site-investigation" className="transition hover:text-blue-100">
+              Site Investigation Reports
+            </Link>
+            <span>Intelligent Permitting.</span>
+          </div>
         </div>
       </footer>
     </div>
