@@ -482,6 +482,14 @@ Return JSON: { "findings": [{ "severity": "critical|high|medium|low|informationa
 
       await sb.from("qaqc_reviews").update({
         status: "complete",
+        inventory_gaps: {
+          index_sheets_not_uploaded: inventory.index_sheets_not_uploaded,
+          uploaded_sheets_not_indexed: inventory.uploaded_sheets_not_indexed,
+          duplicate_sheet_numbers: inventory.duplicate_sheet_numbers,
+          missing_number_sequences: inventory.missing_number_sequences,
+          missing_disciplines: inventory.missing_disciplines,
+          conflicting_dates: inventory.conflicting_dates,
+        } as never,
         jurisdiction_snapshot: {
           jurisdiction: jurisdiction || null,
           state,
