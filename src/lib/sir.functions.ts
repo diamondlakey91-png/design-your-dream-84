@@ -47,16 +47,26 @@ export const submitSirRequest = createServerFn({ method: "POST" })
     }).select("id").maybeSingle();
     if (error || !row) throw new Error("Could not submit your request. Please try again.");
 
-    // Kick off real research immediately so the report shell is populated when a
-    // Permivio reviewer opens the request. Failures never block the submission.
-    try {
-      await runResearch(row.id);
-    } catch (err) {
+    // Kick off real research in the background so the visitor gets an instant
+    // confirmation. runResearch persists its own research_status/research_error,
+    // and admins can re-run it, so it never blocks (or fails) the submission.
+    await supabaseAdmin.from("sir_requests").update({ research_status: "queued" }).eq("id", row.id);
+    const work = runResearch(row.id).catch((err: unknown) => {
       console.error("[sir] auto research failed:", (err as Error).message);
+    });
+    try {
+      // Keep the worker alive for the background pass when the runtime supports it.
+      const spec = "cloudflare:workers";
+      const mod = (await import(/* @vite-ignore */ spec)) as { waitUntil?: (p: Promise<unknown>) => void };
+      if (typeof mod.waitUntil === "function") mod.waitUntil(work);
+    } catch {
+      void work;
     }
+
 
     return { ok: true as const, id: row.id };
   });
+
 
 /** Resolve jurisdiction → research official sources → persist the structured scope. */
 async function runResearch(requestId: string) {
