@@ -56,9 +56,15 @@ export type ParcelJurisdictionPromptInput = {
   scope: string;
   clientObjective: string;
   knownParcelId: string | null;
+  /**
+   * Boundary determination read directly from official government GIS
+   * (Census TIGER / FEMA NFHL). Authoritative — the model may not contradict it.
+   */
+  authoritativeBoundary?: string | null;
   evidence: Array<{ source_key: string; url: string; title: string; retrieved: boolean; excerpt: string }>;
   searchLeads: Array<{ url: string; title: string }>;
 };
+
 
 export function buildParcelJurisdictionPrompt(input: ParcelJurisdictionPromptInput) {
   const g = input.geocode;
