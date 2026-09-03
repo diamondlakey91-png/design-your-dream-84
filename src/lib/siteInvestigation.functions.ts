@@ -341,6 +341,18 @@ EXISTING USE: ${scope?.['occupancy_existing'] ?? "unknown"} · PROPOSED USE: ${s
 GROSS SF: ${scope?.['sq_ft_gross'] ?? "unknown"} · UNITS: ${scope?.['dwelling_units'] ?? "unknown"}
 USER NOTES: ${data.notes ?? "none"}
 
+INVESTIGATION PLAN (produced by PERMIVIO's planner — respect it):
+COMPLEXITY: level ${plan.complexity_level} (${complexityMeta(plan.complexity_level).label}) · REPORT PRODUCT: ${depthMeta(depth).label}
+GROUND-UP: ${plan.ground_up} · INTERIOR ONLY: ${plan.interior_only} · SITE WORK: ${plan.site_work}
+ENTITLEMENT INVOLVEMENT: ${plan.entitlement_involvement} · HEALTH-REGULATED USE: ${plan.health_involvement} · ENVIRONMENTAL: ${plan.environmental_involvement}
+PARCELS: ${plan.parcel_count}${plan.acreage ? ` · ACREAGE: ${plan.acreage}` : ""}${plan.building_sf ? ` · BUILDING SF: ${plan.building_sf}` : ""}
+PARCEL DETAIL: ${data.parcels.length ? JSON.stringify(data.parcels).slice(0, 1500) : "single parcel / not itemized"}
+ACTIVE RESEARCH MODULES:
+${moduleList}
+CLIENT FOLLOW-UP ANSWERS: ${data.followup_answers.length ? JSON.stringify(data.followup_answers).slice(0, 1500) : "none provided"}
+MISSING INFORMATION: ${plan.missing_information.join(" | ") || "none"}
+
+
 CACHED JURISDICTION PROFILE: ${prof ? JSON.stringify(prof).slice(0, 2200) : "none on file"}
 
 OFFICIAL RESEARCH EXCERPTS (cite these URLs; do not cite anything not listed):
