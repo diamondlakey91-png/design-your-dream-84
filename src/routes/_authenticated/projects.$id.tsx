@@ -26,6 +26,7 @@ import { ResponseMatrixTab } from "@/components/project/ResponseMatrixTab";
 import { QaQcTab } from "@/components/project/QaQcTab";
 import { PlanQaQcTab } from "@/components/project/PlanQaQcTab";
 import { SiteInvestigationTab } from "@/components/project/SiteInvestigationTab";
+import { IntelligenceTab } from "@/components/project/IntelligenceTab";
 import { useViewMode } from "@/hooks/useViewMode";
 import { ViewModeToggle } from "@/components/client/ViewModeToggle";
 import { ClientProjectView } from "@/components/client/ClientProjectView";
