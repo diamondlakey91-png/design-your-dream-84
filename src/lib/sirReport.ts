@@ -369,7 +369,14 @@ export function buildSirReport(research: any): SirCoverageSection[] {
     no: i + 1,
     title: s.title,
     intro: s.intro,
-    modules: byKey[s.key],
+    // A finding may only present as "verified" when it carries a citable
+    // official source; without one it is research, not verification.
+    modules: byKey[s.key].map((m) => ({
+      ...m,
+      findings: m.findings.map((f) =>
+        f.verification === "verified" && !f.source ? { ...f, verification: "ai_assisted" as SirVerification } : f,
+      ),
+    })),
   })).filter((s) => s.modules.length > 0);
 }
 
