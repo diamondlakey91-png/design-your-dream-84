@@ -504,16 +504,20 @@ export const getSiteInvestigation = createServerFn({ method: "GET" })
   .inputValidator((d: unknown) => z.object({ investigation_id: z.string().uuid() }).parse(d))
   .handler(async ({ data, context }) => {
     const sb = context.supabase;
-    const [i, f, p, pr] = await Promise.all([
+    const [i, f, p, pr, rk, pc] = await Promise.all([
       sb.from("site_investigations").select("*").eq("id", data.investigation_id).maybeSingle(),
       sb.from("site_investigation_findings").select("*").eq("investigation_id", data.investigation_id).order("sort_order", { ascending: true }),
       sb.from("site_investigation_permits").select("*").eq("investigation_id", data.investigation_id).order("sequence_order", { ascending: true }),
       sb.from("professional_reviews").select("*").eq("target_type", "site_investigation").eq("target_id", data.investigation_id).order("created_at", { ascending: false }).limit(1),
+      sb.from("site_investigation_risks").select("*").eq("investigation_id", data.investigation_id).order("sort_order", { ascending: true }),
+      sb.from("site_investigation_parcels").select("*").eq("investigation_id", data.investigation_id).order("sort_order", { ascending: true }),
     ]);
     return {
       investigation: i.data,
       findings: f.data ?? [],
       permits: p.data ?? [],
+      risks: rk.data ?? [],
+      parcels: pc.data ?? [],
       professional_review: (pr.data ?? [])[0] ?? null,
       disclaimer: SITE_INVESTIGATION_DISCLAIMER,
     };
