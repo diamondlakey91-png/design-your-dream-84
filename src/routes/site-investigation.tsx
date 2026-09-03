@@ -260,10 +260,11 @@ function SiteInvestigationPage() {
                   <CheckCircle2 className="size-12 text-green-400" />
                   <h3 className="mt-4 text-xl font-semibold text-white">Request received</h3>
                   <p className="mt-2 max-w-sm text-sm text-slate-400">
-                    Permivio has already started researching your site — confirming the authority having
-                    jurisdiction, zoning and allowable use, the permit and approval path, utility
-                    coordination points and a realistic timeline. We'll follow up with the confirmed
-                    research scope and turnaround.
+                    Your request is saved and queued for research. Permivio will work to resolve the
+                    parcel and controlling agencies, zoning and allowable use, the likely permit and
+                    approval path, utility coordination points and a realistic timeline — then follow up
+                    with the confirmed research scope and turnaround. Findings requiring agency
+                    confirmation will be labeled as such.
                   </p>
                 </div>
               ) : (
