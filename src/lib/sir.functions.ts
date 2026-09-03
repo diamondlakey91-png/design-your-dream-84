@@ -27,7 +27,7 @@ export const submitSirRequest = createServerFn({ method: "POST" })
   .inputValidator((data) => sirRequestSchema.parse(data))
   .handler(async ({ data }) => {
     const { supabaseAdmin } = await import("@/integrations/supabase/client.server");
-    const { error } = await supabaseAdmin.from("sir_requests").insert({
+    const { data: row, error } = await supabaseAdmin.from("sir_requests").insert({
       name: data.name,
       company: data.company || null,
       email: data.email,
