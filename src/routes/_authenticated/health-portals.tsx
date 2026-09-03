@@ -139,7 +139,8 @@ function HealthPortalsPage() {
                 <ShieldAlert className="size-3.5" /> Manage mappings
               </Link>
             )}
-          </div>
+            </>}
+          />
           <p className="text-sm text-muted-foreground">
             Septic/OSSF, well permitting, food-service plan review, and wetlands/stormwater agencies —
             {" "}{allEntries.length} entries, separate from the building-permit portal directory.

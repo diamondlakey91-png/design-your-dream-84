@@ -136,7 +136,8 @@ function PortalsPage() {
                 <ShieldAlert className="size-3.5" /> Manage mappings
               </Link>
             )}
-          </div>
+            </>}
+          />
           <p className="text-sm text-muted-foreground">
             Direct links to {allEntries.length}+ live municipal permit portals. Search by jurisdiction, filter by
             platform, or pre-fill any portal with an address or permit number.
