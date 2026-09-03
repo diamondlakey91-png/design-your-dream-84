@@ -432,11 +432,10 @@ export function greeting(now = new Date()): string {
   return "Good evening";
 }
 
-export function firstName(fullName: string | null | undefined, email: string | null | undefined): string {
+export function firstName(fullName: string | null | undefined, email?: string | null): string | null {
+  void email; // never display an email-derived name in place of the client's name
   const name = (fullName ?? "").trim();
-  if (name) return name.split(/\s+/)[0];
-  const local = (email ?? "").split("@")[0] ?? "";
-  const guess = local.replace(/[._\-0-9]+/g, " ").trim().split(/\s+/)[0];
-  if (!guess) return "there";
-  return guess.charAt(0).toUpperCase() + guess.slice(1);
+  if (!name) return null;
+  const first = name.split(/\s+/)[0];
+  return first.charAt(0).toUpperCase() + first.slice(1);
 }

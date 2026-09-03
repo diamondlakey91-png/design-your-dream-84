@@ -78,10 +78,10 @@ function Dashboard() {
       <PermivioPageHeader
         eyebrow={mode === "client" ? "Your projects" : email ? `Signed in · ${email}` : "System Live"}
         context={mode === "client" && company ? company : undefined}
-        title={mode === "client" ? `${greeting()}, ${who}` : "Command Center"}
+        title={mode === "client" ? (who ? `${greeting()}, ${who}` : "Welcome back") : "Command Center"}
         subtitle={
           mode === "client"
-            ? "Here's the latest on your projects."
+            ? "Here’s what’s happening with your projects."
             : "Everything that needs your attention across permits, reviews, inspections, and closeout."
         }
         actions={<>
