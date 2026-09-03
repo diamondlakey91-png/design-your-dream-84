@@ -1695,6 +1695,62 @@ export type Database = {
           },
         ]
       }
+      qa_signoffs: {
+        Row: {
+          created_at: string
+          gate_passed: boolean
+          id: string
+          notes: string | null
+          overridden: boolean
+          override_reason: string | null
+          project_id: string
+          scope: string
+          signed_by_name: string
+          signed_by_role: string | null
+          snapshot: Json
+          updated_at: string
+          user_id: string
+        }
+        Insert: {
+          created_at?: string
+          gate_passed?: boolean
+          id?: string
+          notes?: string | null
+          overridden?: boolean
+          override_reason?: string | null
+          project_id: string
+          scope?: string
+          signed_by_name: string
+          signed_by_role?: string | null
+          snapshot?: Json
+          updated_at?: string
+          user_id: string
+        }
+        Update: {
+          created_at?: string
+          gate_passed?: boolean
+          id?: string
+          notes?: string | null
+          overridden?: boolean
+          override_reason?: string | null
+          project_id?: string
+          scope?: string
+          signed_by_name?: string
+          signed_by_role?: string | null
+          snapshot?: Json
+          updated_at?: string
+          user_id?: string
+        }
+        Relationships: [
+          {
+            foreignKeyName: "qa_signoffs_project_id_fkey"
+            columns: ["project_id"]
+            isOneToOne: false
+            referencedRelation: "projects"
+            referencedColumns: ["id"]
+          },
+        ]
+      }
       report_shares: {
         Row: {
           created_at: string
