@@ -316,7 +316,7 @@ function drawBlock(ctx: Ctx, block: ReportBlock) {
         ensure(ctx, 26);
         text(ctx, s.title, { size: 9.5, bold: true });
         if (s.url) {
-          const lines = wrap(s.url, ctx.regular, 8.5, CONTENT_W);
+          const lines = wrapChars(s.url, ctx.regular, 8.5, CONTENT_W);
           for (const line of lines) {
             ensure(ctx, 12);
             ctx.page.drawText(line, { x: MARGIN, y: ctx.y, size: 8.5, font: ctx.regular, color: BLUE });
