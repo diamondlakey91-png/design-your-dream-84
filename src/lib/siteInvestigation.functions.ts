@@ -189,7 +189,7 @@ RULES:
 Return JSON: { "executive_summary": "", "feasibility_rating": "green|yellow|orange|red|gray", "feasibility_rationale": "", "property_info": {}, "sections": [{"key":"","title":"","body":"","bullets":[]}], "findings": [...], "permits": [...], "timeline": [{"phase":"","duration":"","depends_on":"","notes":""}], "assumptions": [], "outstanding_questions": [], "recommended_next_steps": [], "sources": [{"url":"","title":""}] }`,
         "You are a land development consultant, permit expediter and GIS/property intelligence analyst. You never fabricate GIS data, parcel boundaries, zoning classifications, or ordinance citations, and you never present your analysis as a jurisdiction determination, survey, engineering opinion, or legal advice.",
         SiSchema,
-        { model: SI_MODEL, maxTokens: 12000 },
+        { model: SI_MODEL, max_tokens: 12000 },
       );
 
       const validCats = new Set(SI_FINDING_CATEGORIES.map((c) => c.id as string));
