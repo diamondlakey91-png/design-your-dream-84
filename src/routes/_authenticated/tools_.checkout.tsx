@@ -6,7 +6,7 @@ import { EmbeddedCheckout, EmbeddedCheckoutProvider } from "@stripe/react-stripe
 import { ArrowLeft, CheckCircle2, Clock, FileText, Loader2, Lock, Sparkles, UserCheck } from "lucide-react";
 import { PermivioPageHeader } from "@/components/PermivioPageHeader";
 import { getStripe, getStripeEnvironment } from "@/lib/stripe";
-import { createServiceOrder, getCheckoutContext, getOrderState } from "@/lib/toolsReports.functions";
+import { createServiceOrder, getCheckoutContext, getOrderState, requestFullService } from "@/lib/toolsReports.functions";
 import { DISCLAIMER, TIER_COPY, money, type DeliveryTier } from "@/lib/toolsCatalog";
 
 export const Route = createFileRoute("/_authenticated/tools_/checkout")({
@@ -49,6 +49,7 @@ function CheckoutPage() {
 
   const fetchContext = useServerFn(getCheckoutContext);
   const createOrder = useServerFn(createServiceOrder);
+  const askForScope = useServerFn(requestFullService);
 
   const ctx = useQuery({
     queryKey: ["checkout-context", search.product],
@@ -66,6 +67,7 @@ function CheckoutPage() {
   const [clientSecret, setClientSecret] = useState<string | null>(null);
   const [error, setError] = useState<string | null>(null);
   const [busy, setBusy] = useState(false);
+  const [quoteRequested, setQuoteRequested] = useState(false);
 
   const quoteKey = `${tier}${rush ? "_rush" : ""}` as
     | "ai_assisted"
