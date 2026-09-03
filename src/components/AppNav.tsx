@@ -17,6 +17,7 @@ import {
   LogOut,
   MapPin,
   Menu,
+  Plus,
   MessageSquare,
   Send,
   ShieldCheck,
@@ -29,6 +30,7 @@ import {
 import { supabase } from "@/integrations/supabase/client";
 import { PermivioLogo } from "@/components/PermivioMark";
 import { useIsAdmin } from "@/hooks/useIsAdmin";
+import { useOrgContext } from "@/hooks/useOrgContext";
 import { getClientDashboard } from "@/lib/clientDashboard.functions";
 import {
   DropdownMenu,
@@ -43,15 +45,21 @@ import { Tooltip, TooltipContent, TooltipProvider, TooltipTrigger } from "@/comp
 
 type NavLink = { to: string; label: string; icon: typeof MapPin; description?: string };
 
-/** Always-visible primary destinations. */
-const PRIMARY: NavLink[] = [
+/** Primary destinations everyone sees. */
+const PRIMARY_CLIENT: NavLink[] = [
+  { to: "/dashboard", label: "Dashboard", icon: LayoutDashboard },
+  { to: "/projects", label: "My Projects", icon: FolderKanban },
+];
+
+/** Professionals additionally get the research workspace up front. */
+const PRIMARY_PRO: NavLink[] = [
   { to: "/dashboard", label: "Dashboard", icon: LayoutDashboard },
   { to: "/projects", label: "Projects", icon: FolderKanban },
   { to: "/jurisdictions", label: "Jurisdiction Research", icon: Library },
 ];
 
-/** Grouped under the "Tools" dropdown on desktop, listed inline on mobile. */
-const TOOLS: NavLink[] = [
+/** Reports & tools shown to every signed-in user. */
+const TOOLS_CLIENT: NavLink[] = [
   {
     to: "/assistant/screens",
     label: "Site Investigation Reports",
@@ -65,23 +73,28 @@ const TOOLS: NavLink[] = [
     description: "Plan set review, missing sheets, PDF findings",
   },
   {
-    to: "/report",
-    label: "Compliance Reports",
-    icon: FileCheck2,
-    description: "Multi-department compliance research",
-  },
-  {
     to: "/assistant/permits",
     label: "Permit Requirement Finder",
     icon: ClipboardList,
     description: "Jurisdiction + project type → full permit list",
   },
-  { to: "/lookup", label: "Permit Lookup", icon: MapPin, description: "Live permits by address" },
   { to: "/property", label: "Property Analysis", icon: Sparkles, description: "Zoning & site constraints" },
+];
+
+/** Additional professional tooling. */
+const TOOLS_PRO: NavLink[] = [
+  {
+    to: "/report",
+    label: "Compliance Reports",
+    icon: FileCheck2,
+    description: "Multi-department compliance research",
+  },
+  { to: "/lookup", label: "Permit Lookup", icon: MapPin, description: "Live permits by address" },
   { to: "/filing", label: "Permit Filing", icon: Send, description: "Submission workflow" },
   { to: "/portals", label: "Portal Directory", icon: Library, description: "Mapped agency portals" },
 ];
 
+const START: NavLink = { to: "/start", label: "Start a Project", icon: Plus };
 const SERVICES: NavLink = { to: "/tools", label: "Services & Tools", icon: ShoppingBag };
 const SUPPORT: NavLink = { to: "/assistant", label: "Messages & Support", icon: MessageSquare };
 const ADMIN: NavLink[] = [
@@ -106,6 +119,10 @@ export function AppNav() {
   const [open, setOpen] = useState(false);
   const adminQ = useIsAdmin();
   const isAdmin = adminQ.data === true;
+  const orgQ = useOrgContext();
+  const isPro = (orgQ.data?.experience ?? "client") === "pro";
+  const PRIMARY = isPro ? PRIMARY_PRO : PRIMARY_CLIENT;
+  const TOOLS = isPro ? [...TOOLS_CLIENT, ...TOOLS_PRO] : TOOLS_CLIENT;
 
   const clientFn = useServerFn(getClientDashboard);
   const dataQ = useQuery({
@@ -191,6 +208,14 @@ export function AppNav() {
           </nav>
 
           <div className="ml-auto flex items-center gap-1.5">
+            {/* Single canonical project-creation entry point */}
+            <Link
+              to={START.to}
+              className="hidden items-center gap-1.5 rounded-lg bg-foreground px-3 py-2 text-sm font-semibold text-background transition-colors hover:bg-foreground/90 sm:inline-flex"
+            >
+              <Plus className="size-4" aria-hidden /> Start a Project
+            </Link>
+
             {/* Notifications */}
             <Popover>
               <Tooltip>
@@ -318,7 +343,7 @@ export function AppNav() {
               className="relative z-40 max-h-[75dvh] overflow-y-auto overflow-x-hidden border-t border-border bg-background/95 px-4 py-3 lg:hidden"
             >
               <ul className="space-y-1">
-                {[...PRIMARY, SERVICES, SUPPORT].map((l) => (
+                {[START, ...PRIMARY, SERVICES, SUPPORT].map((l) => (
                   <MobileItem key={l.to} link={l} active={active(l.to)} />
                 ))}
               </ul>
