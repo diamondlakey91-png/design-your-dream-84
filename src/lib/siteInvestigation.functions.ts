@@ -1,4 +1,5 @@
 import { createServerFn } from "@tanstack/react-start";
+import { deliverReportForProject } from "@/lib/serviceDelivery";
 import { requireSupabaseAuth } from "@/integrations/supabase/auth-middleware";
 import { z } from "zod";
 import { callGeminiJSON, toSlug } from "@/lib/ai.shared";
@@ -482,7 +483,27 @@ Return JSON: { "executive_summary": "", "feasibility_rating": "green|yellow|oran
         description: `Site investigation complete — feasibility ${ratingMeta(result.feasibility_rating).label}`,
       });
 
-      return { investigation_id: inv.id as string, feasibility_rating: result.feasibility_rating };
+      // If the client paid for this report, this research is the deliverable.
+      const delivery = await deliverReportForProject(sb, context.userId, data.project_id, {
+        title: `${SI_DEPTH_TITLE[depth] ?? "Site Investigation Report"} — ${data.address}`,
+        summary: result.executive_summary || null,
+        key_findings: result.recommended_next_steps.slice(0, 0).concat(
+          result.feasibility_snapshot.slice(0, 6).map((r) => `${r.label}: ${r.value}`),
+        ),
+        risks: [
+          ...result.deal_killers.map((d) => (typeof d === "string" ? d : String(d.issue ?? d.detail ?? ""))),
+          ...result.risks.map((r) => `${r.category}: ${r.why || r.supporting_info || ""}`),
+        ].filter(Boolean).slice(0, 8),
+        next_steps: result.recommended_next_steps.slice(0, 8),
+        source_table: "site_investigations",
+        source_id: inv.id as string,
+      });
+
+      return {
+        investigation_id: inv.id as string,
+        feasibility_rating: result.feasibility_rating,
+        delivered_order_id: delivery?.order_id ?? null,
+      };
     } catch (e) {
       const msg = e instanceof Error ? e.message : "Site investigation failed";
       await sb.from("site_investigations").update({ status: "error", error: msg }).eq("id", inv.id);
