@@ -91,14 +91,14 @@ export const ResearchSchema = z.object({
     applies_because: z.string().max(600),
     verification: Verification,
     source_url: looseText(500).optional(),
-  })).max(14).optional().default([]),
+  })).max(14).optional(),
   access: z.array(z.object({
     item: z.string().max(160),
     authority: looseText(160),
     requirement: z.string().max(600),
     verification: Verification,
     source_url: looseText(500).optional(),
-  })).max(12).optional().default([]),
+  })).max(12).optional(),
   environmental: z.array(z.object({
     constraint: z.string().max(160),
     status: looseEnum(["present", "possible", "not_indicated", "needs_confirmation"] as const, "needs_confirmation"),
@@ -106,14 +106,14 @@ export const ResearchSchema = z.object({
     deal_killer: z.boolean().optional(),
     verification: Verification,
     source_url: looseText(500).optional(),
-  })).max(14).optional().default([]),
+  })).max(14).optional(),
   fees: z.array(z.object({
     item: z.string().max(160),
     agency: looseText(160),
     amount_or_basis: z.string().max(300),
     verification: Verification,
     source_url: looseText(500).optional(),
-  })).max(16).optional().default([]),
+  })).max(16).optional(),
   timeline: z.array(z.object({
     phase: z.string().max(160),
     duration: z.string().max(80),
