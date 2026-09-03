@@ -4502,6 +4502,8 @@ export type Database = {
       [_ in never]: never
     }
     Functions: {
+      can_access_project: { Args: { _project_id: string }; Returns: boolean }
+      can_write_project: { Args: { _project_id: string }; Returns: boolean }
       has_active_subscription: {
         Args: { check_env?: string; user_uuid: string }
         Returns: boolean

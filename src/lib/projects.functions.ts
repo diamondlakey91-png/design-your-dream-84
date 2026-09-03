@@ -3,6 +3,62 @@ import { requireSupabaseAuth } from "@/integrations/supabase/auth-middleware";
 import { z } from "zod";
 import { getEntitlement, requireProjectQuota } from "@/lib/entitlements";
 
+type Db = { from: (t: string) => any };
+
+/**
+ * Every project belongs to an organization so teammates share one project record.
+ * Reuses the caller's existing organization; only creates one when they have none.
+ */
+async function resolveOrganizationId(supabase: Db, userId: string): Promise<string | null> {
+  const { data: membership } = await supabase
+    .from("organization_members")
+    .select("organization_id")
+    .eq("user_id", userId)
+    .order("created_at", { ascending: true })
+    .limit(1);
+  if (membership && membership.length > 0) return membership[0].organization_id as string;
+
+  const { data: org, error } = await supabase
+    .from("organizations")
+    .insert({
+      name: "My Organization",
+      slug: `org-${userId.replace(/-/g, "")}`,
+      kind: "client",
+      created_by: userId,
+    })
+    .select("id")
+    .single();
+  if (error || !org) return null;
+
+  await supabase
+    .from("organization_members")
+    .insert({ organization_id: org.id, user_id: userId, role: "org_admin" });
+  return org.id as string;
+}
+
+/** Owner, or an organization teammate whose role is not a plain client. */
+async function assertProjectWriteAccess(supabase: Db, userId: string, projectId: string) {
+  const { data: project } = await supabase
+    .from("projects")
+    .select("id, user_id, organization_id")
+    .eq("id", projectId)
+    .maybeSingle();
+  if (!project) throw new Error("Project not found");
+  if (project.user_id === userId) return project;
+  if (project.organization_id) {
+    const { data: member } = await supabase
+      .from("organization_members")
+      .select("role")
+      .eq("organization_id", project.organization_id)
+      .eq("user_id", userId)
+      .neq("role", "client")
+      .limit(1);
+    if (member && member.length > 0) return project;
+  }
+  throw new Error("Forbidden");
+}
+
+
 // ---- Projects ----
 export const listProjects = createServerFn({ method: "GET" })
   .middleware([requireSupabaseAuth])
@@ -46,11 +102,13 @@ export const createProject = createServerFn({ method: "POST" })
   .handler(async ({ data, context }) => {
     const ent = await getEntitlement(context.supabase, context.userId);
     await requireProjectQuota(context.supabase, context.userId, ent);
+    const organizationId = await resolveOrganizationId(context.supabase, context.userId);
     const { data: row, error } = await context.supabase
 
       .from("projects")
       .insert({
         user_id: context.userId,
+        organization_id: organizationId,
         name: data.name,
         location: data.location,
         project_type: data.project_type,
@@ -89,7 +147,7 @@ export const updateProject = createServerFn({ method: "POST" })
       .eq("id", data.id).maybeSingle();
     if (eErr) throw new Error(eErr.message);
     if (!existing) throw new Error("Project not found");
-    if (existing.user_id !== context.userId) throw new Error("Forbidden");
+    await assertProjectWriteAccess(context.supabase, context.userId, data.id);
 
     const patch: Record<string, unknown> = { updated_at: new Date().toISOString() };
     const changes: string[] = [];
@@ -118,12 +176,23 @@ export const deleteProject = createServerFn({ method: "POST" })
   .middleware([requireSupabaseAuth])
   .inputValidator((input: unknown) => z.object({ id: z.string().uuid() }).parse(input))
   .handler(async ({ data, context }) => {
-    // Verify ownership
+    // Only the project owner or an organization administrator may delete the record
     const { data: proj, error: pErr } = await context.supabase
-      .from("projects").select("id, user_id, name").eq("id", data.id).maybeSingle();
+      .from("projects").select("id, user_id, name, organization_id").eq("id", data.id).maybeSingle();
     if (pErr) throw new Error(pErr.message);
     if (!proj) throw new Error("Project not found");
-    if (proj.user_id !== context.userId) throw new Error("Forbidden");
+    if (proj.user_id !== context.userId) {
+      const { data: admin } = proj.organization_id
+        ? await context.supabase
+            .from("organization_members")
+            .select("role")
+            .eq("organization_id", proj.organization_id)
+            .eq("user_id", context.userId)
+            .eq("role", "org_admin")
+            .limit(1)
+        : { data: [] as { role: string }[] };
+      if (!admin || admin.length === 0) throw new Error("Forbidden");
+    }
 
     // Delete related rows first (in case FKs don't cascade)
     const tables = [

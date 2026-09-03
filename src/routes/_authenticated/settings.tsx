@@ -18,8 +18,9 @@ import {
 } from "@/lib/settings.functions";
 import {
   User, Lock, Bell, KeyRound, PenLine, Database, Loader2, Plus, Trash2, ExternalLink,
-  ShieldCheck, Check, Settings2,
+  ShieldCheck, Check, Settings2, Users,
 } from "lucide-react";
+import { OrganizationTeamPanel } from "@/components/org/OrganizationTeamPanel";
 
 export const Route = createFileRoute("/_authenticated/settings")({
   head: () => ({
@@ -68,10 +69,18 @@ export const Route = createFileRoute("/_authenticated/settings")({
   ),
 });
 
-type TabKey = "profile" | "security" | "notifications" | "credentials" | "branding" | "cleanup";
+type TabKey =
+  | "profile"
+  | "team"
+  | "security"
+  | "notifications"
+  | "credentials"
+  | "branding"
+  | "cleanup";
 
 const TABS: { key: TabKey; label: string; icon: typeof User }[] = [
   { key: "profile", label: "Profile", icon: User },
+  { key: "team", label: "Organization & Team", icon: Users },
   { key: "security", label: "Security", icon: Lock },
   { key: "notifications", label: "Notifications", icon: Bell },
   { key: "credentials", label: "Portal Credentials", icon: KeyRound },
@@ -242,6 +251,7 @@ function SettingsPage() {
         </nav>
 
         {tab === "profile" ? <ProfileSection /> : null}
+        {tab === "team" ? <OrganizationTeamPanel /> : null}
         {tab === "security" ? <SecuritySection /> : null}
         {tab === "notifications" ? <NotificationsSection /> : null}
         {tab === "credentials" ? <CredentialsSection /> : null}
