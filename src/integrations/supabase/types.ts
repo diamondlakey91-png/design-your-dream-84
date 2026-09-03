@@ -4718,6 +4718,7 @@ export type Database = {
       sir_requests: {
         Row: {
           approx_size: string | null
+          client_user_id: string | null
           company: string | null
           compiled_at: string | null
           compiled_report: Json | null
@@ -4735,6 +4736,7 @@ export type Database = {
           project_stage: string | null
           qa_report: Json | null
           qa_status: string
+          released_to_client_at: string | null
           report_needed: string | null
           research: Json | null
           research_audit: Json | null
@@ -4759,6 +4761,7 @@ export type Database = {
         }
         Insert: {
           approx_size?: string | null
+          client_user_id?: string | null
           company?: string | null
           compiled_at?: string | null
           compiled_report?: Json | null
@@ -4776,6 +4779,7 @@ export type Database = {
           project_stage?: string | null
           qa_report?: Json | null
           qa_status?: string
+          released_to_client_at?: string | null
           report_needed?: string | null
           research?: Json | null
           research_audit?: Json | null
@@ -4800,6 +4804,7 @@ export type Database = {
         }
         Update: {
           approx_size?: string | null
+          client_user_id?: string | null
           company?: string | null
           compiled_at?: string | null
           compiled_report?: Json | null
@@ -4817,6 +4822,7 @@ export type Database = {
           project_stage?: string | null
           qa_report?: Json | null
           qa_status?: string
+          released_to_client_at?: string | null
           report_needed?: string | null
           research?: Json | null
           research_audit?: Json | null
