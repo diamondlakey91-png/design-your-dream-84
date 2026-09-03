@@ -2757,6 +2757,468 @@ export type Database = {
         }
         Relationships: []
       }
+      service_discount_codes: {
+        Row: {
+          active: boolean
+          amount_off_cents: number | null
+          code: string
+          created_at: string
+          expires_at: string | null
+          id: string
+          max_redemptions: number | null
+          percent_off: number | null
+          product_id: string | null
+          redemptions: number
+          updated_at: string
+        }
+        Insert: {
+          active?: boolean
+          amount_off_cents?: number | null
+          code: string
+          created_at?: string
+          expires_at?: string | null
+          id?: string
+          max_redemptions?: number | null
+          percent_off?: number | null
+          product_id?: string | null
+          redemptions?: number
+          updated_at?: string
+        }
+        Update: {
+          active?: boolean
+          amount_off_cents?: number | null
+          code?: string
+          created_at?: string
+          expires_at?: string | null
+          id?: string
+          max_redemptions?: number | null
+          percent_off?: number | null
+          product_id?: string | null
+          redemptions?: number
+          updated_at?: string
+        }
+        Relationships: [
+          {
+            foreignKeyName: "service_discount_codes_product_id_fkey"
+            columns: ["product_id"]
+            isOneToOne: false
+            referencedRelation: "service_products"
+            referencedColumns: ["id"]
+          },
+        ]
+      }
+      service_entitlements: {
+        Row: {
+          created_at: string
+          delivery_tier: Database["public"]["Enums"]["service_delivery_tier"]
+          entitlement_status: Database["public"]["Enums"]["service_entitlement_status"]
+          entitlement_type: Database["public"]["Enums"]["service_entitlement_type"]
+          expires_at: string | null
+          granted_by: string | null
+          id: string
+          order_id: string | null
+          organization_id: string | null
+          product_id: string
+          project_id: string | null
+          starts_at: string
+          updated_at: string
+          user_id: string
+        }
+        Insert: {
+          created_at?: string
+          delivery_tier?: Database["public"]["Enums"]["service_delivery_tier"]
+          entitlement_status?: Database["public"]["Enums"]["service_entitlement_status"]
+          entitlement_type?: Database["public"]["Enums"]["service_entitlement_type"]
+          expires_at?: string | null
+          granted_by?: string | null
+          id?: string
+          order_id?: string | null
+          organization_id?: string | null
+          product_id: string
+          project_id?: string | null
+          starts_at?: string
+          updated_at?: string
+          user_id: string
+        }
+        Update: {
+          created_at?: string
+          delivery_tier?: Database["public"]["Enums"]["service_delivery_tier"]
+          entitlement_status?: Database["public"]["Enums"]["service_entitlement_status"]
+          entitlement_type?: Database["public"]["Enums"]["service_entitlement_type"]
+          expires_at?: string | null
+          granted_by?: string | null
+          id?: string
+          order_id?: string | null
+          organization_id?: string | null
+          product_id?: string
+          project_id?: string | null
+          starts_at?: string
+          updated_at?: string
+          user_id?: string
+        }
+        Relationships: [
+          {
+            foreignKeyName: "service_entitlements_order_id_fkey"
+            columns: ["order_id"]
+            isOneToOne: false
+            referencedRelation: "service_orders"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "service_entitlements_product_id_fkey"
+            columns: ["product_id"]
+            isOneToOne: false
+            referencedRelation: "service_products"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "service_entitlements_project_id_fkey"
+            columns: ["project_id"]
+            isOneToOne: false
+            referencedRelation: "projects"
+            referencedColumns: ["id"]
+          },
+        ]
+      }
+      service_order_items: {
+        Row: {
+          created_at: string
+          delivery_tier: Database["public"]["Enums"]["service_delivery_tier"]
+          id: string
+          label: string | null
+          order_id: string
+          product_id: string
+          quantity: number
+          unit_amount_cents: number
+        }
+        Insert: {
+          created_at?: string
+          delivery_tier?: Database["public"]["Enums"]["service_delivery_tier"]
+          id?: string
+          label?: string | null
+          order_id: string
+          product_id: string
+          quantity?: number
+          unit_amount_cents?: number
+        }
+        Update: {
+          created_at?: string
+          delivery_tier?: Database["public"]["Enums"]["service_delivery_tier"]
+          id?: string
+          label?: string | null
+          order_id?: string
+          product_id?: string
+          quantity?: number
+          unit_amount_cents?: number
+        }
+        Relationships: [
+          {
+            foreignKeyName: "service_order_items_order_id_fkey"
+            columns: ["order_id"]
+            isOneToOne: false
+            referencedRelation: "service_orders"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "service_order_items_product_id_fkey"
+            columns: ["product_id"]
+            isOneToOne: false
+            referencedRelation: "service_products"
+            referencedColumns: ["id"]
+          },
+        ]
+      }
+      service_orders: {
+        Row: {
+          amount_cents: number
+          client_notes: string | null
+          created_at: string
+          currency: string
+          delivered_at: string | null
+          delivery_tier: Database["public"]["Enums"]["service_delivery_tier"]
+          discount_cents: number
+          environment: string
+          id: string
+          product_id: string
+          project_id: string | null
+          rush: boolean
+          status: Database["public"]["Enums"]["service_order_status"]
+          stripe_payment_intent_id: string | null
+          stripe_session_id: string | null
+          updated_at: string
+          user_id: string
+        }
+        Insert: {
+          amount_cents?: number
+          client_notes?: string | null
+          created_at?: string
+          currency?: string
+          delivered_at?: string | null
+          delivery_tier?: Database["public"]["Enums"]["service_delivery_tier"]
+          discount_cents?: number
+          environment?: string
+          id?: string
+          product_id: string
+          project_id?: string | null
+          rush?: boolean
+          status?: Database["public"]["Enums"]["service_order_status"]
+          stripe_payment_intent_id?: string | null
+          stripe_session_id?: string | null
+          updated_at?: string
+          user_id: string
+        }
+        Update: {
+          amount_cents?: number
+          client_notes?: string | null
+          created_at?: string
+          currency?: string
+          delivered_at?: string | null
+          delivery_tier?: Database["public"]["Enums"]["service_delivery_tier"]
+          discount_cents?: number
+          environment?: string
+          id?: string
+          product_id?: string
+          project_id?: string | null
+          rush?: boolean
+          status?: Database["public"]["Enums"]["service_order_status"]
+          stripe_payment_intent_id?: string | null
+          stripe_session_id?: string | null
+          updated_at?: string
+          user_id?: string
+        }
+        Relationships: [
+          {
+            foreignKeyName: "service_orders_product_id_fkey"
+            columns: ["product_id"]
+            isOneToOne: false
+            referencedRelation: "service_products"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "service_orders_project_id_fkey"
+            columns: ["project_id"]
+            isOneToOne: false
+            referencedRelation: "projects"
+            referencedColumns: ["id"]
+          },
+        ]
+      }
+      service_products: {
+        Row: {
+          active: boolean
+          base_price_cents: number
+          category: string
+          client_question: string | null
+          client_title: string
+          commercial_price_cents: number | null
+          complexity_multiplier: number
+          created_at: string
+          currency: string
+          deliverables: Json
+          description: string
+          display_order: number
+          eligibility_rules: Json
+          id: string
+          name: string
+          product_key: string
+          professional_review_price_cents: number | null
+          recommended_phases: Json
+          residential_price_cents: number | null
+          rush_price_cents: number | null
+          sheet_pricing_rules: Json
+          supports_professional_review: boolean
+          turnaround_estimate: string | null
+          updated_at: string
+        }
+        Insert: {
+          active?: boolean
+          base_price_cents?: number
+          category: string
+          client_question?: string | null
+          client_title: string
+          commercial_price_cents?: number | null
+          complexity_multiplier?: number
+          created_at?: string
+          currency?: string
+          deliverables?: Json
+          description: string
+          display_order?: number
+          eligibility_rules?: Json
+          id?: string
+          name: string
+          product_key: string
+          professional_review_price_cents?: number | null
+          recommended_phases?: Json
+          residential_price_cents?: number | null
+          rush_price_cents?: number | null
+          sheet_pricing_rules?: Json
+          supports_professional_review?: boolean
+          turnaround_estimate?: string | null
+          updated_at?: string
+        }
+        Update: {
+          active?: boolean
+          base_price_cents?: number
+          category?: string
+          client_question?: string | null
+          client_title?: string
+          commercial_price_cents?: number | null
+          complexity_multiplier?: number
+          created_at?: string
+          currency?: string
+          deliverables?: Json
+          description?: string
+          display_order?: number
+          eligibility_rules?: Json
+          id?: string
+          name?: string
+          product_key?: string
+          professional_review_price_cents?: number | null
+          recommended_phases?: Json
+          residential_price_cents?: number | null
+          rush_price_cents?: number | null
+          sheet_pricing_rules?: Json
+          supports_professional_review?: boolean
+          turnaround_estimate?: string | null
+          updated_at?: string
+        }
+        Relationships: []
+      }
+      service_report_versions: {
+        Row: {
+          created_at: string
+          delivery_tier: Database["public"]["Enums"]["service_delivery_tier"]
+          id: string
+          order_id: string | null
+          payload: Json | null
+          product_id: string
+          project_id: string | null
+          reviewed_at: string | null
+          reviewed_by: string | null
+          source_id: string | null
+          source_table: string | null
+          summary: string | null
+          title: string
+          updated_at: string
+          user_id: string
+          version: number
+        }
+        Insert: {
+          created_at?: string
+          delivery_tier?: Database["public"]["Enums"]["service_delivery_tier"]
+          id?: string
+          order_id?: string | null
+          payload?: Json | null
+          product_id: string
+          project_id?: string | null
+          reviewed_at?: string | null
+          reviewed_by?: string | null
+          source_id?: string | null
+          source_table?: string | null
+          summary?: string | null
+          title: string
+          updated_at?: string
+          user_id: string
+          version?: number
+        }
+        Update: {
+          created_at?: string
+          delivery_tier?: Database["public"]["Enums"]["service_delivery_tier"]
+          id?: string
+          order_id?: string | null
+          payload?: Json | null
+          product_id?: string
+          project_id?: string | null
+          reviewed_at?: string | null
+          reviewed_by?: string | null
+          source_id?: string | null
+          source_table?: string | null
+          summary?: string | null
+          title?: string
+          updated_at?: string
+          user_id?: string
+          version?: number
+        }
+        Relationships: [
+          {
+            foreignKeyName: "service_report_versions_order_id_fkey"
+            columns: ["order_id"]
+            isOneToOne: false
+            referencedRelation: "service_orders"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "service_report_versions_product_id_fkey"
+            columns: ["product_id"]
+            isOneToOne: false
+            referencedRelation: "service_products"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "service_report_versions_project_id_fkey"
+            columns: ["project_id"]
+            isOneToOne: false
+            referencedRelation: "projects"
+            referencedColumns: ["id"]
+          },
+        ]
+      }
+      service_upgrade_requests: {
+        Row: {
+          contact_value: string | null
+          created_at: string
+          desired_timeline: string | null
+          handled_at: string | null
+          handled_by: string | null
+          id: string
+          notes: string | null
+          preferred_contact: string | null
+          project_id: string | null
+          request_type: string
+          status: string
+          updated_at: string
+          user_id: string
+        }
+        Insert: {
+          contact_value?: string | null
+          created_at?: string
+          desired_timeline?: string | null
+          handled_at?: string | null
+          handled_by?: string | null
+          id?: string
+          notes?: string | null
+          preferred_contact?: string | null
+          project_id?: string | null
+          request_type?: string
+          status?: string
+          updated_at?: string
+          user_id: string
+        }
+        Update: {
+          contact_value?: string | null
+          created_at?: string
+          desired_timeline?: string | null
+          handled_at?: string | null
+          handled_by?: string | null
+          id?: string
+          notes?: string | null
+          preferred_contact?: string | null
+          project_id?: string | null
+          request_type?: string
+          status?: string
+          updated_at?: string
+          user_id?: string
+        }
+        Relationships: [
+          {
+            foreignKeyName: "service_upgrade_requests_project_id_fkey"
+            columns: ["project_id"]
+            isOneToOne: false
+            referencedRelation: "projects"
+            referencedColumns: ["id"]
+          },
+        ]
+      }
       site_investigation_findings: {
         Row: {
           category: string
@@ -3220,6 +3682,25 @@ export type Database = {
         | "analyzing"
         | "needs_followup"
         | "complete"
+      service_delivery_tier: "ai_assisted" | "professional_review"
+      service_entitlement_status: "active" | "revoked" | "expired"
+      service_entitlement_type:
+        | "purchase"
+        | "admin_grant"
+        | "subscription"
+        | "promotional"
+        | "included"
+      service_order_status:
+        | "payment_required"
+        | "paid"
+        | "processing"
+        | "waiting_client"
+        | "ai_in_progress"
+        | "professional_review"
+        | "ready"
+        | "delivered"
+        | "cancelled"
+        | "refunded"
       source_kind: "agency_site" | "code" | "ordinance" | "portal" | "other"
       timeline_basis:
         | "published"
@@ -3451,6 +3932,27 @@ export const Constants = {
         "analyzing",
         "needs_followup",
         "complete",
+      ],
+      service_delivery_tier: ["ai_assisted", "professional_review"],
+      service_entitlement_status: ["active", "revoked", "expired"],
+      service_entitlement_type: [
+        "purchase",
+        "admin_grant",
+        "subscription",
+        "promotional",
+        "included",
+      ],
+      service_order_status: [
+        "payment_required",
+        "paid",
+        "processing",
+        "waiting_client",
+        "ai_in_progress",
+        "professional_review",
+        "ready",
+        "delivered",
+        "cancelled",
+        "refunded",
       ],
       source_kind: ["agency_site", "code", "ordinance", "portal", "other"],
       timeline_basis: [
