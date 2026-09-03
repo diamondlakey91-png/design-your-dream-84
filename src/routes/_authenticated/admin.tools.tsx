@@ -162,7 +162,7 @@ function AdminToolsPage() {
 
   const filtered = useMemo(() => {
     const q = query.trim().toLowerCase();
-    const rows = (productsQ.data ?? []) as Array<Record<string, never>> as Array<Record<string, string | number | boolean | null>>;
+    const rows = (productsQ.data ?? []) as unknown as Array<Record<string, string | number | boolean | null>>;
     if (!q) return rows;
     return rows.filter((r) => `${r['name']} ${r['client_title']} ${r['product_key']} ${r['category']}`.toLowerCase().includes(q));
   }, [productsQ.data, query]);
@@ -418,7 +418,7 @@ function AdminToolsPage() {
               <p className="text-sm text-muted-foreground">Loading orders…</p>
             ) : (
               <>
-                {((ordersQ.data ?? []) as Array<Record<string, never>> as Array<Record<string, string | number | boolean | null | { client_title?: string }>>).map(
+                {((ordersQ.data ?? []) as unknown as Array<Record<string, string | number | boolean | null | { client_title?: string }>>).map(
                   (o) => {
                     const status = String(o['status']);
                     const product = o['service_products'] as { client_title?: string } | null;
