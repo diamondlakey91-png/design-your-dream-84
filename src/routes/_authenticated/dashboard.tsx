@@ -16,6 +16,11 @@ import { ProjectTypeSelector } from "@/components/project-type/ProjectTypeSelect
 import { setProjectTypeForProject } from "@/lib/projectTypes.functions";
 import { useProjectTypes } from "@/hooks/useProjectTypes";
 import { IntakePipelineCard } from "@/components/dashboard/IntakePipelineCard";
+import { useViewMode } from "@/hooks/useViewMode";
+import { ViewModeToggle } from "@/components/client/ViewModeToggle";
+import { ClientDashboard } from "@/components/client/ClientDashboard";
+import { getClientDashboard } from "@/lib/clientDashboard.functions";
+import { greeting, firstName } from "@/lib/clientView";
 
 
 export const Route = createFileRoute("/_authenticated/dashboard")({
@@ -38,6 +43,12 @@ function Dashboard() {
   useEffect(() => {
     supabase.auth.getUser().then(({ data }) => setEmail(data.user?.email ?? null));
   }, []);
+
+  const { mode, setMode } = useViewMode();
+  const clientFn = useServerFn(getClientDashboard);
+  const clientQ = useQuery({ queryKey: ["client-dashboard"], queryFn: () => clientFn() });
+  const who = firstName(clientQ.data?.profile?.full_name ?? null, email);
+  const company = clientQ.data?.profile?.company ?? null;
 
   const projectsQ = useQuery({ queryKey: ["projects"], queryFn: () => listProjectsFn() });
   const deadlinesQ = useQuery({ queryKey: ["deadlines"], queryFn: () => listDeadlinesFn() });
@@ -67,10 +78,16 @@ function Dashboard() {
       {/* Header */}
       <div className="px-6 pt-8 pb-6 lg:px-2">
       <PermivioPageHeader
-        eyebrow={email ? `Signed in · ${email}` : "System Live"}
-        title="Command Center"
-        subtitle="Everything that needs your attention across permits, reviews, inspections, and closeout."
+        eyebrow={mode === "client" ? "Your projects" : email ? `Signed in · ${email}` : "System Live"}
+        context={mode === "client" && company ? company : undefined}
+        title={mode === "client" ? `${greeting()}, ${who}` : "Command Center"}
+        subtitle={
+          mode === "client"
+            ? "Here's what's happening with your projects."
+            : "Everything that needs your attention across permits, reviews, inspections, and closeout."
+        }
         actions={<>
+          <ViewModeToggle mode={mode} onChange={setMode} />
           <div className="hidden flex-col items-end sm:flex">
             <span className="font-mono text-[10px] uppercase tracking-tight text-muted-foreground">Active</span>
             <span className="text-lg font-semibold text-foreground">
@@ -94,6 +111,12 @@ function Dashboard() {
       />
       </div>
 
+      {mode === "client" ? (
+        <div className="px-4 pb-10 lg:px-2">
+          <ClientDashboard onCreateProject={() => setShowCreate(true)} />
+        </div>
+      ) : (
+      <>
       {/* Main grid */}
       <div className="grid grid-cols-12 gap-6 px-4 pb-8 lg:px-2">
         {/* LEFT column: Health + AI insight */}
@@ -183,6 +206,8 @@ function Dashboard() {
           </div>
         </div>
       </div>
+      </>
+      )}
 
       {showCreate && <CreateProjectDialog onClose={() => setShowCreate(false)} />}
     </AppShell>
