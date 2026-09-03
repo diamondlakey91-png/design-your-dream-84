@@ -1,4 +1,5 @@
 import { createFileRoute, Link, useNavigate } from "@tanstack/react-router";
+import { PermivioPageHeader } from "@/components/PermivioPageHeader";
 import { useMutation, useQuery, useQueryClient } from "@tanstack/react-query";
 import { useServerFn } from "@tanstack/react-start";
 import { AppShell } from "@/components/AppShell";
@@ -126,14 +127,13 @@ function InspectionMode() {
         <Link to="/projects/$id" params={{ id: insp.project_id }} className="inline-flex items-center gap-1.5 text-sm text-muted-foreground hover:text-foreground">
           <ArrowLeft className="size-4" /> Back to project
         </Link>
-        <div className="flex items-center gap-2 mt-4 mb-2">
-          <span className="text-[10px] font-mono bg-brand/15 text-brand px-1.5 py-0.5 rounded uppercase tracking-widest">Inspection Mode</span>
-          <span className="text-[10px] font-mono bg-muted px-1.5 py-0.5 rounded text-muted-foreground uppercase">{insp.status}</span>
+        <div className="mt-3">
+          <PermivioPageHeader
+            eyebrow={`Inspection Mode · ${insp.status.toUpperCase()}`}
+            context={project ? `${project.name}${project.location ? ` · ${project.location}` : ""}` : undefined}
+            title={insp.inspection_type}
+          />
         </div>
-        <h1 className="text-xl font-semibold">{insp.inspection_type}</h1>
-        {project && (
-          <p className="text-sm text-muted-foreground mt-1">{project.name} · {project.location}</p>
-        )}
       </header>
 
       <div className="p-6 space-y-6 pb-32">
