@@ -641,6 +641,24 @@ export const generateSiteInvestigationPdf = createServerFn({ method: "POST" })
     text(`Prepared: ${inv.prepared_date ?? new Date().toISOString().slice(0, 10)}`);
     text(`Overall feasibility rating: ${ratingMeta(inv.feasibility_rating).label} — ${ratingMeta(inv.feasibility_rating).definition}`, { b: true, gap: 8 });
 
+    const snap = inv.feasibility_snapshot as Record<string, string> | null;
+    if (snap && Object.keys(snap).length) {
+      heading("Executive feasibility snapshot");
+      for (const [k, v] of Object.entries(snap)) {
+        if (!v) continue;
+        text(`${k.replace(/_/g, " ").replace(/^\w/, (c) => c.toUpperCase())}: ${v}`, { gap: 1 });
+      }
+    }
+
+    if ((pc.data ?? []).length > 1) {
+      heading("Parcel summary");
+      for (const r of pc.data ?? []) {
+        text(`${r.label}${r.parcel_number ? ` · ${r.parcel_number}` : ""}${r.acreage ? ` · ${r.acreage} ac` : ""}${r.zoning ? ` · Zoning ${r.zoning}` : ""}${r.phase ? ` · ${r.phase}` : ""}`, { b: true, gap: 1 });
+        if (r.notes) text(`   ${r.notes}`, { gap: 1 });
+      }
+    }
+
+
     for (const s of (inv.report?.sections ?? []) as Array<{ no: number; title: string; body: string; bullets: string[] }>) {
       heading(`${s.no}. ${s.title}`);
       if (s.body) text(s.body);
