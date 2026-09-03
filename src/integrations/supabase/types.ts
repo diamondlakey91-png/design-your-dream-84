@@ -3222,6 +3222,543 @@ export type Database = {
           },
         ]
       }
+      sir_agent_runs: {
+        Row: {
+          agent: Database["public"]["Enums"]["sir_agent"]
+          assignment_id: string
+          completed_at: string | null
+          created_at: string
+          error: string | null
+          findings_created: number
+          id: string
+          input_version: number
+          module: string
+          notes: string | null
+          output_version: number
+          retry_count: number
+          reviewer_action: string | null
+          revision: number
+          sequence: number
+          sources_found: number
+          started_at: string | null
+          status: Database["public"]["Enums"]["sir_task_status"]
+          task: string
+          updated_at: string
+        }
+        Insert: {
+          agent: Database["public"]["Enums"]["sir_agent"]
+          assignment_id: string
+          completed_at?: string | null
+          created_at?: string
+          error?: string | null
+          findings_created?: number
+          id?: string
+          input_version?: number
+          module: string
+          notes?: string | null
+          output_version?: number
+          retry_count?: number
+          reviewer_action?: string | null
+          revision?: number
+          sequence?: number
+          sources_found?: number
+          started_at?: string | null
+          status?: Database["public"]["Enums"]["sir_task_status"]
+          task: string
+          updated_at?: string
+        }
+        Update: {
+          agent?: Database["public"]["Enums"]["sir_agent"]
+          assignment_id?: string
+          completed_at?: string | null
+          created_at?: string
+          error?: string | null
+          findings_created?: number
+          id?: string
+          input_version?: number
+          module?: string
+          notes?: string | null
+          output_version?: number
+          retry_count?: number
+          reviewer_action?: string | null
+          revision?: number
+          sequence?: number
+          sources_found?: number
+          started_at?: string | null
+          status?: Database["public"]["Enums"]["sir_task_status"]
+          task?: string
+          updated_at?: string
+        }
+        Relationships: [
+          {
+            foreignKeyName: "sir_agent_runs_assignment_id_fkey"
+            columns: ["assignment_id"]
+            isOneToOne: false
+            referencedRelation: "sir_assignments"
+            referencedColumns: ["id"]
+          },
+        ]
+      }
+      sir_assignments: {
+        Row: {
+          complexity_level: number
+          composed_report: Json | null
+          created_at: string
+          executive_summary: string | null
+          id: string
+          internal_notes: string | null
+          last_error: string | null
+          project_brief: Json
+          project_id: string | null
+          qaqc_passed_at: string | null
+          recommendation:
+            | Database["public"]["Enums"]["sir_recommendation"]
+            | null
+          recommendation_basis: string | null
+          released_at: string | null
+          request_id: string | null
+          research_completed_at: string | null
+          research_plan: Json
+          research_started_at: string | null
+          reviewed_at: string | null
+          reviewed_by: string | null
+          revision: number
+          source_freshness_days: number
+          status: Database["public"]["Enums"]["sir_workflow_status"]
+          tier: string
+          updated_at: string
+          user_id: string | null
+        }
+        Insert: {
+          complexity_level?: number
+          composed_report?: Json | null
+          created_at?: string
+          executive_summary?: string | null
+          id?: string
+          internal_notes?: string | null
+          last_error?: string | null
+          project_brief?: Json
+          project_id?: string | null
+          qaqc_passed_at?: string | null
+          recommendation?:
+            | Database["public"]["Enums"]["sir_recommendation"]
+            | null
+          recommendation_basis?: string | null
+          released_at?: string | null
+          request_id?: string | null
+          research_completed_at?: string | null
+          research_plan?: Json
+          research_started_at?: string | null
+          reviewed_at?: string | null
+          reviewed_by?: string | null
+          revision?: number
+          source_freshness_days?: number
+          status?: Database["public"]["Enums"]["sir_workflow_status"]
+          tier?: string
+          updated_at?: string
+          user_id?: string | null
+        }
+        Update: {
+          complexity_level?: number
+          composed_report?: Json | null
+          created_at?: string
+          executive_summary?: string | null
+          id?: string
+          internal_notes?: string | null
+          last_error?: string | null
+          project_brief?: Json
+          project_id?: string | null
+          qaqc_passed_at?: string | null
+          recommendation?:
+            | Database["public"]["Enums"]["sir_recommendation"]
+            | null
+          recommendation_basis?: string | null
+          released_at?: string | null
+          request_id?: string | null
+          research_completed_at?: string | null
+          research_plan?: Json
+          research_started_at?: string | null
+          reviewed_at?: string | null
+          reviewed_by?: string | null
+          revision?: number
+          source_freshness_days?: number
+          status?: Database["public"]["Enums"]["sir_workflow_status"]
+          tier?: string
+          updated_at?: string
+          user_id?: string | null
+        }
+        Relationships: [
+          {
+            foreignKeyName: "sir_assignments_project_id_fkey"
+            columns: ["project_id"]
+            isOneToOne: false
+            referencedRelation: "projects"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "sir_assignments_request_id_fkey"
+            columns: ["request_id"]
+            isOneToOne: false
+            referencedRelation: "sir_requests"
+            referencedColumns: ["id"]
+          },
+        ]
+      }
+      sir_conflicts: {
+        Row: {
+          affects_feasibility: boolean
+          assigned_to: string
+          assignment_id: string
+          conflicting_sources: string | null
+          created_at: string
+          finding_a: string | null
+          finding_b: string | null
+          id: string
+          module: string
+          resolution: string | null
+          resolved_at: string | null
+          resolved_by: string | null
+          summary: string
+          updated_at: string
+        }
+        Insert: {
+          affects_feasibility?: boolean
+          assigned_to?: string
+          assignment_id: string
+          conflicting_sources?: string | null
+          created_at?: string
+          finding_a?: string | null
+          finding_b?: string | null
+          id?: string
+          module: string
+          resolution?: string | null
+          resolved_at?: string | null
+          resolved_by?: string | null
+          summary: string
+          updated_at?: string
+        }
+        Update: {
+          affects_feasibility?: boolean
+          assigned_to?: string
+          assignment_id?: string
+          conflicting_sources?: string | null
+          created_at?: string
+          finding_a?: string | null
+          finding_b?: string | null
+          id?: string
+          module?: string
+          resolution?: string | null
+          resolved_at?: string | null
+          resolved_by?: string | null
+          summary?: string
+          updated_at?: string
+        }
+        Relationships: [
+          {
+            foreignKeyName: "sir_conflicts_assignment_id_fkey"
+            columns: ["assignment_id"]
+            isOneToOne: false
+            referencedRelation: "sir_assignments"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "sir_conflicts_finding_a_fkey"
+            columns: ["finding_a"]
+            isOneToOne: false
+            referencedRelation: "sir_findings"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "sir_conflicts_finding_b_fkey"
+            columns: ["finding_b"]
+            isOneToOne: false
+            referencedRelation: "sir_findings"
+            referencedColumns: ["id"]
+          },
+        ]
+      }
+      sir_finding_sources: {
+        Row: {
+          accessed_at: string
+          assignment_id: string
+          created_at: string
+          document_id: string | null
+          effective_date: string | null
+          finding_id: string
+          id: string
+          link_ok: boolean | null
+          locator: string | null
+          publishing_authority: string | null
+          source_name: string
+          supports: string | null
+          tier: Database["public"]["Enums"]["sir_source_tier"]
+          url: string | null
+        }
+        Insert: {
+          accessed_at?: string
+          assignment_id: string
+          created_at?: string
+          document_id?: string | null
+          effective_date?: string | null
+          finding_id: string
+          id?: string
+          link_ok?: boolean | null
+          locator?: string | null
+          publishing_authority?: string | null
+          source_name: string
+          supports?: string | null
+          tier?: Database["public"]["Enums"]["sir_source_tier"]
+          url?: string | null
+        }
+        Update: {
+          accessed_at?: string
+          assignment_id?: string
+          created_at?: string
+          document_id?: string | null
+          effective_date?: string | null
+          finding_id?: string
+          id?: string
+          link_ok?: boolean | null
+          locator?: string | null
+          publishing_authority?: string | null
+          source_name?: string
+          supports?: string | null
+          tier?: Database["public"]["Enums"]["sir_source_tier"]
+          url?: string | null
+        }
+        Relationships: [
+          {
+            foreignKeyName: "sir_finding_sources_assignment_id_fkey"
+            columns: ["assignment_id"]
+            isOneToOne: false
+            referencedRelation: "sir_assignments"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "sir_finding_sources_document_id_fkey"
+            columns: ["document_id"]
+            isOneToOne: false
+            referencedRelation: "project_documents"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "sir_finding_sources_finding_id_fkey"
+            columns: ["finding_id"]
+            isOneToOne: false
+            referencedRelation: "sir_findings"
+            referencedColumns: ["id"]
+          },
+        ]
+      }
+      sir_findings: {
+        Row: {
+          agency: string | null
+          agent: Database["public"]["Enums"]["sir_agent"]
+          ai_confidence: Database["public"]["Enums"]["sir_confidence"]
+          analysis: string | null
+          applicability: string | null
+          assignment_id: string
+          client_visible: boolean
+          confirmation_required: boolean
+          cost_impact: string | null
+          created_at: string
+          effective_date: string | null
+          finding: string
+          geographic_applicability: string | null
+          id: string
+          internal_note: string | null
+          module: string
+          project_id: string | null
+          recommended_action: string | null
+          research_question: string
+          reviewer_note: string | null
+          reviewer_status: Database["public"]["Enums"]["sir_reviewer_status"]
+          revision: number
+          risk_level: string | null
+          schedule_impact: string | null
+          updated_at: string
+          verification_status: Database["public"]["Enums"]["sir_verification_status"]
+        }
+        Insert: {
+          agency?: string | null
+          agent: Database["public"]["Enums"]["sir_agent"]
+          ai_confidence?: Database["public"]["Enums"]["sir_confidence"]
+          analysis?: string | null
+          applicability?: string | null
+          assignment_id: string
+          client_visible?: boolean
+          confirmation_required?: boolean
+          cost_impact?: string | null
+          created_at?: string
+          effective_date?: string | null
+          finding: string
+          geographic_applicability?: string | null
+          id?: string
+          internal_note?: string | null
+          module: string
+          project_id?: string | null
+          recommended_action?: string | null
+          research_question: string
+          reviewer_note?: string | null
+          reviewer_status?: Database["public"]["Enums"]["sir_reviewer_status"]
+          revision?: number
+          risk_level?: string | null
+          schedule_impact?: string | null
+          updated_at?: string
+          verification_status?: Database["public"]["Enums"]["sir_verification_status"]
+        }
+        Update: {
+          agency?: string | null
+          agent?: Database["public"]["Enums"]["sir_agent"]
+          ai_confidence?: Database["public"]["Enums"]["sir_confidence"]
+          analysis?: string | null
+          applicability?: string | null
+          assignment_id?: string
+          client_visible?: boolean
+          confirmation_required?: boolean
+          cost_impact?: string | null
+          created_at?: string
+          effective_date?: string | null
+          finding?: string
+          geographic_applicability?: string | null
+          id?: string
+          internal_note?: string | null
+          module?: string
+          project_id?: string | null
+          recommended_action?: string | null
+          research_question?: string
+          reviewer_note?: string | null
+          reviewer_status?: Database["public"]["Enums"]["sir_reviewer_status"]
+          revision?: number
+          risk_level?: string | null
+          schedule_impact?: string | null
+          updated_at?: string
+          verification_status?: Database["public"]["Enums"]["sir_verification_status"]
+        }
+        Relationships: [
+          {
+            foreignKeyName: "sir_findings_assignment_id_fkey"
+            columns: ["assignment_id"]
+            isOneToOne: false
+            referencedRelation: "sir_assignments"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "sir_findings_project_id_fkey"
+            columns: ["project_id"]
+            isOneToOne: false
+            referencedRelation: "projects"
+            referencedColumns: ["id"]
+          },
+        ]
+      }
+      sir_followups: {
+        Row: {
+          answer: string | null
+          answered_at: string | null
+          answered_by: string | null
+          assignment_id: string
+          created_at: string
+          id: string
+          module: string
+          question: string
+          updated_at: string
+          why_it_matters: string | null
+        }
+        Insert: {
+          answer?: string | null
+          answered_at?: string | null
+          answered_by?: string | null
+          assignment_id: string
+          created_at?: string
+          id?: string
+          module: string
+          question: string
+          updated_at?: string
+          why_it_matters?: string | null
+        }
+        Update: {
+          answer?: string | null
+          answered_at?: string | null
+          answered_by?: string | null
+          assignment_id?: string
+          created_at?: string
+          id?: string
+          module?: string
+          question?: string
+          updated_at?: string
+          why_it_matters?: string | null
+        }
+        Relationships: [
+          {
+            foreignKeyName: "sir_followups_assignment_id_fkey"
+            columns: ["assignment_id"]
+            isOneToOne: false
+            referencedRelation: "sir_assignments"
+            referencedColumns: ["id"]
+          },
+        ]
+      }
+      sir_qa_exceptions: {
+        Row: {
+          assignment_id: string
+          blocking: boolean
+          check_name: string
+          created_at: string
+          detail: string
+          finding_id: string | null
+          id: string
+          resolved: boolean
+          resolved_at: string | null
+          revision: number
+          severity: string
+          updated_at: string
+        }
+        Insert: {
+          assignment_id: string
+          blocking?: boolean
+          check_name: string
+          created_at?: string
+          detail: string
+          finding_id?: string | null
+          id?: string
+          resolved?: boolean
+          resolved_at?: string | null
+          revision?: number
+          severity?: string
+          updated_at?: string
+        }
+        Update: {
+          assignment_id?: string
+          blocking?: boolean
+          check_name?: string
+          created_at?: string
+          detail?: string
+          finding_id?: string | null
+          id?: string
+          resolved?: boolean
+          resolved_at?: string | null
+          revision?: number
+          severity?: string
+          updated_at?: string
+        }
+        Relationships: [
+          {
+            foreignKeyName: "sir_qa_exceptions_assignment_id_fkey"
+            columns: ["assignment_id"]
+            isOneToOne: false
+            referencedRelation: "sir_assignments"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "sir_qa_exceptions_finding_id_fkey"
+            columns: ["finding_id"]
+            isOneToOne: false
+            referencedRelation: "sir_findings"
+            referencedColumns: ["id"]
+          },
+        ]
+      }
       sir_requests: {
         Row: {
           approx_size: string | null
@@ -3991,6 +4528,68 @@ export type Database = {
         | "delivered"
         | "cancelled"
         | "refunded"
+      sir_agent:
+        | "lead"
+        | "intake_scope"
+        | "property_jurisdiction"
+        | "document_intelligence"
+        | "zoning_entitlement"
+        | "building_fire_health"
+        | "utilities_infrastructure"
+        | "transportation_access"
+        | "environmental_constraints"
+        | "fee_schedule"
+        | "risk_feasibility"
+        | "report_composition"
+        | "qa_validation"
+      sir_confidence: "high" | "medium" | "low"
+      sir_recommendation:
+        | "proceed"
+        | "proceed_with_conditions"
+        | "further_investigation_required"
+        | "high_risk"
+        | "not_recommended"
+      sir_reviewer_status:
+        | "unreviewed"
+        | "approved"
+        | "modified"
+        | "requires_confirmation"
+        | "suppressed"
+        | "rejected"
+      sir_source_tier:
+        | "official_code"
+        | "official_gis"
+        | "official_map"
+        | "official_instructions"
+        | "official_fee_schedule"
+        | "official_utility"
+        | "agency_correspondence"
+        | "client_document"
+        | "secondary"
+      sir_task_status:
+        | "pending"
+        | "running"
+        | "complete"
+        | "failed"
+        | "skipped"
+        | "integration_required"
+      sir_verification_status:
+        | "verified"
+        | "preliminary_analysis"
+        | "pending_confirmation"
+        | "client_input_required"
+        | "not_available"
+        | "conflict_detected"
+      sir_workflow_status:
+        | "research_not_started"
+        | "research_in_progress"
+        | "research_complete"
+        | "qaqc_failed"
+        | "corrections_required"
+        | "qaqc_passed"
+        | "lpg_review_pending"
+        | "lpg_reviewed"
+        | "approved_for_client_delivery"
       source_kind: "agency_site" | "code" | "ordinance" | "portal" | "other"
       timeline_basis:
         | "published"
@@ -4243,6 +4842,75 @@ export const Constants = {
         "delivered",
         "cancelled",
         "refunded",
+      ],
+      sir_agent: [
+        "lead",
+        "intake_scope",
+        "property_jurisdiction",
+        "document_intelligence",
+        "zoning_entitlement",
+        "building_fire_health",
+        "utilities_infrastructure",
+        "transportation_access",
+        "environmental_constraints",
+        "fee_schedule",
+        "risk_feasibility",
+        "report_composition",
+        "qa_validation",
+      ],
+      sir_confidence: ["high", "medium", "low"],
+      sir_recommendation: [
+        "proceed",
+        "proceed_with_conditions",
+        "further_investigation_required",
+        "high_risk",
+        "not_recommended",
+      ],
+      sir_reviewer_status: [
+        "unreviewed",
+        "approved",
+        "modified",
+        "requires_confirmation",
+        "suppressed",
+        "rejected",
+      ],
+      sir_source_tier: [
+        "official_code",
+        "official_gis",
+        "official_map",
+        "official_instructions",
+        "official_fee_schedule",
+        "official_utility",
+        "agency_correspondence",
+        "client_document",
+        "secondary",
+      ],
+      sir_task_status: [
+        "pending",
+        "running",
+        "complete",
+        "failed",
+        "skipped",
+        "integration_required",
+      ],
+      sir_verification_status: [
+        "verified",
+        "preliminary_analysis",
+        "pending_confirmation",
+        "client_input_required",
+        "not_available",
+        "conflict_detected",
+      ],
+      sir_workflow_status: [
+        "research_not_started",
+        "research_in_progress",
+        "research_complete",
+        "qaqc_failed",
+        "corrections_required",
+        "qaqc_passed",
+        "lpg_review_pending",
+        "lpg_reviewed",
+        "approved_for_client_delivery",
       ],
       source_kind: ["agency_site", "code", "ordinance", "portal", "other"],
       timeline_basis: [
