@@ -1,9 +1,10 @@
-import { useState } from "react";
+import { useRef, useState } from "react";
 import { useServerFn } from "@tanstack/react-start";
 import { useMutation, useQuery, useQueryClient } from "@tanstack/react-query";
 import { toast } from "sonner";
-import { Sparkles, FileDown, Trash2, ListPlus, ShieldAlert } from "lucide-react";
-import { listDocuments } from "@/lib/documents.functions";
+import { Sparkles, FileDown, Trash2, ListPlus, ShieldAlert, Upload } from "lucide-react";
+import { supabase } from "@/integrations/supabase/client";
+import { listDocuments, registerDocument } from "@/lib/documents.functions";
 import {
   runQaQcReview,
   listQaQcReviews,
