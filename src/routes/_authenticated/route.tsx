@@ -10,5 +10,9 @@ export const Route = createFileRoute("/_authenticated")({
     if (error || !data.user) throw redirect({ to: "/auth" });
     return { user: data.user };
   },
-  component: () => <Outlet />,
+  component: () => (
+    <AppShell>
+      <Outlet />
+    </AppShell>
+  ),
 });
