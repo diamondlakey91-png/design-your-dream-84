@@ -18,8 +18,9 @@ import {
 } from "@/lib/settings.functions";
 import {
   User, Lock, Bell, KeyRound, PenLine, Database, Loader2, Plus, Trash2, ExternalLink,
-  ShieldCheck, Check, Settings2,
+  ShieldCheck, Check, Settings2, Users,
 } from "lucide-react";
+import { OrganizationTeamPanel } from "@/components/org/OrganizationTeamPanel";
 
 export const Route = createFileRoute("/_authenticated/settings")({
   head: () => ({
@@ -250,6 +251,7 @@ function SettingsPage() {
         </nav>
 
         {tab === "profile" ? <ProfileSection /> : null}
+        {tab === "team" ? <OrganizationTeamPanel /> : null}
         {tab === "security" ? <SecuritySection /> : null}
         {tab === "notifications" ? <NotificationsSection /> : null}
         {tab === "credentials" ? <CredentialsSection /> : null}
