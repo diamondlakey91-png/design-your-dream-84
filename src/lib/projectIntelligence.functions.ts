@@ -71,6 +71,66 @@ export const getProjectIntelligence = createServerFn({ method: "GET" })
     const project = projectRes.data;
     if (!project) throw new Error("Project not found");
 
+    // ---- Purchased tools & reports attached to this project ----
+    const [ordersRes, versionsRes, productsRes] = await Promise.all([
+      sb
+        .from("service_orders")
+        .select("id,product_id,status,delivery_tier,rush,amount_cents,created_at,delivered_at")
+        .eq("project_id", pid)
+        .order("created_at", { ascending: false }),
+      sb
+        .from("service_report_versions")
+        .select("id,order_id,product_id,title,summary,version,delivery_tier,reviewed_at,created_at,payload")
+        .eq("project_id", pid)
+        .order("created_at", { ascending: false }),
+      sb.from("service_products").select("id,title,category"),
+    ]);
+    const productTitles = new Map((productsRes.data ?? []).map((p) => [p.id, p.title]));
+    const reportVersions = (versionsRes.data ?? []).map((v) => {
+      const payload = (v.payload ?? null) as Record<string, unknown> | null;
+      const list = (key: string) => {
+        const raw = payload?.[key];
+        if (!Array.isArray(raw)) return [] as string[];
+        return raw
+          .map((x) =>
+            typeof x === "string"
+              ? x
+              : typeof x === "object" && x !== null
+                ? String((x as Record<string, unknown>)["title"] ?? (x as Record<string, unknown>)["summary"] ?? (x as Record<string, unknown>)["detail"] ?? "")
+                : "",
+          )
+          .filter(Boolean)
+          .slice(0, 6);
+      };
+      return {
+        id: v.id,
+        order_id: v.order_id,
+        title: v.title || productTitles.get(v.product_id) || "Report",
+        summary: v.summary,
+        version: v.version,
+        delivery_tier: v.delivery_tier,
+        professionally_reviewed: Boolean(v.reviewed_at),
+        created_at: v.created_at,
+        key_findings: list("key_findings").length ? list("key_findings") : list("findings"),
+        risks: list("risks").length ? list("risks") : list("deal_killers"),
+        next_steps: list("next_steps").length ? list("next_steps") : list("recommendations"),
+      };
+    });
+    const reports = {
+      orders: (ordersRes.data ?? []).map((o) => ({
+        id: o.id,
+        title: productTitles.get(o.product_id) ?? "Purchased service",
+        status: o.status,
+        delivery_tier: o.delivery_tier,
+        rush: o.rush,
+        amount_cents: o.amount_cents,
+        created_at: o.created_at,
+        delivered_at: o.delivered_at,
+        version_count: reportVersions.filter((v) => v.order_id === o.id).length,
+      })),
+      versions: reportVersions,
+    };
+
     const scope = scopeRes.data?.[0] ?? null;
     const items = itemsRes.data ?? [];
     const docs = docsRes.data ?? [];
@@ -281,6 +341,7 @@ export const getProjectIntelligence = createServerFn({ method: "GET" })
           unresolved_findings: unresolvedFindings.length,
           inspections: inspections.length,
           deadlines: deadlines.length,
+          purchased_reports: reports.versions.length,
         },
       },
       criticalPath,
@@ -296,6 +357,7 @@ export const getProjectIntelligence = createServerFn({ method: "GET" })
       health,
       revisions,
       openingReadiness,
+      reports,
       verification: "ai_suggested" as const,
     };
   });
