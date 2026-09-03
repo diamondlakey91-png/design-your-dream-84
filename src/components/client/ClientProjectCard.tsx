@@ -49,25 +49,15 @@ export function ClientProjectCard({ project, signals }: { project: ClientProject
       </div>
 
       {attention.length > 0 && (
-        <div className="mt-4 flex items-start gap-2 rounded-2xl border border-[oklch(0.66_0.19_258)]/35 bg-[oklch(0.66_0.19_258)]/10 px-3 py-2.5">
-          <AlertTriangle className="mt-0.5 size-4 shrink-0 text-[oklch(0.72_0.17_258)]" />
+        <div className="mt-4 flex items-start gap-2 rounded-2xl border border-primary/35 bg-primary/10 px-3 py-2.5">
+          <Info className="mt-0.5 size-4 shrink-0 text-primary" />
           <p className="text-xs text-foreground">
-            We need {attention.length} thing{attention.length === 1 ? "" : "s"} from you: {attention[0].whatIsNeeded}
+            We need {attention.length} item{attention.length === 1 ? "" : "s"} from you: {attention[0].whatIsNeeded}
             {attention.length > 1 ? ` and ${attention.length - 1} more.` : "."}
           </p>
         </div>
       )}
 
-      {/* Progress */}
-      <div className="mt-5">
-        <div className="flex items-center justify-between text-xs">
-          <span className="text-muted-foreground">{ms.completed} of {ms.total} major milestones completed</span>
-          <span className="font-medium text-foreground">{ms.percent}%</span>
-        </div>
-        <div className="mt-2 h-2 overflow-hidden rounded-full bg-secondary" role="progressbar" aria-valuenow={ms.percent} aria-valuemin={0} aria-valuemax={100}>
-          <div className={`h-full rounded-full ${tone.bar}`} style={{ width: `${Math.max(3, ms.percent)}%` }} />
-        </div>
-      </div>
 
       <dl className="mt-5 grid gap-4 sm:grid-cols-2">
         <div>
