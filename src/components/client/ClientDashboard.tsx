@@ -5,7 +5,7 @@ import { useServerFn } from "@tanstack/react-start";
 import { ArrowRight, CheckCircle2, Loader2, MapPinned, Plus, Sparkles } from "lucide-react";
 import { format, isToday, isYesterday, parseISO } from "date-fns";
 import { getClientDashboard } from "@/lib/clientDashboard.functions";
-import { money } from "@/lib/toolsCatalog";
+import { money, statusTone, ORDER_STATUS_LABEL, TIER_COPY } from "@/lib/toolsCatalog";
 import { ClientAttentionList } from "@/components/client/ClientAttentionList";
 import { ClientProjectCard } from "@/components/client/ClientProjectCard";
 import {
