@@ -80,9 +80,68 @@ async function handleSubscriptionDeleted(subscription: Sub, env: StripeEnv) {
     .eq("environment", env);
 }
 
+type CheckoutSession = {
+  id: string;
+  payment_intent?: string | null;
+  payment_status?: string;
+  metadata?: Record<string, string>;
+};
+
+/**
+ * Fulfilment for one-off Tools & Reports purchases. The order is only marked
+ * paid — and the entitlement granted — here, after Stripe signature verification.
+ */
+async function handleServiceCheckoutCompleted(session: CheckoutSession, env: StripeEnv) {
+  const orderId = session.metadata?.orderId;
+  const userId = session.metadata?.userId;
+  if (session.metadata?.kind !== "service_order" || !orderId || !userId) return;
+  if (session.payment_status && session.payment_status !== "paid") return;
+
+  const db = getSupabase();
+  const { data: order } = await db
+    .from("service_orders")
+    .select("id,user_id,project_id,product_id,delivery_tier,status")
+    .eq("id", orderId)
+    .maybeSingle();
+  if (!order || order.user_id !== userId) return;
+  if (order.status !== "payment_required") return;
+
+  await db
+    .from("service_orders")
+    .update({
+      status: "processing",
+      stripe_payment_intent_id: typeof session.payment_intent === "string" ? session.payment_intent : null,
+      paid_at: new Date().toISOString(),
+      updated_at: new Date().toISOString(),
+    })
+    .eq("id", orderId);
+
+  await db.from("service_entitlements").insert({
+    user_id: userId,
+    project_id: order.project_id,
+    product_id: order.product_id,
+    order_id: orderId,
+    entitlement_type: "purchase",
+    entitlement_status: "active",
+    delivery_tier: order.delivery_tier,
+    environment: env,
+  });
+
+  if (order.project_id) {
+    await db.from("activity").insert({
+      project_id: order.project_id,
+      user_id: userId,
+      description: "Permivio service purchased — preparing your report",
+    });
+  }
+}
+
 async function handleWebhook(req: Request, env: StripeEnv) {
   const event = await verifyWebhook(req, env);
   switch (event.type) {
+    case "checkout.session.completed":
+    case "checkout.session.async_payment_succeeded":
+      await handleServiceCheckoutCompleted(event.data.object as CheckoutSession, env); break;
     case "customer.subscription.created":
       await handleSubscriptionCreated(event.data.object as Sub, env); break;
     case "customer.subscription.updated":

@@ -42,6 +42,7 @@ export function AppShell({ children }: { children: ReactNode }) {
             <TopLink to="/dashboard" label="Dashboard" active={active("/dashboard")} />
             <TopLink to="/projects" label="Projects" active={active("/projects")} />
             <TopLink to="/assistant" label="Messages" active={active("/assistant")} />
+            <TopLink to="/tools" label="Tools & Reports" active={active("/tools")} />
             <TopLink to="/jurisdictions" label="Library" active={active("/jurisdictions")} />
             <TopLink to="/settings" label="Account" active={active("/settings")} />
           </nav>
