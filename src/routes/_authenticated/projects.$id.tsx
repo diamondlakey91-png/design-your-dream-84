@@ -26,20 +26,33 @@ import { ResponseMatrixTab } from "@/components/project/ResponseMatrixTab";
 import { QaQcTab } from "@/components/project/QaQcTab";
 import { PlanQaQcTab } from "@/components/project/PlanQaQcTab";
 import { SiteInvestigationTab } from "@/components/project/SiteInvestigationTab";
+import { useViewMode } from "@/hooks/useViewMode";
+import { ViewModeToggle } from "@/components/client/ViewModeToggle";
+import { ClientProjectView } from "@/components/client/ClientProjectView";
+import type { ClientProjectInput } from "@/lib/clientView";
+
+const TABS = ["overview", "scope", "site", "checklist", "docs", "planqaqc", "qaqc", "responses", "deadlines", "inspections", "timeline"] as const;
 
 export const Route = createFileRoute("/_authenticated/projects/$id")({
+  validateSearch: (search: Record<string, unknown>) => ({
+    tab: typeof search.tab === "string" && (TABS as readonly string[]).includes(search.tab) ? (search.tab as Tab) : undefined,
+  }),
   head: () => ({ meta: [{ title: "Project — Permivio" }, { name: "robots", content: "noindex" }] }),
   component: ProjectDetail,
 });
 
-type Tab = "overview" | "scope" | "site" | "checklist" | "docs" | "planqaqc" | "qaqc" | "responses" | "deadlines" | "inspections" | "timeline";
+type Tab = (typeof TABS)[number];
 
 
 function ProjectDetail() {
   const { id } = Route.useParams();
+  const { tab: searchTab } = Route.useSearch();
   const navigate = useNavigate();
   const qc = useQueryClient();
-  const [tab, setTab] = useState<Tab>("overview");
+  const { mode, setMode } = useViewMode();
+  const [tab, setTab] = useState<Tab>(searchTab ?? "overview");
+  const [forcedPro, setForcedPro] = useState(false);
+  const showPro = mode === "pro" || forcedPro;
   const [editOpen, setEditOpen] = useState(false);
 
   const getFn = useServerFn(getProject);
@@ -78,14 +91,15 @@ function ProjectDetail() {
               {project.project_type && <span className="inline-flex items-center gap-1">· {project.project_type}</span>}
             </span>
           }
-          actions={
+          actions={<>
+            <ViewModeToggle mode={showPro ? "pro" : "client"} onChange={(m) => { setForcedPro(false); setMode(m); }} />
             <button
               onClick={() => setEditOpen(true)}
               className="inline-flex items-center gap-1.5 text-xs font-mono uppercase tracking-widest px-2.5 py-1.5 rounded border border-border hover:border-brand hover:text-brand"
             >
               <Pencil className="size-3.5" /> Edit
             </button>
-          }
+          </>}
         />
       </div>
 
@@ -118,6 +132,16 @@ function ProjectDetail() {
       />
 
 
+      {!showPro && (
+        <div className="p-6">
+          <ClientProjectView
+            project={project as unknown as ClientProjectInput}
+            onOpenTab={(t) => { setTab(t as Tab); setForcedPro(true); }}
+          />
+        </div>
+      )}
+
+      {showPro && <>
       {/* Tabs */}
       <nav className="sticky top-0 z-10 bg-background/95 backdrop-blur border-b border-border">
         <div className="flex overflow-x-auto">
