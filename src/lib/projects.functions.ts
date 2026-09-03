@@ -147,7 +147,7 @@ export const updateProject = createServerFn({ method: "POST" })
       .eq("id", data.id).maybeSingle();
     if (eErr) throw new Error(eErr.message);
     if (!existing) throw new Error("Project not found");
-    if (existing.user_id !== context.userId) throw new Error("Forbidden");
+    await assertProjectWriteAccess(context.supabase, context.userId, data.id);
 
     const patch: Record<string, unknown> = { updated_at: new Date().toISOString() };
     const changes: string[] = [];
