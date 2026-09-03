@@ -538,6 +538,7 @@ export async function runParcelJurisdictionAgent(input: {
       postalCode: geo.postalCode,
       locationType: geo.locationType,
     },
+    geography,
     evidence,
     searchLeads: leads,
     promptVersion: PARCEL_JURISDICTION_PROMPT_VERSION,
