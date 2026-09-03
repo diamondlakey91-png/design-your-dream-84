@@ -229,6 +229,25 @@ export const runSiteInvestigation = createServerFn({ method: "POST" })
     const jurisdiction = String(conf?.['city'] ?? project.jurisdiction ?? "").trim();
     const state = String(conf?.['state'] ?? "").trim();
     const projectType = data.project_type_label ?? String(scope?.['friendly_project_type'] ?? project.project_type ?? "");
+    const scopeText = String(scope?.['plain_scope'] ?? scope?.['scope_text'] ?? data.notes ?? "");
+
+    const parcelAcreage = data.parcels.reduce((sum, p) => sum + (p.acreage ?? 0), 0);
+    const plan: InvestigationPlan = buildInvestigationPlan({
+      projectTypeLabel: projectType,
+      scopeText: `${scopeText} ${data.notes ?? ""} ${data.followup_answers.map((a) => `${a.question} ${a.answer} ${a.note ?? ""}`).join(" ")}`,
+      parcelCount: Math.max(1, data.parcels.length),
+      acreage: data.acreage ?? (parcelAcreage > 0 ? parcelAcreage : null),
+      buildingSf: data.building_sf ?? (scope?.['sq_ft_gross'] ? Number(scope['sq_ft_gross']) : null),
+      existingUse: (scope?.['occupancy_existing'] as string | null) ?? null,
+      proposedUse: (scope?.['occupancy_proposed'] as string | null) ?? null,
+    });
+    const depth = data.report_depth ?? plan.recommended_depth;
+
+    let version = 1;
+    if (data.previous_investigation_id) {
+      const { data: prev } = await sb.from("site_investigations").select("version").eq("id", data.previous_investigation_id).maybeSingle();
+      version = ((prev as { version?: number } | null)?.version ?? 1) + 1;
+    }
 
     const { data: inv, error: insErr } = await sb
       .from("site_investigations")
@@ -245,6 +264,20 @@ export const runSiteInvestigation = createServerFn({ method: "POST" })
         status: "running",
         model: SI_MODEL,
         prompt_version: SI_PROMPT_VERSION,
+        document_ids: data.document_ids.length ? data.document_ids : null,
+        investigation_plan: plan as never,
+        complexity_level: plan.complexity_level,
+        complexity_label: plan.complexity_label,
+        report_depth: depth,
+        recommended_depth: plan.recommended_depth,
+        modules: plan.modules as never,
+        followups: data.followup_answers as never,
+        parcel_count: Math.max(1, data.parcels.length),
+        site_acreage: data.acreage ?? (parcelAcreage > 0 ? parcelAcreage : null),
+        custom_quote_requested: plan.custom_quote_recommended,
+        version,
+        parent_investigation_id: data.previous_investigation_id ?? null,
+        progress_step: "Researching the property",
         jurisdiction_snapshot: {
           jurisdiction: jurisdiction || null,
           state: state || null,
@@ -255,6 +288,24 @@ export const runSiteInvestigation = createServerFn({ method: "POST" })
       .select("*")
       .single();
     if (insErr || !inv) throw new Error(insErr?.message ?? "Could not start investigation");
+
+    if (data.parcels.length) {
+      await sb.from("site_investigation_parcels").insert(
+        data.parcels.map((p, i) => ({
+          investigation_id: inv.id,
+          user_id: context.userId,
+          label: p.label ?? `Parcel ${String.fromCharCode(65 + i)}`,
+          parcel_number: p.parcel_number ?? null,
+          address: p.address ?? null,
+          acreage: p.acreage ?? null,
+          phase: p.phase ?? null,
+          notes: p.notes ?? null,
+          jurisdiction: jurisdiction || null,
+          state: state || null,
+          sort_order: i,
+        })),
+      );
+    }
 
     try {
       const { context: research, sources } = await gatherSiteResearch(jurisdiction, state, data.address, projectType);
