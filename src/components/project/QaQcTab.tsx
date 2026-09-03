@@ -4,7 +4,7 @@ import { useState } from "react";
 import { toast } from "sonner";
 import { CheckCircle2, AlertTriangle, XCircle, HelpCircle, ShieldCheck, Sparkles, Trash2 } from "lucide-react";
 import { getQaQcStatus, createQaSignoff, deleteQaSignoff } from "@/lib/qaqc.functions";
-import { batchReviewPlans, addPlanReviewFixesToChecklist } from "@/lib/planReview.functions";
+import { batchReviewPlans } from "@/lib/planReview.functions";
 import { importCommentsFromDocuments } from "@/lib/responseMatrix.functions";
 import { Input } from "@/components/ui/input";
 import { Label } from "@/components/ui/label";
@@ -23,7 +23,6 @@ export function QaQcTab({ projectId }: { projectId: string }) {
   const statusFn = useServerFn(getQaQcStatus);
   const batchFn = useServerFn(batchReviewPlans);
   const importFn = useServerFn(importCommentsFromDocuments);
-  const fixesFn = useServerFn(addPlanReviewFixesToChecklist);
   const signFn = useServerFn(createQaSignoff);
   const delSignFn = useServerFn(deleteQaSignoff);
 
@@ -55,15 +54,6 @@ export function QaQcTab({ projectId }: { projectId: string }) {
       refresh();
     },
     onError: (e) => toast.error(e instanceof Error ? e.message : "Comment import failed"),
-  });
-
-  const addFixes = useMutation({
-    mutationFn: () => fixesFn({ data: { project_id: projectId } }),
-    onSuccess: () => {
-      toast.success("Fix list added to checklist");
-      refresh();
-    },
-    onError: (e) => toast.error(e instanceof Error ? e.message : "Could not add fixes"),
   });
 
   const [name, setName] = useState("");
@@ -146,13 +136,6 @@ export function QaQcTab({ projectId }: { projectId: string }) {
               className="rounded-lg border border-border px-2.5 py-1.5 text-[11px] font-mono uppercase tracking-wider hover:border-brand hover:text-brand disabled:opacity-50"
             >
               {runImport.isPending ? "Importing…" : "Import comments"}
-            </button>
-            <button
-              onClick={() => addFixes.mutate()}
-              disabled={addFixes.isPending}
-              className="rounded-lg border border-border px-2.5 py-1.5 text-[11px] font-mono uppercase tracking-wider hover:border-brand hover:text-brand disabled:opacity-50"
-            >
-              {addFixes.isPending ? "Adding…" : "Add fixes to checklist"}
             </button>
           </div>
         </div>
