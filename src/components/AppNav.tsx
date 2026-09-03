@@ -79,7 +79,7 @@ const TOOLS: NavLink[] = [
   { to: "/lookup", label: "Permit Lookup", icon: MapPin, description: "Live permits by address" },
   { to: "/property", label: "Property Analysis", icon: Sparkles, description: "Zoning & site constraints" },
   { to: "/filing", label: "Permit Filing", icon: Send, description: "Submission workflow" },
-  { to: "/portals", label: "Portal Directory", icon: Library, description: "Nationwide agency portals" },
+  { to: "/portals", label: "Portal Directory", icon: Library, description: "Mapped agency portals" },
 ];
 
 const SERVICES: NavLink = { to: "/tools", label: "Services & Tools", icon: ShoppingBag };

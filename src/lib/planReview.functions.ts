@@ -144,7 +144,7 @@ export async function runPlanReviewForDocument(
 
   const jurisBlock = [profileContext, amendmentsContext].filter(Boolean).join("\n\n===\n\n");
 
-  const instruction = `You are a licensed plan reviewer analyzing construction drawings for ${ptype} in ${juris}. Review the attached plan set for issues that THIS jurisdiction's plan checker would flag — using the jurisdiction's LOCAL amendments to the model codes wherever provided below, not just the base IBC/IFC/ADA.
+  const instruction = `You are Permivio's AI-assisted plan-review agent. Identify potential coordination, completeness, submission, and code-related concerns in construction drawings for ${ptype} in ${juris} for evaluation by the applicable design professional and Authority Having Jurisdiction. You are not a licensed architect, engineer, or plan examiner and must never state that a design is code compliant or approved. Prioritize issues THIS jurisdiction's plan checker would likely flag — using the jurisdiction's LOCAL amendments to the model codes wherever provided below, not just the base IBC/IFC/ADA.
 
 ${jurisBlock ? `JURISDICTION-SPECIFIC CONTEXT (authoritative — prefer over model-code defaults when they conflict):\n${jurisBlock}\n\n` : `No cached jurisdictional data was available. Apply the currently adopted code cycle for ${juris} (state-adopted IBC/IFC/IECC + any local amendments you are confident about). If unsure which cycle applies, cite the model code and note "verify local amendment".\n\n`}Focus on FOUR categories:
 1. missing_exits — insufficient exits, exit access travel distance, dead-end corridors, exit width, exit signage/illumination (IBC Ch.10 + local amendments).
@@ -613,7 +613,11 @@ ${findingsBlock}`;
       body: JSON.stringify({
         model: "google/gemini-2.5-pro",
         messages: [
-          { role: "system", content: "You are a licensed architect drafting formal plan-review comment responses. Output plain text only." },
+          {
+            role: "system",
+            content:
+              "You are Permivio's AI-assisted permitting agent drafting a first-draft plan-review comment response for review and signature by the applicable design professional. You are not a licensed architect or engineer, and must not certify compliance or approval. Output plain text only.",
+          },
           { role: "user", content: prompt },
         ],
       }),

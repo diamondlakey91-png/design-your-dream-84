@@ -126,7 +126,7 @@ function PortalsPage() {
         <header className="space-y-1">
           <PermivioPageHeader
             eyebrow="Permit Portals"
-            title="Nationwide Portal Directory"
+            title="Permit Portal Directory"
             actions={<>
             {adminQ.data === true && (
               <Link
