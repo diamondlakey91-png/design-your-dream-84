@@ -22,7 +22,7 @@ export function AppShell({ children }: { children: ReactNode }) {
   };
 
   return (
-    <div className="relative min-h-dvh bg-background pb-28 text-foreground">
+    <div className="relative min-h-dvh bg-background pb-28 text-foreground lg:pb-12">
       {/* Ambient glow */}
       <div
         aria-hidden
@@ -38,6 +38,13 @@ export function AppShell({ children }: { children: ReactNode }) {
           <Link to="/dashboard" aria-label="Permivio home" className="shrink-0">
             <PermivioLogo />
           </Link>
+          <nav aria-label="Main" className="hidden items-center gap-1 lg:flex">
+            <TopLink to="/dashboard" label="Dashboard" active={active("/dashboard")} />
+            <TopLink to="/projects" label="Projects" active={active("/projects")} />
+            <TopLink to="/assistant" label="Messages" active={active("/assistant")} />
+            <TopLink to="/jurisdictions" label="Library" active={active("/jurisdictions")} />
+            <TopLink to="/settings" label="Account" active={active("/settings")} />
+          </nav>
           <div className="flex items-center gap-3">
             <span className="font-mono text-[10px] uppercase tracking-widest text-muted-foreground">
               Permit OS
@@ -62,7 +69,7 @@ export function AppShell({ children }: { children: ReactNode }) {
 
 
       {/* Bottom nav */}
-      <nav className="fixed inset-x-0 bottom-0 z-40 border-t border-border bg-background/80 backdrop-blur-xl">
+      <nav aria-label="Mobile" className="fixed inset-x-0 bottom-0 z-40 border-t border-border bg-background/80 backdrop-blur-xl lg:hidden">
         <div className="mx-auto flex max-w-2xl items-center justify-around px-6 py-3">
           <NavItem to="/dashboard" icon={<Home className="size-5" />} label="Sites" active={active("/dashboard")} />
           <NavItem to="/property" icon={<Building2 className="size-5" />} label="Property" active={active("/property")} />
@@ -86,6 +93,19 @@ export function AppShell({ children }: { children: ReactNode }) {
         </div>
       </nav>
     </div>
+  );
+}
+
+function TopLink({ to, label, active }: { to: string; label: string; active: boolean }) {
+  return (
+    <Link
+      to={to}
+      className={`rounded-lg px-3 py-1.5 text-sm font-medium transition-colors ${
+        active ? "bg-secondary text-foreground" : "text-muted-foreground hover:text-foreground"
+      }`}
+    >
+      {label}
+    </Link>
   );
 }
 
