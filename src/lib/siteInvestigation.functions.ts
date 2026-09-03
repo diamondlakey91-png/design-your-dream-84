@@ -487,11 +487,12 @@ Return JSON: { "executive_summary": "", "feasibility_rating": "green|yellow|oran
       const delivery = await deliverReportForProject(sb, context.userId, data.project_id, {
         title: `${depthMeta(depth).label} — ${data.address}`,
         summary: result.executive_summary || null,
-        key_findings: result.recommended_next_steps.slice(0, 0).concat(
-          result.feasibility_snapshot.slice(0, 6).map((r) => `${r.label}: ${r.value}`),
-        ),
+        key_findings: Object.entries(result.feasibility_snapshot)
+          .filter(([, v]) => typeof v === "string" && v.trim())
+          .slice(0, 8)
+          .map(([k, v]) => `${k.replace(/_/g, " ")}: ${v}`),
         risks: [
-          ...result.deal_killers.map((d) => (typeof d === "string" ? d : String(d.issue ?? d.detail ?? ""))),
+          ...result.deal_killers.map((d) => [d.title, d.detail].filter(Boolean).join(" — ")),
           ...result.risks.map((r) => `${r.category}: ${r.why || r.supporting_info || ""}`),
         ].filter(Boolean).slice(0, 8),
         next_steps: result.recommended_next_steps.slice(0, 8),

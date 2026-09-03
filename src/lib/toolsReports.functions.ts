@@ -96,7 +96,7 @@ export const createServiceOrder = createServerFn({ method: "POST" })
       const stripe = createStripeClient(data.environment as StripeEnv);
       const session = await stripe.checkout.sessions.create({
         mode: "payment",
-        ui_mode: "embedded",
+        ui_mode: "embedded_page",
         return_url: `${data.returnUrl}${data.returnUrl.includes("?") ? "&" : "?"}order_id=${order.id}&session_id={CHECKOUT_SESSION_ID}`,
         line_items: [
           {
