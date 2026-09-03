@@ -361,11 +361,19 @@ export async function runSirLeadAgent(row: SirRequestRow): Promise<{
   const resolved = await resolveSirJurisdiction({ siteAddress: row.site_address, jurisdiction: row.jurisdiction });
   const locality = resolved.locality ?? resolved.county ?? resolved.city ?? row.jurisdiction;
 
-  const { context, sources } = await gatherOfficialResearch({
+  const { context, sources: harvested } = await gatherOfficialResearch({
     locality,
     state: resolved.state ?? "",
     address: resolved.formatted_address ?? row.site_address ?? "",
     use: row.intended_use.slice(0, 120),
+  });
+
+  // A search-engine results page is never a citable source, so it is removed
+  // from the evidence pool before the citation gate runs.
+  const SEARCH_HOSTS = /(^|\.)(google|bing|duckduckgo|yahoo|search\.brave)\./i;
+  const sources = harvested.filter((s) => {
+    const h = hostOf(s.url);
+    return Boolean(h) && !SEARCH_HOSTS.test(h!);
   });
 
   const allowed = new Set<string>();
