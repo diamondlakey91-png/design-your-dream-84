@@ -48,6 +48,7 @@ import { Route as AuthenticatedReportIdRouteImport } from './routes/_authenticat
 import { Route as AuthenticatedProjectsIdRouteImport } from './routes/_authenticated/projects.$id'
 import { Route as AuthenticatedJurisdictionsSlugRouteImport } from './routes/_authenticated/jurisdictions.$slug'
 import { Route as AuthenticatedInspectionsIdRouteImport } from './routes/_authenticated/inspections.$id'
+import { Route as AuthenticatedFeasibilityIdRouteImport } from './routes/_authenticated/feasibility.$id'
 import { Route as AuthenticatedAssistantScreensRouteImport } from './routes/_authenticated/assistant.screens'
 import { Route as AuthenticatedAssistantPermitsRouteImport } from './routes/_authenticated/assistant.permits'
 import { Route as AuthenticatedAssistantAnalysisRouteImport } from './routes/_authenticated/assistant.analysis'
@@ -270,6 +271,12 @@ const AuthenticatedInspectionsIdRoute =
     path: '/inspections/$id',
     getParentRoute: () => AuthenticatedRouteRoute,
   } as any)
+const AuthenticatedFeasibilityIdRoute =
+  AuthenticatedFeasibilityIdRouteImport.update({
+    id: '/feasibility/$id',
+    path: '/feasibility/$id',
+    getParentRoute: () => AuthenticatedRouteRoute,
+  } as any)
 const AuthenticatedAssistantScreensRoute =
   AuthenticatedAssistantScreensRouteImport.update({
     id: '/screens',
@@ -385,6 +392,7 @@ export interface FileRoutesByFullPath {
   '/assistant/analysis': typeof AuthenticatedAssistantAnalysisRoute
   '/assistant/permits': typeof AuthenticatedAssistantPermitsRoute
   '/assistant/screens': typeof AuthenticatedAssistantScreensRouteWithChildren
+  '/feasibility/$id': typeof AuthenticatedFeasibilityIdRoute
   '/inspections/$id': typeof AuthenticatedInspectionsIdRoute
   '/jurisdictions/$slug': typeof AuthenticatedJurisdictionsSlugRoute
   '/projects/$id': typeof AuthenticatedProjectsIdRoute
@@ -437,6 +445,7 @@ export interface FileRoutesByTo {
   '/assistant/$threadId': typeof AuthenticatedAssistantThreadIdRoute
   '/assistant/analysis': typeof AuthenticatedAssistantAnalysisRoute
   '/assistant/permits': typeof AuthenticatedAssistantPermitsRoute
+  '/feasibility/$id': typeof AuthenticatedFeasibilityIdRoute
   '/inspections/$id': typeof AuthenticatedInspectionsIdRoute
   '/jurisdictions/$slug': typeof AuthenticatedJurisdictionsSlugRoute
   '/projects/$id': typeof AuthenticatedProjectsIdRoute
@@ -493,6 +502,7 @@ export interface FileRoutesById {
   '/_authenticated/assistant/analysis': typeof AuthenticatedAssistantAnalysisRoute
   '/_authenticated/assistant/permits': typeof AuthenticatedAssistantPermitsRoute
   '/_authenticated/assistant/screens': typeof AuthenticatedAssistantScreensRouteWithChildren
+  '/_authenticated/feasibility/$id': typeof AuthenticatedFeasibilityIdRoute
   '/_authenticated/inspections/$id': typeof AuthenticatedInspectionsIdRoute
   '/_authenticated/jurisdictions/$slug': typeof AuthenticatedJurisdictionsSlugRoute
   '/_authenticated/projects/$id': typeof AuthenticatedProjectsIdRoute
@@ -549,6 +559,7 @@ export interface FileRouteTypes {
     | '/assistant/analysis'
     | '/assistant/permits'
     | '/assistant/screens'
+    | '/feasibility/$id'
     | '/inspections/$id'
     | '/jurisdictions/$slug'
     | '/projects/$id'
@@ -601,6 +612,7 @@ export interface FileRouteTypes {
     | '/assistant/$threadId'
     | '/assistant/analysis'
     | '/assistant/permits'
+    | '/feasibility/$id'
     | '/inspections/$id'
     | '/jurisdictions/$slug'
     | '/projects/$id'
@@ -656,6 +668,7 @@ export interface FileRouteTypes {
     | '/_authenticated/assistant/analysis'
     | '/_authenticated/assistant/permits'
     | '/_authenticated/assistant/screens'
+    | '/_authenticated/feasibility/$id'
     | '/_authenticated/inspections/$id'
     | '/_authenticated/jurisdictions/$slug'
     | '/_authenticated/projects/$id'
@@ -973,6 +986,13 @@ declare module '@tanstack/react-router' {
       preLoaderRoute: typeof AuthenticatedInspectionsIdRouteImport
       parentRoute: typeof AuthenticatedRouteRoute
     }
+    '/_authenticated/feasibility/$id': {
+      id: '/_authenticated/feasibility/$id'
+      path: '/feasibility/$id'
+      fullPath: '/feasibility/$id'
+      preLoaderRoute: typeof AuthenticatedFeasibilityIdRouteImport
+      parentRoute: typeof AuthenticatedRouteRoute
+    }
     '/_authenticated/assistant/screens': {
       id: '/_authenticated/assistant/screens'
       path: '/screens'
@@ -1156,6 +1176,7 @@ interface AuthenticatedRouteRouteChildren {
   AuthenticatedAdminPortalsRoute: typeof AuthenticatedAdminPortalsRoute
   AuthenticatedAdminSirRoute: typeof AuthenticatedAdminSirRoute
   AuthenticatedAdminToolsRoute: typeof AuthenticatedAdminToolsRoute
+  AuthenticatedFeasibilityIdRoute: typeof AuthenticatedFeasibilityIdRoute
   AuthenticatedInspectionsIdRoute: typeof AuthenticatedInspectionsIdRoute
   AuthenticatedProjectsIdRoute: typeof AuthenticatedProjectsIdRoute
   AuthenticatedReportsIdRoute: typeof AuthenticatedReportsIdRoute
@@ -1186,6 +1207,7 @@ const AuthenticatedRouteRouteChildren: AuthenticatedRouteRouteChildren = {
   AuthenticatedAdminPortalsRoute: AuthenticatedAdminPortalsRoute,
   AuthenticatedAdminSirRoute: AuthenticatedAdminSirRoute,
   AuthenticatedAdminToolsRoute: AuthenticatedAdminToolsRoute,
+  AuthenticatedFeasibilityIdRoute: AuthenticatedFeasibilityIdRoute,
   AuthenticatedInspectionsIdRoute: AuthenticatedInspectionsIdRoute,
   AuthenticatedProjectsIdRoute: AuthenticatedProjectsIdRoute,
   AuthenticatedReportsIdRoute: AuthenticatedReportsIdRoute,
