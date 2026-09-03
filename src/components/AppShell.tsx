@@ -1,125 +1,35 @@
-import { Link, useLocation, useNavigate } from "@tanstack/react-router";
-import { Home, MessageSquare, Library, LogOut, MapPin, Building2, Settings } from "lucide-react";
-import { supabase } from "@/integrations/supabase/client";
-import { useQueryClient } from "@tanstack/react-query";
-import type { ReactNode } from "react";
+import { createContext, useContext, type ReactNode } from "react";
 import { WelcomeBanner } from "@/components/WelcomeBanner";
-import { PermivioLogo } from "@/components/PermivioMark";
+import { AppNav } from "@/components/AppNav";
+
+/**
+ * True when an AppShell (and therefore the single AppNav) is already mounted
+ * above us — keeps nested page-level <AppShell> usages from duplicating nav.
+ */
+const ShellContext = createContext(false);
 
 export function AppShell({ children }: { children: ReactNode }) {
-  const location = useLocation();
-  const navigate = useNavigate();
-  const queryClient = useQueryClient();
-
-  const active = (path: string) =>
-    location.pathname === path || location.pathname.startsWith(path + "/");
-
-  const signOut = async () => {
-    await queryClient.cancelQueries();
-    queryClient.clear();
-    await supabase.auth.signOut();
-    navigate({ to: "/auth", replace: true });
-  };
+  const alreadyInShell = useContext(ShellContext);
+  if (alreadyInShell) return <>{children}</>;
 
   return (
-    <div className="relative min-h-dvh bg-background pb-28 text-foreground lg:pb-12">
-      {/* Ambient glow */}
-      <div
-        aria-hidden
-        className="pointer-events-none fixed inset-0 -z-10 opacity-70"
-        style={{
-          background:
-            "radial-gradient(60rem 40rem at 15% -10%, oklch(0.66 0.19 258 / 0.12), transparent 60%), radial-gradient(50rem 40rem at 100% 10%, oklch(0.68 0.19 305 / 0.10), transparent 60%)",
-        }}
-      />
-      {/* Top brand bar */}
-      <header className="sticky top-0 z-30 border-b border-border/60 bg-background/70 backdrop-blur-xl">
-        <div className="mx-auto flex max-w-7xl items-center justify-between px-4 py-2.5 lg:px-8">
-          <Link to="/dashboard" aria-label="Permivio home" className="shrink-0">
-            <PermivioLogo />
-          </Link>
-          <nav aria-label="Main" className="hidden items-center gap-1 lg:flex">
-            <TopLink to="/dashboard" label="Dashboard" active={active("/dashboard")} />
-            <TopLink to="/projects" label="Projects" active={active("/projects")} />
-            <TopLink to="/assistant" label="Messages" active={active("/assistant")} />
-            <TopLink to="/tools" label="Tools & Reports" active={active("/tools")} />
-            <TopLink to="/jurisdictions" label="Library" active={active("/jurisdictions")} />
-            <TopLink to="/settings" label="Account" active={active("/settings")} />
-          </nav>
-          <div className="flex items-center gap-3">
-            <span className="font-mono text-[10px] uppercase tracking-widest text-muted-foreground">
-              Permit OS
-            </span>
-            <Link
-              to="/settings"
-              aria-label="Workspace settings"
-              className={`rounded-lg border border-border p-1.5 transition-colors ${
-                active("/settings") ? "text-brand" : "text-muted-foreground hover:text-foreground"
-              }`}
-            >
-              <Settings className="size-4" />
-            </Link>
-          </div>
+    <ShellContext.Provider value={true}>
+      <div className="relative min-h-dvh bg-background pb-12 text-foreground">
+        {/* Ambient glow */}
+        <div
+          aria-hidden
+          className="pointer-events-none fixed inset-0 -z-10 opacity-70"
+          style={{
+            background:
+              "radial-gradient(60rem 40rem at 15% -10%, oklch(0.66 0.19 258 / 0.12), transparent 60%), radial-gradient(50rem 40rem at 100% 10%, oklch(0.68 0.19 305 / 0.10), transparent 60%)",
+          }}
+        />
+        <AppNav />
+        <div className="mx-auto max-w-7xl px-4 pt-4 lg:px-8">
+          <WelcomeBanner />
         </div>
-
-      </header>
-      <div className="mx-auto max-w-7xl px-4 pt-4 lg:px-8">
-        <WelcomeBanner />
+        <div className="mx-auto max-w-7xl px-0 lg:px-8">{children}</div>
       </div>
-      <div className="mx-auto max-w-7xl px-0 lg:px-8">{children}</div>
-
-
-      {/* Bottom nav */}
-      <nav aria-label="Mobile" className="fixed inset-x-0 bottom-0 z-40 border-t border-border bg-background/80 backdrop-blur-xl lg:hidden">
-        <div className="mx-auto flex max-w-2xl items-center justify-around px-6 py-3">
-          <NavItem to="/dashboard" icon={<Home className="size-5" />} label="Sites" active={active("/dashboard")} />
-          <NavItem to="/property" icon={<Building2 className="size-5" />} label="Property" active={active("/property")} />
-          <NavItem to="/lookup" icon={<MapPin className="size-5" />} label="Lookup" active={active("/lookup")} />
-          <Link
-            to="/assistant"
-            className="grid size-14 -mt-8 place-items-center rounded-full bg-primary text-primary-foreground shadow-[0_10px_40px_-8px_oklch(0.66_0.19_258/0.6)] ring-4 ring-background"
-            aria-label="AI assistant"
-          >
-            <MessageSquare className="size-5" />
-          </Link>
-          <NavItem to="/jurisdictions" icon={<Library className="size-5" />} label="Library" active={active("/jurisdictions")} />
-          <button
-            onClick={signOut}
-            className="flex flex-col items-center gap-1 text-muted-foreground hover:text-foreground"
-            aria-label="Sign out"
-          >
-            <LogOut className="size-5" />
-            <span className="font-mono text-[9px] uppercase tracking-widest">Out</span>
-          </button>
-        </div>
-      </nav>
-    </div>
-  );
-}
-
-function TopLink({ to, label, active }: { to: string; label: string; active: boolean }) {
-  return (
-    <Link
-      to={to}
-      className={`rounded-lg px-3 py-1.5 text-sm font-medium transition-colors ${
-        active ? "bg-secondary text-foreground" : "text-muted-foreground hover:text-foreground"
-      }`}
-    >
-      {label}
-    </Link>
-  );
-}
-
-function NavItem({ to, icon, label, active }: { to: string; icon: ReactNode; label: string; active: boolean }) {
-  return (
-    <Link
-      to={to}
-      className={`flex flex-col items-center gap-1 transition-colors ${
-        active ? "text-foreground" : "text-muted-foreground hover:text-foreground"
-      }`}
-    >
-      {icon}
-      <span className="font-mono text-[9px] uppercase tracking-widest">{label}</span>
-    </Link>
+    </ShellContext.Provider>
   );
 }
