@@ -4,7 +4,7 @@
 // plain-language statuses, milestones, and action items. Nothing here changes
 // stored data — the professional/admin views keep using the raw fields.
 
-export type ClientTone = "green" | "blue" | "yellow" | "red" | "gray";
+export type ClientTone = "green" | "blue" | "red" | "gray";
 
 export type ClientPermitItem = {
   id: string;
@@ -137,47 +137,47 @@ export function clientStatus(project: ClientProjectInput, signals: ClientSignals
 
   if (attentionCount > 0) {
     return {
-      label: "Needs Your Attention",
-      tone: "yellow",
+      label: "Documents Needed",
+      tone: "blue",
       plain: `We need ${attentionCount} thing${attentionCount === 1 ? "" : "s"} from you before this can move forward.`,
     };
   }
 
   if (ms.steps.find((s) => s.key === "cofo")?.done) {
-    return { label: "Certificate of Occupancy", tone: "green", plain: "Your Certificate of Occupancy is complete. You're cleared to open." };
+    return { label: "Complete", tone: "green", plain: "Your Certificate of Occupancy is complete. You're cleared to open." };
   }
   if (ms.steps.find((s) => s.key === "inspections")?.done) {
-    return { label: "Final Approvals", tone: "green", plain: "Inspections passed. We're closing out the final approvals." };
+    return { label: "Approved", tone: "green", plain: "Inspections passed. We're closing out the final approvals." };
   }
   if (signals.inspections.length > 0) {
     return { label: "Inspections", tone: "blue", plain: "Your permit is issued and inspections are underway." };
   }
   if (ms.steps.find((s) => s.key === "issued")?.done) {
-    return { label: "Permit Issued", tone: "green", plain: "Your permit has been issued. Construction can proceed." };
+    return { label: "Approved", tone: "green", plain: "Your permit has been issued. Construction can proceed." };
   }
   if (raw.includes("correction") || raw.includes("revision")) {
-    return { label: "Corrections Needed", tone: "red", plain: "The reviewers sent comments back. We're preparing the corrections." };
+    return { label: "Corrections Needed", tone: "red", plain: "The agency sent comments back. We're preparing the corrections." };
   }
   if (raw.includes("resubmit")) {
-    return { label: "Resubmitted", tone: "blue", plain: "The corrected documents went back to the reviewing office." };
+    return { label: "Submitted", tone: "blue", plain: "The corrected documents went back to the reviewing agency." };
   }
   if (items.some((i) => i.status === "under_review") || raw.includes("review") || project.current_stage === 2) {
-    return { label: "Jurisdiction Review", tone: "blue", plain: "Your application is being reviewed by the jurisdiction. Nothing is needed from you right now." };
+    return { label: "Agency Reviewing", tone: "blue", plain: "The agency is currently reviewing your submission. Nothing is needed from you right now." };
   }
   if (items.some((i) => i.status === "submitted") || raw.includes("submit") || project.current_stage === 1) {
     return { label: "Submitted", tone: "blue", plain: "Your application has been filed and is waiting to be picked up for review." };
   }
   if (ms.steps.find((s) => s.key === "plans_ready")?.done) {
-    return { label: "Ready to Submit", tone: "blue", plain: "Everything is prepared. We're ready to file the application." };
+    return { label: "Permivio Working", tone: "blue", plain: "Everything is prepared. Permivio is ready to file your application." };
   }
   if (signals.documentCount > 0) {
-    return { label: "Plans Being Prepared", tone: "blue", plain: "We're organizing and checking your documents before filing." };
+    return { label: "Permivio Working", tone: "blue", plain: "Permivio is preparing your application." };
   }
   if (items.length > 0) {
-    return { label: "Waiting for Documents", tone: "yellow", plain: "We're waiting on the documents this project needs." };
+    return { label: "Documents Needed", tone: "blue", plain: "We're waiting on the documents needed for this application." };
   }
   if (project.jurisdiction) {
-    return { label: "Researching Requirements", tone: "blue", plain: "We're identifying which approvals this project needs." };
+    return { label: "Permivio Working", tone: "blue", plain: "Permivio is identifying which approvals this project needs." };
   }
   return { label: "Getting Started", tone: "gray", plain: "We're setting up your project and confirming the basics." };
 }
@@ -259,7 +259,7 @@ function classifyAsk(item: ClientPermitItem): { action: AttentionActionKind; tab
     return {
       action: "upload",
       tab: "docs",
-      whatIsNeeded: `Upload the ${item.name.toLowerCase()}`,
+      whatIsNeeded: `Upload the documents needed for the ${item.name.toLowerCase()}`,
       why: "This document is part of the required submittal package for this project.",
     };
   }
@@ -313,7 +313,7 @@ export function attentionItems(project: ClientProjectInput, signals: ClientSigna
       action: ask.action,
       actionLabel: ACTION_LABEL[ask.action],
       tab: ask.tab,
-      tone: overdue ? "red" : "yellow",
+      tone: overdue ? "red" : "blue",
     });
   }
 
@@ -331,7 +331,7 @@ export function attentionItems(project: ClientProjectInput, signals: ClientSigna
       action: "review",
       actionLabel: ACTION_LABEL.review,
       tab: "deadlines",
-      tone: days < 0 ? "red" : "yellow",
+      tone: days < 0 ? "red" : "blue",
     });
   }
 
@@ -352,7 +352,7 @@ export function attentionItems(project: ClientProjectInput, signals: ClientSigna
   }
 
   return out.sort((a, b) => {
-    const rank = (t: ClientTone) => (t === "red" ? 0 : t === "yellow" ? 1 : 2);
+    const rank = (t: ClientTone) => (t === "red" ? 0 : t === "blue" ? 1 : 2);
     if (rank(a.tone) !== rank(b.tone)) return rank(a.tone) - rank(b.tone);
     if (a.dueDate && b.dueDate) return a.dueDate.localeCompare(b.dueDate);
     if (a.dueDate) return -1;
@@ -421,11 +421,6 @@ export const TONE_CLASSES: Record<ClientTone, { badge: string; dot: string; bar:
     bar: "bg-[oklch(0.75_0.16_155)]",
   },
   blue: { badge: "border-primary/40 bg-primary/12 text-primary", dot: "bg-primary", bar: "bg-primary" },
-  yellow: {
-    badge: "border-[oklch(0.66_0.19_258)]/40 bg-[oklch(0.66_0.19_258)]/12 text-[oklch(0.72_0.17_258)]",
-    dot: "bg-[oklch(0.66_0.19_258)]",
-    bar: "bg-[oklch(0.66_0.19_258)]",
-  },
   red: { badge: "border-destructive/40 bg-destructive/12 text-destructive", dot: "bg-destructive", bar: "bg-destructive" },
   gray: { badge: "border-border bg-secondary/60 text-muted-foreground", dot: "bg-muted-foreground", bar: "bg-muted-foreground" },
 };
