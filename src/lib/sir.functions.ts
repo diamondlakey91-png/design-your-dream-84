@@ -1,7 +1,6 @@
 import { createServerFn } from "@tanstack/react-start";
 import { z } from "zod";
 import { requireSupabaseAuth } from "@/integrations/supabase/auth-middleware";
-import { runResearch } from "@/lib/sirResearchRunner.server";
 
 const sirRequestSchema = z.object({
   name: z.string().trim().min(1, "Name is required").max(200),
@@ -52,6 +51,7 @@ export const submitSirRequest = createServerFn({ method: "POST" })
     // confirmation. runResearch persists its own research_status/research_error,
     // and admins can re-run it, so it never blocks (or fails) the submission.
     await supabaseAdmin.from("sir_requests").update({ research_status: "queued" }).eq("id", row.id);
+    const { runResearch } = await import("@/lib/sirResearchRunner.server");
     const work = runResearch(row.id).catch((err: unknown) => {
       console.error("[sir] auto research failed:", (err as Error).message);
     });
@@ -94,6 +94,7 @@ export const researchSirRequest = createServerFn({ method: "POST" })
   .inputValidator((d: unknown) => z.object({ id: z.string().uuid() }).parse(d))
   .handler(async ({ data, context }) => {
     await assertAdmin(context as never);
+    const { runResearch } = await import("@/lib/sirResearchRunner.server");
     return runResearch(data.id);
   });
 
@@ -262,4 +263,31 @@ export const generateSirReportPdf = createServerFn({ method: "POST" })
     if (!(row as any).research) throw new Error("Run research before exporting the report.");
     const { renderSirReportPdf } = await import("@/lib/sirReportPdf.server");
     return renderSirReportPdf(row);
+  });
+
+/**
+ * Admin/reviewer: release the professionally reviewed report to the client's
+ * SIR workspace. Nothing reaches a client before a human sign-off.
+ */
+export const releaseSirReportToClient = createServerFn({ method: "POST" })
+  .middleware([requireSupabaseAuth])
+  .inputValidator((d: unknown) => z.object({ id: z.string().uuid() }).parse(d))
+  .handler(async ({ data, context }) => {
+    await assertAdmin(context as never);
+    const { data: row, error: readErr } = await context.supabase
+      .from("sir_requests")
+      .select("review_status, qa_status")
+      .eq("id", data.id)
+      .maybeSingle();
+    if (readErr) throw new Error(readErr.message);
+    if (!row) throw new Error("Request not found");
+    if (row.review_status !== "reviewed") throw new Error("Sign the report off as professionally reviewed before releasing it.");
+    if (row.qa_status === "blocked") throw new Error("The QA/QC gate is blocking this draft. Clear the blockers before releasing it.");
+
+    const { error } = await context.supabase
+      .from("sir_requests")
+      .update({ released_to_client_at: new Date().toISOString() } as never)
+      .eq("id", data.id);
+    if (error) throw new Error(error.message);
+    return { ok: true as const };
   });
