@@ -314,8 +314,19 @@ export const runSiteInvestigation = createServerFn({ method: "POST" })
         ? await sb.from("jurisdiction_profiles").select("name, state, county, department, portal_url, overview, permit_categories, requirements, sources").eq("slug", toSlug(jurisdiction)).maybeSingle()
         : { data: null };
 
-      const sectionList = SI_REPORT_SECTIONS.map((s) => `${s.no}. ${s.key} — ${s.title}`).join("\n");
+      const wantedKeys = new Set(activeSectionKeys(plan));
+      const activeSections = SI_REPORT_SECTIONS.filter((s) => wantedKeys.has(s.key));
+      const sectionList = activeSections.map((s) => `${s.no}. ${s.key} — ${s.title}`).join("\n");
       const catList = SI_FINDING_CATEGORIES.map((c) => `${c.id} (${c.label})`).join(", ");
+      const moduleList = activeModuleIds(plan)
+        .map((id) => {
+          const m = moduleMeta(id);
+          const planned = plan.modules.find((x) => x.id === id);
+          return m ? `MODULE ${m.code} — ${m.label} (${planned?.status ?? "required"}): ${planned?.reason ?? ""}` : "";
+        })
+        .filter(Boolean)
+        .join("\n");
+      const riskList = RISK_CATEGORIES.map((r) => r.id).join(", ");
 
       const result = await callGeminiJSON(
         `Produce a PERMIVIO Site Investigation & Feasibility Report.
