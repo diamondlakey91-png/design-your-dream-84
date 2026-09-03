@@ -519,7 +519,7 @@ Open questions from the lead agent: ${plan.open_questions.join("; ") || "(none)"
 
   // 2b — Feasibility verdict pass (Feasibility Report product only). It runs
   // after the specialists so it reasons over their actual findings.
-  let feasibility: z.infer<typeof FeasibilitySchema> | null = null;
+  let feasibility: z.input<typeof FeasibilitySchema> | null = null;
   if (feasibilityMode) {
     feasibility = await settle("feasibility_decision", "Feasibility & go / no-go decision", () =>
       ask(
@@ -533,7 +533,7 @@ Open questions from the lead agent: ${plan.open_questions.join("; ") || "(none)"
         agent: "feasibility_decision",
         role: "Feasibility & go / no-go decision",
         status: "complete",
-        items: feasibility.deal_killers.length + feasibility.conditions_to_proceed.length,
+        items: (feasibility.deal_killers?.length ?? 0) + (feasibility.conditions_to_proceed?.length ?? 0),
         cited: 0,
         downgraded: 0,
       });
@@ -604,7 +604,7 @@ Open questions from the lead agent: ${plan.open_questions.join("; ") || "(none)"
         severity: (e.deal_killer ? "high" : "medium") as "high" | "medium",
         why: e.implication.slice(0, 600),
       })),
-    ...(feasibility?.deal_killers ?? []).map((d) => ({
+    ...((feasibility?.deal_killers ?? []) as Array<{ title: string; why: string }>).map((d) => ({
       title: `${d.title} (potential deal-killer)`.slice(0, 200),
       severity: "high" as const,
       why: d.why.slice(0, 600),
@@ -658,9 +658,9 @@ Open questions from the lead agent: ${plan.open_questions.join("; ") || "(none)"
       ? {
           ...feasibility,
           rationale: feasibility.rationale.slice(0, 1500),
-          conditions_to_proceed: clip(feasibility.conditions_to_proceed, 300).slice(0, 12),
-          cost_schedule_exposure: clip(feasibility.cost_schedule_exposure, 300).slice(0, 10),
-          deal_killers: feasibility.deal_killers.slice(0, 10).map((d) => ({ ...d, title: d.title.slice(0, 200), why: d.why.slice(0, 600) })),
+          conditions_to_proceed: clip(feasibility.conditions_to_proceed ?? [], 300).slice(0, 12),
+          cost_schedule_exposure: clip(feasibility.cost_schedule_exposure ?? [], 300).slice(0, 10),
+          deal_killers: (feasibility.deal_killers ?? []).slice(0, 10).map((d) => ({ ...d, title: d.title.slice(0, 200), why: d.why.slice(0, 600) })),
         }
       : undefined,
   });
