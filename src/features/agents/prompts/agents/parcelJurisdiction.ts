@@ -56,9 +56,15 @@ export type ParcelJurisdictionPromptInput = {
   scope: string;
   clientObjective: string;
   knownParcelId: string | null;
+  /**
+   * Boundary determination read directly from official government GIS
+   * (Census TIGER / FEMA NFHL). Authoritative — the model may not contradict it.
+   */
+  authoritativeBoundary?: string | null;
   evidence: Array<{ source_key: string; url: string; title: string; retrieved: boolean; excerpt: string }>;
   searchLeads: Array<{ url: string; title: string }>;
 };
+
 
 export function buildParcelJurisdictionPrompt(input: ParcelJurisdictionPromptInput) {
   const g = input.geocode;
@@ -86,6 +92,9 @@ Address elements from the geocoder — POSTAL/MAILING ONLY, not a jurisdiction d
 - state: ${g.state ?? "unknown"}
 - ZIP: ${g.postalCode ?? "unknown"}
 Parcel identifier provided by the client: ${input.knownParcelId ?? "none"}
+
+AUTHORITATIVE BOUNDARY DETERMINATION (read directly from official government GIS — you may NOT contradict, soften or re-derive this)
+${input.authoritativeBoundary ?? "(no government boundary service could be reached — treat corporate-limit status as undetermined and say what must be confirmed)"}
 
 PROJECT
 Client objective: ${input.clientObjective}

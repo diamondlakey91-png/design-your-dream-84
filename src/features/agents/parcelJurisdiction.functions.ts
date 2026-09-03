@@ -201,6 +201,7 @@ export const runParcelJurisdiction = createServerFn({ method: "POST" })
             jurisdiction_matrix: result.jurisdictionMatrix,
             overlays_and_districts: result.overlays,
             geocode: result.geocode,
+            geography: result.geography,
             downgrades: result.downgrades,
             evidence: result.evidence.map((e) => ({
               source_key: e.source_key,
@@ -230,6 +231,13 @@ export const runParcelJurisdiction = createServerFn({ method: "POST" })
         jurisdictionMatrix: result.jurisdictionMatrix,
         overlays: result.overlays,
         geocode: result.geocode,
+        geography: {
+          determination: result.geography.determination,
+          census: result.geography.census,
+          flood: result.geography.flood,
+          unavailable: result.geography.unavailable,
+          sources: result.geography.evidence.map((e) => ({ source_key: e.source_key, title: e.title, url: e.url })),
+        },
         findings: toClientFindings(
           result.output.findings.map((f) => ({
             title: f.title,
