@@ -154,6 +154,21 @@ export function PlanQaQcTab({ projectId, userId }: { projectId: string; userId: 
             </p>
           </div>
           <div className="flex items-center gap-2">
+            <input
+              ref={fileRef}
+              type="file"
+              multiple
+              accept="application/pdf,image/*"
+              className="hidden"
+              onChange={(e) => e.target.files?.length && onUploadPlans(e.target.files)}
+            />
+            <button
+              onClick={() => fileRef.current?.click()}
+              disabled={uploading}
+              className="inline-flex items-center gap-1.5 rounded-lg border border-border px-3 py-2 text-[11px] font-mono uppercase tracking-wider hover:border-brand hover:text-brand disabled:opacity-50"
+            >
+              <Upload className="size-3.5" /> {uploading ? "Uploading…" : "Upload plan set"}
+            </button>
             <Input value={revision} onChange={(e) => setRevision(e.target.value)} className="h-9 w-28" placeholder="Rev A" />
             <button
               onClick={() => run.mutate()}
