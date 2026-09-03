@@ -81,7 +81,7 @@ function Dashboard() {
         title={mode === "client" ? `${greeting()}, ${who}` : "Command Center"}
         subtitle={
           mode === "client"
-            ? "Here's what's happening with your projects."
+            ? "Here's the latest on your projects."
             : "Everything that needs your attention across permits, reviews, inspections, and closeout."
         }
         actions={<>
@@ -92,17 +92,11 @@ function Dashboard() {
             </span>
           </div>
           <div className="hidden h-10 w-px bg-border sm:block" />
-          <Link
-            to="/report"
-            className="inline-flex items-center gap-1.5 rounded-full border border-brand/40 bg-brand/10 px-4 py-2.5 text-sm font-semibold text-brand transition-colors hover:bg-brand/20 shadow-[0_10px_40px_-12px_oklch(0.66_0.19_258/0.6)]"
-          >
-            <FileCheck2 className="size-4" /> Compliance Report
-          </Link>
           <button
             onClick={() => setShowCreate(true)}
             className="inline-flex items-center gap-1.5 rounded-full bg-foreground px-4 py-2.5 text-sm font-semibold text-background transition-colors hover:bg-foreground/90"
           >
-            <Plus className="size-4" /> New project
+            <Plus className="size-4" /> Start New Project
           </button>
         </>}
       />

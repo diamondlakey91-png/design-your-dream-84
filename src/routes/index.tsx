@@ -348,18 +348,19 @@ function Landing() {
           }}
         />
         <div className="mx-auto max-w-4xl px-6 py-24 text-center">
-          <h2 className="bg-gradient-to-b from-white via-blue-100 to-blue-500 bg-clip-text text-3xl font-bold tracking-tight text-transparent md:text-5xl">
-            Ship permits faster.
+          <h2 className="bg-gradient-to-b from-white via-blue-100 to-blue-500 bg-clip-text text-3xl font-bold tracking-tight text-transparent md:text-4xl">
+            Know the path. Clear the way.
           </h2>
-          <p className="mx-auto mt-4 max-w-xl text-pretty text-base text-blue-200/70 md:text-lg">
-            Join builders using Permivio to move projects through review — one intelligent step at a time.
+          <p className="mx-auto mt-4 max-w-2xl text-pretty text-base text-blue-200/70 md:text-lg">
+            From site feasibility and plan review through permitting and final approval, Permivio keeps every project
+            moving with clarity.
           </p>
           <div className="mt-8 flex flex-wrap items-center justify-center gap-3">
             <Link
               to="/auth"
               className="inline-flex h-12 items-center gap-2 rounded-lg bg-gradient-to-r from-blue-500 to-blue-700 px-6 text-sm font-semibold text-white shadow-[0_10px_40px_-8px_rgba(59,130,246,0.7)]"
             >
-              Get started free <ArrowRight className="size-4" />
+              Start your project <ArrowRight className="size-4" />
             </Link>
           </div>
         </div>
