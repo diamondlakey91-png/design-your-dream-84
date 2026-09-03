@@ -71,7 +71,7 @@ export const submitSirRequest = createServerFn({ method: "POST" })
 /** Resolve jurisdiction → research official sources → persist the structured scope. */
 async function runResearch(requestId: string) {
   const { supabaseAdmin } = await import("@/integrations/supabase/client.server");
-  const { researchSirRequestRow, SIR_RESEARCH_MODEL } = await import("@/lib/sirResearch.server");
+  const { runSirLeadAgent, SIR_LEAD_AGENT_MODEL } = await import("@/lib/sirLeadAgent.server");
 
   const { data: row } = await supabaseAdmin.from("sir_requests").select("*").eq("id", requestId).maybeSingle();
   if (!row) throw new Error("Request not found");
@@ -79,7 +79,9 @@ async function runResearch(requestId: string) {
   await supabaseAdmin.from("sir_requests").update({ research_status: "running", research_error: null }).eq("id", requestId);
 
   try {
-    const { resolved, research, sources } = await researchSirRequestRow(row);
+    // The Lead Project Intelligence Agent orchestrates the specialist research
+    // passes and gates every claim against the harvested official evidence.
+    const { resolved, research, sources, audit } = await runSirLeadAgent(row);
     const { error } = await supabaseAdmin
       .from("sir_requests")
       .update({
@@ -87,7 +89,8 @@ async function runResearch(requestId: string) {
         research: research as never,
         resolved_jurisdiction: resolved as never,
         research_sources: sources as never,
-        research_model: SIR_RESEARCH_MODEL,
+        research_model: SIR_LEAD_AGENT_MODEL,
+        research_audit: audit as never,
         researched_at: new Date().toISOString(),
         research_error: null,
       })
@@ -273,6 +276,7 @@ export const generateSirReportPdf = createServerFn({ method: "POST" })
       effectiveFindingText,
       SIR_REPORT_DISCLAIMER,
       SIR_PROFESSIONAL_REVIEW_NOTE,
+      SIR_AI_RESEARCH_DISCLAIMER,
     } = await import("@/lib/sirReport");
 
     const sections = buildSirReport(r.research);
@@ -369,6 +373,22 @@ export const generateSirReportPdf = createServerFn({ method: "POST" })
     if (sources.length) {
       heading("Official sources");
       for (const s of sources) text(`- ${s.title || s.url}: ${s.url}`, { size: 8, gap: 1 });
+    }
+
+    const auditRec = r.research_audit as
+      | { agents?: Array<{ role: string; status: string; items: number; cited: number }>; evidence_sources?: number; coverage_gaps?: string[]; citation_downgrades?: Array<{ item: string; reason: string }> }
+      | null;
+    if (auditRec) {
+      heading("How this research was produced");
+      text(SIR_AI_RESEARCH_DISCLAIMER, { size: 8.5, color: [0.35, 0.38, 0.44] });
+      text(`Official source pages reviewed: ${auditRec.evidence_sources ?? 0}`, { gap: 1 });
+      for (const a of auditRec.agents ?? []) {
+        text(`- ${a.role}: ${a.status} · ${a.items} finding(s) · ${a.cited} source-backed`, { size: 8.5, gap: 1 });
+      }
+      for (const g of auditRec.coverage_gaps ?? []) text(`- Coverage gap: ${g}`, { size: 8.5, gap: 1 });
+      for (const d of auditRec.citation_downgrades ?? []) {
+        text(`- Downgraded from verified: ${d.item} — ${d.reason}`, { size: 8.5, gap: 1 });
+      }
     }
 
     heading("Assumptions and limitations");

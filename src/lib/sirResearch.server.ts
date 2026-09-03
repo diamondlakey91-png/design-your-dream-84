@@ -17,7 +17,7 @@ export const SIR_RESEARCH_MODEL = "google/gemini-2.5-pro";
 // Models frequently return free-text verification wording ("confirmed via official
 // website"). Normalise defensively and default to the most conservative label so a
 // wording variation never fails the whole research pass.
-const Verification = z.preprocess((v) => {
+export const Verification = z.preprocess((v) => {
   const s = String(v ?? "").toLowerCase();
   if (s === "verified" || s === "ai_assisted" || s === "needs_confirmation") return s;
   if (/(confirm|verified|official|published)/.test(s) && !/(needs|require|unconfirmed|pending)/.test(s)) return "verified";
@@ -26,7 +26,7 @@ const Verification = z.preprocess((v) => {
 }, z.enum(["verified", "ai_assisted", "needs_confirmation"])) as unknown as z.ZodType<"verified" | "ai_assisted" | "needs_confirmation">;
 
 /** Lenient enum: normalises free-text values, falling back to a safe default. */
-function looseEnum<T extends readonly [string, ...string[]]>(values: T, fallback: T[number]) {
+export function looseEnum<T extends readonly [string, ...string[]]>(values: T, fallback: T[number]) {
   return z.preprocess((v) => {
     const s = String(v ?? "").toLowerCase().trim().replace(/[\s-]+/g, "_");
     return (values as readonly string[]).includes(s) ? s : fallback;
@@ -34,7 +34,7 @@ function looseEnum<T extends readonly [string, ...string[]]>(values: T, fallback
 }
 
 /** Lenient text: models sometimes return arrays where a sentence was requested. */
-const looseText = (max: number) =>
+export const looseText = (max: number) =>
   z.preprocess((v) => {
     if (v === null || v === undefined) return null;
     if (Array.isArray(v)) return v.map((x) => String(x)).join("; ").slice(0, max);
@@ -42,7 +42,7 @@ const looseText = (max: number) =>
     return String(v).slice(0, max);
   }, z.string().max(max).nullable()) as unknown as z.ZodType<string | null>;
 
-const AuthoritySchema = z.object({
+export const AuthoritySchema = z.object({
   role: z.string().max(60),
   official_name: z.string().max(200),
   responsibility: z.string().max(400),
@@ -51,7 +51,7 @@ const AuthoritySchema = z.object({
 });
 
 
-const ResearchSchema = z.object({
+export const ResearchSchema = z.object({
   scope_summary: z.string(),
   project_classification: z.string(),
   complexity: looseEnum(["simple", "moderate", "complex", "major"] as const, "moderate"),
@@ -66,6 +66,7 @@ const ResearchSchema = z.object({
     rationale: z.string(),
     items_to_confirm: z.array(z.string().max(300)).max(12),
     verification: Verification,
+    source_url: looseText(500).optional(),
   }),
   permits: z.array(z.object({
     name: z.string().max(160),
@@ -75,12 +76,14 @@ const ResearchSchema = z.object({
     depends_on: looseText(200).optional(),
     notes: looseText(600).optional(),
     verification: Verification,
+    source_url: looseText(500).optional(),
   })).max(30),
   utilities: z.array(z.object({
     utility: z.string().max(80),
     provider: looseText(160),
     coordination_required: z.string().max(600),
     verification: Verification,
+    source_url: looseText(500).optional(),
   })).max(12),
   timeline: z.array(z.object({
     phase: z.string().max(160),
@@ -187,7 +190,7 @@ export async function resolveSirJurisdiction(input: { siteAddress?: string | nul
   };
 }
 
-async function gatherOfficialResearch(args: { locality: string; state: string; address: string; use: string }) {
+export async function gatherOfficialResearch(args: { locality: string; state: string; address: string; use: string }) {
   const key = process.env['FIRECRAWL_API_KEY'];
   const sources: Array<{ url: string; title: string }> = [];
   if (!key) return { context: "", sources };

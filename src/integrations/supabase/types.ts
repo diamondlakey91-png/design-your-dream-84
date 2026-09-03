@@ -3870,6 +3870,7 @@ export type Database = {
           project_stage: string | null
           report_needed: string | null
           research: Json | null
+          research_audit: Json | null
           research_error: string | null
           research_model: string | null
           research_sources: Json | null
@@ -3904,6 +3905,7 @@ export type Database = {
           project_stage?: string | null
           report_needed?: string | null
           research?: Json | null
+          research_audit?: Json | null
           research_error?: string | null
           research_model?: string | null
           research_sources?: Json | null
@@ -3938,6 +3940,7 @@ export type Database = {
           project_stage?: string | null
           report_needed?: string | null
           research?: Json | null
+          research_audit?: Json | null
           research_error?: string | null
           research_model?: string | null
           research_sources?: Json | null
