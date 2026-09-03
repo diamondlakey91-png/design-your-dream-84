@@ -14,7 +14,24 @@ import { buildMdVaAuthorities, canonicalMdVaLocality, isMdVaLocality } from "@/l
 
 export const SIR_RESEARCH_MODEL = "google/gemini-2.5-pro";
 
-const Verification = z.enum(["verified", "ai_assisted", "needs_confirmation"]);
+// Models frequently return free-text verification wording ("confirmed via official
+// website"). Normalise defensively and default to the most conservative label so a
+// wording variation never fails the whole research pass.
+const Verification = z.preprocess((v) => {
+  const s = String(v ?? "").toLowerCase();
+  if (s === "verified" || s === "ai_assisted" || s === "needs_confirmation") return s;
+  if (/(confirm|verified|official|published)/.test(s) && !/(needs|require|unconfirmed|pending)/.test(s)) return "verified";
+  if (/(ai|inferred|estimate|likely|analysis)/.test(s)) return "ai_assisted";
+  return "needs_confirmation";
+}, z.enum(["verified", "ai_assisted", "needs_confirmation"])) as unknown as z.ZodType<"verified" | "ai_assisted" | "needs_confirmation">;
+
+/** Lenient enum: normalises free-text values, falling back to a safe default. */
+function looseEnum<T extends readonly [string, ...string[]]>(values: T, fallback: T[number]) {
+  return z.preprocess((v) => {
+    const s = String(v ?? "").toLowerCase().trim().replace(/[\s-]+/g, "_");
+    return (values as readonly string[]).includes(s) ? s : fallback;
+  }, z.enum(values)) as unknown as z.ZodType<T[number]>;
+}
 
 const AuthoritySchema = z.object({
   role: z.string().max(60),
@@ -27,7 +44,7 @@ const AuthoritySchema = z.object({
 const ResearchSchema = z.object({
   scope_summary: z.string(),
   project_classification: z.string(),
-  complexity: z.enum(["simple", "moderate", "complex", "major"]),
+  complexity: looseEnum(["simple", "moderate", "complex", "major"] as const, "moderate"),
   jurisdiction: z.object({
     ahj_summary: z.string(),
     authorities: z.array(AuthoritySchema).max(20),
@@ -35,7 +52,7 @@ const ResearchSchema = z.object({
   }),
   zoning: z.object({
     district: z.string().nullable(),
-    use_conclusion: z.enum(["likely_permitted", "conditional", "potentially_not_permitted", "needs_confirmation"]),
+    use_conclusion: looseEnum(["likely_permitted", "conditional", "potentially_not_permitted", "needs_confirmation"] as const, "needs_confirmation"),
     rationale: z.string(),
     items_to_confirm: z.array(z.string().max(300)).max(12),
     verification: Verification,
@@ -44,7 +61,7 @@ const ResearchSchema = z.object({
     name: z.string().max(160),
     agency: z.string().max(160),
     category: z.string().max(60),
-    likelihood: z.enum(["required", "likely", "conditional", "not_required"]),
+    likelihood: looseEnum(["required", "likely", "conditional", "not_required"] as const, "conditional"),
     depends_on: z.string().max(200).optional().nullable(),
     notes: z.string().max(600).optional().nullable(),
     verification: Verification,
@@ -66,7 +83,7 @@ const ResearchSchema = z.object({
   turnaround: z.string().max(200),
   risks: z.array(z.object({
     title: z.string().max(200),
-    severity: z.enum(["low", "medium", "high"]),
+    severity: looseEnum(["low", "medium", "high"] as const, "medium"),
     why: z.string().max(600),
   })).max(15),
   open_questions: z.array(z.string().max(300)).max(15),
