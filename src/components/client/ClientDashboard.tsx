@@ -10,6 +10,7 @@ import { ClientProjectCard } from "@/components/client/ClientProjectCard";
 import {
   attentionItems,
   clientStatus,
+  firstName,
   friendlyActivity,
   type AttentionItem,
   type ClientProjectInput,
@@ -24,6 +25,7 @@ import {
 export function ClientDashboard({ onCreateProject }: { onCreateProject: () => void }) {
   const fn = useServerFn(getClientDashboard);
   const q = useQuery({ queryKey: ["client-dashboard"], queryFn: () => fn() });
+  const clientName = firstName(q.data?.profile?.full_name ?? null);
 
   const model = useMemo(() => {
     const d = q.data;
@@ -87,7 +89,9 @@ export function ClientDashboard({ onCreateProject }: { onCreateProject: () => vo
           <div className="flex items-start gap-3 rounded-3xl border border-border bg-card p-5">
             <CheckCircle2 className="mt-0.5 size-5 shrink-0 text-[oklch(0.82_0.15_155)]" />
             <div>
-              <p className="text-sm font-medium text-foreground">Nothing needed from you right now.</p>
+              <p className="text-sm font-medium text-foreground">
+                {clientName ? `You’re all caught up, ${clientName}.` : "You’re all caught up."}
+              </p>
               <p className="mt-1 text-sm text-muted-foreground">
                 Permivio is handling the next steps. Anything we need will appear here first.
               </p>
