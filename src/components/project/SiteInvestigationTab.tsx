@@ -168,11 +168,76 @@ export function SiteInvestigationTab({
             <Label className="text-xs">Prepared for (optional)</Label>
             <Input value={client} onChange={(e) => setClient(e.target.value)} placeholder="Client / owner name" />
           </div>
+          <div>
+            <Label className="text-xs">Site acreage (optional)</Label>
+            <Input value={acreage} onChange={(e) => setAcreage(e.target.value)} inputMode="decimal" placeholder="1.75" />
+          </div>
+          <div>
+            <Label className="text-xs">Building area, sf (optional)</Label>
+            <Input value={buildingSf} onChange={(e) => setBuildingSf(e.target.value)} inputMode="numeric" placeholder="4200" />
+          </div>
           <div className="md:col-span-2">
             <Label className="text-xs">Scope notes, known constraints, questions</Label>
             <Textarea value={notes} onChange={(e) => setNotes(e.target.value)} rows={3} placeholder="Adding a 900 sf patio, grease interceptor unknown, drive-thru desired…" />
           </div>
         </div>
+        <div className="mt-3 grid gap-3 md:grid-cols-2">
+          <div>
+            <Label className="text-xs">Report product</Label>
+            <select
+              value={depth}
+              onChange={(e) => setDepth(e.target.value)}
+              className="mt-1 w-full rounded-lg border border-border bg-background px-3 py-2 text-xs"
+            >
+              <option value="">
+                Recommended{planned.data ? ` — ${planned.data.recommended_depth_label}` : ""}
+              </option>
+              {REPORT_DEPTHS.map((r) => (
+                <option key={r.id} value={r.id}>{r.label}</option>
+              ))}
+            </select>
+          </div>
+          <div>
+            <Label className="text-xs">Parcels</Label>
+            <div className="mt-1 space-y-2">
+              {parcels.map((p, i) => (
+                <div key={i} className="grid grid-cols-4 gap-1.5">
+                  <Input value={p.label} onChange={(e) => setParcels((prev) => prev.map((x, j) => (j === i ? { ...x, label: e.target.value } : x)))} placeholder={`Parcel ${String.fromCharCode(65 + i)}`} />
+                  <Input value={p.parcel_number} onChange={(e) => setParcels((prev) => prev.map((x, j) => (j === i ? { ...x, parcel_number: e.target.value } : x)))} placeholder="APN" />
+                  <Input value={p.acreage} onChange={(e) => setParcels((prev) => prev.map((x, j) => (j === i ? { ...x, acreage: e.target.value } : x)))} placeholder="Acres" />
+                  <Input value={p.phase} onChange={(e) => setParcels((prev) => prev.map((x, j) => (j === i ? { ...x, phase: e.target.value } : x)))} placeholder="Phase" />
+                </div>
+              ))}
+              <button
+                type="button"
+                onClick={() => setParcels((prev) => [...prev, { label: "", parcel_number: "", acreage: "", phase: "" }])}
+                className="rounded-lg border border-border px-2.5 py-1.5 text-[11px] font-mono uppercase tracking-wider text-muted-foreground hover:border-brand hover:text-brand"
+              >
+                + Add parcel
+              </button>
+            </div>
+          </div>
+        </div>
+
+        {planned.data?.plan && (
+          <div className="mt-3 rounded-lg border border-border bg-background/40 p-3">
+            <p className="text-[11px] font-mono uppercase tracking-wider text-muted-foreground">What Permivio will research</p>
+            <p className="mt-1 text-xs">
+              {planned.data.plan.complexity_label} · {planned.data.recommended_depth_label} · {planned.data.plan.modules.length} research modules
+            </p>
+            <div className="mt-2 flex flex-wrap gap-1.5">
+              {planned.data.plan.modules.map((m: { id: string; label: string }) => (
+                <span key={m.id} className="rounded-full bg-muted/40 px-2 py-0.5 text-[10px] font-mono uppercase tracking-wider text-muted-foreground ring-1 ring-border">
+                  {m.label}
+                </span>
+              ))}
+            </div>
+            {planned.data.plan.custom_quote_recommended && (
+              <p className="mt-2 text-xs text-muted-foreground">This scope is large enough that a custom-scoped study is recommended.</p>
+            )}
+          </div>
+        )}
+
         <button
           onClick={() => run.mutate()}
           disabled={run.isPending || address.trim().length < 5}
@@ -249,6 +314,105 @@ export function SiteInvestigationTab({
             <div className="rounded-xl border border-border bg-card/60 p-4">
               <p className="text-[11px] font-mono uppercase tracking-wider text-muted-foreground">Executive summary</p>
               <p className="mt-1.5 text-sm">{d.investigation.executive_summary}</p>
+            </div>
+          )}
+
+          {Object.keys(d.investigation.feasibility_snapshot ?? {}).length > 0 && (
+            <div className="rounded-xl border border-border bg-card/60 p-4">
+              <p className="text-[11px] font-mono uppercase tracking-wider text-muted-foreground">Executive feasibility snapshot</p>
+              <dl className="mt-2 grid gap-2 text-xs sm:grid-cols-2 lg:grid-cols-3">
+                {Object.entries(d.investigation.feasibility_snapshot as Record<string, string>).map(([k, v]) =>
+                  v ? (
+                    <div key={k}>
+                      <dt className="font-mono text-[10px] uppercase tracking-wider text-muted-foreground">{k.replace(/_/g, " ")}</dt>
+                      <dd>{v}</dd>
+                    </div>
+                  ) : null,
+                )}
+              </dl>
+            </div>
+          )}
+
+          {(d.parcels ?? []).length > 1 && (
+            <div className="rounded-xl border border-border bg-card/60 p-4">
+              <p className="text-[11px] font-mono uppercase tracking-wider text-muted-foreground">Parcel summary</p>
+              <ul className="mt-2 space-y-1.5 text-xs">
+                {d.parcels.map((p: Record<string, any>) => (
+                  <li key={p.id}>
+                    <span className="font-medium">{p.label}</span>
+                    <span className="text-muted-foreground">
+                      {p.parcel_number ? ` · ${p.parcel_number}` : ""}
+                      {p.acreage ? ` · ${p.acreage} ac` : ""}
+                      {p.zoning ? ` · Zoning ${p.zoning}` : ""}
+                      {p.phase ? ` · ${p.phase}` : ""}
+                    </span>
+                    {p.notes && <p className="text-muted-foreground">{p.notes}</p>}
+                  </li>
+                ))}
+              </ul>
+            </div>
+          )}
+
+          {(d.risks ?? []).length > 0 && (
+            <div className="rounded-xl border border-border bg-card/60 p-4">
+              <p className="text-[11px] font-mono uppercase tracking-wider text-muted-foreground">Risk matrix</p>
+              <ul className="mt-2 space-y-2 text-xs">
+                {d.risks.map((r: Record<string, any>) => (
+                  <li key={r.id} className="border-l-2 border-border pl-3">
+                    <div className="flex flex-wrap items-center gap-1.5">
+                      <span className="text-sm font-medium">{riskCategoryLabel(r.category)}</span>
+                      <span className={`rounded-full px-2 py-0.5 text-[10px] font-mono uppercase tracking-wider ring-1 ${riskLevelMeta(r.level).klass}`}>
+                        {riskLevelMeta(r.level).label}
+                      </span>
+                      <span className="rounded-full bg-muted/40 px-2 py-0.5 text-[10px] font-mono uppercase tracking-wider text-muted-foreground ring-1 ring-border">
+                        {String(r.verification).replace(/_/g, " ")}
+                      </span>
+                    </div>
+                    {r.why && <p className="mt-1 text-muted-foreground">{r.why}</p>}
+                    {r.supporting_info && <p className="text-muted-foreground">{r.supporting_info}</p>}
+                    {r.mitigation && <p className="text-muted-foreground"><span className="text-foreground">Mitigation: </span>{r.mitigation}</p>}
+                  </li>
+                ))}
+              </ul>
+            </div>
+          )}
+
+          <div className="rounded-xl border border-border bg-card/60 p-4">
+            <p className="text-[11px] font-mono uppercase tracking-wider text-muted-foreground">Potential deal killers</p>
+            {((d.investigation.deal_killers ?? []) as Array<Record<string, string>>).length === 0 ? (
+              <p className="mt-1.5 text-xs text-muted-foreground">{NO_DEAL_KILLERS_TEXT}</p>
+            ) : (
+              <ul className="mt-2 space-y-2 text-xs">
+                {((d.investigation.deal_killers ?? []) as Array<Record<string, string>>).map((k, i) => (
+                  <li key={i} className="border-l-2 border-destructive/60 pl-3">
+                    <p className="text-sm font-medium">{k['issue']}</p>
+                    {k['why'] && <p className="mt-0.5 text-muted-foreground">{k['why']}</p>}
+                    {k['supporting_info'] && <p className="text-muted-foreground">{k['supporting_info']}</p>}
+                    {k['resolution_path'] && <p className="text-muted-foreground"><span className="text-foreground">Possible path: </span>{k['resolution_path']}</p>}
+                    <p className="font-mono text-[10px] uppercase tracking-wider text-muted-foreground">{String(k['verification'] ?? "").replace(/_/g, " ")}</p>
+                  </li>
+                ))}
+              </ul>
+            )}
+          </div>
+
+          {((d.investigation.due_diligence ?? []) as Array<Record<string, string>>).length > 0 && (
+            <div className="rounded-xl border border-border bg-card/60 p-4">
+              <p className="text-[11px] font-mono uppercase tracking-wider text-muted-foreground">Outstanding due diligence</p>
+              <ul className="mt-2 space-y-2 text-xs">
+                {((d.investigation.due_diligence ?? []) as Array<Record<string, string>>).map((it, i) => (
+                  <li key={i} className="border-l-2 border-border pl-3">
+                    <div className="flex flex-wrap items-center gap-1.5">
+                      <span className="text-sm font-medium">{it['item']}</span>
+                      <span className="rounded-full bg-muted/40 px-2 py-0.5 text-[10px] font-mono uppercase tracking-wider text-muted-foreground ring-1 ring-border">
+                        {ddPriorityLabel(it['priority'] ?? "")}
+                      </span>
+                    </div>
+                    {it['why'] && <p className="mt-0.5 text-muted-foreground">{it['why']}</p>}
+                    {it['responsible_party'] && <p className="text-muted-foreground">Typically handled by: {it['responsible_party']}</p>}
+                  </li>
+                ))}
+              </ul>
             </div>
           )}
 
