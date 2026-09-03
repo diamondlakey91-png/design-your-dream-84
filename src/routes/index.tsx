@@ -30,7 +30,7 @@ export const Route = createFileRoute("/")({
       {
         property: "og:description",
         content:
-          "AI permit assistant, 20,000+ U.S. jurisdictions, live portal tracking, review-cycle intelligence.",
+          "AI-assisted permit research, agency and approval identification, portal tracking, and review-cycle intelligence.",
       },
       { property: "og:type", content: "website" },
       { name: "twitter:card", content: "summary_large_image" },
