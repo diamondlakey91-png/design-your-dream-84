@@ -4,7 +4,7 @@ import { useMutation, useQuery, useQueryClient } from "@tanstack/react-query";
 import { useServerFn } from "@tanstack/react-start";
 import { listThreads, createThread, deleteThread } from "@/lib/chat.functions";
 import { listProjects } from "@/lib/projects.functions";
-import { ArrowLeft, Plus, MessageSquare, Trash2, Briefcase, Layers } from "lucide-react";
+import { ArrowLeft, Plus, MessageSquare, Trash2, Briefcase, Layers, ClipboardList } from "lucide-react";
 import { toast } from "sonner";
 
 export const Route = createFileRoute("/_authenticated/assistant/")({
@@ -67,6 +67,18 @@ function AssistantIndex() {
             <div className="text-[11px] font-mono uppercase tracking-widest text-sky-300/80">New</div>
             <div className="text-base font-semibold mt-1">Structured permit analysis →</div>
             <p className="text-xs text-zinc-400 mt-1">Enter a project and get a full roadmap: permits, agencies, sequence, inspections, risks, and next actions.</p>
+          </Link>
+
+          <Link
+            to="/assistant/permits"
+            className="block rounded-2xl p-5 bg-zinc-900 ring-1 ring-white/5 hover:ring-sky-400/40 transition"
+          >
+            <div className="flex items-center gap-2 text-zinc-400">
+              <ClipboardList className="size-4" />
+              <span className="text-[11px] font-mono uppercase tracking-widest">Permit finder</span>
+            </div>
+            <div className="text-base font-semibold mt-1">What permits do I actually need? →</div>
+            <p className="text-xs text-zinc-400 mt-1">Tell us the jurisdiction and project type. Every permit category is reported — nothing is left off the list.</p>
           </Link>
 
           <Link
