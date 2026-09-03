@@ -984,6 +984,89 @@ export type Database = {
         }
         Relationships: []
       }
+      organization_members: {
+        Row: {
+          created_at: string
+          credentials: string | null
+          id: string
+          invited_by: string | null
+          organization_id: string
+          role: Database["public"]["Enums"]["org_role"]
+          title: string | null
+          updated_at: string
+          user_id: string
+        }
+        Insert: {
+          created_at?: string
+          credentials?: string | null
+          id?: string
+          invited_by?: string | null
+          organization_id: string
+          role?: Database["public"]["Enums"]["org_role"]
+          title?: string | null
+          updated_at?: string
+          user_id: string
+        }
+        Update: {
+          created_at?: string
+          credentials?: string | null
+          id?: string
+          invited_by?: string | null
+          organization_id?: string
+          role?: Database["public"]["Enums"]["org_role"]
+          title?: string | null
+          updated_at?: string
+          user_id?: string
+        }
+        Relationships: [
+          {
+            foreignKeyName: "organization_members_organization_id_fkey"
+            columns: ["organization_id"]
+            isOneToOne: false
+            referencedRelation: "organizations"
+            referencedColumns: ["id"]
+          },
+        ]
+      }
+      organizations: {
+        Row: {
+          billing_email: string | null
+          branding: Json
+          created_at: string
+          created_by: string | null
+          id: string
+          kind: Database["public"]["Enums"]["org_kind"]
+          name: string
+          notes: string | null
+          slug: string
+          updated_at: string
+        }
+        Insert: {
+          billing_email?: string | null
+          branding?: Json
+          created_at?: string
+          created_by?: string | null
+          id?: string
+          kind?: Database["public"]["Enums"]["org_kind"]
+          name: string
+          notes?: string | null
+          slug: string
+          updated_at?: string
+        }
+        Update: {
+          billing_email?: string | null
+          branding?: Json
+          created_at?: string
+          created_by?: string | null
+          id?: string
+          kind?: Database["public"]["Enums"]["org_kind"]
+          name?: string
+          notes?: string | null
+          slug?: string
+          updated_at?: string
+        }
+        Relationships: []
+      }
       permit_analyses: {
         Row: {
           analysis: Json
@@ -1672,6 +1755,7 @@ export type Database = {
           linked_permit_url: string | null
           location: string
           name: string
+          organization_id: string | null
           permit_count: number
           permits_issued: number
           primary_project_type_id: string | null
@@ -1699,6 +1783,7 @@ export type Database = {
           linked_permit_url?: string | null
           location?: string
           name: string
+          organization_id?: string | null
           permit_count?: number
           permits_issued?: number
           primary_project_type_id?: string | null
@@ -1726,6 +1811,7 @@ export type Database = {
           linked_permit_url?: string | null
           location?: string
           name?: string
+          organization_id?: string | null
           permit_count?: number
           permits_issued?: number
           primary_project_type_id?: string | null
@@ -1739,6 +1825,13 @@ export type Database = {
           user_id?: string
         }
         Relationships: [
+          {
+            foreignKeyName: "projects_organization_id_fkey"
+            columns: ["organization_id"]
+            isOneToOne: false
+            referencedRelation: "organizations"
+            referencedColumns: ["id"]
+          },
           {
             foreignKeyName: "projects_primary_project_type_id_fkey"
             columns: ["primary_project_type_id"]
@@ -4413,6 +4506,13 @@ export type Database = {
         Args: { check_env?: string; user_uuid: string }
         Returns: boolean
       }
+      has_org_role: {
+        Args: {
+          _org_id: string
+          _role: Database["public"]["Enums"]["org_role"]
+        }
+        Returns: boolean
+      }
       has_role: {
         Args: {
           _role: Database["public"]["Enums"]["app_role"]
@@ -4420,6 +4520,7 @@ export type Database = {
         }
         Returns: boolean
       }
+      is_org_member: { Args: { _org_id: string }; Returns: boolean }
       roadmap_visible: { Args: { _roadmap_id: string }; Returns: boolean }
     }
     Enums: {
@@ -4463,6 +4564,16 @@ export type Database = {
         | "user_confirmed"
         | "pending_review"
         | "human_verified"
+      org_kind: "client" | "professional" | "platform"
+      org_role:
+        | "client"
+        | "client_admin"
+        | "project_manager"
+        | "permit_manager"
+        | "researcher"
+        | "qaqc_reviewer"
+        | "authorized_reviewer"
+        | "org_admin"
       permit_category:
         | "zoning"
         | "building"
@@ -4587,8 +4698,8 @@ export type Database = {
         | "qaqc_failed"
         | "corrections_required"
         | "qaqc_passed"
-        | "lpg_review_pending"
-        | "lpg_reviewed"
+        | "professional_review_pending"
+        | "professionally_reviewed"
         | "approved_for_client_delivery"
       source_kind: "agency_site" | "code" | "ordinance" | "portal" | "other"
       timeline_basis:
@@ -4772,6 +4883,17 @@ export const Constants = {
         "pending_review",
         "human_verified",
       ],
+      org_kind: ["client", "professional", "platform"],
+      org_role: [
+        "client",
+        "client_admin",
+        "project_manager",
+        "permit_manager",
+        "researcher",
+        "qaqc_reviewer",
+        "authorized_reviewer",
+        "org_admin",
+      ],
       permit_category: [
         "zoning",
         "building",
@@ -4908,8 +5030,8 @@ export const Constants = {
         "qaqc_failed",
         "corrections_required",
         "qaqc_passed",
-        "lpg_review_pending",
-        "lpg_reviewed",
+        "professional_review_pending",
+        "professionally_reviewed",
         "approved_for_client_delivery",
       ],
       source_kind: ["agency_site", "code", "ordinance", "portal", "other"],
