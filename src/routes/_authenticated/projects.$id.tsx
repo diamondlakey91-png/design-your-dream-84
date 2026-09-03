@@ -173,6 +173,7 @@ function ProjectDetail() {
         {tab === "overview" && (
           <OverviewTab project={project} stage={stage} activity={activity} onChange={() => qc.invalidateQueries({ queryKey: ["project", id] })} />
         )}
+        {tab === "intelligence" && <IntelligenceTab projectId={id} />}
         {tab === "scope" && <ScopeTab projectId={id} defaultAddress={project.location} />}
         {tab === "site" && (
           <SiteInvestigationTab projectId={id} defaultAddress={project.location} defaultProjectType={project.project_type} />
