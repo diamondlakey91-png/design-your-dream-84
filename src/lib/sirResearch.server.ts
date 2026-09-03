@@ -37,9 +37,19 @@ const AuthoritySchema = z.object({
   role: z.string().max(60),
   official_name: z.string().max(200),
   responsibility: z.string().max(400),
-  website: z.string().max(400).optional().nullable(),
+  website: looseText(400).optional(),
   verification: Verification,
 });
+
+
+/** Lenient text: models sometimes return arrays where a sentence was requested. */
+const looseText = (max: number) =>
+  z.preprocess((v) => {
+    if (v === null || v === undefined) return null;
+    if (Array.isArray(v)) return v.map((x) => String(x)).join("; ").slice(0, max);
+    if (typeof v === "object") return JSON.stringify(v).slice(0, max);
+    return String(v).slice(0, max);
+  }, z.string().max(max).nullable()) as unknown as z.ZodType<string | null>;
 
 const ResearchSchema = z.object({
   scope_summary: z.string(),
@@ -51,7 +61,7 @@ const ResearchSchema = z.object({
     verification: Verification,
   }),
   zoning: z.object({
-    district: z.string().nullable(),
+    district: looseText(160),
     use_conclusion: looseEnum(["likely_permitted", "conditional", "potentially_not_permitted", "needs_confirmation"] as const, "needs_confirmation"),
     rationale: z.string(),
     items_to_confirm: z.array(z.string().max(300)).max(12),
@@ -62,20 +72,20 @@ const ResearchSchema = z.object({
     agency: z.string().max(160),
     category: z.string().max(60),
     likelihood: looseEnum(["required", "likely", "conditional", "not_required"] as const, "conditional"),
-    depends_on: z.string().max(200).optional().nullable(),
-    notes: z.string().max(600).optional().nullable(),
+    depends_on: looseText(200).optional(),
+    notes: looseText(600).optional(),
     verification: Verification,
   })).max(30),
   utilities: z.array(z.object({
     utility: z.string().max(80),
-    provider: z.string().max(160).nullable(),
+    provider: looseText(160),
     coordination_required: z.string().max(600),
     verification: Verification,
   })).max(12),
   timeline: z.array(z.object({
     phase: z.string().max(160),
     duration: z.string().max(80),
-    depends_on: z.string().max(200).optional().nullable(),
+    depends_on: looseText(200).optional(),
     long_lead: z.boolean().optional(),
     critical_path: z.boolean().optional(),
   })).max(20),
