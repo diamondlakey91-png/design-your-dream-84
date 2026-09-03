@@ -61,8 +61,24 @@ type Finding = {
 };
 type Question = { question: string; why_it_matters: string; blocking: boolean; who_can_answer: string | null };
 
+type Geography = {
+  determination: { place_in_control: string | null; incorporation_status: string; postal_city_is_controlling: boolean | null; note: string; authoritative: boolean };
+  census: {
+    place: { name: string; geoid: string } | null;
+    countySubdivision: { name: string } | null;
+    county: string | null;
+    state: string | null;
+    tract: string | null;
+    block: string | null;
+  } | null;
+  flood: { zone: string; subtype: string | null; sfha: boolean | null; firmPanel: string | null } | null;
+  unavailable: string[];
+  sources: Array<{ source_key: string; title: string; url: string }>;
+};
+
 type Result = {
   runId: string;
+  geography?: Geography;
   addressNormalization: Normalization;
   parcels: Parcel[];
   jurisdictionMatrix: MatrixRow[];
@@ -211,6 +227,51 @@ export function PropertyJurisdictionPanel({
             </dl>
             <p className="mt-4 rounded border border-sky-500/30 bg-sky-500/5 p-3 text-xs text-sky-200">{n.postal_city_note}</p>
           </section>
+
+          {result.geography && (
+            <section className="rounded-lg border border-border bg-card p-5">
+              <div className="flex items-center gap-2">
+                <h4 className="text-xs font-mono uppercase tracking-widest">Official boundary record</h4>
+                <StatusChip status={result.geography.determination.authoritative ? "verified" : "not_available"} />
+              </div>
+              <p className="mt-2 text-xs text-muted-foreground">
+                Read directly from government GIS services — U.S. Census Bureau TIGER boundaries, the FCC block API and the FEMA National Flood Hazard Layer. These values are not AI-generated.
+              </p>
+              <dl className="mt-4 grid gap-3 sm:grid-cols-2 lg:grid-cols-4 text-xs">
+                {[
+                  ["Incorporated place at this point", result.geography.census?.place?.name ?? (result.geography.determination.authoritative ? "None — unincorporated" : null)],
+                  ["Township / MCD", result.geography.census?.countySubdivision?.name ?? null],
+                  ["County of record", result.geography.census?.county ?? null],
+                  ["State", result.geography.census?.state ?? null],
+                  ["FEMA flood zone", result.geography.flood ? `${result.geography.flood.zone}${result.geography.flood.sfha ? " (SFHA)" : ""}` : null],
+                  ["FIRM panel", result.geography.flood?.firmPanel ?? null],
+                  ["Census tract", result.geography.census?.tract ?? null],
+                  ["2020 block", result.geography.census?.block ?? null],
+                ].map(([k, v]) => (
+                  <div key={String(k)}>
+                    <dt className="text-muted-foreground">{k}</dt>
+                    <dd className="text-foreground">{v || "—"}</dd>
+                  </div>
+                ))}
+              </dl>
+              {result.geography.unavailable.length > 0 && (
+                <p className="mt-4 rounded border border-border bg-muted/30 p-3 text-xs text-muted-foreground">
+                  Not reachable on this run — confirm these directly: {result.geography.unavailable.join("; ")}.
+                </p>
+              )}
+              {result.geography.sources.length > 0 && (
+                <ul className="mt-4 space-y-1 text-xs">
+                  {result.geography.sources.map((sr) => (
+                    <li key={sr.source_key}>
+                      <a href={sr.url} target="_blank" rel="noopener noreferrer" className="text-brand hover:underline">
+                        {sr.source_key} — {sr.title}
+                      </a>
+                    </li>
+                  ))}
+                </ul>
+              )}
+            </section>
+          )}
 
           {result.parcels.length > 0 && (
             <section className="rounded-lg border border-border bg-card p-5">
