@@ -41,6 +41,7 @@ import { Route as AuthenticatedAssistantIndexRouteImport } from './routes/_authe
 import { Route as ShareReportsTokenRouteImport } from './routes/share.reports.$token'
 import { Route as ApiChatStreamRouteImport } from './routes/api/chat.stream'
 import { Route as AuthenticatedToolsCheckoutRouteImport } from './routes/_authenticated/tools_.checkout'
+import { Route as AuthenticatedSirIdRouteImport } from './routes/_authenticated/sir.$id'
 import { Route as AuthenticatedReportsIdRouteImport } from './routes/_authenticated/reports.$id'
 import { Route as AuthenticatedReportIdRouteImport } from './routes/_authenticated/report.$id'
 import { Route as AuthenticatedProjectsIdRouteImport } from './routes/_authenticated/projects.$id'
@@ -230,6 +231,11 @@ const AuthenticatedToolsCheckoutRoute =
     path: '/tools/checkout',
     getParentRoute: () => AuthenticatedRouteRoute,
   } as any)
+const AuthenticatedSirIdRoute = AuthenticatedSirIdRouteImport.update({
+  id: '/sir/$id',
+  path: '/sir/$id',
+  getParentRoute: () => AuthenticatedRouteRoute,
+} as any)
 const AuthenticatedReportsIdRoute = AuthenticatedReportsIdRouteImport.update({
   id: '/reports/$id',
   path: '/reports/$id',
@@ -377,6 +383,7 @@ export interface FileRoutesByFullPath {
   '/projects/$id': typeof AuthenticatedProjectsIdRoute
   '/report/$id': typeof AuthenticatedReportIdRoute
   '/reports/$id': typeof AuthenticatedReportsIdRoute
+  '/sir/$id': typeof AuthenticatedSirIdRoute
   '/tools/checkout': typeof AuthenticatedToolsCheckoutRoute
   '/api/chat/stream': typeof ApiChatStreamRoute
   '/share/reports/$token': typeof ShareReportsTokenRoute
@@ -427,6 +434,7 @@ export interface FileRoutesByTo {
   '/projects/$id': typeof AuthenticatedProjectsIdRoute
   '/report/$id': typeof AuthenticatedReportIdRoute
   '/reports/$id': typeof AuthenticatedReportsIdRoute
+  '/sir/$id': typeof AuthenticatedSirIdRoute
   '/tools/checkout': typeof AuthenticatedToolsCheckoutRoute
   '/api/chat/stream': typeof ApiChatStreamRoute
   '/share/reports/$token': typeof ShareReportsTokenRoute
@@ -481,6 +489,7 @@ export interface FileRoutesById {
   '/_authenticated/projects/$id': typeof AuthenticatedProjectsIdRoute
   '/_authenticated/report/$id': typeof AuthenticatedReportIdRoute
   '/_authenticated/reports/$id': typeof AuthenticatedReportsIdRoute
+  '/_authenticated/sir/$id': typeof AuthenticatedSirIdRoute
   '/_authenticated/tools_/checkout': typeof AuthenticatedToolsCheckoutRoute
   '/api/chat/stream': typeof ApiChatStreamRoute
   '/share/reports/$token': typeof ShareReportsTokenRoute
@@ -535,6 +544,7 @@ export interface FileRouteTypes {
     | '/projects/$id'
     | '/report/$id'
     | '/reports/$id'
+    | '/sir/$id'
     | '/tools/checkout'
     | '/api/chat/stream'
     | '/share/reports/$token'
@@ -585,6 +595,7 @@ export interface FileRouteTypes {
     | '/projects/$id'
     | '/report/$id'
     | '/reports/$id'
+    | '/sir/$id'
     | '/tools/checkout'
     | '/api/chat/stream'
     | '/share/reports/$token'
@@ -638,6 +649,7 @@ export interface FileRouteTypes {
     | '/_authenticated/projects/$id'
     | '/_authenticated/report/$id'
     | '/_authenticated/reports/$id'
+    | '/_authenticated/sir/$id'
     | '/_authenticated/tools_/checkout'
     | '/api/chat/stream'
     | '/share/reports/$token'
@@ -899,6 +911,13 @@ declare module '@tanstack/react-router' {
       preLoaderRoute: typeof AuthenticatedToolsCheckoutRouteImport
       parentRoute: typeof AuthenticatedRouteRoute
     }
+    '/_authenticated/sir/$id': {
+      id: '/_authenticated/sir/$id'
+      path: '/sir/$id'
+      fullPath: '/sir/$id'
+      preLoaderRoute: typeof AuthenticatedSirIdRouteImport
+      parentRoute: typeof AuthenticatedRouteRoute
+    }
     '/_authenticated/reports/$id': {
       id: '/_authenticated/reports/$id'
       path: '/reports/$id'
@@ -1120,6 +1139,7 @@ interface AuthenticatedRouteRouteChildren {
   AuthenticatedInspectionsIdRoute: typeof AuthenticatedInspectionsIdRoute
   AuthenticatedProjectsIdRoute: typeof AuthenticatedProjectsIdRoute
   AuthenticatedReportsIdRoute: typeof AuthenticatedReportsIdRoute
+  AuthenticatedSirIdRoute: typeof AuthenticatedSirIdRoute
   AuthenticatedToolsCheckoutRoute: typeof AuthenticatedToolsCheckoutRoute
   AuthenticatedFilingIndexRoute: typeof AuthenticatedFilingIndexRoute
   AuthenticatedHarvestIndexRoute: typeof AuthenticatedHarvestIndexRoute
@@ -1148,6 +1168,7 @@ const AuthenticatedRouteRouteChildren: AuthenticatedRouteRouteChildren = {
   AuthenticatedInspectionsIdRoute: AuthenticatedInspectionsIdRoute,
   AuthenticatedProjectsIdRoute: AuthenticatedProjectsIdRoute,
   AuthenticatedReportsIdRoute: AuthenticatedReportsIdRoute,
+  AuthenticatedSirIdRoute: AuthenticatedSirIdRoute,
   AuthenticatedToolsCheckoutRoute: AuthenticatedToolsCheckoutRoute,
   AuthenticatedFilingIndexRoute: AuthenticatedFilingIndexRoute,
   AuthenticatedHarvestIndexRoute: AuthenticatedHarvestIndexRoute,
