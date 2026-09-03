@@ -26,12 +26,13 @@ import { ResponseMatrixTab } from "@/components/project/ResponseMatrixTab";
 import { QaQcTab } from "@/components/project/QaQcTab";
 import { PlanQaQcTab } from "@/components/project/PlanQaQcTab";
 import { SiteInvestigationTab } from "@/components/project/SiteInvestigationTab";
+import { IntelligenceTab } from "@/components/project/IntelligenceTab";
 import { useViewMode } from "@/hooks/useViewMode";
 import { ViewModeToggle } from "@/components/client/ViewModeToggle";
 import { ClientProjectView } from "@/components/client/ClientProjectView";
 import type { ClientProjectInput } from "@/lib/clientView";
 
-const TABS = ["overview", "scope", "site", "checklist", "docs", "planqaqc", "qaqc", "responses", "deadlines", "inspections", "timeline"] as const;
+const TABS = ["overview", "intelligence", "scope", "site", "checklist", "docs", "planqaqc", "qaqc", "responses", "deadlines", "inspections", "timeline"] as const;
 
 export const Route = createFileRoute("/_authenticated/projects/$id")({
   validateSearch: (search: Record<string, unknown>): { tab?: Tab } =>
@@ -146,7 +147,7 @@ function ProjectDetail() {
       {/* Tabs */}
       <nav className="sticky top-0 z-10 bg-background/95 backdrop-blur border-b border-border">
         <div className="flex overflow-x-auto">
-          {(["overview", "scope", "site", "checklist", "docs", "planqaqc", "qaqc", "responses", "deadlines", "inspections", "timeline"] as Tab[]).map((t) => (
+          {(TABS as readonly Tab[]).map((t) => (
             <button
               key={t}
               onClick={() => setTab(t)}
@@ -172,6 +173,7 @@ function ProjectDetail() {
         {tab === "overview" && (
           <OverviewTab project={project} stage={stage} activity={activity} onChange={() => qc.invalidateQueries({ queryKey: ["project", id] })} />
         )}
+        {tab === "intelligence" && <IntelligenceTab projectId={id} />}
         {tab === "scope" && <ScopeTab projectId={id} defaultAddress={project.location} />}
         {tab === "site" && (
           <SiteInvestigationTab projectId={id} defaultAddress={project.location} defaultProjectType={project.project_type} />
