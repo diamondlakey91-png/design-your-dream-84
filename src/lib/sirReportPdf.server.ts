@@ -182,7 +182,7 @@ const bytes = await pdf.save();
 let bin = "";
 for (let k = 0; k < bytes.length; k += 0x8000) bin += String.fromCharCode(...bytes.subarray(k, k + 0x8000));
 return {
-  filename: `PERMIVIO-${feasibilityReport ? "Project-Feasibility-Report" : "Site-Investigation-Report"}${String(r.site_address || r.jurisdiction).replace(/[^A-Za-z0-9]+/g, "-").slice(0, 40)}.pdf`,
+  filename: `PERMIVIO-${feasibilityReport ? "Project-Feasibility-Report" : "Site-Investigation-Report"}-${String(r.site_address || r.jurisdiction).replace(/[^A-Za-z0-9]+/g, "-").slice(0, 40)}.pdf`,
   base64: btoa(bin),
 };
 
