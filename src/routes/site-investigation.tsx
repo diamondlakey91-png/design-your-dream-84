@@ -260,7 +260,9 @@ function SiteInvestigationPage() {
                   <CheckCircle2 className="size-12 text-green-400" />
                   <h3 className="mt-4 text-xl font-semibold text-white">Request received</h3>
                   <p className="mt-2 max-w-sm text-sm text-slate-400">
-                    Thanks — we'll review the site and intended use, then follow up with the proposed
+                    Permivio has already started researching your site — confirming the authority having
+                    jurisdiction, zoning and allowable use, the permit and approval path, utility
+                    coordination points and a realistic timeline. We'll follow up with the confirmed
                     research scope and turnaround.
                   </p>
                 </div>
