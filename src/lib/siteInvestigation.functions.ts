@@ -10,8 +10,19 @@ import {
   UTILITY_CAPACITY_CAVEAT,
   ratingMeta,
 } from "@/lib/siteInvestigationConfig";
+import {
+  buildInvestigationPlan,
+  activeSectionKeys,
+  activeModuleIds,
+  depthMeta,
+  complexityMeta,
+  moduleMeta,
+  RISK_CATEGORIES,
+  NO_DEAL_KILLERS_TEXT,
+  type InvestigationPlan,
+} from "@/lib/siteInvestigationEngine";
 
-export const SI_PROMPT_VERSION = "site-investigation-v1";
+export const SI_PROMPT_VERSION = "site-investigation-v2-engine";
 export const SI_MODEL = "google/gemini-2.5-pro";
 
 type SiOut = {
