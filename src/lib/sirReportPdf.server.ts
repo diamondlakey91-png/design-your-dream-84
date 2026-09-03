@@ -52,8 +52,18 @@ const text = (s: string, opts: { size?: number; b?: boolean; color?: [number, nu
     let line = "";
     const lines: string[] = [];
     for (const w of words) {
-      const t = line ? `${line} ${w}` : w;
-      if (fnt.widthOfTextAtSize(t, size) > width) { lines.push(line); line = w; } else line = t;
+      // Long unbroken tokens (source URLs) are split by character so they
+      // never run past the right margin.
+      let word = w;
+      while (fnt.widthOfTextAtSize(word, size) > width) {
+        let cut = 1;
+        while (cut < word.length && fnt.widthOfTextAtSize(word.slice(0, cut + 1), size) <= width) cut++;
+        if (line) { lines.push(line); line = ""; }
+        lines.push(word.slice(0, cut));
+        word = word.slice(cut);
+      }
+      const t = line ? `${line} ${word}` : word;
+      if (fnt.widthOfTextAtSize(t, size) > width) { if (line) lines.push(line); line = word; } else line = t;
     }
     if (line) lines.push(line);
     for (const ln of lines) {
