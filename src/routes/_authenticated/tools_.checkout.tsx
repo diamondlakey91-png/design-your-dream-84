@@ -283,7 +283,23 @@ function CheckoutPage() {
 
               {error && <p className="mt-4 rounded-2xl border border-destructive/40 bg-destructive/10 p-3 text-xs text-foreground">{error}</p>}
 
-              {!clientSecret && (
+              {customQuote ? (
+                quoteRequested ? (
+                  <p className="mt-5 rounded-2xl border border-primary/40 bg-primary/10 p-3 text-xs text-foreground">
+                    Scope request received. A Permivio permitting professional will confirm the scope and price with you
+                    before any work or payment.
+                  </p>
+                ) : (
+                  <button
+                    onClick={requestScope}
+                    disabled={busy}
+                    className="mt-5 inline-flex w-full items-center justify-center gap-2 rounded-xl bg-primary px-4 py-3 text-sm font-semibold text-primary-foreground disabled:opacity-60"
+                  >
+                    {busy ? <Loader2 className="size-4 animate-spin" /> : <FileText className="size-4" />}
+                    Request scope &amp; quote
+                  </button>
+                )
+              ) : !clientSecret ? (
                 <button
                   onClick={startPayment}
                   disabled={busy || amount <= 0}
@@ -292,7 +308,8 @@ function CheckoutPage() {
                   {busy ? <Loader2 className="size-4 animate-spin" /> : <Lock className="size-4" />}
                   Continue to payment
                 </button>
-              )}
+              ) : null}
+
               {clientSecret && (
                 <p className="mt-4 inline-flex items-center gap-2 text-xs text-muted-foreground">
                   <Lock className="size-3.5" /> Card details are entered directly with our payment processor — Permivio never sees them.
