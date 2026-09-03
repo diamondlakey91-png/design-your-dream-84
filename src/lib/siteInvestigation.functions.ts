@@ -10,24 +10,24 @@ import {
   UTILITY_CAPACITY_CAVEAT,
   ratingMeta,
 } from "@/lib/siteInvestigationConfig";
+import {
+  buildInvestigationPlan,
+  activeSectionKeys,
+  activeModuleIds,
+  depthMeta,
+  complexityMeta,
+  moduleMeta,
+  RISK_CATEGORIES,
+  riskCategoryLabel,
+  riskLevelMeta,
+  ddPriorityLabel,
+  NO_DEAL_KILLERS_TEXT,
+  type InvestigationPlan,
+} from "@/lib/siteInvestigationEngine";
 
-export const SI_PROMPT_VERSION = "site-investigation-v1";
+export const SI_PROMPT_VERSION = "site-investigation-v2-engine";
 export const SI_MODEL = "google/gemini-2.5-pro";
 
-type SiOut = {
-  executive_summary: string;
-  feasibility_rating: "green" | "yellow" | "orange" | "red" | "gray";
-  feasibility_rationale: string;
-  property_info: Record<string, string>;
-  sections: Array<{ key: string; title: string; body: string; bullets: string[] }>;
-  findings: Array<{ category: string; classification: string; title: string; detail: string; impact: string; source_url: string; source_title: string; verification: string }>;
-  permits: Array<{ approval: string; agency: string; why_required: string; trigger_condition: string; timeline_estimate: string; concurrent: boolean; source_url: string; verification: string }>;
-  timeline: Array<{ phase: string; duration: string; depends_on: string; notes: string }>;
-  assumptions: string[];
-  outstanding_questions: string[];
-  recommended_next_steps: string[];
-  sources: Array<{ url: string; title: string }>;
-};
 
 const SectionSchema = z.object({
   key: z.string(),
@@ -67,12 +67,101 @@ const SiSchema = z.object({
     duration: z.string().default(""),
     depends_on: z.string().default(""),
     notes: z.string().default(""),
+    concurrent: z.boolean().default(false),
+    critical_path: z.boolean().default(false),
+    long_lead: z.boolean().default(false),
   })).max(30).default([]),
+  feasibility_snapshot: z.object({
+    overall: z.string().default(""),
+    proposed_project: z.string().default(""),
+    property: z.string().default(""),
+    jurisdiction: z.string().default(""),
+    zoning_result: z.string().default(""),
+    use_feasibility: z.string().default(""),
+    major_approvals: z.string().default(""),
+    primary_risk: z.string().default(""),
+    critical_path: z.string().default(""),
+    estimated_approval_range: z.string().default(""),
+    recommended_next_step: z.string().default(""),
+  }).default({}),
+  risks: z.array(z.object({
+    category: z.string().default("schedule"),
+    level: z.enum(["low", "medium", "high", "unknown"]).default("unknown"),
+    why: z.string().default(""),
+    supporting_info: z.string().default(""),
+    mitigation: z.string().default(""),
+    verification: z.enum(["verified", "ai_assisted", "needs_agency_confirmation"]).default("needs_agency_confirmation"),
+    parcel_label: z.string().default(""),
+  })).max(24).default([]),
+  deal_killers: z.array(z.object({
+    title: z.string().min(2),
+    detail: z.string().default(""),
+    supporting_info: z.string().default(""),
+    verification: z.enum(["verified", "ai_assisted", "needs_agency_confirmation"]).default("needs_agency_confirmation"),
+  })).max(12).default([]),
+  due_diligence: z.array(z.object({
+    item: z.string().min(2),
+    priority: z.enum(["before_purchase", "before_lease", "before_design", "before_permit", "before_construction"]).default("before_design"),
+    why: z.string().default(""),
+    who: z.string().default(""),
+  })).max(30).default([]),
+  parcel_notes: z.array(z.object({
+    label: z.string().default(""),
+    zoning: z.string().default(""),
+    land_use: z.string().default(""),
+    jurisdiction: z.string().default(""),
+    notes: z.string().default(""),
+    verification: z.enum(["verified", "ai_assisted", "needs_agency_confirmation"]).default("needs_agency_confirmation"),
+  })).max(20).default([]),
   assumptions: z.array(z.string()).max(30).default([]),
   outstanding_questions: z.array(z.string()).max(30).default([]),
   recommended_next_steps: z.array(z.string()).max(30).default([]),
   sources: z.array(z.object({ url: z.string(), title: z.string().default("") })).max(40).default([]),
 });
+
+type SiOut = z.infer<typeof SiSchema>;
+
+const ParcelInput = z.object({
+  label: z.string().max(60).optional(),
+  parcel_number: z.string().max(80).optional(),
+  address: z.string().max(300).optional(),
+  acreage: z.number().nonnegative().max(100000).optional(),
+  phase: z.string().max(80).optional(),
+  notes: z.string().max(600).optional(),
+});
+
+/** Investigation planner — decides complexity, depth and which research modules apply. */
+export const planSiteInvestigation = createServerFn({ method: "POST" })
+  .middleware([requireSupabaseAuth])
+  .inputValidator((d: unknown) =>
+    z.object({
+      project_id: z.string().uuid(),
+      project_type_label: z.string().max(200).default(""),
+      scope_text: z.string().max(6000).default(""),
+      parcels: z.array(ParcelInput).max(40).default([]),
+      acreage: z.number().nonnegative().max(100000).optional(),
+      building_sf: z.number().nonnegative().max(10000000).optional(),
+    }).parse(d),
+  )
+  .handler(async ({ data, context }) => {
+    const sb = context.supabase;
+    const [{ data: project }, { data: scopeRows }] = await Promise.all([
+      sb.from("projects").select("project_type, jurisdiction").eq("id", data.project_id).maybeSingle(),
+      sb.from("scope_of_work").select("*").eq("project_id", data.project_id).order("created_at", { ascending: false }).limit(1),
+    ]);
+    const scope = (scopeRows ?? [])[0] as Record<string, unknown> | undefined;
+    const parcelAcreage = data.parcels.reduce((sum, p) => sum + (p.acreage ?? 0), 0);
+    const plan = buildInvestigationPlan({
+      projectTypeLabel: data.project_type_label || String(scope?.['friendly_project_type'] ?? project?.project_type ?? ""),
+      scopeText: data.scope_text || String(scope?.['plain_scope'] ?? scope?.['scope_text'] ?? ""),
+      parcelCount: Math.max(1, data.parcels.length),
+      acreage: data.acreage ?? (parcelAcreage > 0 ? parcelAcreage : null),
+      buildingSf: data.building_sf ?? (scope?.['sq_ft_gross'] ? Number(scope['sq_ft_gross']) : null),
+      existingUse: (scope?.['occupancy_existing'] as string | null) ?? null,
+      proposedUse: (scope?.['occupancy_proposed'] as string | null) ?? null,
+    });
+    return { plan, recommended_depth_label: depthMeta(plan.recommended_depth).label };
+  });
 
 // eslint-disable-next-line @typescript-eslint/no-explicit-any
 async function gatherSiteResearch(jurisdiction: string, state: string, address: string, projectType: string) {
@@ -116,6 +205,17 @@ export const runSiteInvestigation = createServerFn({ method: "POST" })
       project_type_label: z.string().max(160).optional(),
       notes: z.string().max(4000).optional(),
       client_name: z.string().max(160).optional(),
+      report_depth: z.enum(["property_snapshot", "project_feasibility", "development_due_diligence", "major_development_study"]).optional(),
+      parcels: z.array(ParcelInput).max(40).default([]),
+      acreage: z.number().nonnegative().max(100000).optional(),
+      building_sf: z.number().nonnegative().max(10000000).optional(),
+      followup_answers: z.array(z.object({
+        question: z.string().max(300),
+        answer: z.enum(["yes", "no", "unsure", "skipped"]),
+        note: z.string().max(600).optional(),
+      })).max(20).default([]),
+      document_ids: z.array(z.string().uuid()).max(30).default([]),
+      previous_investigation_id: z.string().uuid().optional(),
     }).parse(d),
   )
   .handler(async ({ data, context }) => {
@@ -132,6 +232,25 @@ export const runSiteInvestigation = createServerFn({ method: "POST" })
     const jurisdiction = String(conf?.['city'] ?? project.jurisdiction ?? "").trim();
     const state = String(conf?.['state'] ?? "").trim();
     const projectType = data.project_type_label ?? String(scope?.['friendly_project_type'] ?? project.project_type ?? "");
+    const scopeText = String(scope?.['plain_scope'] ?? scope?.['scope_text'] ?? data.notes ?? "");
+
+    const parcelAcreage = data.parcels.reduce((sum, p) => sum + (p.acreage ?? 0), 0);
+    const plan: InvestigationPlan = buildInvestigationPlan({
+      projectTypeLabel: projectType,
+      scopeText: `${scopeText} ${data.notes ?? ""} ${data.followup_answers.map((a) => `${a.question} ${a.answer} ${a.note ?? ""}`).join(" ")}`,
+      parcelCount: Math.max(1, data.parcels.length),
+      acreage: data.acreage ?? (parcelAcreage > 0 ? parcelAcreage : null),
+      buildingSf: data.building_sf ?? (scope?.['sq_ft_gross'] ? Number(scope['sq_ft_gross']) : null),
+      existingUse: (scope?.['occupancy_existing'] as string | null) ?? null,
+      proposedUse: (scope?.['occupancy_proposed'] as string | null) ?? null,
+    });
+    const depth = data.report_depth ?? plan.recommended_depth;
+
+    let version = 1;
+    if (data.previous_investigation_id) {
+      const { data: prev } = await sb.from("site_investigations").select("version").eq("id", data.previous_investigation_id).maybeSingle();
+      version = ((prev as { version?: number } | null)?.version ?? 1) + 1;
+    }
 
     const { data: inv, error: insErr } = await sb
       .from("site_investigations")
@@ -148,6 +267,20 @@ export const runSiteInvestigation = createServerFn({ method: "POST" })
         status: "running",
         model: SI_MODEL,
         prompt_version: SI_PROMPT_VERSION,
+        document_ids: data.document_ids.length ? data.document_ids : undefined,
+        investigation_plan: plan as never,
+        complexity_level: plan.complexity_level,
+        complexity_label: plan.complexity_label,
+        report_depth: depth,
+        recommended_depth: plan.recommended_depth,
+        modules: plan.modules as never,
+        followups: data.followup_answers as never,
+        parcel_count: Math.max(1, data.parcels.length),
+        site_acreage: data.acreage ?? (parcelAcreage > 0 ? parcelAcreage : null),
+        custom_quote_requested: plan.custom_quote_recommended,
+        version,
+        parent_investigation_id: data.previous_investigation_id ?? null,
+        progress_step: "Researching the property",
         jurisdiction_snapshot: {
           jurisdiction: jurisdiction || null,
           state: state || null,
@@ -159,6 +292,24 @@ export const runSiteInvestigation = createServerFn({ method: "POST" })
       .single();
     if (insErr || !inv) throw new Error(insErr?.message ?? "Could not start investigation");
 
+    if (data.parcels.length) {
+      await sb.from("site_investigation_parcels").insert(
+        data.parcels.map((p, i) => ({
+          investigation_id: inv.id,
+          user_id: context.userId,
+          label: p.label ?? `Parcel ${String.fromCharCode(65 + i)}`,
+          parcel_number: p.parcel_number ?? null,
+          address: p.address ?? null,
+          acreage: p.acreage ?? null,
+          phase: p.phase ?? null,
+          notes: p.notes ?? null,
+          jurisdiction: jurisdiction || null,
+          state: state || null,
+          sort_order: i,
+        })),
+      );
+    }
+
     try {
       const { context: research, sources } = await gatherSiteResearch(jurisdiction, state, data.address, projectType);
 
@@ -166,8 +317,19 @@ export const runSiteInvestigation = createServerFn({ method: "POST" })
         ? await sb.from("jurisdiction_profiles").select("name, state, county, department, portal_url, overview, permit_categories, requirements, sources").eq("slug", toSlug(jurisdiction)).maybeSingle()
         : { data: null };
 
-      const sectionList = SI_REPORT_SECTIONS.map((s) => `${s.no}. ${s.key} — ${s.title}`).join("\n");
+      const wantedKeys = new Set(activeSectionKeys(plan));
+      const activeSections = SI_REPORT_SECTIONS.filter((s) => wantedKeys.has(s.key));
+      const sectionList = activeSections.map((s) => `${s.no}. ${s.key} — ${s.title}`).join("\n");
       const catList = SI_FINDING_CATEGORIES.map((c) => `${c.id} (${c.label})`).join(", ");
+      const moduleList = activeModuleIds(plan)
+        .map((id) => {
+          const m = moduleMeta(id);
+          const planned = plan.modules.find((x) => x.id === id);
+          return m ? `MODULE ${m.code} — ${m.label} (${planned?.status ?? "required"}): ${planned?.reason ?? ""}` : "";
+        })
+        .filter(Boolean)
+        .join("\n");
+      const riskList = RISK_CATEGORIES.map((r) => r.id).join(", ");
 
       const result = await callGeminiJSON(
         `Produce a PERMIVIO Site Investigation & Feasibility Report.
@@ -182,25 +344,42 @@ EXISTING USE: ${scope?.['occupancy_existing'] ?? "unknown"} · PROPOSED USE: ${s
 GROSS SF: ${scope?.['sq_ft_gross'] ?? "unknown"} · UNITS: ${scope?.['dwelling_units'] ?? "unknown"}
 USER NOTES: ${data.notes ?? "none"}
 
+INVESTIGATION PLAN (produced by PERMIVIO's planner — respect it):
+COMPLEXITY: level ${plan.complexity_level} (${complexityMeta(plan.complexity_level).label}) · REPORT PRODUCT: ${depthMeta(depth).label}
+GROUND-UP: ${plan.ground_up} · INTERIOR ONLY: ${plan.interior_only} · SITE WORK: ${plan.site_work}
+ENTITLEMENT INVOLVEMENT: ${plan.entitlement_involvement} · HEALTH-REGULATED USE: ${plan.health_involvement} · ENVIRONMENTAL: ${plan.environmental_involvement}
+PARCELS: ${plan.parcel_count}${plan.acreage ? ` · ACREAGE: ${plan.acreage}` : ""}${plan.building_sf ? ` · BUILDING SF: ${plan.building_sf}` : ""}
+PARCEL DETAIL: ${data.parcels.length ? JSON.stringify(data.parcels).slice(0, 1500) : "single parcel / not itemized"}
+ACTIVE RESEARCH MODULES:
+${moduleList}
+CLIENT FOLLOW-UP ANSWERS: ${data.followup_answers.length ? JSON.stringify(data.followup_answers).slice(0, 1500) : "none provided"}
+MISSING INFORMATION: ${plan.missing_information.join(" | ") || "none"}
+
+
 CACHED JURISDICTION PROFILE: ${prof ? JSON.stringify(prof).slice(0, 2200) : "none on file"}
 
 OFFICIAL RESEARCH EXCERPTS (cite these URLs; do not cite anything not listed):
 ${research.slice(0, 14000) || "(no research retrieved — mark jurisdiction-specific items needs_agency_confirmation)"}
 
-Write all 25 report sections, in this order, using these exact keys:
+Write ONLY these report sections (the active investigation modules), in this order, using these exact keys:
 ${sectionList}
 
 findings.category must be one of: ${catList}
+risks.category must be one of: ${riskList}. Only include risk categories relevant to this project.
 
 RULES:
 - Never state a zoning determination as final. Zoning conclusions are "likely_permitted", "conditional", "potentially_not_permitted", or "needs_confirmation".
 - ${UTILITY_CAPACITY_CAVEAT} Always say so in the utility section.
 - Never say "code compliant", "guaranteed feasible", "plans approved", or "engineering approved".
-- Never invent a parcel number, zoning district, flood zone, setback, or ordinance section. If unknown, state that it requires confirmation.
-- Every finding and permit needs a verification level: verified (backed by a cited official source), ai_assisted, or needs_agency_confirmation.
-- Timelines are estimates only; label them as such.
+- Never invent a parcel number, zoning district, flood zone, setback, wetland determination, utility capacity, fee, contact or ordinance section. If unknown, state that it requires confirmation.
+- Every finding, permit and risk needs a verification level: verified (backed by a cited official source), ai_assisted, or needs_agency_confirmation.
+- Timelines are estimates only, project-specific, and must reflect this project's actual approvals — never a generic 30-90 day range.
+- Write plain-language first: what it means, why it matters, what to do next. Technical detail goes after the plain explanation.
+- deal_killers: only include items with meaningful supporting evidence. If none, return an empty array.
+- due_diligence: prioritize each item as before_purchase, before_lease, before_design, before_permit or before_construction.
+- If multiple parcels are listed, note differences per parcel in parcel_notes and flag differing zoning.
 
-Return JSON: { "executive_summary": "", "feasibility_rating": "green|yellow|orange|red|gray", "feasibility_rationale": "", "property_info": {}, "sections": [{"key":"","title":"","body":"","bullets":[]}], "findings": [...], "permits": [...], "timeline": [{"phase":"","duration":"","depends_on":"","notes":""}], "assumptions": [], "outstanding_questions": [], "recommended_next_steps": [], "sources": [{"url":"","title":""}] }`,
+Return JSON: { "executive_summary": "", "feasibility_rating": "green|yellow|orange|red|gray", "feasibility_rationale": "", "property_info": {}, "sections": [{"key":"","title":"","body":"","bullets":[]}], "findings": [...], "permits": [...], "timeline": [{"phase":"","duration":"","depends_on":"","notes":"","concurrent":false,"critical_path":false,"long_lead":false}], "feasibility_snapshot": {"overall":"","proposed_project":"","property":"","jurisdiction":"","zoning_result":"","use_feasibility":"","major_approvals":"","primary_risk":"","critical_path":"","estimated_approval_range":"","recommended_next_step":""}, "risks": [...], "deal_killers": [...], "due_diligence": [...], "parcel_notes": [...], "assumptions": [], "outstanding_questions": [], "recommended_next_steps": [], "sources": [{"url":"","title":""}] }`,
         "You are a land development consultant, permit expediter and GIS/property intelligence analyst. You never fabricate GIS data, parcel boundaries, zoning classifications, or ordinance citations, and you never present your analysis as a jurisdiction determination, survey, engineering opinion, or legal advice.",
         SiSchema,
         { model: SI_MODEL, max_tokens: 12000 },
@@ -238,21 +417,58 @@ Return JSON: { "executive_summary": "", "feasibility_rating": "green|yellow|oran
         })));
       }
 
-      const orderedSections = SI_REPORT_SECTIONS.map((s) => {
+      const validRisks = new Set(RISK_CATEGORIES.map((r) => r.id as string));
+      if (result.risks.length) {
+        await sb.from("site_investigation_risks").insert(result.risks.map((r, i) => ({
+          investigation_id: inv.id,
+          user_id: context.userId,
+          category: validRisks.has(r.category) ? r.category : "schedule",
+          level: r.level,
+          why: r.why || null,
+          supporting_info: r.supporting_info || null,
+          mitigation: r.mitigation || null,
+          verification: r.verification,
+          parcel_label: r.parcel_label || null,
+          sort_order: i,
+        })));
+      }
+
+      if (result.parcel_notes.length && data.parcels.length) {
+        const { data: rows } = await sb.from("site_investigation_parcels").select("id, label").eq("investigation_id", inv.id);
+        for (const note of result.parcel_notes) {
+          const match = (rows ?? []).find((r: { label: string | null }) => (r.label ?? "").toLowerCase() === note.label.toLowerCase());
+          if (!match) continue;
+          await sb.from("site_investigation_parcels").update({
+            zoning: note.zoning || null,
+            land_use: note.land_use || null,
+            jurisdiction: note.jurisdiction || null,
+            notes: note.notes || null,
+            verification: note.verification,
+          }).eq("id", (match as { id: string }).id);
+        }
+      }
+
+      const activeKeys = new Set(activeSectionKeys(plan));
+      const orderedSections = SI_REPORT_SECTIONS.filter((s) => activeKeys.has(s.key)).map((s) => {
         const found = result.sections.find((x) => x.key === s.key);
         return { key: s.key, no: s.no, title: s.title, body: found?.body ?? "", bullets: found?.bullets ?? [] };
-      });
+      }).filter((s) => s.body || s.bullets.length);
 
       await sb.from("site_investigations").update({
         status: "complete",
+        progress_step: null,
         executive_summary: result.executive_summary || null,
         feasibility_rating: result.feasibility_rating,
         property_info: result.property_info,
+        feasibility_snapshot: result.feasibility_snapshot as never,
+        deal_killers: result.deal_killers as never,
+        due_diligence: result.due_diligence as never,
         report: {
           sections: orderedSections,
           feasibility_rationale: result.feasibility_rationale,
           outstanding_questions: result.outstanding_questions,
           recommended_next_steps: result.recommended_next_steps,
+          no_deal_killers_text: result.deal_killers.length ? null : NO_DEAL_KILLERS_TEXT,
           disclaimer: SITE_INVESTIGATION_DISCLAIMER,
         },
         timeline: result.timeline,
@@ -280,7 +496,7 @@ export const listSiteInvestigations = createServerFn({ method: "GET" })
   .handler(async ({ data, context }) => {
     const { data: rows } = await context.supabase
       .from("site_investigations")
-      .select("id, address, project_type_label, feasibility_rating, status, created_at, report_number, error")
+      .select("id, address, project_type_label, feasibility_rating, status, created_at, report_number, error, version, report_depth, complexity_level, complexity_label, progress_step, parcel_count")
       .eq("project_id", data.project_id)
       .order("created_at", { ascending: false });
     return { investigations: rows ?? [] };
@@ -291,16 +507,20 @@ export const getSiteInvestigation = createServerFn({ method: "GET" })
   .inputValidator((d: unknown) => z.object({ investigation_id: z.string().uuid() }).parse(d))
   .handler(async ({ data, context }) => {
     const sb = context.supabase;
-    const [i, f, p, pr] = await Promise.all([
+    const [i, f, p, pr, rk, pc] = await Promise.all([
       sb.from("site_investigations").select("*").eq("id", data.investigation_id).maybeSingle(),
       sb.from("site_investigation_findings").select("*").eq("investigation_id", data.investigation_id).order("sort_order", { ascending: true }),
       sb.from("site_investigation_permits").select("*").eq("investigation_id", data.investigation_id).order("sequence_order", { ascending: true }),
       sb.from("professional_reviews").select("*").eq("target_type", "site_investigation").eq("target_id", data.investigation_id).order("created_at", { ascending: false }).limit(1),
+      sb.from("site_investigation_risks").select("*").eq("investigation_id", data.investigation_id).order("sort_order", { ascending: true }),
+      sb.from("site_investigation_parcels").select("*").eq("investigation_id", data.investigation_id).order("sort_order", { ascending: true }),
     ]);
     return {
       investigation: i.data,
       findings: f.data ?? [],
       permits: p.data ?? [],
+      risks: rk.data ?? [],
+      parcels: pc.data ?? [],
       professional_review: (pr.data ?? [])[0] ?? null,
       disclaimer: SITE_INVESTIGATION_DISCLAIMER,
     };
@@ -370,11 +590,13 @@ export const generateSiteInvestigationPdf = createServerFn({ method: "POST" })
   )
   .handler(async ({ data, context }) => {
     const sb = context.supabase;
-    const [i, f, p, settings] = await Promise.all([
+    const [i, f, p, settings, rk, pc] = await Promise.all([
       sb.from("site_investigations").select("*").eq("id", data.investigation_id).maybeSingle(),
       sb.from("site_investigation_findings").select("*").eq("investigation_id", data.investigation_id).order("sort_order", { ascending: true }),
       sb.from("site_investigation_permits").select("*").eq("investigation_id", data.investigation_id).order("sequence_order", { ascending: true }),
       sb.from("user_settings").select("brand_company_name, brand_license_number, brand_contact_email, brand_contact_phone, brand_footer_note").eq("user_id", context.userId).maybeSingle(),
+      sb.from("site_investigation_risks").select("*").eq("investigation_id", data.investigation_id).order("sort_order", { ascending: true }),
+      sb.from("site_investigation_parcels").select("*").eq("investigation_id", data.investigation_id).order("sort_order", { ascending: true }),
     ]);
     // eslint-disable-next-line @typescript-eslint/no-explicit-any
     const inv = i.data as any;
@@ -422,6 +644,24 @@ export const generateSiteInvestigationPdf = createServerFn({ method: "POST" })
     text(`Prepared: ${inv.prepared_date ?? new Date().toISOString().slice(0, 10)}`);
     text(`Overall feasibility rating: ${ratingMeta(inv.feasibility_rating).label} — ${ratingMeta(inv.feasibility_rating).definition}`, { b: true, gap: 8 });
 
+    const snap = inv.feasibility_snapshot as Record<string, string> | null;
+    if (snap && Object.keys(snap).length) {
+      heading("Executive feasibility snapshot");
+      for (const [k, v] of Object.entries(snap)) {
+        if (!v) continue;
+        text(`${k.replace(/_/g, " ").replace(/^\w/, (c) => c.toUpperCase())}: ${v}`, { gap: 1 });
+      }
+    }
+
+    if ((pc.data ?? []).length > 1) {
+      heading("Parcel summary");
+      for (const r of pc.data ?? []) {
+        text(`${r.label}${r.parcel_number ? ` · ${r.parcel_number}` : ""}${r.acreage ? ` · ${r.acreage} ac` : ""}${r.zoning ? ` · Zoning ${r.zoning}` : ""}${r.phase ? ` · ${r.phase}` : ""}`, { b: true, gap: 1 });
+        if (r.notes) text(`   ${r.notes}`, { gap: 1 });
+      }
+    }
+
+
     for (const s of (inv.report?.sections ?? []) as Array<{ no: number; title: string; body: string; bullets: string[] }>) {
       heading(`${s.no}. ${s.title}`);
       if (s.body) text(s.body);
@@ -454,6 +694,38 @@ export const generateSiteInvestigationPdf = createServerFn({ method: "POST" })
     heading("Estimated timeline");
     for (const t of (inv.timeline ?? []) as Array<{ phase: string; duration: string; depends_on: string; notes: string }>) {
       text(`- ${t.phase}: ${t.duration || "TBD"}${t.depends_on ? ` (after ${t.depends_on})` : ""}${t.notes ? ` — ${t.notes}` : ""}`);
+    }
+
+    if ((rk.data ?? []).length) {
+      heading("Risk matrix");
+      for (const r of rk.data ?? []) {
+        text(`- ${riskCategoryLabel(r.category)} · ${riskLevelMeta(r.level).label}${r.parcel_label ? ` · ${r.parcel_label}` : ""}`, { b: true, gap: 1 });
+        if (r.why) text(`   Why it matters: ${r.why}`, { gap: 1 });
+        if (r.supporting_info) text(`   Supporting information: ${r.supporting_info}`, { gap: 1 });
+        if (r.mitigation) text(`   Mitigation: ${r.mitigation}`, { gap: 1 });
+        text(`   Status: ${String(r.verification).replace(/_/g, " ")}`, { size: 8, color: [0.35, 0.38, 0.44], gap: 1 });
+      }
+    }
+
+    heading("Potential deal killers");
+    const dks = (inv.deal_killers ?? []) as Array<{ issue: string; why: string; supporting_info?: string; resolution_path?: string; verification: string }>;
+    if (!dks.length) text(NO_DEAL_KILLERS_TEXT);
+    for (const d of dks) {
+      text(`- ${d.issue}`, { b: true, gap: 1 });
+      if (d.why) text(`   Why: ${d.why}`, { gap: 1 });
+      if (d.supporting_info) text(`   Supporting information: ${d.supporting_info}`, { gap: 1 });
+      if (d.resolution_path) text(`   Possible resolution path: ${d.resolution_path}`, { gap: 1 });
+      text(`   Status: ${String(d.verification).replace(/_/g, " ")}`, { size: 8, color: [0.35, 0.38, 0.44], gap: 1 });
+    }
+
+    const dd = (inv.due_diligence ?? []) as Array<{ item: string; priority: string; why: string; responsible_party?: string }>;
+    if (dd.length) {
+      heading("Outstanding due diligence");
+      for (const d of dd) {
+        text(`- ${d.item} [${ddPriorityLabel(d.priority)}]`, { b: true, gap: 1 });
+        if (d.why) text(`   Why: ${d.why}`, { gap: 1 });
+        if (d.responsible_party) text(`   Typically handled by: ${d.responsible_party}`, { gap: 1 });
+      }
     }
 
     heading("Official sources");

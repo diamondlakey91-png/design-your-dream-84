@@ -3275,6 +3275,77 @@ export type Database = {
           },
         ]
       }
+      site_investigation_parcels: {
+        Row: {
+          acreage: number | null
+          address: string | null
+          county: string | null
+          created_at: string
+          id: string
+          investigation_id: string
+          jurisdiction: string | null
+          label: string | null
+          land_use: string | null
+          notes: string | null
+          parcel_number: string | null
+          phase: string | null
+          sort_order: number
+          state: string | null
+          updated_at: string
+          user_id: string
+          verification: string
+          zoning: string | null
+        }
+        Insert: {
+          acreage?: number | null
+          address?: string | null
+          county?: string | null
+          created_at?: string
+          id?: string
+          investigation_id: string
+          jurisdiction?: string | null
+          label?: string | null
+          land_use?: string | null
+          notes?: string | null
+          parcel_number?: string | null
+          phase?: string | null
+          sort_order?: number
+          state?: string | null
+          updated_at?: string
+          user_id: string
+          verification?: string
+          zoning?: string | null
+        }
+        Update: {
+          acreage?: number | null
+          address?: string | null
+          county?: string | null
+          created_at?: string
+          id?: string
+          investigation_id?: string
+          jurisdiction?: string | null
+          label?: string | null
+          land_use?: string | null
+          notes?: string | null
+          parcel_number?: string | null
+          phase?: string | null
+          sort_order?: number
+          state?: string | null
+          updated_at?: string
+          user_id?: string
+          verification?: string
+          zoning?: string | null
+        }
+        Relationships: [
+          {
+            foreignKeyName: "site_investigation_parcels_investigation_id_fkey"
+            columns: ["investigation_id"]
+            isOneToOne: false
+            referencedRelation: "site_investigations"
+            referencedColumns: ["id"]
+          },
+        ]
+      }
       site_investigation_permits: {
         Row: {
           agency: string | null
@@ -3331,89 +3402,200 @@ export type Database = {
           },
         ]
       }
+      site_investigation_risks: {
+        Row: {
+          category: string
+          created_at: string
+          id: string
+          investigation_id: string
+          level: string
+          mitigation: string | null
+          parcel_label: string | null
+          sort_order: number
+          supporting_info: string | null
+          updated_at: string
+          user_id: string
+          verification: string
+          why: string | null
+        }
+        Insert: {
+          category: string
+          created_at?: string
+          id?: string
+          investigation_id: string
+          level?: string
+          mitigation?: string | null
+          parcel_label?: string | null
+          sort_order?: number
+          supporting_info?: string | null
+          updated_at?: string
+          user_id: string
+          verification?: string
+          why?: string | null
+        }
+        Update: {
+          category?: string
+          created_at?: string
+          id?: string
+          investigation_id?: string
+          level?: string
+          mitigation?: string | null
+          parcel_label?: string | null
+          sort_order?: number
+          supporting_info?: string | null
+          updated_at?: string
+          user_id?: string
+          verification?: string
+          why?: string | null
+        }
+        Relationships: [
+          {
+            foreignKeyName: "site_investigation_risks_investigation_id_fkey"
+            columns: ["investigation_id"]
+            isOneToOne: false
+            referencedRelation: "site_investigations"
+            referencedColumns: ["id"]
+          },
+        ]
+      }
       site_investigations: {
         Row: {
           address: string
           assumptions: Json
           client_name: string | null
+          complexity_label: string | null
+          complexity_level: number
           created_at: string
+          custom_quote_requested: boolean
+          deal_killers: Json
           document_ids: string[]
+          due_diligence: Json
           error: string | null
           executive_summary: string | null
           feasibility_rating: string
+          feasibility_snapshot: Json
+          followups: Json
           id: string
+          investigation_plan: Json
           jurisdiction_snapshot: Json
           model: string | null
+          modules: Json
           notes: string | null
+          parcel_count: number
+          parent_investigation_id: string | null
           prepared_date: string | null
+          progress_step: string | null
           project_id: string
           project_type_id: string | null
           project_type_label: string | null
           prompt_version: string | null
           property_info: Json
+          recommended_depth: string | null
           report: Json
+          report_depth: string
           report_number: string | null
+          site_acreage: number | null
           sources: Json
           status: string
           timeline: Json
           updated_at: string
           user_id: string
+          version: number
         }
         Insert: {
           address: string
           assumptions?: Json
           client_name?: string | null
+          complexity_label?: string | null
+          complexity_level?: number
           created_at?: string
+          custom_quote_requested?: boolean
+          deal_killers?: Json
           document_ids?: string[]
+          due_diligence?: Json
           error?: string | null
           executive_summary?: string | null
           feasibility_rating?: string
+          feasibility_snapshot?: Json
+          followups?: Json
           id?: string
+          investigation_plan?: Json
           jurisdiction_snapshot?: Json
           model?: string | null
+          modules?: Json
           notes?: string | null
+          parcel_count?: number
+          parent_investigation_id?: string | null
           prepared_date?: string | null
+          progress_step?: string | null
           project_id: string
           project_type_id?: string | null
           project_type_label?: string | null
           prompt_version?: string | null
           property_info?: Json
+          recommended_depth?: string | null
           report?: Json
+          report_depth?: string
           report_number?: string | null
+          site_acreage?: number | null
           sources?: Json
           status?: string
           timeline?: Json
           updated_at?: string
           user_id: string
+          version?: number
         }
         Update: {
           address?: string
           assumptions?: Json
           client_name?: string | null
+          complexity_label?: string | null
+          complexity_level?: number
           created_at?: string
+          custom_quote_requested?: boolean
+          deal_killers?: Json
           document_ids?: string[]
+          due_diligence?: Json
           error?: string | null
           executive_summary?: string | null
           feasibility_rating?: string
+          feasibility_snapshot?: Json
+          followups?: Json
           id?: string
+          investigation_plan?: Json
           jurisdiction_snapshot?: Json
           model?: string | null
+          modules?: Json
           notes?: string | null
+          parcel_count?: number
+          parent_investigation_id?: string | null
           prepared_date?: string | null
+          progress_step?: string | null
           project_id?: string
           project_type_id?: string | null
           project_type_label?: string | null
           prompt_version?: string | null
           property_info?: Json
+          recommended_depth?: string | null
           report?: Json
+          report_depth?: string
           report_number?: string | null
+          site_acreage?: number | null
           sources?: Json
           status?: string
           timeline?: Json
           updated_at?: string
           user_id?: string
+          version?: number
         }
         Relationships: [
+          {
+            foreignKeyName: "site_investigations_parent_investigation_id_fkey"
+            columns: ["parent_investigation_id"]
+            isOneToOne: false
+            referencedRelation: "site_investigations"
+            referencedColumns: ["id"]
+          },
           {
             foreignKeyName: "site_investigations_project_id_fkey"
             columns: ["project_id"]
