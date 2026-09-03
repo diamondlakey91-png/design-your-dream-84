@@ -202,6 +202,17 @@ export const runSiteInvestigation = createServerFn({ method: "POST" })
       project_type_label: z.string().max(160).optional(),
       notes: z.string().max(4000).optional(),
       client_name: z.string().max(160).optional(),
+      report_depth: z.enum(["property_snapshot", "project_feasibility", "development_due_diligence", "major_development_study"]).optional(),
+      parcels: z.array(ParcelInput).max(40).default([]),
+      acreage: z.number().nonnegative().max(100000).optional(),
+      building_sf: z.number().nonnegative().max(10000000).optional(),
+      followup_answers: z.array(z.object({
+        question: z.string().max(300),
+        answer: z.enum(["yes", "no", "unsure", "skipped"]),
+        note: z.string().max(600).optional(),
+      })).max(20).default([]),
+      document_ids: z.array(z.string().uuid()).max(30).default([]),
+      previous_investigation_id: z.string().uuid().optional(),
     }).parse(d),
   )
   .handler(async ({ data, context }) => {
