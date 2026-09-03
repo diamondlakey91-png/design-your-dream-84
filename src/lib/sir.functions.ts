@@ -76,16 +76,28 @@ async function runResearch(requestId: string) {
   const { data: row } = await supabaseAdmin.from("sir_requests").select("*").eq("id", requestId).maybeSingle();
   if (!row) throw new Error("Request not found");
 
-  await supabaseAdmin.from("sir_requests").update({ research_status: "running", research_error: null }).eq("id", requestId);
+  await supabaseAdmin.from("sir_requests").update({ research_status: "running", research_error: null, qa_status: "pending", review_stage: "draft" }).eq("id", requestId);
 
   try {
     // The Lead Project Intelligence Agent orchestrates the specialist research
     // passes and gates every claim against the harvested official evidence.
     const { resolved, research, sources, audit } = await runSirLeadAgent(row);
+
+    // Lead SIR Agent, second half: compile the final draft, run the QA/QC gate
+    // and queue it for internal professional review (or hold it as QA-blocked).
+    const { leadCompileAndGate } = await import("@/lib/sirLeadOrchestrator.server");
+    const gate = leadCompileAndGate(research, { sources, audit });
+
     const { error } = await supabaseAdmin
       .from("sir_requests")
       .update({
         research_status: "complete",
+        compiled_report: gate.compiled as never,
+        compiled_at: new Date().toISOString(),
+        qa_report: gate.qa as never,
+        qa_status: gate.qa.status,
+        review_stage: gate.review_stage,
+        submitted_for_review_at: gate.review_stage === "professional_review_pending" ? new Date().toISOString() : null,
         research: research as never,
         resolved_jurisdiction: resolved as never,
         research_sources: sources as never,
@@ -132,6 +144,41 @@ export const researchSirRequest = createServerFn({ method: "POST" })
   .handler(async ({ data, context }) => {
     await assertAdmin(context as never);
     return runResearch(data.id);
+  });
+
+/**
+ * Admin/reviewer: re-run the Lead SIR Agent's compile + QA/QC gate on the
+ * existing research (no new model calls) and re-queue it for review.
+ */
+export const compileSirForReview = createServerFn({ method: "POST" })
+  .middleware([requireSupabaseAuth])
+  .inputValidator((d: unknown) => z.object({ id: z.string().uuid() }).parse(d))
+  .handler(async ({ data, context }) => {
+    await assertAdmin(context as never);
+    const { data: row, error: readErr } = await context.supabase
+      .from("sir_requests")
+      .select("research, research_sources, research_audit")
+      .eq("id", data.id)
+      .maybeSingle();
+    if (readErr) throw new Error(readErr.message);
+    if (!row?.research) throw new Error("Run research before compiling the report.");
+
+    const { leadCompileAndGate } = await import("@/lib/sirLeadOrchestrator.server");
+    const gate = leadCompileAndGate(row.research, { sources: row.research_sources, audit: row.research_audit });
+
+    const { error } = await context.supabase
+      .from("sir_requests")
+      .update({
+        compiled_report: gate.compiled as never,
+        compiled_at: new Date().toISOString(),
+        qa_report: gate.qa as never,
+        qa_status: gate.qa.status,
+        review_stage: gate.review_stage,
+        submitted_for_review_at: gate.review_stage === "professional_review_pending" ? new Date().toISOString() : null,
+      })
+      .eq("id", data.id);
+    if (error) throw new Error(error.message);
+    return { ok: true as const, qa: gate.qa, review_stage: gate.review_stage };
   });
 
 /** Admin: move a request through intake triage. */
@@ -192,6 +239,7 @@ export const reviewSirFinding = createServerFn({ method: "POST" })
         finding_reviews: reviews as never,
         // Any edit after sign-off returns the report to in-review.
         review_status: "in_review",
+        review_stage: "professional_review_pending",
         reviewed_at: null,
       })
       .eq("id", data.id);
@@ -216,11 +264,14 @@ export const finalizeSirReview = createServerFn({ method: "POST" })
     await assertAdmin(context as never);
     const { data: row, error: readErr } = await context.supabase
       .from("sir_requests")
-      .select("research, finding_reviews")
+      .select("research, finding_reviews, qa_status")
       .eq("id", data.id)
       .maybeSingle();
     if (readErr) throw new Error(readErr.message);
     if (!row?.research) throw new Error("Run research before signing off the report.");
+    if (row.qa_status === "blocked") {
+      throw new Error("The QA/QC gate is blocking this draft. Clear the blockers and re-run QA/QC before sign-off.");
+    }
 
     const { buildSirReport, rollupSirReview } = await import("@/lib/sirReport");
     const sections = buildSirReport(row.research);
@@ -233,6 +284,7 @@ export const finalizeSirReview = createServerFn({ method: "POST" })
       .from("sir_requests")
       .update({
         review_status: "reviewed",
+        review_stage: "professionally_reviewed",
         reviewer_name: data.reviewer_name,
         reviewer_credential: data.reviewer_credential || null,
         reviewer_summary: data.reviewer_summary || null,
