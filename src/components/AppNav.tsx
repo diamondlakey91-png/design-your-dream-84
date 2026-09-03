@@ -81,6 +81,13 @@ const TOOLS_CLIENT: NavLink[] = [
     description: "Submit a brief, track research, download the report",
   },
   {
+    to: "/feasibility",
+    label: "Project Feasibility",
+    icon: Scale,
+    description: "Go / no-go verdict, deal-killers, conditions to proceed",
+  },
+
+  {
     to: "/plan-qaqc",
     label: "Plan QA/QC Report",
     icon: FileSearch,
