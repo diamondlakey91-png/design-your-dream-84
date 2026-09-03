@@ -139,6 +139,16 @@ export function PlanQaQcTab({ projectId, userId }: { projectId: string; userId: 
   const findings = (d?.findings ?? []) as QaQcFindingRow[];
   const sheets = (d?.sheets ?? []) as QaQcSheetRow[];
   const sevCount = (s: string) => findings.filter((f) => f.severity === s && !f.resolved).length;
+  const missingSheets = sheets.filter((s) => s.index_state === "missing_from_upload");
+  const gaps = (d?.review?.inventory_gaps ?? {}) as Record<string, string[] | undefined>;
+  const gapBlocks = [
+    { label: "On the drawing index but not uploaded", items: gaps['index_sheets_not_uploaded'] ?? [] },
+    { label: "Uploaded but not listed on the index", items: gaps['uploaded_sheets_not_indexed'] ?? [] },
+    { label: "Duplicate sheet numbers", items: gaps['duplicate_sheet_numbers'] ?? [] },
+    { label: "Gaps in sheet numbering", items: gaps['missing_number_sequences'] ?? [] },
+    { label: "Disciplines with no sheets in this set", items: gaps['missing_disciplines'] ?? [] },
+    { label: "Conflicting dates across the set", items: gaps['conflicting_dates'] ?? [] },
+  ];
 
   return (
     <div className="space-y-6">
