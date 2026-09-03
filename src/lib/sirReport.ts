@@ -175,6 +175,36 @@ export function buildSirReport(research: any): SirCoverageSection[] {
       })),
     });
   }
+  const codes: any[] = research.codes ?? [];
+  if (codes.length) {
+    permitModules.push({
+      key: "adopted_codes",
+      label: "Adopted codes governing this project",
+      findings: codes.map((c, i) => ({
+        id: `code:${i}`,
+        title: `${c.discipline}: ${c.code_and_edition}`,
+        detail: c.applies_because ?? "",
+        meta: ["Adopted code research — not a compliance determination"],
+        verification: asVerification(c.verification),
+        source: c.source_url ?? null,
+      })),
+    });
+  }
+  const fees: any[] = research.fees ?? [];
+  if (fees.length) {
+    permitModules.push({
+      key: "fees",
+      label: "Fees & cost exposure",
+      findings: fees.map((f, i) => ({
+        id: `fee:${i}`,
+        title: f.item,
+        detail: f.amount_or_basis ?? "",
+        meta: [f.agency, "Confirm current schedule with the agency before budgeting"].filter(Boolean),
+        verification: asVerification(f.verification),
+        source: f.source_url ?? null,
+      })),
+    });
+  }
   const timeline: any[] = research.timeline ?? [];
   if (timeline.length) {
     permitModules.push({
@@ -210,6 +240,36 @@ export function buildSirReport(research: any): SirCoverageSection[] {
         meta: ["Capacity is never confirmed without a written availability letter"],
         verification: asVerification(u.verification),
         source: u.source_url ?? null,
+      })),
+    });
+  }
+  const access: any[] = research.access ?? [];
+  if (access.length) {
+    siteModules.push({
+      key: "access",
+      label: "Transportation, access & right-of-way",
+      findings: access.map((a, i) => ({
+        id: `access:${i}`,
+        title: a.item,
+        detail: a.requirement ?? "",
+        meta: [a.authority].filter(Boolean),
+        verification: asVerification(a.verification),
+        source: a.source_url ?? null,
+      })),
+    });
+  }
+  const environmental: any[] = research.environmental ?? [];
+  if (environmental.length) {
+    siteModules.push({
+      key: "environmental",
+      label: "Environmental & site constraints",
+      findings: environmental.map((e, i) => ({
+        id: `environmental:${i}`,
+        title: `${e.constraint} — ${label(e.status)}`,
+        detail: e.implication ?? "",
+        meta: [e.deal_killer ? "Potential deal-killer" : null].filter(Boolean) as string[],
+        verification: asVerification(e.verification),
+        source: e.source_url ?? null,
       })),
     });
   }
@@ -316,6 +376,10 @@ export function buildSirSnapshot(research: any): Array<{ label: string; value: s
     { label: "Approvals identified", value: `${permits.length} total · ${required} required or likely` },
     { label: "Authorities identified", value: String((research.jurisdiction?.authorities ?? []).length) },
     { label: "High-severity risks", value: String(highRisks) },
+    ...(((research.environmental ?? []) as any[]).some((e) => e.deal_killer)
+      ? [{ label: "Potential deal-killers", value: ((research.environmental ?? []) as any[]).filter((e) => e.deal_killer).map((e) => e.constraint).join("; ") }]
+      : []),
+    ...(((research.codes ?? []) as any[]).length ? [{ label: "Adopted codes identified", value: String(((research.codes ?? []) as any[]).length) }] : []),
     { label: "Estimated turnaround", value: research.turnaround || "Not established" },
     {
       label: "Go / no-go position",
