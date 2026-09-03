@@ -147,6 +147,25 @@ function wrap(text: string, font: PDFFont, size: number, width: number): string[
   return out.length ? out : [""];
 }
 
+/** Wraps unbroken strings (URLs) by character so long links never overrun the margin. */
+function wrapChars(value: string, font: PDFFont, size: number, width: number): string[] {
+  const clean = sanitize(value);
+  const out: string[] = [];
+  let line = "";
+  for (const ch of clean) {
+    const candidate = line + ch;
+    if (font.widthOfTextAtSize(candidate, size) > width && line) {
+      out.push(line);
+      line = ch;
+    } else {
+      line = candidate;
+    }
+  }
+  if (line) out.push(line);
+  return out.length ? out : [""];
+}
+
+
 function newPage(ctx: Ctx) {
   ctx.page = ctx.pdf.addPage([PAGE_W, PAGE_H]);
   ctx.pages.push(ctx.page);
