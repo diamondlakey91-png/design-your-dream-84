@@ -46,11 +46,13 @@ export const createProject = createServerFn({ method: "POST" })
   .handler(async ({ data, context }) => {
     const ent = await getEntitlement(context.supabase, context.userId);
     await requireProjectQuota(context.supabase, context.userId, ent);
+    const organizationId = await resolveOrganizationId(context.supabase, context.userId);
     const { data: row, error } = await context.supabase
 
       .from("projects")
       .insert({
         user_id: context.userId,
+        organization_id: organizationId,
         name: data.name,
         location: data.location,
         project_type: data.project_type,
