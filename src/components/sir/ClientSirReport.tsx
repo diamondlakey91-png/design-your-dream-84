@@ -64,6 +64,59 @@ export function ClientSirReport({
         {reviewer.summary && <p className="mt-2 text-sm text-slate-200">{reviewer.summary}</p>}
       </div>
 
+      {verdict && (
+        <div className="rounded-xl border border-white/10 bg-white/[0.02] p-4">
+          <div className="flex flex-wrap items-center gap-2">
+            <h4 className="text-sm font-semibold text-white">Feasibility verdict</h4>
+            <span className={`rounded-full border px-2 py-0.5 text-[10px] uppercase tracking-wide ${ratingMeta(verdict.rating).klass}`}>
+              {ratingMeta(verdict.rating).label}
+            </span>
+            <span className="rounded-full border border-blue-500/30 bg-blue-500/10 px-2 py-0.5 text-[10px] uppercase tracking-wide text-blue-200">
+              {verdict.recommendation.replace(/_/g, " ")}
+            </span>
+          </div>
+          <p className="mt-2 text-sm leading-relaxed text-slate-300">{verdict.rationale}</p>
+          {!!verdict.deal_killers?.length && (
+            <div className="mt-3">
+              <p className="text-xs font-medium text-white">Potential deal-killers</p>
+              <ul className="mt-1 grid gap-1">
+                {verdict.deal_killers.map((d) => (
+                  <li key={d.title} className="rounded-lg border border-red-500/25 bg-red-500/[0.06] p-2 text-xs text-slate-300">
+                    <span className="font-medium text-red-200">{d.title}</span>
+                    <span className={`ml-2 rounded-full border px-1.5 py-0.5 text-[10px] ${VERIFICATION_STYLE[d.verification] ?? VERIFICATION_STYLE.needs_confirmation}`}>
+                      {d.verification.replace(/_/g, " ")}
+                    </span>
+                    <p className="mt-1">{d.why}</p>
+                  </li>
+                ))}
+              </ul>
+            </div>
+          )}
+          {!!verdict.conditions_to_proceed?.length && (
+            <div className="mt-3">
+              <p className="text-xs font-medium text-white">Conditions to proceed</p>
+              <ul className="mt-1 list-disc pl-5 text-xs text-slate-300">
+                {verdict.conditions_to_proceed.map((c) => (
+                  <li key={c}>{c}</li>
+                ))}
+              </ul>
+            </div>
+          )}
+          {!!verdict.cost_schedule_exposure?.length && (
+            <div className="mt-3">
+              <p className="text-xs font-medium text-white">Cost & schedule exposure</p>
+              <ul className="mt-1 list-disc pl-5 text-xs text-slate-300">
+                {verdict.cost_schedule_exposure.map((c) => (
+                  <li key={c}>{c}</li>
+                ))}
+              </ul>
+            </div>
+          )}
+        </div>
+      )}
+
+
+
       <div className="rounded-xl border border-white/10 bg-white/[0.02] p-4">
         <h4 className="text-sm font-semibold text-white">Executive feasibility snapshot</h4>
         <dl className="mt-3 grid gap-2 sm:grid-cols-2 lg:grid-cols-3">
