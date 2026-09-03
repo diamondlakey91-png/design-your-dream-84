@@ -1,4 +1,5 @@
 import { createFileRoute, Link, useNavigate } from "@tanstack/react-router";
+import { PermivioPageHeader } from "@/components/PermivioPageHeader";
 import { useQuery, useQueryClient } from "@tanstack/react-query";
 import { useServerFn } from "@tanstack/react-start";
 import { AppShell } from "@/components/AppShell";
@@ -63,32 +64,30 @@ function ProjectDetail() {
 
   return (
     <AppShell>
-      <header className="p-6 border-b border-border">
-        <button onClick={() => navigate({ to: "/dashboard" })} className="inline-flex items-center gap-1.5 text-sm text-muted-foreground hover:text-foreground">
-          <ArrowLeft className="size-4" /> Sites
-        </button>
-        <div className="flex items-center gap-2 mt-4 mb-2">
-          <span className="text-[10px] font-mono bg-muted px-1.5 py-0.5 rounded text-muted-foreground">ID: {project.id.slice(0, 8).toUpperCase()}</span>
-          <span className="text-[10px] font-mono px-1.5 py-0.5 rounded bg-brand/15 text-brand">{project.status.toUpperCase()}</span>
-        </div>
-        <h1 className="text-2xl font-semibold">{project.name}</h1>
-        <div className="flex items-start justify-between gap-3">
-          <div>
-            <h1 className="text-2xl font-semibold">{project.name}</h1>
-            <div className="mt-1 text-sm text-muted-foreground flex flex-wrap gap-x-3 gap-y-1">
+      <div className="p-6 border-b border-border">
+        <PermivioPageHeader
+          backTo="/dashboard"
+          backLabel="Sites"
+          eyebrow={`ID ${project.id.slice(0, 8).toUpperCase()} · ${project.status.toUpperCase()}`}
+          context={project.name}
+          title="Project Workspace"
+          subtitle={
+            <span className="flex flex-wrap gap-x-3 gap-y-1">
               {project.jurisdiction && <span className="inline-flex items-center gap-1"><Landmark className="size-3.5" />{project.jurisdiction}</span>}
               {project.location && <span className="inline-flex items-center gap-1"><MapPin className="size-3.5" />{project.location}</span>}
               {project.project_type && <span className="inline-flex items-center gap-1">· {project.project_type}</span>}
-            </div>
-          </div>
-          <button
-            onClick={() => setEditOpen(true)}
-            className="inline-flex items-center gap-1.5 text-xs font-mono uppercase tracking-widest px-2.5 py-1.5 rounded border border-border hover:border-brand hover:text-brand"
-          >
-            <Pencil className="size-3.5" /> Edit
-          </button>
-        </div>
-      </header>
+            </span>
+          }
+          actions={
+            <button
+              onClick={() => setEditOpen(true)}
+              className="inline-flex items-center gap-1.5 text-xs font-mono uppercase tracking-widest px-2.5 py-1.5 rounded border border-border hover:border-brand hover:text-brand"
+            >
+              <Pencil className="size-3.5" /> Edit
+            </button>
+          }
+        />
+      </div>
 
       <EditProjectDialog
         open={editOpen}

@@ -94,8 +94,8 @@ function ProjectsPage() {
               <FileSignature className="size-4 text-primary" /> Permit Filing
             </Link>
           </div>
-
-        </header>
+          </>}
+        />
 
 
         {/* Toolbar */}
