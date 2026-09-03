@@ -55,7 +55,7 @@ export function ClientAttentionList({ items, showProject = true }: { items: Atte
               <Link
                 to="/projects/$id"
                 params={{ id: a.projectId }}
-                search={{ tab: a.tab }}
+                search={{ tab: a.tab as never }}
                 className="inline-flex shrink-0 items-center gap-1.5 rounded-full border border-primary/40 bg-primary/10 px-4 py-2 text-sm font-semibold text-primary transition-colors hover:bg-primary/20"
               >
                 {ICON[a.action]} {a.actionLabel}

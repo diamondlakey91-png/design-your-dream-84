@@ -34,9 +34,10 @@ import type { ClientProjectInput } from "@/lib/clientView";
 const TABS = ["overview", "scope", "site", "checklist", "docs", "planqaqc", "qaqc", "responses", "deadlines", "inspections", "timeline"] as const;
 
 export const Route = createFileRoute("/_authenticated/projects/$id")({
-  validateSearch: (search: Record<string, unknown>) => ({
-    tab: typeof search.tab === "string" && (TABS as readonly string[]).includes(search.tab) ? (search.tab as Tab) : undefined,
-  }),
+  validateSearch: (search: Record<string, unknown>): { tab?: Tab } =>
+    typeof search.tab === "string" && (TABS as readonly string[]).includes(search.tab)
+      ? { tab: search.tab as Tab }
+      : {},
   head: () => ({ meta: [{ title: "Project — Permivio" }, { name: "robots", content: "noindex" }] }),
   component: ProjectDetail,
 });
