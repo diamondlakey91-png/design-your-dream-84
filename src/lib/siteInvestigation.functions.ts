@@ -18,6 +18,9 @@ import {
   complexityMeta,
   moduleMeta,
   RISK_CATEGORIES,
+  riskCategoryLabel,
+  riskLevelMeta,
+  ddPriorityLabel,
   NO_DEAL_KILLERS_TEXT,
   type InvestigationPlan,
 } from "@/lib/siteInvestigationEngine";
@@ -696,7 +699,7 @@ export const generateSiteInvestigationPdf = createServerFn({ method: "POST" })
     if ((rk.data ?? []).length) {
       heading("Risk matrix");
       for (const r of rk.data ?? []) {
-        text(`- ${riskCategoryMeta(r.category).label} · ${riskLevelMeta(r.level).label}${r.parcel_label ? ` · ${r.parcel_label}` : ""}`, { b: true, gap: 1 });
+        text(`- ${riskCategoryLabel(r.category)} · ${riskLevelMeta(r.level).label}${r.parcel_label ? ` · ${r.parcel_label}` : ""}`, { b: true, gap: 1 });
         if (r.why) text(`   Why it matters: ${r.why}`, { gap: 1 });
         if (r.supporting_info) text(`   Supporting information: ${r.supporting_info}`, { gap: 1 });
         if (r.mitigation) text(`   Mitigation: ${r.mitigation}`, { gap: 1 });
@@ -719,7 +722,7 @@ export const generateSiteInvestigationPdf = createServerFn({ method: "POST" })
     if (dd.length) {
       heading("Outstanding due diligence");
       for (const d of dd) {
-        text(`- ${d.item} [${ddPriorityMeta(d.priority).label}]`, { b: true, gap: 1 });
+        text(`- ${d.item} [${ddPriorityLabel(d.priority)}]`, { b: true, gap: 1 });
         if (d.why) text(`   Why: ${d.why}`, { gap: 1 });
         if (d.responsible_party) text(`   Typically handled by: ${d.responsible_party}`, { gap: 1 });
       }
