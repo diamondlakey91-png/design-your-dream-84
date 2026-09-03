@@ -1,4 +1,5 @@
 import { createFileRoute, Link } from "@tanstack/react-router";
+import { PermivioMark } from "@/components/PermivioMark";
 import { ArrowRight, Sparkles, Check } from "lucide-react";
 
 export const Route = createFileRoute("/pricing")({
@@ -30,10 +31,8 @@ function PricingPage() {
     <div className="min-h-screen bg-background text-foreground">
       <header className="mx-auto flex max-w-6xl items-center justify-between px-6 py-6">
         <Link to="/" className="flex items-center gap-2">
-          <div className="grid size-9 place-items-center rounded-lg bg-brand">
-            <div className="size-4 rounded-sm border-2 border-ink/30" />
-          </div>
-          <span className="text-lg font-semibold tracking-tight">Permivio</span>
+          <PermivioMark className="h-9 w-9" />
+          <span className="text-lg font-semibold tracking-tight">PERMIVIO</span>
         </Link>
         <Link
           to="/auth"

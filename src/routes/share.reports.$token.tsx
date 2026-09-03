@@ -4,6 +4,7 @@ import { useMutation } from "@tanstack/react-query";
 import { useEffect, useState } from "react";
 import { getSharedBatchReport } from "@/lib/reportShares.functions";
 import { ShieldCheck, Lock, AlertTriangle } from "lucide-react";
+import { PermivioMark } from "@/components/PermivioMark";
 
 export const Route = createFileRoute("/share/reports/$token")({
   head: () => ({ meta: [

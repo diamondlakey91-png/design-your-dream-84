@@ -1,5 +1,6 @@
 import { createFileRoute, Link } from "@tanstack/react-router";
 import { CheckCircle2 } from "lucide-react";
+import { PermivioMark } from "@/components/PermivioMark";
 
 export const Route = createFileRoute("/checkout/return")({
   head: () => ({ meta: [{ title: "Checkout — Permivio" }, { name: "robots", content: "noindex" }] }),
@@ -14,6 +15,10 @@ function CheckoutReturn() {
   return (
     <div className="min-h-screen grid place-items-center bg-background p-6">
       <div className="max-w-md w-full text-center bg-card ring-1 ring-black/5 rounded-2xl p-8">
+        <Link to="/" className="mb-6 inline-flex items-center gap-2">
+          <PermivioMark className="h-7 w-7" />
+          <span className="text-base font-semibold tracking-tight">PERMIVIO</span>
+        </Link>
         {session_id ? (
           <>
             <div className="mx-auto grid size-14 place-items-center rounded-full bg-brand/15 text-brand">
