@@ -134,6 +134,26 @@ export function ClientDashboard({ onCreateProject }: { onCreateProject: () => vo
         </div>
       </section>
 
+      {/* Tools & Reports — buy a single report without full-service permitting */}
+      <section aria-labelledby="tools-reports">
+        <div className="rounded-3xl border border-border bg-card p-5 sm:p-6">
+          <h2 id="tools-reports" className="text-base font-semibold text-foreground">Tools &amp; Reports</h2>
+          <p className="mt-2 max-w-2xl text-sm text-muted-foreground">
+            Need just one thing? Buy a single report — site feasibility, permit requirements, plan quality control and
+            more — and keep it saved to your project. You can add a professional review or hand the whole project to
+            Permivio at any time.
+          </p>
+          <Link
+            to="/tools"
+            className="mt-4 inline-flex items-center rounded-full bg-primary px-4 py-2 text-sm font-semibold text-primary-foreground transition-colors hover:bg-primary/90"
+          >
+            Browse tools &amp; reports
+          </Link>
+        </div>
+      </section>
+
+
+
       {/* Recent updates — secondary */}
       {model.activity.length > 0 && (
         <section aria-labelledby="recent-updates">
