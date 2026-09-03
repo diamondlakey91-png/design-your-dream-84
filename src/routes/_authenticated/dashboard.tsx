@@ -3,18 +3,13 @@ import { PermivioPageHeader } from "@/components/PermivioPageHeader";
 import { useMutation, useQuery, useQueryClient } from "@tanstack/react-query";
 import { useServerFn } from "@tanstack/react-start";
 import { AppShell } from "@/components/AppShell";
-import { listProjects, listDeadlines, createProject, deleteProject } from "@/lib/projects.functions";
+import { listProjects, listDeadlines, deleteProject } from "@/lib/projects.functions";
 import { generateDailyBriefing } from "@/lib/chat.functions";
-import { geocodeAddress } from "@/lib/geocoding.functions";
 import { supabase } from "@/integrations/supabase/client";
 import { useEffect, useMemo, useState } from "react";
-import { Plus, X, Sparkles, ArrowUpRight, CalendarClock, ClipboardCheck, Loader2, AlertTriangle, Trophy, Trash2, MapPin, CheckCircle2, FileCheck2 } from "lucide-react";
+import { Plus, Sparkles, ArrowUpRight, CalendarClock, ClipboardCheck, Loader2, AlertTriangle, Trophy, Trash2, FileCheck2 } from "lucide-react";
 import { toast } from "sonner";
 import { format, differenceInCalendarDays, parseISO } from "date-fns";
-import { JurisdictionAutocomplete } from "@/components/JurisdictionAutocomplete";
-import { ProjectTypeSelector } from "@/components/project-type/ProjectTypeSelector";
-import { setProjectTypeForProject } from "@/lib/projectTypes.functions";
-import { useProjectTypes } from "@/hooks/useProjectTypes";
 import { IntakePipelineCard } from "@/components/dashboard/IntakePipelineCard";
 import { ClientDashboard } from "@/components/client/ClientDashboard";
 import { getClientDashboard } from "@/lib/clientDashboard.functions";
@@ -55,7 +50,6 @@ function Dashboard() {
   const projectsQ = useQuery({ queryKey: ["projects"], queryFn: () => listProjectsFn() });
   const deadlinesQ = useQuery({ queryKey: ["deadlines"], queryFn: () => listDeadlinesFn() });
 
-  const [showCreate, setShowCreate] = useState(false);
   const projects = projectsQ.data ?? [];
   const deadlines = deadlinesQ.data ?? [];
 
@@ -100,19 +94,19 @@ function Dashboard() {
             </span>
           </div>
           <div className="hidden h-10 w-px bg-border sm:block" />
-          <button
-            onClick={() => setShowCreate(true)}
+          <Link
+            to="/start"
             className="inline-flex items-center gap-1.5 rounded-full bg-foreground px-4 py-2.5 text-sm font-semibold text-background transition-colors hover:bg-foreground/90"
           >
-            <Plus className="size-4" /> Start New Project
-          </button>
+            <Plus className="size-4" /> Start a Project
+          </Link>
         </>}
       />
       </div>
 
       {mode === "client" ? (
         <div className="px-4 pb-10 lg:px-2">
-          <ClientDashboard onCreateProject={() => setShowCreate(true)} />
+          <ClientDashboard />
         </div>
       ) : (
       <>
@@ -169,7 +163,7 @@ function Dashboard() {
             {projectsQ.isLoading ? (
               <SkeletonRows />
             ) : projects.length === 0 ? (
-              <EmptyState onCreate={() => setShowCreate(true)} />
+              <EmptyState  />
             ) : (
               <div className="divide-y divide-border">
                 {projects.slice(0, 6).map((p) => (
@@ -208,7 +202,6 @@ function Dashboard() {
       </>
       )}
 
-      {showCreate && <CreateProjectDialog onClose={() => setShowCreate(false)} />}
     </AppShell>
   );
 }
@@ -504,7 +497,7 @@ function SkeletonRows() {
   );
 }
 
-function EmptyState({ onCreate }: { onCreate: () => void }) {
+function EmptyState() {
   return (
     <div className="px-6 pb-8 pt-2 text-center sm:px-8">
       <div className="mx-auto grid size-12 place-items-center rounded-2xl bg-secondary text-muted-foreground">
@@ -513,12 +506,12 @@ function EmptyState({ onCreate }: { onCreate: () => void }) {
       <p className="mt-4 font-mono text-[10px] uppercase tracking-widest text-muted-foreground">No active sites</p>
       <h3 className="mt-2 text-lg font-semibold text-foreground">Nothing on file yet.</h3>
       <p className="mt-1 text-sm text-muted-foreground">Log your first commercial permit project to get started.</p>
-      <button
-        onClick={onCreate}
+      <Link
+        to="/start"
         className="mt-4 inline-flex h-10 items-center gap-1.5 rounded-full bg-primary px-4 text-sm font-semibold text-primary-foreground shadow-[0_10px_40px_-8px_oklch(0.66_0.19_258/0.6)]"
       >
-        <Plus className="size-4" /> Add project
-      </button>
+        <Plus className="size-4" /> Start a Project
+      </Link>
     </div>
   );
 }
@@ -547,132 +540,4 @@ function computePortfolio(
 
   const atRisk = overdue + onHold;
   return { healthScore: score, atRisk, avgProgress };
-}
-
-
-/* ---------- create dialog ---------- */
-
-function CreateProjectDialog({ onClose }: { onClose: () => void }) {
-  const navigate = useNavigate();
-  const createFn = useServerFn(createProject);
-  const geocodeFn = useServerFn(geocodeAddress);
-  const setTypeFn = useServerFn(setProjectTypeForProject);
-  const queryClient = useQueryClient();
-  const { byId } = useProjectTypes();
-  const [name, setName] = useState("");
-  const [location, setLocation] = useState("");
-  const [jurisdiction, setJurisdiction] = useState("");
-  const [projectType, setProjectType] = useState("Tenant Fit-Out");
-  const [primaryTypeId, setPrimaryTypeId] = useState<string | null>(null);
-  const [permitCount, setPermitCount] = useState(3);
-  const [geocodeVerified, setGeocodeVerified] = useState(false);
-
-  const mut = useMutation({
-    mutationFn: async () => {
-      const row = await createFn({ data: { name, location, jurisdiction, project_type: projectType, permit_count: permitCount } });
-      if (primaryTypeId) {
-        await setTypeFn({ data: { project_id: row.id, primary_project_type_id: primaryTypeId, additional_project_type_ids: [], source: "user_selected" } }).catch(() => {});
-      }
-      return row;
-    },
-    onSuccess: (row) => {
-      queryClient.invalidateQueries({ queryKey: ["projects"] });
-      toast.success("Project created");
-      onClose();
-      navigate({ to: "/projects/$id", params: { id: row.id } });
-    },
-    onError: (e) => toast.error(e instanceof Error ? e.message : "Failed"),
-  });
-
-  const verifyMut = useMutation({
-    mutationFn: () => geocodeFn({ data: { address: location } }),
-    onSuccess: (res) => {
-      setLocation(res.formatted_address);
-      setJurisdiction(res.jurisdiction);
-      setGeocodeVerified(true);
-      toast.success("Address verified");
-    },
-    onError: (e) => toast.error(e instanceof Error ? e.message : "Couldn't verify that address"),
-  });
-
-  return (
-    <div className="fixed inset-0 z-50 grid place-items-end bg-black/60 p-0 backdrop-blur-sm sm:place-items-center sm:p-6" onClick={onClose}>
-      <div
-        className="max-h-[90dvh] w-full overflow-y-auto rounded-t-3xl border border-border bg-popover p-6 pb-8 sm:max-w-md sm:rounded-3xl"
-        onClick={(e) => e.stopPropagation()}
-      >
-        <div className="mb-6 flex items-center justify-between">
-          <div>
-            <p className="font-mono text-[10px] uppercase tracking-widest text-muted-foreground">New site</p>
-            <h2 className="mt-1 text-xl font-semibold">Add project</h2>
-          </div>
-          <button onClick={onClose} className="grid size-8 place-items-center rounded-lg border border-border">
-            <X className="size-4" />
-          </button>
-        </div>
-
-        <form onSubmit={(e) => { e.preventDefault(); if (name) mut.mutate(); }} className="flex flex-col gap-3">
-          <Field label="Project name">
-            <input required value={name} onChange={(e) => setName(e.target.value)}
-              placeholder="Riverside Plaza"
-              className="h-11 rounded-lg border border-input bg-card px-3 text-sm outline-none focus:border-primary" />
-          </Field>
-          <Field label="Location">
-            <div className="flex gap-2">
-              <input value={location} onChange={(e) => { setLocation(e.target.value); setGeocodeVerified(false); }}
-                placeholder="Cleveland, OH"
-                className="h-11 flex-1 rounded-lg border border-input bg-card px-3 text-sm outline-none focus:border-primary" />
-              <button type="button" disabled={!location.trim() || verifyMut.isPending}
-                onClick={() => verifyMut.mutate()}
-                className="inline-flex h-11 shrink-0 items-center gap-1.5 rounded-lg border border-input px-3 text-xs font-medium disabled:opacity-40">
-                {verifyMut.isPending ? <Loader2 className="size-3.5 animate-spin" /> : <MapPin className="size-3.5" />}
-                Verify
-              </button>
-            </div>
-          </Field>
-          <Field label="Jurisdiction">
-            <JurisdictionAutocomplete value={jurisdiction} onChange={(v) => { setJurisdiction(v); setGeocodeVerified(false); }} placeholder="Cuyahoga County, OH" />
-            {geocodeVerified && (
-              <span className="mt-1 inline-flex items-center gap-1 text-xs font-medium text-emerald-600">
-                <CheckCircle2 className="size-3.5" /> Verified via geocoding
-              </span>
-            )}
-          </Field>
-          <Field label="Project type">
-            <ProjectTypeSelector
-              mode="single"
-              value={{ primaryId: primaryTypeId }}
-              onChange={(v) => {
-                setPrimaryTypeId(v.primaryId ?? null);
-                const t = v.primaryId ? byId.get(v.primaryId) : null;
-                if (t) setProjectType(t.client_label);
-              }}
-              label=""
-              helperText=""
-            />
-          </Field>
-
-          <Field label="Estimated permit count">
-            <input type="number" min={1} max={20} value={permitCount}
-              onChange={(e) => setPermitCount(parseInt(e.target.value) || 1)}
-              className="h-11 rounded-lg border border-input bg-card px-3 text-sm outline-none focus:border-primary" />
-          </Field>
-
-          <button type="submit" disabled={mut.isPending}
-            className="mt-3 inline-flex h-11 items-center justify-center rounded-full bg-primary text-sm font-semibold text-primary-foreground shadow-[0_10px_40px_-8px_oklch(0.66_0.19_258/0.6)] disabled:opacity-50">
-            {mut.isPending ? "Creating…" : "Create project"}
-          </button>
-        </form>
-      </div>
-    </div>
-  );
-}
-
-function Field({ label, children }: { label: string; children: React.ReactNode }) {
-  return (
-    <label className="flex flex-col gap-1.5">
-      <span className="font-mono text-[10px] uppercase tracking-widest text-muted-foreground">{label}</span>
-      {children}
-    </label>
-  );
 }
