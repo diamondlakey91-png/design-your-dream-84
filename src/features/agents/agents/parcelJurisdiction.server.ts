@@ -112,10 +112,10 @@ const rawSchema = agentOutputSchema
     overlays_and_districts: z.array(overlaySchema).default([]),
   });
 
-export type AddressNormalization = z.infer<typeof addressNormalizationSchema>;
-export type ParcelRecord = z.infer<typeof parcelSchema>;
-export type JurisdictionMatrixRow = z.infer<typeof matrixRowSchema>;
-export type OverlayRecord = z.infer<typeof overlaySchema>;
+export type AddressNormalization = z.output<typeof addressNormalizationSchema>;
+export type ParcelRecord = z.output<typeof parcelSchema>;
+export type JurisdictionMatrixRow = z.output<typeof matrixRowSchema>;
+export type OverlayRecord = z.output<typeof overlaySchema>;
 
 export type ParcelJurisdictionResult = {
   output: AgentOutput;
@@ -301,9 +301,10 @@ export async function runParcelJurisdictionAgent(input: {
 
   assertNoLicensureClaim(parcelJurisdictionSystemPrompt);
 
-  let raw: z.infer<typeof rawSchema>;
+  type Raw = z.output<typeof rawSchema>;
+  let raw: Raw;
   try {
-    raw = await callGeminiJSON(prompt, parcelJurisdictionSystemPrompt, rawSchema, {
+    raw = await callGeminiJSON(prompt, parcelJurisdictionSystemPrompt, rawSchema as unknown as z.ZodType<Raw>, {
       model: def.model.id,
       max_tokens: def.model.maxOutputTokens ?? 12000,
     });
