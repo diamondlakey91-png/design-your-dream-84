@@ -358,20 +358,25 @@ CACHED JURISDICTION PROFILE: ${prof ? JSON.stringify(prof).slice(0, 2200) : "non
 OFFICIAL RESEARCH EXCERPTS (cite these URLs; do not cite anything not listed):
 ${research.slice(0, 14000) || "(no research retrieved — mark jurisdiction-specific items needs_agency_confirmation)"}
 
-Write all 25 report sections, in this order, using these exact keys:
+Write ONLY these report sections (the active investigation modules), in this order, using these exact keys:
 ${sectionList}
 
 findings.category must be one of: ${catList}
+risks.category must be one of: ${riskList}. Only include risk categories relevant to this project.
 
 RULES:
 - Never state a zoning determination as final. Zoning conclusions are "likely_permitted", "conditional", "potentially_not_permitted", or "needs_confirmation".
 - ${UTILITY_CAPACITY_CAVEAT} Always say so in the utility section.
 - Never say "code compliant", "guaranteed feasible", "plans approved", or "engineering approved".
-- Never invent a parcel number, zoning district, flood zone, setback, or ordinance section. If unknown, state that it requires confirmation.
-- Every finding and permit needs a verification level: verified (backed by a cited official source), ai_assisted, or needs_agency_confirmation.
-- Timelines are estimates only; label them as such.
+- Never invent a parcel number, zoning district, flood zone, setback, wetland determination, utility capacity, fee, contact or ordinance section. If unknown, state that it requires confirmation.
+- Every finding, permit and risk needs a verification level: verified (backed by a cited official source), ai_assisted, or needs_agency_confirmation.
+- Timelines are estimates only, project-specific, and must reflect this project's actual approvals — never a generic 30-90 day range.
+- Write plain-language first: what it means, why it matters, what to do next. Technical detail goes after the plain explanation.
+- deal_killers: only include items with meaningful supporting evidence. If none, return an empty array.
+- due_diligence: prioritize each item as before_purchase, before_lease, before_design, before_permit or before_construction.
+- If multiple parcels are listed, note differences per parcel in parcel_notes and flag differing zoning.
 
-Return JSON: { "executive_summary": "", "feasibility_rating": "green|yellow|orange|red|gray", "feasibility_rationale": "", "property_info": {}, "sections": [{"key":"","title":"","body":"","bullets":[]}], "findings": [...], "permits": [...], "timeline": [{"phase":"","duration":"","depends_on":"","notes":""}], "assumptions": [], "outstanding_questions": [], "recommended_next_steps": [], "sources": [{"url":"","title":""}] }`,
+Return JSON: { "executive_summary": "", "feasibility_rating": "green|yellow|orange|red|gray", "feasibility_rationale": "", "property_info": {}, "sections": [{"key":"","title":"","body":"","bullets":[]}], "findings": [...], "permits": [...], "timeline": [{"phase":"","duration":"","depends_on":"","notes":"","concurrent":false,"critical_path":false,"long_lead":false}], "feasibility_snapshot": {"overall":"","proposed_project":"","property":"","jurisdiction":"","zoning_result":"","use_feasibility":"","major_approvals":"","primary_risk":"","critical_path":"","estimated_approval_range":"","recommended_next_step":""}, "risks": [...], "deal_killers": [...], "due_diligence": [...], "parcel_notes": [...], "assumptions": [], "outstanding_questions": [], "recommended_next_steps": [], "sources": [{"url":"","title":""}] }`,
         "You are a land development consultant, permit expediter and GIS/property intelligence analyst. You never fabricate GIS data, parcel boundaries, zoning classifications, or ordinance citations, and you never present your analysis as a jurisdiction determination, survey, engineering opinion, or legal advice.",
         SiSchema,
         { model: SI_MODEL, max_tokens: 12000 },
