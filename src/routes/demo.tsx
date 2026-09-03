@@ -525,7 +525,7 @@ function DemoVideo({ videoRef, muted }: { videoRef: React.RefObject<HTMLVideoEle
   useEffect(() => {
     let alive = true;
     fetch("/demo/permivio-demo.mp4", { method: "HEAD" })
-      .then((r) => alive && setAvailable(r.ok))
+      .then((r) => alive && setAvailable(r.ok && (r.headers.get("content-type") ?? "").startsWith("video")))
       .catch(() => alive && setAvailable(false));
     return () => {
       alive = false;
