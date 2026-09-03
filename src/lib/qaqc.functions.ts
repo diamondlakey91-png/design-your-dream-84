@@ -290,7 +290,7 @@ export const createQaSignoff = createServerFn({ method: "POST" })
       .single();
     if (error) throw new Error(error.message);
 
-    await context.supabase.from("project_activity").insert({
+    await context.supabase.from("activity").insert({
       project_id: data.project_id,
       user_id: context.userId,
       description: `QA/QC ${data.scope.replace(/_/g, " ")} sign-off by ${data.signed_by_name.trim()}${data.overridden ? " (override)" : ""}`,
