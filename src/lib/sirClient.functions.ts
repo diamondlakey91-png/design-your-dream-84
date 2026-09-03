@@ -23,6 +23,8 @@ const briefSchema = z.object({
   existingBuilding: z.enum(["yes", "no", "unknown"]).optional(),
   targetDate: z.string().trim().max(80).optional().or(z.literal("")),
   notes: z.string().trim().max(4000).optional().or(z.literal("")),
+  /** Which Permivio product this brief produces. */
+  kind: z.enum(["sir", "feasibility"]).default("sir"),
 });
 
 export type SirBriefInput = z.infer<typeof briefSchema>;
@@ -49,8 +51,10 @@ export const submitSirBrief = createServerFn({ method: "POST" })
         existing_building: data.existingBuilding || null,
         target_date: data.targetDate || null,
         notes: data.notes || null,
+        report_kind: data.kind,
+        report_needed: data.kind === "feasibility" ? "Project Feasibility Report" : "Site Investigation Report",
         research_status: "queued",
-      })
+      } as never)
       .select("id")
       .maybeSingle();
     if (error || !row) throw new Error(error?.message ?? "Could not submit your brief. Please try again.");
@@ -73,20 +77,22 @@ export const submitSirBrief = createServerFn({ method: "POST" })
   });
 
 const PROGRESS_COLUMNS =
-  "id, created_at, name, company, jurisdiction, site_address, intended_use, approx_size, target_date, research_status, research_error, researched_at, resolved_jurisdiction, research_audit, qa_status, review_stage, review_status, reviewer_name, reviewer_credential, reviewed_at, released_to_client_at";
+  "id, created_at, report_kind, name, company, jurisdiction, site_address, intended_use, approx_size, target_date, research_status, research_error, researched_at, resolved_jurisdiction, research_audit, qa_status, review_stage, review_status, reviewer_name, reviewer_credential, reviewed_at, released_to_client_at";
 
 /** Client: every brief the caller has submitted, newest first. */
 export const listMySirBriefs = createServerFn({ method: "GET" })
   .middleware([requireSupabaseAuth])
-  .handler(async ({ context }) => {
-    const { data, error } = await context.supabase
+  .inputValidator((d: unknown) => z.object({ kind: z.enum(["sir", "feasibility"]).default("sir") }).parse(d ?? {}))
+  .handler(async ({ data, context }) => {
+    const { data: rows, error } = await context.supabase
       .from("sir_requests")
       .select(PROGRESS_COLUMNS)
       .eq("client_user_id", context.userId)
+      .eq("report_kind", data.kind)
       .order("created_at", { ascending: false })
       .limit(100);
     if (error) throw new Error(error.message);
-    return data ?? [];
+    return rows ?? [];
   });
 
 /**
@@ -109,6 +115,7 @@ export const getMySirBrief = createServerFn({ method: "GET" })
     const released = Boolean(row.released_to_client_at);
     return {
       released,
+      kind: (row as { report_kind?: string }).report_kind ?? "sir",
       brief: {
         id: row.id,
         created_at: row.created_at,
