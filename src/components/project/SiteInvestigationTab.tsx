@@ -144,6 +144,7 @@ export function SiteInvestigationTab({
   // eslint-disable-next-line @typescript-eslint/no-explicit-any
   const d = inv.data as any;
   const rating = d?.investigation ? ratingMeta(d.investigation.feasibility_rating) : null;
+  const isComplete = d?.investigation?.status === "complete";
 
   return (
     <div className="space-y-6">
@@ -289,16 +290,18 @@ export function SiteInvestigationTab({
                 <button
                   onClick={() => exportPdf.mutate(false)}
                   disabled={exportPdf.isPending}
+                  title="Download the full internal report, including working notes"
                   className="inline-flex items-center gap-1.5 rounded-lg border border-border px-2.5 py-1.5 text-[11px] font-mono uppercase tracking-wider hover:border-brand hover:text-brand disabled:opacity-50"
                 >
-                  <FileDown className="size-3.5" /> Report PDF
+                  <FileDown className="size-3.5" /> {exportPdf.isPending ? "Preparing…" : "Report PDF"}
                 </button>
                 <button
                   onClick={() => exportPdf.mutate(true)}
                   disabled={exportPdf.isPending}
+                  title="Download the client-ready report PDF"
                   className="inline-flex items-center gap-1.5 rounded-lg border border-border px-2.5 py-1.5 text-[11px] font-mono uppercase tracking-wider hover:border-brand hover:text-brand disabled:opacity-50"
                 >
-                  <FileDown className="size-3.5" /> Client-ready PDF
+                  <FileDown className="size-3.5" /> {exportPdf.isPending ? "Preparing…" : "Client-ready PDF"}
                 </button>
                 <button
                   onClick={() => remove.mutate(d.investigation.id)}
@@ -309,6 +312,45 @@ export function SiteInvestigationTab({
               </div>
             </div>
           </div>
+
+          {isComplete ? (
+            <div className="rounded-xl border border-brand/40 bg-brand/5 p-4">
+              <div className="flex flex-wrap items-center justify-between gap-3">
+                <div>
+                  <p className="text-[11px] font-mono uppercase tracking-wider text-brand">Report complete</p>
+                  <p className="mt-1 text-sm font-medium">
+                    Site Investigation &amp; Feasibility Report {d.investigation.report_number ?? ""} is ready to download.
+                  </p>
+                  <p className="mt-1 text-xs text-muted-foreground">
+                    Client-ready PDF omits internal working notes. Findings remain research and analysis — not a jurisdiction
+                    determination, survey, or engineering opinion.
+                  </p>
+                </div>
+                <div className="flex flex-wrap gap-2">
+                  <button
+                    onClick={() => exportPdf.mutate(true)}
+                    disabled={exportPdf.isPending}
+                    className="inline-flex items-center gap-1.5 rounded-lg bg-brand px-3 py-2 text-[11px] font-mono uppercase tracking-wider text-brand-foreground hover:bg-brand/90 disabled:opacity-50"
+                  >
+                    <FileDown className="size-3.5" /> {exportPdf.isPending ? "Preparing PDF…" : "Download report PDF"}
+                  </button>
+                  <button
+                    onClick={() => exportPdf.mutate(false)}
+                    disabled={exportPdf.isPending}
+                    className="inline-flex items-center gap-1.5 rounded-lg border border-border px-3 py-2 text-[11px] font-mono uppercase tracking-wider hover:border-brand hover:text-brand disabled:opacity-50"
+                  >
+                    <FileDown className="size-3.5" /> Internal version
+                  </button>
+                </div>
+              </div>
+            </div>
+          ) : (
+            <p className="rounded-xl border border-border bg-card/40 p-3 text-xs text-muted-foreground">
+              This report is still <span className="font-medium">{String(d.investigation.status).replace(/_/g, " ")}</span>. The
+              downloadable PDF will reflect a draft until research is complete.
+            </p>
+          )}
+
 
           {d.investigation.executive_summary && (
             <div className="rounded-xl border border-border bg-card/60 p-4">
