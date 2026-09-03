@@ -169,8 +169,6 @@ function FilingPage() {
             </span>}
             subtitle="Multi-jurisdiction filing workspace: pre-flight checks, a required human approval step, manual portal submission with a deep link, and status monitoring with a named source."
           />
-          <div className="min-w-0">
-          </div>
           <div className="flex flex-wrap items-center gap-2">
             <button
               onClick={() => q.refetch()}
