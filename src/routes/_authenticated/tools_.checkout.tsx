@@ -84,7 +84,27 @@ function CheckoutPage() {
 
 
 
+  const requestScope = async () => {
+    if (!product) return;
+    setBusy(true);
+    setError(null);
+    try {
+      await askForScope({
+        data: {
+          projectId: projectId || null,
+          notes: `Custom scope requested for ${product.client_title}${notes ? ` — ${notes}` : ""}`,
+        },
+      });
+      setQuoteRequested(true);
+    } catch {
+      setError("We couldn't send your scope request. Please try again.");
+    } finally {
+      setBusy(false);
+    }
+  };
+
   const startPayment = async () => {
+
     if (!product) return;
     setBusy(true);
     setError(null);
