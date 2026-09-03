@@ -31,8 +31,10 @@ export function ClientSirReport({
   sources,
   findingReviews,
   reviewer,
+  title = "Site Investigation Report",
 }: {
   research: unknown;
+  title?: string;
   sources: Array<{ title?: string | null; url: string }> | null;
   findingReviews: SirFindingReviews | null;
   reviewer: { name?: string | null; credential?: string | null; summary?: string | null; reviewed_at?: string | null };
@@ -41,12 +43,13 @@ export function ClientSirReport({
   const snapshot = useMemo(() => buildSirSnapshot(research), [research]);
   const matrix = useMemo(() => buildSirRiskMatrix(research), [research]);
   const reviews = findingReviews ?? {};
+  const verdict = (research as { feasibility?: { rating: string; recommendation: string; rationale: string; deal_killers?: Array<{ title: string; why: string; verification: string }>; conditions_to_proceed?: string[]; cost_schedule_exposure?: string[] } } | null)?.feasibility;
 
   return (
     <div className="grid gap-4">
       <div className="rounded-xl border border-green-500/25 bg-green-500/[0.06] p-4">
         <div className="flex flex-wrap items-center gap-2">
-          <h3 className="text-sm font-semibold text-white">Site Investigation Report</h3>
+          <h3 className="text-sm font-semibold text-white">{title}</h3>
           <span className="inline-flex items-center gap-1 rounded-full border border-green-500/30 bg-green-500/10 px-2 py-0.5 text-[11px] font-semibold tracking-wide text-green-300">
             <BadgeCheck className="size-3" /> PROFESSIONALLY REVIEWED
           </span>
