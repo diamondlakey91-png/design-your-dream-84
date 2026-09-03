@@ -35,6 +35,15 @@ export function ClientDashboard({ onCreateProject }: { onCreateProject: () => vo
     currency: string;
     turnaround_estimate: string | null;
   }>;
+  const orders = (q.data?.orders ?? []) as Array<{
+    id: string;
+    product_title: string;
+    order_status: string;
+    delivery_tier: string;
+    total_price_cents: number | null;
+    currency: string | null;
+    created_at: string;
+  }>;
 
   const model = useMemo(() => {
     const d = q.data;
