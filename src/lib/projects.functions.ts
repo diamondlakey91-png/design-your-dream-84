@@ -176,12 +176,23 @@ export const deleteProject = createServerFn({ method: "POST" })
   .middleware([requireSupabaseAuth])
   .inputValidator((input: unknown) => z.object({ id: z.string().uuid() }).parse(input))
   .handler(async ({ data, context }) => {
-    // Verify ownership
+    // Only the project owner or an organization administrator may delete the record
     const { data: proj, error: pErr } = await context.supabase
-      .from("projects").select("id, user_id, name").eq("id", data.id).maybeSingle();
+      .from("projects").select("id, user_id, name, organization_id").eq("id", data.id).maybeSingle();
     if (pErr) throw new Error(pErr.message);
     if (!proj) throw new Error("Project not found");
-    if (proj.user_id !== context.userId) throw new Error("Forbidden");
+    if (proj.user_id !== context.userId) {
+      const { data: admin } = proj.organization_id
+        ? await context.supabase
+            .from("organization_members")
+            .select("role")
+            .eq("organization_id", proj.organization_id)
+            .eq("user_id", context.userId)
+            .eq("role", "org_admin")
+            .limit(1)
+        : { data: [] as { role: string }[] };
+      if (!admin || admin.length === 0) throw new Error("Forbidden");
+    }
 
     // Delete related rows first (in case FKs don't cascade)
     const tables = [
