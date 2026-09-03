@@ -5,6 +5,7 @@ import { useServerFn } from "@tanstack/react-start";
 import { ArrowRight, CheckCircle2, Loader2, MapPinned, Plus, Sparkles } from "lucide-react";
 import { format, isToday, isYesterday, parseISO } from "date-fns";
 import { getClientDashboard } from "@/lib/clientDashboard.functions";
+import { money } from "@/lib/toolsCatalog";
 import { ClientAttentionList } from "@/components/client/ClientAttentionList";
 import { ClientProjectCard } from "@/components/client/ClientProjectCard";
 import {
@@ -26,6 +27,14 @@ export function ClientDashboard({ onCreateProject }: { onCreateProject: () => vo
   const fn = useServerFn(getClientDashboard);
   const q = useQuery({ queryKey: ["client-dashboard"], queryFn: () => fn() });
   const clientName = firstName(q.data?.profile?.full_name ?? null);
+  const featured = (q.data?.featuredProducts ?? []) as Array<{
+    id: string;
+    client_title: string;
+    client_question: string | null;
+    base_price_cents: number;
+    currency: string;
+    turnaround_estimate: string | null;
+  }>;
 
   const model = useMemo(() => {
     const d = q.data;
@@ -143,10 +152,27 @@ export function ClientDashboard({ onCreateProject }: { onCreateProject: () => vo
         <div className="rounded-3xl border border-border bg-card p-5 sm:p-6">
           <h2 id="tools-reports" className="text-base font-semibold text-foreground">Tools &amp; Reports</h2>
           <p className="mt-2 max-w-2xl text-sm text-muted-foreground">
-            Need just one thing? Buy a single report — site feasibility, permit requirements, plan quality control and
-            more — and keep it saved to your project. You can add a professional review or hand the whole project to
-            Permivio at any time.
+            Need just one thing? Buy a single report and keep it saved to your project. You can add a professional
+            review or hand the whole project to Permivio at any time.
           </p>
+          {featured.length > 0 && (
+            <ul className="mt-4 grid gap-3 sm:grid-cols-2">
+              {featured.map((p) => (
+                <li key={p.id} className="rounded-2xl border border-border bg-background/40 p-4">
+                  <p className="text-sm font-semibold text-foreground">{p.client_title}</p>
+                  {p.client_question && (
+                    <p className="mt-1 text-xs text-muted-foreground">{p.client_question}</p>
+                  )}
+                  <p className="mt-2 text-xs text-muted-foreground">
+                    <span className="font-semibold text-primary">
+                      From {money(p.base_price_cents, p.currency)}
+                    </span>
+                    {p.turnaround_estimate ? ` · ${p.turnaround_estimate}` : ""}
+                  </p>
+                </li>
+              ))}
+            </ul>
+          )}
           <Link
             to="/tools"
             className="mt-4 inline-flex items-center rounded-full bg-primary px-4 py-2 text-sm font-semibold text-primary-foreground transition-colors hover:bg-primary/90"

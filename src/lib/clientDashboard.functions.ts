@@ -12,7 +12,7 @@ import { z } from "zod";
 export const getClientDashboard = createServerFn({ method: "GET" })
   .middleware([requireSupabaseAuth])
   .handler(async ({ context }) => {
-    const [profile, projects, items, deadlines, inspections, docs, activity] = await Promise.all([
+    const [profile, projects, items, deadlines, inspections, docs, activity, featured] = await Promise.all([
       context.supabase
         .from("user_settings")
         .select("full_name,company")
@@ -33,6 +33,14 @@ export const getClientDashboard = createServerFn({ method: "GET" })
         .select("id,project_id,description,created_at")
         .order("created_at", { ascending: false })
         .limit(40),
+      // Featured client-facing reports for the Tools & Reports card. Pricing and
+      // turnaround always come from the configured product records.
+      context.supabase
+        .from("service_products")
+        .select("id,product_key,client_title,client_question,base_price_cents,currency,turnaround_estimate")
+        .eq("active", true)
+        .eq("category", "feasibility")
+        .order("display_order"),
     ]);
 
     const firstError = [projects.error, items.error, deadlines.error, inspections.error, docs.error, activity.error].find(Boolean);
@@ -46,6 +54,7 @@ export const getClientDashboard = createServerFn({ method: "GET" })
       inspections: inspections.data ?? [],
       documents: docs.data ?? [],
       activity: activity.data ?? [],
+      featuredProducts: featured.data ?? [],
     };
   });
 
