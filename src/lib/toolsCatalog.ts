@@ -102,7 +102,7 @@ export function recommendFor(
   signals: { documentCount: number; hasComments: boolean; purchasedKeys: Set<string> },
 ): Recommendation {
   if (signals.purchasedKeys.has(product.product_key)) return "completed";
-  if (!project) return product.product_key === "site_investigation" ? "recommended" : "available";
+  if (!project) return product.product_key === "project_feasibility" ? "recommended" : "available";
 
   const stage = project.current_stage ?? 0;
   const s = (project.status ?? "").toLowerCase();
@@ -110,6 +110,10 @@ export function recommendFor(
 
   switch (product.product_key) {
     case "site_investigation":
+    case "property_snapshot":
+    case "project_feasibility":
+    case "development_due_diligence":
+    case "major_development_study":
     case "jurisdiction_research":
     case "utility_due_diligence":
       return stage <= 1 ? "recommended" : "available";
