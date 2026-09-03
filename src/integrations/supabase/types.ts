@@ -3229,6 +3229,7 @@ export type Database = {
           created_at: string
           email: string
           existing_building: string | null
+          finding_reviews: Json
           id: string
           intended_use: string
           jurisdiction: string
@@ -3245,6 +3246,12 @@ export type Database = {
           research_status: string
           researched_at: string | null
           resolved_jurisdiction: Json | null
+          review_status: string
+          reviewed_at: string | null
+          reviewed_by: string | null
+          reviewer_credential: string | null
+          reviewer_name: string | null
+          reviewer_summary: string | null
           role: string | null
           site_address: string | null
           status: string
@@ -3256,6 +3263,7 @@ export type Database = {
           created_at?: string
           email: string
           existing_building?: string | null
+          finding_reviews?: Json
           id?: string
           intended_use: string
           jurisdiction: string
@@ -3272,6 +3280,12 @@ export type Database = {
           research_status?: string
           researched_at?: string | null
           resolved_jurisdiction?: Json | null
+          review_status?: string
+          reviewed_at?: string | null
+          reviewed_by?: string | null
+          reviewer_credential?: string | null
+          reviewer_name?: string | null
+          reviewer_summary?: string | null
           role?: string | null
           site_address?: string | null
           status?: string
@@ -3283,6 +3297,7 @@ export type Database = {
           created_at?: string
           email?: string
           existing_building?: string | null
+          finding_reviews?: Json
           id?: string
           intended_use?: string
           jurisdiction?: string
@@ -3299,6 +3314,12 @@ export type Database = {
           research_status?: string
           researched_at?: string | null
           resolved_jurisdiction?: Json | null
+          review_status?: string
+          reviewed_at?: string | null
+          reviewed_by?: string | null
+          reviewer_credential?: string | null
+          reviewer_name?: string | null
+          reviewer_summary?: string | null
           role?: string | null
           site_address?: string | null
           status?: string
