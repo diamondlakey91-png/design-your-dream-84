@@ -91,7 +91,7 @@ type CheckoutSession = {
  * Fulfilment for one-off Tools & Reports purchases. The order is only marked
  * paid — and the entitlement granted — here, after Stripe signature verification.
  */
-async function handleServiceCheckoutCompleted(session: CheckoutSession, env: StripeEnv) {
+async function handleServiceCheckoutCompleted(session: CheckoutSession) {
   const orderId = session.metadata?.orderId;
   const userId = session.metadata?.userId;
   if (session.metadata?.kind !== "service_order" || !orderId || !userId) return;
@@ -111,7 +111,6 @@ async function handleServiceCheckoutCompleted(session: CheckoutSession, env: Str
     .update({
       status: "processing",
       stripe_payment_intent_id: typeof session.payment_intent === "string" ? session.payment_intent : null,
-      paid_at: new Date().toISOString(),
       updated_at: new Date().toISOString(),
     })
     .eq("id", orderId);
@@ -124,7 +123,6 @@ async function handleServiceCheckoutCompleted(session: CheckoutSession, env: Str
     entitlement_type: "purchase",
     entitlement_status: "active",
     delivery_tier: order.delivery_tier,
-    environment: env,
   });
 
   if (order.project_id) {
@@ -141,7 +139,7 @@ async function handleWebhook(req: Request, env: StripeEnv) {
   switch (event.type) {
     case "checkout.session.completed":
     case "checkout.session.async_payment_succeeded":
-      await handleServiceCheckoutCompleted(event.data.object as CheckoutSession, env); break;
+      await handleServiceCheckoutCompleted(event.data.object as CheckoutSession); break;
     case "customer.subscription.created":
       await handleSubscriptionCreated(event.data.object as Sub, env); break;
     case "customer.subscription.updated":
