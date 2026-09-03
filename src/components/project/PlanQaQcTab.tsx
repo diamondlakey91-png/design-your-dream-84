@@ -60,6 +60,31 @@ export function PlanQaQcTab({ projectId, userId }: { projectId: string; userId: 
     (d) => d.mime_type === "application/pdf" || (d.mime_type ?? "").startsWith("image/") || d.name.toLowerCase().endsWith(".pdf"),
   );
 
+  const onUploadPlans = async (files: FileList) => {
+    setUploading(true);
+    const added: string[] = [];
+    try {
+      for (const file of Array.from(files)) {
+        const path = `${userId}/${projectId}/${Date.now()}-${file.name.replace(/[^\w.-]/g, "_")}`;
+        const { error } = await supabase.storage.from("project-docs").upload(path, file, { upsert: false });
+        if (error) throw error;
+        const doc = await registerFn({
+          data: { project_id: projectId, name: file.name, storage_path: path, mime_type: file.type, size_bytes: file.size },
+        });
+        const id = (doc as { id?: string } | null)?.id;
+        if (id) added.push(id);
+      }
+      await qc.invalidateQueries({ queryKey: ["docs", projectId] });
+      setSelected((prev) => [...prev, ...added].slice(0, 8));
+      toast.success(`${added.length} plan file(s) uploaded and selected`);
+    } catch (e) {
+      toast.error(e instanceof Error ? e.message : "Upload failed");
+    } finally {
+      setUploading(false);
+      if (fileRef.current) fileRef.current.value = "";
+    }
+  };
+
   const run = useMutation({
     mutationFn: () => runFn({ data: { project_id: projectId, document_ids: selected, revision_label: revision || "Rev A" } }),
     onSuccess: (res) => {
