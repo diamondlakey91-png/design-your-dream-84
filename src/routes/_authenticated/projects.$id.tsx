@@ -23,13 +23,16 @@ import { TimelineTab } from "@/components/project/TimelineTab";
 import { ScopeTab } from "@/components/project/ScopeTab";
 import { ResponseMatrixTab } from "@/components/project/ResponseMatrixTab";
 import { QaQcTab } from "@/components/project/QaQcTab";
+import { PlanQaQcTab } from "@/components/project/PlanQaQcTab";
+import { SiteInvestigationTab } from "@/components/project/SiteInvestigationTab";
 
 export const Route = createFileRoute("/_authenticated/projects/$id")({
   head: () => ({ meta: [{ title: "Project — Permivio" }, { name: "robots", content: "noindex" }] }),
   component: ProjectDetail,
 });
 
-type Tab = "overview" | "scope" | "checklist" | "docs" | "qaqc" | "responses" | "deadlines" | "inspections" | "timeline";
+type Tab = "overview" | "scope" | "site" | "checklist" | "docs" | "planqaqc" | "qaqc" | "responses" | "deadlines" | "inspections" | "timeline";
+
 
 function ProjectDetail() {
   const { id } = Route.useParams();
