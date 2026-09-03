@@ -1,4 +1,5 @@
 import { createFileRoute, Link, useNavigate } from "@tanstack/react-router";
+import { PermivioPageHeader } from "@/components/PermivioPageHeader";
 import { useMutation, useQuery, useQueryClient } from "@tanstack/react-query";
 import { useServerFn } from "@tanstack/react-start";
 import { listThreads, createThread, deleteThread } from "@/lib/chat.functions";
@@ -42,18 +43,20 @@ function AssistantIndex() {
   return (
     <div className="min-h-dvh bg-zinc-950 text-zinc-100">
       <div className="mx-auto max-w-2xl">
-        <header className="px-6 py-4 border-b border-white/5 flex items-center justify-between">
-          <Link to="/dashboard" className="inline-flex items-center gap-1.5 text-sm text-zinc-400 hover:text-white">
-            <ArrowLeft className="size-4" /> Back
-          </Link>
-          <span className="font-medium">Permit Assistant</span>
-          <button
+        <header className="px-6 py-4 border-b border-white/5">
+          <PermivioPageHeader
+            backTo="/dashboard"
+            eyebrow="AI Permit Assistant"
+            title="Permit Assistant"
+            subtitle="Ask jurisdiction-specific permit questions and get checklists tied to your projects."
+            actions={<button
             onClick={() => create.mutate(null)}
             disabled={create.isPending}
             className="inline-flex items-center gap-1.5 rounded-lg bg-brand text-brand-foreground px-3 py-1.5 text-sm font-medium disabled:opacity-50"
           >
             <Plus className="size-4" /> New chat
-          </button>
+          </button>}
+          />
         </header>
 
         <div className="p-6 space-y-6">
