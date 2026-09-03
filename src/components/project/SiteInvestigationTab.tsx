@@ -144,6 +144,7 @@ export function SiteInvestigationTab({
   // eslint-disable-next-line @typescript-eslint/no-explicit-any
   const d = inv.data as any;
   const rating = d?.investigation ? ratingMeta(d.investigation.feasibility_rating) : null;
+  const isComplete = d?.investigation?.status === "complete";
 
   return (
     <div className="space-y-6">
