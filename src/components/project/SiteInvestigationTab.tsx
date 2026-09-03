@@ -241,13 +241,13 @@ export function SiteInvestigationTab({
           <div className="space-y-3">
             <p className="text-[11px] font-mono uppercase tracking-wider text-muted-foreground">Findings by category</p>
             {SI_FINDING_CATEGORIES.map((cat) => {
-              const rows = d.findings.filter((f) => f.category === cat.id);
+              const rows = d.findings.filter((f: Record<string, string>) => f['category'] === cat.id);
               if (!rows.length) return null;
               return (
                 <div key={cat.id} className="rounded-xl border border-border bg-card/60 p-4">
                   <p className="text-sm font-semibold">{cat.label}</p>
                   <ul className="mt-2 space-y-2 text-xs">
-                    {rows.map((f) => {
+                    {rows.map((f: Record<string, string>) => {
                       const cm = classificationMeta(f.classification);
                       return (
                         <li key={f.id} className="border-l-2 border-border pl-3">
@@ -279,7 +279,7 @@ export function SiteInvestigationTab({
             <div className="rounded-xl border border-border bg-card/60 p-4">
               <p className="text-[11px] font-mono uppercase tracking-wider text-muted-foreground">Required permits & approvals (estimated sequence)</p>
               <ol className="mt-2 space-y-2 text-xs">
-                {d.permits.map((p, i) => (
+                {d.permits.map((p: Record<string, unknown>, i: number) => (
                   <li key={p.id} className="border-l-2 border-border pl-3">
                     <p className="text-sm font-medium">
                       {i + 1}. {p.approval}
