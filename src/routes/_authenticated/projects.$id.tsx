@@ -31,7 +31,7 @@ import { ViewModeToggle } from "@/components/client/ViewModeToggle";
 import { ClientProjectView } from "@/components/client/ClientProjectView";
 import type { ClientProjectInput } from "@/lib/clientView";
 
-const TABS = ["overview", "scope", "site", "checklist", "docs", "planqaqc", "qaqc", "responses", "deadlines", "inspections", "timeline"] as const;
+const TABS = ["overview", "intelligence", "scope", "site", "checklist", "docs", "planqaqc", "qaqc", "responses", "deadlines", "inspections", "timeline"] as const;
 
 export const Route = createFileRoute("/_authenticated/projects/$id")({
   validateSearch: (search: Record<string, unknown>): { tab?: Tab } =>
