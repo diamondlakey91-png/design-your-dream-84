@@ -27,6 +27,7 @@ import {
   Wrench,
   X,
   MapPinned,
+  Scale,
 } from "lucide-react";
 import { supabase } from "@/integrations/supabase/client";
 import { PermivioLogo } from "@/components/PermivioMark";
@@ -80,6 +81,13 @@ const TOOLS_CLIENT: NavLink[] = [
     icon: MapPinned,
     description: "Submit a brief, track research, download the report",
   },
+  {
+    to: "/feasibility",
+    label: "Project Feasibility",
+    icon: Scale,
+    description: "Go / no-go verdict, deal-killers, conditions to proceed",
+  },
+
   {
     to: "/plan-qaqc",
     label: "Plan QA/QC Report",

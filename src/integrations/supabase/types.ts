@@ -4737,6 +4737,7 @@ export type Database = {
           qa_report: Json | null
           qa_status: string
           released_to_client_at: string | null
+          report_kind: string
           report_needed: string | null
           research: Json | null
           research_audit: Json | null
@@ -4780,6 +4781,7 @@ export type Database = {
           qa_report?: Json | null
           qa_status?: string
           released_to_client_at?: string | null
+          report_kind?: string
           report_needed?: string | null
           research?: Json | null
           research_audit?: Json | null
@@ -4823,6 +4825,7 @@ export type Database = {
           qa_report?: Json | null
           qa_status?: string
           released_to_client_at?: string | null
+          report_kind?: string
           report_needed?: string | null
           research?: Json | null
           research_audit?: Json | null

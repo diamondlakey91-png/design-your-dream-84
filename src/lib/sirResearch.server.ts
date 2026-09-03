@@ -131,6 +131,24 @@ export const ResearchSchema = z.object({
   open_questions: z.array(z.string().max(300)).max(15),
   recommended_next_steps: z.array(z.string().max(300)).max(12),
   sources: z.array(z.object({ url: z.string().max(500), title: z.string().max(300) })).max(30),
+  // Only produced for the Project Feasibility Report product: the go / no-go
+  // verdict the Feasibility & Decision agent derives from the same evidence.
+  feasibility: z
+    .object({
+      rating: looseEnum(["green", "yellow", "orange", "red", "gray"] as const, "gray"),
+      recommendation: looseEnum(
+        ["proceed", "proceed_with_conditions", "further_investigation_required", "high_risk", "not_recommended"] as const,
+        "further_investigation_required",
+      ),
+      rationale: z.string().max(1500),
+      deal_killers: z
+        .array(z.object({ title: z.string().max(200), why: z.string().max(600), verification: Verification }))
+        .max(10),
+      conditions_to_proceed: z.array(z.string().max(300)).max(12),
+      cost_schedule_exposure: z.array(z.string().max(300)).max(10),
+    })
+    .optional(),
+
 });
 
 export type SirResearch = z.infer<typeof ResearchSchema>;
@@ -272,6 +290,8 @@ export type SirRequestRow = {
   report_needed: string | null;
   target_date: string | null;
   notes: string | null;
+  /** Which product this brief produces; feasibility adds the go/no-go pass. */
+  report_kind?: string | null;
 };
 
 /** Full research pass for one request: jurisdiction → official sources → structured scope. */

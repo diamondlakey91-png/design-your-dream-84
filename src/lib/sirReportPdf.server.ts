@@ -77,7 +77,8 @@ const text = (s: string, opts: { size?: number; b?: boolean; color?: [number, nu
 const heading = (s: string) => { if (y < 120) newPage(); y -= 6; text(s, { size: 12, b: true, color: [0.05, 0.3, 0.75], gap: 6 }); };
 
 text("PERMIVIO", { size: 18, b: true, color: [0.05, 0.3, 0.75], gap: 2 });
-text("Site Investigation Report", { size: 14, b: true, gap: 6 });
+const feasibilityReport = r.report_kind === "feasibility";
+text(feasibilityReport ? "Project Feasibility Report" : "Site Investigation Report", { size: 14, b: true, gap: 6 });
 if (professionallyReviewed) {
   text("PROFESSIONALLY REVIEWED", { size: 11, b: true, color: [0.05, 0.45, 0.3], gap: 2 });
   text(`Reviewer: ${r.reviewer_name ?? ""}${r.reviewer_credential ? ` · ${r.reviewer_credential}` : ""} · ${new Date(r.reviewed_at).toLocaleDateString()}`, { size: 9, gap: 4 });
@@ -92,6 +93,30 @@ text(`Jurisdiction: ${r.jurisdiction}`);
 if (r.parcel_apn) text(`Parcel / APN: ${r.parcel_apn}`);
 text(`Intended use / scope: ${r.intended_use}`);
 text(`Prepared: ${new Date().toISOString().slice(0, 10)}`, { gap: 8 });
+
+const verdict = r.research?.feasibility as
+  | { rating: string; recommendation: string; rationale: string; deal_killers?: Array<{ title: string; why: string; verification: string }>; conditions_to_proceed?: string[]; cost_schedule_exposure?: string[] }
+  | undefined;
+if (verdict) {
+  heading("Feasibility verdict");
+  text(`Rating: ${verdict.rating.toUpperCase()} · Recommendation: ${verdict.recommendation.replace(/_/g, " ")}`, { b: true, gap: 2 });
+  text(verdict.rationale, { gap: 4 });
+  if (verdict.deal_killers?.length) {
+    text("Potential deal-killers", { b: true, gap: 1 });
+    for (const d of verdict.deal_killers) text(`- ${d.title} [${d.verification.replace(/_/g, " ")}]: ${d.why}`, { gap: 1 });
+    y -= 3;
+  }
+  if (verdict.conditions_to_proceed?.length) {
+    text("Conditions to proceed", { b: true, gap: 1 });
+    for (const c of verdict.conditions_to_proceed) text(`- ${c}`, { gap: 1 });
+    y -= 3;
+  }
+  if (verdict.cost_schedule_exposure?.length) {
+    text("Cost & schedule exposure", { b: true, gap: 1 });
+    for (const c of verdict.cost_schedule_exposure) text(`- ${c}`, { gap: 1 });
+    y -= 3;
+  }
+}
 
 heading("Executive feasibility snapshot");
 for (const s of snapshot) text(`${s.label}: ${s.value}`, { gap: 1 });
@@ -157,7 +182,7 @@ const bytes = await pdf.save();
 let bin = "";
 for (let k = 0; k < bytes.length; k += 0x8000) bin += String.fromCharCode(...bytes.subarray(k, k + 0x8000));
 return {
-  filename: `PERMIVIO-Site-Investigation-Report-${String(r.site_address || r.jurisdiction).replace(/[^A-Za-z0-9]+/g, "-").slice(0, 40)}.pdf`,
+  filename: `PERMIVIO-${feasibilityReport ? "Project-Feasibility-Report" : "Site-Investigation-Report"}-${String(r.site_address || r.jurisdiction).replace(/[^A-Za-z0-9]+/g, "-").slice(0, 40)}.pdf`,
   base64: btoa(bin),
 };
 

@@ -346,6 +346,18 @@ REPORT REQUESTED: ${row.report_needed ?? "not specified"} · TARGET MILESTONE: $
 CLIENT NOTES: ${row.notes ?? "none"}`;
 }
 
+const FeasibilitySchema = z.object({
+  rating: looseEnum(["green", "yellow", "orange", "red", "gray"] as const, "gray"),
+  recommendation: looseEnum(
+    ["proceed", "proceed_with_conditions", "further_investigation_required", "high_risk", "not_recommended"] as const,
+    "further_investigation_required",
+  ),
+  rationale: z.string(),
+  deal_killers: z.array(z.object({ title: z.string(), why: z.string(), verification: Verification })).default([]),
+  conditions_to_proceed: z.array(z.string()).default([]),
+  cost_schedule_exposure: z.array(z.string()).default([]),
+});
+
 /* -------------------------------------------------------------- orchestrator */
 
 /**
@@ -445,6 +457,11 @@ Open questions from the lead agent: ${plan.open_questions.join("; ") || "(none)"
     }
   };
 
+  // The Project Feasibility Report runs one additional specialist: the
+  // Feasibility & Decision agent that turns the researched constraints into a
+  // go / no-go verdict. It never overrides a jurisdiction determination.
+  const feasibilityMode = row.report_kind === "feasibility";
+
   const [landUse, permitPath, site, codesRes, accessRes, envRes, feeRes, decision] = await Promise.all([
     settle("land_use", "Jurisdiction, zoning & entitlements", () =>
       ask(
@@ -499,6 +516,29 @@ Open questions from the lead agent: ${plan.open_questions.join("; ") || "(none)"
       ),
     ),
   ]);
+
+  // 2b — Feasibility verdict pass (Feasibility Report product only). It runs
+  // after the specialists so it reasons over their actual findings.
+  let feasibility: z.input<typeof FeasibilitySchema> | null = null;
+  if (feasibilityMode) {
+    feasibility = await settle("feasibility_decision", "Feasibility & go / no-go decision", () =>
+      ask(
+        `You are the FEASIBILITY & DECISION AGENT.\n\n${facts}\n\n${assignment}\n\n${evidence}\n\nSPECIALIST FINDINGS TO REASON OVER:\nZoning: ${JSON.stringify(landUse?.zoning ?? null).slice(0, 1500)}\nEntitlements: ${JSON.stringify(landUse?.entitlements ?? []).slice(0, 1500)}\nPermits: ${JSON.stringify(permitPath?.permits ?? []).slice(0, 2000)}\nUtilities: ${JSON.stringify(site?.utilities ?? []).slice(0, 1200)}\nEnvironmental: ${JSON.stringify(envRes?.environmental ?? []).slice(0, 1500)}\nAccess: ${JSON.stringify(accessRes?.access ?? []).slice(0, 1200)}\nRisks: ${JSON.stringify(decision?.risks ?? []).slice(0, 1200)}\n\nProduce the feasibility verdict for THIS project on THIS site. Ratings: green = appears generally feasible on available information; yellow = feasible with meaningful issues to resolve; orange = major constraints or discretionary approvals appear likely; red = significant feasibility concerns identified; gray = insufficient verified information. Never state that a permit will be issued, that the project complies, or that utility capacity exists. A deal-killer is only listed when a researched constraint could prevent the intended use, and it carries its own verification level.\n\nReturn JSON: { "rating": "", "recommendation": "", "rationale": "", "deal_killers": [{"title":"","why":"","verification":""}], "conditions_to_proceed": [], "cost_schedule_exposure": [] }`,
+        FeasibilitySchema,
+        9000,
+      ),
+    );
+    if (feasibility) {
+      audit.agents.push({
+        agent: "feasibility_decision",
+        role: "Feasibility & go / no-go decision",
+        status: "complete",
+        items: (feasibility.deal_killers?.length ?? 0) + (feasibility.conditions_to_proceed?.length ?? 0),
+        cited: 0,
+        downgraded: 0,
+      });
+    }
+  }
 
   // 3 — Citation gate + audit tally per agent.
   let before = audit.citation_downgrades.length;
@@ -564,6 +604,11 @@ Open questions from the lead agent: ${plan.open_questions.join("; ") || "(none)"
         severity: (e.deal_killer ? "high" : "medium") as "high" | "medium",
         why: e.implication.slice(0, 600),
       })),
+    ...((feasibility?.deal_killers ?? []) as Array<{ title: string; why: string }>).map((d) => ({
+      title: `${d.title} (potential deal-killer)`.slice(0, 200),
+      severity: "high" as const,
+      why: d.why.slice(0, 600),
+    })),
     ...(site?.site_constraints ?? []).map((c) => ({ title: c.slice(0, 200), severity: "medium" as const, why: "Site constraint identified in agency records — confirm with the authority having jurisdiction." })),
   ];
   if (decision) {
@@ -609,6 +654,15 @@ Open questions from the lead agent: ${plan.open_questions.join("; ") || "(none)"
     open_questions: clip([...plan.open_questions, ...(permitPath?.review_notes ?? []), ...(codesRes?.review_notes ?? [])].slice(0, 15), 300),
     recommended_next_steps: clip(decision?.recommended_next_steps ?? [], 300),
     sources,
+    feasibility: feasibility
+      ? {
+          ...feasibility,
+          rationale: feasibility.rationale.slice(0, 1500),
+          conditions_to_proceed: clip(feasibility.conditions_to_proceed ?? [], 300).slice(0, 12),
+          cost_schedule_exposure: clip(feasibility.cost_schedule_exposure ?? [], 300).slice(0, 10),
+          deal_killers: (feasibility.deal_killers ?? []).slice(0, 10).map((d) => ({ ...d, title: d.title.slice(0, 200), why: d.why.slice(0, 600) })),
+        }
+      : undefined,
   });
 
   return { resolved, research, sources, audit };

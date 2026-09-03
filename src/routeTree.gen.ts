@@ -37,6 +37,7 @@ import { Route as AuthenticatedReportsIndexRouteImport } from './routes/_authent
 import { Route as AuthenticatedProjectsIndexRouteImport } from './routes/_authenticated/projects.index'
 import { Route as AuthenticatedHarvestIndexRouteImport } from './routes/_authenticated/harvest.index'
 import { Route as AuthenticatedFilingIndexRouteImport } from './routes/_authenticated/filing.index'
+import { Route as AuthenticatedFeasibilityIndexRouteImport } from './routes/_authenticated/feasibility.index'
 import { Route as AuthenticatedAssistantIndexRouteImport } from './routes/_authenticated/assistant.index'
 import { Route as ShareReportsTokenRouteImport } from './routes/share.reports.$token'
 import { Route as ApiChatStreamRouteImport } from './routes/api/chat.stream'
@@ -47,6 +48,7 @@ import { Route as AuthenticatedReportIdRouteImport } from './routes/_authenticat
 import { Route as AuthenticatedProjectsIdRouteImport } from './routes/_authenticated/projects.$id'
 import { Route as AuthenticatedJurisdictionsSlugRouteImport } from './routes/_authenticated/jurisdictions.$slug'
 import { Route as AuthenticatedInspectionsIdRouteImport } from './routes/_authenticated/inspections.$id'
+import { Route as AuthenticatedFeasibilityIdRouteImport } from './routes/_authenticated/feasibility.$id'
 import { Route as AuthenticatedAssistantScreensRouteImport } from './routes/_authenticated/assistant.screens'
 import { Route as AuthenticatedAssistantPermitsRouteImport } from './routes/_authenticated/assistant.permits'
 import { Route as AuthenticatedAssistantAnalysisRouteImport } from './routes/_authenticated/assistant.analysis'
@@ -209,6 +211,12 @@ const AuthenticatedFilingIndexRoute =
     path: '/filing/',
     getParentRoute: () => AuthenticatedRouteRoute,
   } as any)
+const AuthenticatedFeasibilityIndexRoute =
+  AuthenticatedFeasibilityIndexRouteImport.update({
+    id: '/feasibility/',
+    path: '/feasibility/',
+    getParentRoute: () => AuthenticatedRouteRoute,
+  } as any)
 const AuthenticatedAssistantIndexRoute =
   AuthenticatedAssistantIndexRouteImport.update({
     id: '/',
@@ -261,6 +269,12 @@ const AuthenticatedInspectionsIdRoute =
   AuthenticatedInspectionsIdRouteImport.update({
     id: '/inspections/$id',
     path: '/inspections/$id',
+    getParentRoute: () => AuthenticatedRouteRoute,
+  } as any)
+const AuthenticatedFeasibilityIdRoute =
+  AuthenticatedFeasibilityIdRouteImport.update({
+    id: '/feasibility/$id',
+    path: '/feasibility/$id',
     getParentRoute: () => AuthenticatedRouteRoute,
   } as any)
 const AuthenticatedAssistantScreensRoute =
@@ -378,6 +392,7 @@ export interface FileRoutesByFullPath {
   '/assistant/analysis': typeof AuthenticatedAssistantAnalysisRoute
   '/assistant/permits': typeof AuthenticatedAssistantPermitsRoute
   '/assistant/screens': typeof AuthenticatedAssistantScreensRouteWithChildren
+  '/feasibility/$id': typeof AuthenticatedFeasibilityIdRoute
   '/inspections/$id': typeof AuthenticatedInspectionsIdRoute
   '/jurisdictions/$slug': typeof AuthenticatedJurisdictionsSlugRoute
   '/projects/$id': typeof AuthenticatedProjectsIdRoute
@@ -388,6 +403,7 @@ export interface FileRoutesByFullPath {
   '/api/chat/stream': typeof ApiChatStreamRoute
   '/share/reports/$token': typeof ShareReportsTokenRoute
   '/assistant/': typeof AuthenticatedAssistantIndexRoute
+  '/feasibility/': typeof AuthenticatedFeasibilityIndexRoute
   '/filing/': typeof AuthenticatedFilingIndexRoute
   '/harvest/': typeof AuthenticatedHarvestIndexRoute
   '/projects/': typeof AuthenticatedProjectsIndexRoute
@@ -429,6 +445,7 @@ export interface FileRoutesByTo {
   '/assistant/$threadId': typeof AuthenticatedAssistantThreadIdRoute
   '/assistant/analysis': typeof AuthenticatedAssistantAnalysisRoute
   '/assistant/permits': typeof AuthenticatedAssistantPermitsRoute
+  '/feasibility/$id': typeof AuthenticatedFeasibilityIdRoute
   '/inspections/$id': typeof AuthenticatedInspectionsIdRoute
   '/jurisdictions/$slug': typeof AuthenticatedJurisdictionsSlugRoute
   '/projects/$id': typeof AuthenticatedProjectsIdRoute
@@ -439,6 +456,7 @@ export interface FileRoutesByTo {
   '/api/chat/stream': typeof ApiChatStreamRoute
   '/share/reports/$token': typeof ShareReportsTokenRoute
   '/assistant': typeof AuthenticatedAssistantIndexRoute
+  '/feasibility': typeof AuthenticatedFeasibilityIndexRoute
   '/filing': typeof AuthenticatedFilingIndexRoute
   '/harvest': typeof AuthenticatedHarvestIndexRoute
   '/projects': typeof AuthenticatedProjectsIndexRoute
@@ -484,6 +502,7 @@ export interface FileRoutesById {
   '/_authenticated/assistant/analysis': typeof AuthenticatedAssistantAnalysisRoute
   '/_authenticated/assistant/permits': typeof AuthenticatedAssistantPermitsRoute
   '/_authenticated/assistant/screens': typeof AuthenticatedAssistantScreensRouteWithChildren
+  '/_authenticated/feasibility/$id': typeof AuthenticatedFeasibilityIdRoute
   '/_authenticated/inspections/$id': typeof AuthenticatedInspectionsIdRoute
   '/_authenticated/jurisdictions/$slug': typeof AuthenticatedJurisdictionsSlugRoute
   '/_authenticated/projects/$id': typeof AuthenticatedProjectsIdRoute
@@ -494,6 +513,7 @@ export interface FileRoutesById {
   '/api/chat/stream': typeof ApiChatStreamRoute
   '/share/reports/$token': typeof ShareReportsTokenRoute
   '/_authenticated/assistant/': typeof AuthenticatedAssistantIndexRoute
+  '/_authenticated/feasibility/': typeof AuthenticatedFeasibilityIndexRoute
   '/_authenticated/filing/': typeof AuthenticatedFilingIndexRoute
   '/_authenticated/harvest/': typeof AuthenticatedHarvestIndexRoute
   '/_authenticated/projects/': typeof AuthenticatedProjectsIndexRoute
@@ -539,6 +559,7 @@ export interface FileRouteTypes {
     | '/assistant/analysis'
     | '/assistant/permits'
     | '/assistant/screens'
+    | '/feasibility/$id'
     | '/inspections/$id'
     | '/jurisdictions/$slug'
     | '/projects/$id'
@@ -549,6 +570,7 @@ export interface FileRouteTypes {
     | '/api/chat/stream'
     | '/share/reports/$token'
     | '/assistant/'
+    | '/feasibility/'
     | '/filing/'
     | '/harvest/'
     | '/projects/'
@@ -590,6 +612,7 @@ export interface FileRouteTypes {
     | '/assistant/$threadId'
     | '/assistant/analysis'
     | '/assistant/permits'
+    | '/feasibility/$id'
     | '/inspections/$id'
     | '/jurisdictions/$slug'
     | '/projects/$id'
@@ -600,6 +623,7 @@ export interface FileRouteTypes {
     | '/api/chat/stream'
     | '/share/reports/$token'
     | '/assistant'
+    | '/feasibility'
     | '/filing'
     | '/harvest'
     | '/projects'
@@ -644,6 +668,7 @@ export interface FileRouteTypes {
     | '/_authenticated/assistant/analysis'
     | '/_authenticated/assistant/permits'
     | '/_authenticated/assistant/screens'
+    | '/_authenticated/feasibility/$id'
     | '/_authenticated/inspections/$id'
     | '/_authenticated/jurisdictions/$slug'
     | '/_authenticated/projects/$id'
@@ -654,6 +679,7 @@ export interface FileRouteTypes {
     | '/api/chat/stream'
     | '/share/reports/$token'
     | '/_authenticated/assistant/'
+    | '/_authenticated/feasibility/'
     | '/_authenticated/filing/'
     | '/_authenticated/harvest/'
     | '/_authenticated/projects/'
@@ -883,6 +909,13 @@ declare module '@tanstack/react-router' {
       preLoaderRoute: typeof AuthenticatedFilingIndexRouteImport
       parentRoute: typeof AuthenticatedRouteRoute
     }
+    '/_authenticated/feasibility/': {
+      id: '/_authenticated/feasibility/'
+      path: '/feasibility'
+      fullPath: '/feasibility/'
+      preLoaderRoute: typeof AuthenticatedFeasibilityIndexRouteImport
+      parentRoute: typeof AuthenticatedRouteRoute
+    }
     '/_authenticated/assistant/': {
       id: '/_authenticated/assistant/'
       path: '/'
@@ -951,6 +984,13 @@ declare module '@tanstack/react-router' {
       path: '/inspections/$id'
       fullPath: '/inspections/$id'
       preLoaderRoute: typeof AuthenticatedInspectionsIdRouteImport
+      parentRoute: typeof AuthenticatedRouteRoute
+    }
+    '/_authenticated/feasibility/$id': {
+      id: '/_authenticated/feasibility/$id'
+      path: '/feasibility/$id'
+      fullPath: '/feasibility/$id'
+      preLoaderRoute: typeof AuthenticatedFeasibilityIdRouteImport
       parentRoute: typeof AuthenticatedRouteRoute
     }
     '/_authenticated/assistant/screens': {
@@ -1136,11 +1176,13 @@ interface AuthenticatedRouteRouteChildren {
   AuthenticatedAdminPortalsRoute: typeof AuthenticatedAdminPortalsRoute
   AuthenticatedAdminSirRoute: typeof AuthenticatedAdminSirRoute
   AuthenticatedAdminToolsRoute: typeof AuthenticatedAdminToolsRoute
+  AuthenticatedFeasibilityIdRoute: typeof AuthenticatedFeasibilityIdRoute
   AuthenticatedInspectionsIdRoute: typeof AuthenticatedInspectionsIdRoute
   AuthenticatedProjectsIdRoute: typeof AuthenticatedProjectsIdRoute
   AuthenticatedReportsIdRoute: typeof AuthenticatedReportsIdRoute
   AuthenticatedSirIdRoute: typeof AuthenticatedSirIdRoute
   AuthenticatedToolsCheckoutRoute: typeof AuthenticatedToolsCheckoutRoute
+  AuthenticatedFeasibilityIndexRoute: typeof AuthenticatedFeasibilityIndexRoute
   AuthenticatedFilingIndexRoute: typeof AuthenticatedFilingIndexRoute
   AuthenticatedHarvestIndexRoute: typeof AuthenticatedHarvestIndexRoute
   AuthenticatedProjectsIndexRoute: typeof AuthenticatedProjectsIndexRoute
@@ -1165,11 +1207,13 @@ const AuthenticatedRouteRouteChildren: AuthenticatedRouteRouteChildren = {
   AuthenticatedAdminPortalsRoute: AuthenticatedAdminPortalsRoute,
   AuthenticatedAdminSirRoute: AuthenticatedAdminSirRoute,
   AuthenticatedAdminToolsRoute: AuthenticatedAdminToolsRoute,
+  AuthenticatedFeasibilityIdRoute: AuthenticatedFeasibilityIdRoute,
   AuthenticatedInspectionsIdRoute: AuthenticatedInspectionsIdRoute,
   AuthenticatedProjectsIdRoute: AuthenticatedProjectsIdRoute,
   AuthenticatedReportsIdRoute: AuthenticatedReportsIdRoute,
   AuthenticatedSirIdRoute: AuthenticatedSirIdRoute,
   AuthenticatedToolsCheckoutRoute: AuthenticatedToolsCheckoutRoute,
+  AuthenticatedFeasibilityIndexRoute: AuthenticatedFeasibilityIndexRoute,
   AuthenticatedFilingIndexRoute: AuthenticatedFilingIndexRoute,
   AuthenticatedHarvestIndexRoute: AuthenticatedHarvestIndexRoute,
   AuthenticatedProjectsIndexRoute: AuthenticatedProjectsIndexRoute,
