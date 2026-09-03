@@ -19,6 +19,7 @@ import { IntakePipelineCard } from "@/components/dashboard/IntakePipelineCard";
 import { ClientDashboard } from "@/components/client/ClientDashboard";
 import { getClientDashboard } from "@/lib/clientDashboard.functions";
 import { greeting, firstName } from "@/lib/clientView";
+import { useOrgContext } from "@/hooks/useOrgContext";
 
 
 export const Route = createFileRoute("/_authenticated/dashboard")({
@@ -42,7 +43,10 @@ function Dashboard() {
     supabase.auth.getUser().then(({ data }) => setEmail(data.user?.email ?? null));
   }, []);
 
-  const mode: "client" | "pro" = "client";
+  // Real role-based experience: clients see the simplified view, permitting
+  // professionals / reviewers / platform admins get the full workspace.
+  const orgQ = useOrgContext();
+  const mode: "client" | "pro" = orgQ.data?.experience ?? "client";
   const clientFn = useServerFn(getClientDashboard);
   const clientQ = useQuery({ queryKey: ["client-dashboard"], queryFn: () => clientFn() });
   const who = firstName(clientQ.data?.profile?.full_name ?? null, email);
