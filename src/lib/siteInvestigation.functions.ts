@@ -267,7 +267,7 @@ export const runSiteInvestigation = createServerFn({ method: "POST" })
         status: "running",
         model: SI_MODEL,
         prompt_version: SI_PROMPT_VERSION,
-        document_ids: data.document_ids.length ? data.document_ids : null,
+        document_ids: data.document_ids.length ? data.document_ids : undefined,
         investigation_plan: plan as never,
         complexity_level: plan.complexity_level,
         complexity_label: plan.complexity_label,
