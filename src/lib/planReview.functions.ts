@@ -613,7 +613,11 @@ ${findingsBlock}`;
       body: JSON.stringify({
         model: "google/gemini-2.5-pro",
         messages: [
-          { role: "system", content: "You are a licensed architect drafting formal plan-review comment responses. Output plain text only." },
+          {
+            role: "system",
+            content:
+              "You are Permivio's AI-assisted permitting agent drafting a first-draft plan-review comment response for review and signature by the applicable design professional. You are not a licensed architect or engineer, and must not certify compliance or approval. Output plain text only.",
+          },
           { role: "user", content: prompt },
         ],
       }),
