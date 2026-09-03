@@ -183,7 +183,9 @@ export function PlanQaQcTab({ projectId, userId }: { projectId: string; userId: 
         <div className="mt-3 space-y-1.5">
           {docs.isLoading && <p className="text-sm text-muted-foreground">Loading documents…</p>}
           {!docs.isLoading && planDocs.length === 0 && (
-            <p className="text-sm text-muted-foreground">Upload plan sheets in the Docs tab first (PDF or image).</p>
+            <p className="text-sm text-muted-foreground">
+              Upload a plan set above (PDF or image sheets) — uploads are saved to this project's documents.
+            </p>
           )}
           {planDocs.slice(0, 30).map((doc) => (
             <label key={doc.id} className="flex items-center gap-2 rounded-lg border border-border/60 px-3 py-2 text-xs">
