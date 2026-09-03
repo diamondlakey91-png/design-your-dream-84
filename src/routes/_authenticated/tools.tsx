@@ -1,4 +1,4 @@
-import { createFileRoute } from "@tanstack/react-router";
+import { createFileRoute, useNavigate } from "@tanstack/react-router";
 import { useMemo, useState } from "react";
 import { useQuery } from "@tanstack/react-query";
 import { useServerFn } from "@tanstack/react-start";
@@ -41,7 +41,7 @@ export const Route = createFileRoute("/_authenticated/tools")({
 function ToolsAndReportsPage() {
   const navigate = useNavigate();
   const fetchOverview = useServerFn(getToolsOverview);
-  const { data, isLoading, refetch } = useQuery({
+  const { data, isLoading } = useQuery({
     queryKey: ["tools-overview"],
     queryFn: () => fetchOverview(),
   });
