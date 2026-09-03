@@ -33,11 +33,11 @@ export const listAttachableOrders = createServerFn({ method: "GET" })
         .eq("user_id", userId)
         .order("created_at", { ascending: false })
         .limit(100),
-      supabase.from("service_products").select("id,title"),
+      supabase.from("service_products").select("id,client_title,name"),
       supabase.from("service_report_versions").select("id,order_id").eq("user_id", userId),
     ]);
     if (orders.error) throw new Error(orders.error.message);
-    const titles = new Map((products.data ?? []).map((p) => [p.id, p.title]));
+    const titles = new Map((products.data ?? []).map((p) => [p.id, p.client_title || p.name]));
     const counts = new Map<string, number>();
     for (const v of versions.data ?? []) {
       if (v.order_id) counts.set(v.order_id, (counts.get(v.order_id) ?? 0) + 1);
@@ -113,10 +113,10 @@ export const attachOrderToProject = createServerFn({ method: "POST" })
 
     const { data: product } = await supabase
       .from("service_products")
-      .select("title")
+      .select("client_title,name")
       .eq("id", order.product_id)
       .maybeSingle();
-    const title = product?.title ?? "Purchased service";
+    const title = product?.client_title ?? product?.name ?? "Purchased service";
 
     if (data.project_id) {
       await supabase.from("activity").insert({

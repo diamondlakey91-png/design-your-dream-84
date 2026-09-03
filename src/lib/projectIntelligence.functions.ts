@@ -83,9 +83,9 @@ export const getProjectIntelligence = createServerFn({ method: "GET" })
         .select("id,order_id,product_id,title,summary,version,delivery_tier,reviewed_at,created_at,payload")
         .eq("project_id", pid)
         .order("created_at", { ascending: false }),
-      sb.from("service_products").select("id,title,category"),
+      sb.from("service_products").select("id,client_title,name,category"),
     ]);
-    const productTitles = new Map((productsRes.data ?? []).map((p) => [p.id, p.title]));
+    const productTitles = new Map((productsRes.data ?? []).map((p) => [p.id, p.client_title || p.name]));
     const reportVersions = (versionsRes.data ?? []).map((v) => {
       const payload = (v.payload ?? null) as Record<string, unknown> | null;
       const list = (key: string) => {
