@@ -143,7 +143,7 @@ function ToolsAndReportsPage() {
                 onBuy={(tier) =>
                   navigate({
                     to: "/tools/checkout",
-                    search: { product: product.product_key, tier, project: projectId, rush: false },
+                    search: { product: product.product_key, tier, project: projectId, rush: false, order_id: undefined },
                   })
                 }
                 onFullService={() => setFullService(true)}
