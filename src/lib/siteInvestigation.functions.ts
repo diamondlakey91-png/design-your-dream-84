@@ -25,20 +25,6 @@ import {
 export const SI_PROMPT_VERSION = "site-investigation-v2-engine";
 export const SI_MODEL = "google/gemini-2.5-pro";
 
-type SiOut = {
-  executive_summary: string;
-  feasibility_rating: "green" | "yellow" | "orange" | "red" | "gray";
-  feasibility_rationale: string;
-  property_info: Record<string, string>;
-  sections: Array<{ key: string; title: string; body: string; bullets: string[] }>;
-  findings: Array<{ category: string; classification: string; title: string; detail: string; impact: string; source_url: string; source_title: string; verification: string }>;
-  permits: Array<{ approval: string; agency: string; why_required: string; trigger_condition: string; timeline_estimate: string; concurrent: boolean; source_url: string; verification: string }>;
-  timeline: Array<{ phase: string; duration: string; depends_on: string; notes: string }>;
-  assumptions: string[];
-  outstanding_questions: string[];
-  recommended_next_steps: string[];
-  sources: Array<{ url: string; title: string }>;
-};
 
 const SectionSchema = z.object({
   key: z.string(),
