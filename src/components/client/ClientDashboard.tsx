@@ -10,6 +10,7 @@ import { ClientProjectCard } from "@/components/client/ClientProjectCard";
 import {
   attentionItems,
   clientStatus,
+  friendlyActivity,
   type AttentionItem,
   type ClientProjectInput,
   type ClientSignals,
@@ -46,7 +47,13 @@ export function ClientDashboard({ onCreateProject }: { onCreateProject: () => vo
     const groups = rows
       .filter((r) => r.attention.length > 0)
       .map((r) => ({ project: r.project, items: r.attention.slice(0, 4) as AttentionItem[] }));
-    return { rows, groups };
+    const nameById = new Map(projects.map((p) => [p.id, p.name] as const));
+    const activity = (
+      d.activity as Array<{ id: string; project_id: string | null; description: string; created_at: string }>
+    )
+      .slice(0, 5)
+      .map((a) => ({ ...a, projectName: a.project_id ? nameById.get(a.project_id) ?? null : null }));
+    return { rows, groups, activity };
   }, [q.data]);
 
   if (q.isLoading) {
@@ -92,13 +99,18 @@ export function ClientDashboard({ onCreateProject }: { onCreateProject: () => vo
               <div key={g.project.id} className="rounded-3xl border border-border bg-card p-4 sm:p-5">
                 <div className="mb-3 flex flex-wrap items-center justify-between gap-2">
                   <p className="truncate text-sm font-semibold text-foreground">{g.project.name}</p>
-                  <Link
-                    to="/projects/$id"
-                    params={{ id: g.project.id }}
-                    className="inline-flex items-center gap-1 text-xs font-medium text-primary hover:underline"
-                  >
-                    View project <ArrowRight className="size-3.5" />
-                  </Link>
+                  <span className="flex items-center gap-3">
+                    <span className="text-xs text-muted-foreground">
+                      {g.items.length} item{g.items.length === 1 ? "" : "s"} needed
+                    </span>
+                    <Link
+                      to="/projects/$id"
+                      params={{ id: g.project.id }}
+                      className="inline-flex items-center gap-1 rounded-full border border-primary/40 bg-primary/10 px-3 py-1.5 text-xs font-semibold text-primary transition-colors hover:bg-primary/20"
+                    >
+                      Review Requests <ArrowRight className="size-3.5" />
+                    </Link>
+                  </span>
                 </div>
                 <ClientAttentionList items={g.items} showProject={false} compact />
               </div>
@@ -121,6 +133,24 @@ export function ClientDashboard({ onCreateProject }: { onCreateProject: () => vo
           ))}
         </div>
       </section>
+
+      {/* Recent updates — secondary */}
+      {model.activity.length > 0 && (
+        <section aria-labelledby="recent-updates">
+          <h2 id="recent-updates" className="mb-3 text-sm font-medium text-muted-foreground">Recent Updates</h2>
+          <ul className="divide-y divide-border overflow-hidden rounded-3xl border border-border bg-card">
+            {model.activity.map((a) => (
+              <li key={a.id} className="flex flex-wrap items-start justify-between gap-2 px-5 py-3.5">
+                <div className="min-w-0">
+                  <p className="text-sm text-foreground">{friendlyActivity(a.description)}</p>
+                  {a.projectName && <p className="mt-0.5 text-xs text-muted-foreground">{a.projectName}</p>}
+                </div>
+                <span className="shrink-0 text-xs text-muted-foreground">{dayLabel(a.created_at)}</span>
+              </li>
+            ))}
+          </ul>
+        </section>
+      )}
     </div>
   );
 }
