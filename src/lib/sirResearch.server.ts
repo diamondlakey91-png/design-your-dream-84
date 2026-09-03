@@ -33,15 +33,6 @@ function looseEnum<T extends readonly [string, ...string[]]>(values: T, fallback
   }, z.enum(values)) as unknown as z.ZodType<T[number]>;
 }
 
-const AuthoritySchema = z.object({
-  role: z.string().max(60),
-  official_name: z.string().max(200),
-  responsibility: z.string().max(400),
-  website: looseText(400).optional(),
-  verification: Verification,
-});
-
-
 /** Lenient text: models sometimes return arrays where a sentence was requested. */
 const looseText = (max: number) =>
   z.preprocess((v) => {
@@ -50,6 +41,15 @@ const looseText = (max: number) =>
     if (typeof v === "object") return JSON.stringify(v).slice(0, max);
     return String(v).slice(0, max);
   }, z.string().max(max).nullable()) as unknown as z.ZodType<string | null>;
+
+const AuthoritySchema = z.object({
+  role: z.string().max(60),
+  official_name: z.string().max(200),
+  responsibility: z.string().max(400),
+  website: looseText(400).optional(),
+  verification: Verification,
+});
+
 
 const ResearchSchema = z.object({
   scope_summary: z.string(),
