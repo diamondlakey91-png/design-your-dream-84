@@ -3219,6 +3219,69 @@ export type Database = {
           },
         ]
       }
+      sir_requests: {
+        Row: {
+          approx_size: string | null
+          company: string | null
+          created_at: string
+          email: string
+          existing_building: string | null
+          id: string
+          intended_use: string
+          jurisdiction: string
+          name: string
+          notes: string | null
+          parcel_apn: string | null
+          phone: string | null
+          project_stage: string | null
+          report_needed: string | null
+          role: string | null
+          site_address: string | null
+          status: string
+          target_date: string | null
+        }
+        Insert: {
+          approx_size?: string | null
+          company?: string | null
+          created_at?: string
+          email: string
+          existing_building?: string | null
+          id?: string
+          intended_use: string
+          jurisdiction: string
+          name: string
+          notes?: string | null
+          parcel_apn?: string | null
+          phone?: string | null
+          project_stage?: string | null
+          report_needed?: string | null
+          role?: string | null
+          site_address?: string | null
+          status?: string
+          target_date?: string | null
+        }
+        Update: {
+          approx_size?: string | null
+          company?: string | null
+          created_at?: string
+          email?: string
+          existing_building?: string | null
+          id?: string
+          intended_use?: string
+          jurisdiction?: string
+          name?: string
+          notes?: string | null
+          parcel_apn?: string | null
+          phone?: string | null
+          project_stage?: string | null
+          report_needed?: string | null
+          role?: string | null
+          site_address?: string | null
+          status?: string
+          target_date?: string | null
+        }
+        Relationships: []
+      }
       site_investigation_findings: {
         Row: {
           category: string
