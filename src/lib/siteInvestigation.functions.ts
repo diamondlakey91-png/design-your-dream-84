@@ -485,7 +485,7 @@ Return JSON: { "executive_summary": "", "feasibility_rating": "green|yellow|oran
 
       // If the client paid for this report, this research is the deliverable.
       const delivery = await deliverReportForProject(sb, context.userId, data.project_id, {
-        title: `${SI_DEPTH_TITLE[depth] ?? "Site Investigation Report"} — ${data.address}`,
+        title: `${depthMeta(depth).label} — ${data.address}`,
         summary: result.executive_summary || null,
         key_findings: result.recommended_next_steps.slice(0, 0).concat(
           result.feasibility_snapshot.slice(0, 6).map((r) => `${r.label}: ${r.value}`),
