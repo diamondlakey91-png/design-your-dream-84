@@ -27,12 +27,13 @@ import { QaQcTab } from "@/components/project/QaQcTab";
 import { PlanQaQcTab } from "@/components/project/PlanQaQcTab";
 import { SiteInvestigationTab } from "@/components/project/SiteInvestigationTab";
 import { IntelligenceTab } from "@/components/project/IntelligenceTab";
+import { PropertyJurisdictionPanel } from "@/components/project/PropertyJurisdictionPanel";
 import { useViewMode } from "@/hooks/useViewMode";
 import { ViewModeToggle } from "@/components/client/ViewModeToggle";
 import { ClientProjectView } from "@/components/client/ClientProjectView";
 import type { ClientProjectInput } from "@/lib/clientView";
 
-const TABS = ["overview", "intelligence", "scope", "site", "checklist", "docs", "planqaqc", "qaqc", "responses", "deadlines", "inspections", "timeline"] as const;
+const TABS = ["overview", "intelligence", "property", "scope", "site", "checklist", "docs", "planqaqc", "qaqc", "responses", "deadlines", "inspections", "timeline"] as const;
 
 export const Route = createFileRoute("/_authenticated/projects/$id")({
   validateSearch: (search: Record<string, unknown>): { tab?: Tab } =>
@@ -174,6 +175,9 @@ function ProjectDetail() {
           <OverviewTab project={project} stage={stage} activity={activity} onChange={() => qc.invalidateQueries({ queryKey: ["project", id] })} />
         )}
         {tab === "intelligence" && <IntelligenceTab projectId={id} />}
+        {tab === "property" && (
+          <PropertyJurisdictionPanel projectId={id} defaultAddress={project.location} projectType={project.project_type} />
+        )}
         {tab === "scope" && <ScopeTab projectId={id} defaultAddress={project.location} />}
         {tab === "site" && (
           <SiteInvestigationTab projectId={id} defaultAddress={project.location} defaultProjectType={project.project_type} />
