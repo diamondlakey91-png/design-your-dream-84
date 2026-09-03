@@ -290,16 +290,18 @@ export function SiteInvestigationTab({
                 <button
                   onClick={() => exportPdf.mutate(false)}
                   disabled={exportPdf.isPending}
+                  title="Download the full internal report, including working notes"
                   className="inline-flex items-center gap-1.5 rounded-lg border border-border px-2.5 py-1.5 text-[11px] font-mono uppercase tracking-wider hover:border-brand hover:text-brand disabled:opacity-50"
                 >
-                  <FileDown className="size-3.5" /> Report PDF
+                  <FileDown className="size-3.5" /> {exportPdf.isPending ? "Preparing…" : "Report PDF"}
                 </button>
                 <button
                   onClick={() => exportPdf.mutate(true)}
                   disabled={exportPdf.isPending}
+                  title="Download the client-ready report PDF"
                   className="inline-flex items-center gap-1.5 rounded-lg border border-border px-2.5 py-1.5 text-[11px] font-mono uppercase tracking-wider hover:border-brand hover:text-brand disabled:opacity-50"
                 >
-                  <FileDown className="size-3.5" /> Client-ready PDF
+                  <FileDown className="size-3.5" /> {exportPdf.isPending ? "Preparing…" : "Client-ready PDF"}
                 </button>
                 <button
                   onClick={() => remove.mutate(d.investigation.id)}
