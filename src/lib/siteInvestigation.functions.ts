@@ -14,6 +14,21 @@ import {
 export const SI_PROMPT_VERSION = "site-investigation-v1";
 export const SI_MODEL = "google/gemini-2.5-pro";
 
+type SiOut = {
+  executive_summary: string;
+  feasibility_rating: "green" | "yellow" | "orange" | "red" | "gray";
+  feasibility_rationale: string;
+  property_info: Record<string, string>;
+  sections: Array<{ key: string; title: string; body: string; bullets: string[] }>;
+  findings: Array<{ category: string; classification: string; title: string; detail: string; impact: string; source_url: string; source_title: string; verification: string }>;
+  permits: Array<{ approval: string; agency: string; why_required: string; trigger_condition: string; timeline_estimate: string; concurrent: boolean; source_url: string; verification: string }>;
+  timeline: Array<{ phase: string; duration: string; depends_on: string; notes: string }>;
+  assumptions: string[];
+  outstanding_questions: string[];
+  recommended_next_steps: string[];
+  sources: Array<{ url: string; title: string }>;
+};
+
 const SectionSchema = z.object({
   key: z.string(),
   title: z.string().default(""),
@@ -136,10 +151,9 @@ export const runSiteInvestigation = createServerFn({ method: "POST" })
         jurisdiction_snapshot: {
           jurisdiction: jurisdiction || null,
           state: state || null,
-          county: conf?.['state'] ? conf?.['city'] ?? null : null,
-          confirmation_status: conf?.['status'] ?? "unconfirmed",
-          parcel_number: conf?.['parcel_number'] ?? null,
-        },
+          confirmation_status: String(conf?.['status'] ?? "unconfirmed"),
+          parcel_number: conf?.['parcel_number'] ? String(conf['parcel_number']) : null,
+        } as never,
       })
       .select("*")
       .single();
@@ -190,7 +204,7 @@ Return JSON: { "executive_summary": "", "feasibility_rating": "green|yellow|oran
         "You are a land development consultant, permit expediter and GIS/property intelligence analyst. You never fabricate GIS data, parcel boundaries, zoning classifications, or ordinance citations, and you never present your analysis as a jurisdiction determination, survey, engineering opinion, or legal advice.",
         SiSchema,
         { model: SI_MODEL, max_tokens: 12000 },
-      );
+      ) as unknown as SiOut;
 
       const validCats = new Set(SI_FINDING_CATEGORIES.map((c) => c.id as string));
       if (result.findings.length) {
@@ -362,7 +376,8 @@ export const generateSiteInvestigationPdf = createServerFn({ method: "POST" })
       sb.from("site_investigation_permits").select("*").eq("investigation_id", data.investigation_id).order("sequence_order", { ascending: true }),
       sb.from("user_settings").select("brand_company_name, brand_license_number, brand_contact_email, brand_contact_phone, brand_footer_note").eq("user_id", context.userId).maybeSingle(),
     ]);
-    const inv = i.data;
+    // eslint-disable-next-line @typescript-eslint/no-explicit-any
+    const inv = i.data as any;
     if (!inv) throw new Error("Investigation not found");
     const { data: project } = await sb.from("projects").select("name, jurisdiction").eq("id", inv.project_id).maybeSingle();
 

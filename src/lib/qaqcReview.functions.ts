@@ -70,6 +70,27 @@ async function callMultimodalJSON<T>(system: string, parts: ContentPart[], schem
 
 // ---------------------------------------------------------------- AI schemas
 
+type Inventory = {
+  sheets: Array<{ sheet_number: string; sheet_title: string; discipline: string; revision_number: string; revision_date: string; professional_of_record: string; seal_status: string; index_state: string; notes: string }>;
+  index_sheets_not_uploaded: string[];
+  uploaded_sheets_not_indexed: string[];
+  duplicate_sheet_numbers: string[];
+  missing_number_sequences: string[];
+  missing_disciplines: string[];
+  conflicting_dates: string[];
+  project_information: Record<string, string>;
+  observations: string[];
+};
+
+type FindingsOut = {
+  findings: Array<{ severity: string; category: string; discipline: string; sheet_number: string; sheet_title: string; location: string; summary: string; plain_language: string; why_it_matters: string; code_basis: string; jurisdiction_source_url: string; recommended_action: string; responsible_discipline: string; verification: string }>;
+  missing_documents: Array<{ name: string; reason: string; blocking: boolean }>;
+  submission_issues: string[];
+  needs_professional_confirmation: string[];
+  recommended_actions: string[];
+  executive_summary: string;
+};
+
 const InventorySchema = z.object({
   sheets: z.array(z.object({
     sheet_number: z.string().default(""),
@@ -282,11 +303,11 @@ export const runQaQcReview = createServerFn({ method: "POST" })
         status: "running",
         model: QAQC_MODEL,
         prompt_version: QAQC_PROMPT_VERSION,
-        project_context: {
+        project_context: ({
           project_type: ctx.project['project_type'] ?? null,
           address: ctx.confirmation?.['formatted_address'] ?? ctx.project['location'] ?? null,
-          confirmation_status: ctx.confirmation?.['status'] ?? "unconfirmed",
-        },
+          confirmation_status: String(ctx.confirmation?.['status'] ?? "unconfirmed"),
+        } as Record<string, unknown>) as never,
       })
       .select("*")
       .single();
@@ -323,7 +344,7 @@ Return JSON: { "sheets": [...], "index_sheets_not_uploaded": [], "uploaded_sheet
           ...fileParts,
         ],
         InventorySchema,
-      );
+      ) as unknown as Inventory;
 
       const sheetRows = inventory.sheets
         .filter((s) => s.sheet_number || s.sheet_title)
@@ -379,7 +400,7 @@ Return JSON: { "sheets": [...], "index_sheets_not_uploaded": [], "uploaded_sheet
         { ids: ["mechanical", "electrical", "plumbing", "fire_protection", "civil_site", "cross_discipline"], label: "Group B" },
       ];
 
-      const results = [] as Array<z.infer<typeof FindingsSchema>>;
+      const results: FindingsOut[] = [];
       for (const g of groups) {
         const catText = QAQC_CATEGORIES.filter((c) => g.ids.includes(c.id))
           .map((c) => `${c.no}. ${c.label} (id: ${c.id}) — check: ${c.checks.join(", ")}`)
@@ -418,7 +439,7 @@ Return JSON: { "findings": [{ "severity": "critical|high|medium|low|informationa
             ...fileParts,
           ],
           FindingsSchema,
-        );
+        ) as unknown as FindingsOut;
         results.push(out);
       }
 
@@ -464,9 +485,9 @@ Return JSON: { "findings": [{ "severity": "critical|high|medium|low|informationa
         jurisdiction_snapshot: {
           jurisdiction: jurisdiction || null,
           state,
-          confirmation_status: ctx.confirmation?.['status'] ?? "unconfirmed",
-          authorities: ctx.confirmation?.['overrides'] ?? {},
-        },
+          confirmation_status: String(ctx.confirmation?.['status'] ?? "unconfirmed"),
+          authorities: (ctx.confirmation?.['overrides'] ?? {}) as Record<string, unknown>,
+        } as never,
         codes_researched: codes,
         sources,
         executive_summary: summary || null,
@@ -551,7 +572,9 @@ export const addQaQcGapsToChecklist = createServerFn({ method: "POST" })
   .inputValidator((d: unknown) => z.object({ review_id: z.string().uuid() }).parse(d))
   .handler(async ({ data, context }) => {
     const sb = context.supabase;
-    const { data: review } = await sb.from("qaqc_reviews").select("*").eq("id", data.review_id).maybeSingle();
+    const { data: reviewRow } = await sb.from("qaqc_reviews").select("*").eq("id", data.review_id).maybeSingle();
+    // eslint-disable-next-line @typescript-eslint/no-explicit-any
+    const review = reviewRow as any;
     if (!review) throw new Error("Review not found");
     const { data: missingSheets } = await sb
       .from("qaqc_sheets").select("sheet_number, discipline")
@@ -615,7 +638,8 @@ export const generateQaQcReportPdf = createServerFn({ method: "POST" })
       sb.from("qaqc_sheets").select("*").eq("review_id", data.review_id).order("sort_order", { ascending: true }),
       sb.from("qaqc_findings").select("*").eq("review_id", data.review_id).order("finding_no", { ascending: true }),
     ]);
-    const review = r.data;
+    // eslint-disable-next-line @typescript-eslint/no-explicit-any
+    const review = r.data as any;
     if (!review) throw new Error("Review not found");
     const { data: project } = await sb.from("projects").select("name, location, jurisdiction, project_type").eq("id", review.project_id).maybeSingle();
 
