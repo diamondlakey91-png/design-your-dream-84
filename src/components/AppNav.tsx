@@ -26,6 +26,7 @@ import {
   User,
   Wrench,
   X,
+  MapPinned,
 } from "lucide-react";
 import { supabase } from "@/integrations/supabase/client";
 import { PermivioLogo } from "@/components/PermivioMark";
