@@ -1407,6 +1407,59 @@ export type Database = {
         }
         Relationships: []
       }
+      professional_reviews: {
+        Row: {
+          created_at: string
+          id: string
+          project_id: string | null
+          requested_notes: string | null
+          reviewed_at: string | null
+          reviewer_name: string | null
+          reviewer_notes: string | null
+          status: string
+          target_id: string
+          target_type: string
+          updated_at: string
+          user_id: string
+        }
+        Insert: {
+          created_at?: string
+          id?: string
+          project_id?: string | null
+          requested_notes?: string | null
+          reviewed_at?: string | null
+          reviewer_name?: string | null
+          reviewer_notes?: string | null
+          status?: string
+          target_id: string
+          target_type: string
+          updated_at?: string
+          user_id: string
+        }
+        Update: {
+          created_at?: string
+          id?: string
+          project_id?: string | null
+          requested_notes?: string | null
+          reviewed_at?: string | null
+          reviewer_name?: string | null
+          reviewer_notes?: string | null
+          status?: string
+          target_id?: string
+          target_type?: string
+          updated_at?: string
+          user_id?: string
+        }
+        Relationships: [
+          {
+            foreignKeyName: "professional_reviews_project_id_fkey"
+            columns: ["project_id"]
+            isOneToOne: false
+            referencedRelation: "projects"
+            referencedColumns: ["id"]
+          },
+        ]
+      }
       project_documents: {
         Row: {
           ai_action_items: Json | null
@@ -1747,6 +1800,302 @@ export type Database = {
             columns: ["project_id"]
             isOneToOne: false
             referencedRelation: "projects"
+            referencedColumns: ["id"]
+          },
+        ]
+      }
+      qaqc_findings: {
+        Row: {
+          category: string
+          code_basis: string | null
+          created_at: string
+          discipline: string
+          finding_no: number
+          id: string
+          jurisdiction_source_url: string | null
+          location: string | null
+          plain_language: string | null
+          recommended_action: string | null
+          resolved: boolean
+          responsible_discipline: string | null
+          review_id: string
+          severity: string
+          sheet_number: string | null
+          sheet_title: string | null
+          summary: string
+          updated_at: string
+          user_id: string
+          verification: string
+          why_it_matters: string | null
+        }
+        Insert: {
+          category?: string
+          code_basis?: string | null
+          created_at?: string
+          discipline?: string
+          finding_no: number
+          id?: string
+          jurisdiction_source_url?: string | null
+          location?: string | null
+          plain_language?: string | null
+          recommended_action?: string | null
+          resolved?: boolean
+          responsible_discipline?: string | null
+          review_id: string
+          severity?: string
+          sheet_number?: string | null
+          sheet_title?: string | null
+          summary: string
+          updated_at?: string
+          user_id: string
+          verification?: string
+          why_it_matters?: string | null
+        }
+        Update: {
+          category?: string
+          code_basis?: string | null
+          created_at?: string
+          discipline?: string
+          finding_no?: number
+          id?: string
+          jurisdiction_source_url?: string | null
+          location?: string | null
+          plain_language?: string | null
+          recommended_action?: string | null
+          resolved?: boolean
+          responsible_discipline?: string | null
+          review_id?: string
+          severity?: string
+          sheet_number?: string | null
+          sheet_title?: string | null
+          summary?: string
+          updated_at?: string
+          user_id?: string
+          verification?: string
+          why_it_matters?: string | null
+        }
+        Relationships: [
+          {
+            foreignKeyName: "qaqc_findings_review_id_fkey"
+            columns: ["review_id"]
+            isOneToOne: false
+            referencedRelation: "qaqc_reviews"
+            referencedColumns: ["id"]
+          },
+        ]
+      }
+      qaqc_reviews: {
+        Row: {
+          codes_researched: Json
+          created_at: string
+          document_ids: string[]
+          error: string | null
+          executive_summary: string | null
+          id: string
+          jurisdiction_snapshot: Json
+          missing_documents: Json
+          model: string | null
+          needs_professional_confirmation: Json
+          project_context: Json
+          project_id: string
+          prompt_version: string | null
+          readiness_category: string
+          readiness_score: number | null
+          recommended_actions: Json
+          revision_label: string
+          sources: Json
+          status: string
+          submission_issues: Json
+          updated_at: string
+          user_id: string
+        }
+        Insert: {
+          codes_researched?: Json
+          created_at?: string
+          document_ids?: string[]
+          error?: string | null
+          executive_summary?: string | null
+          id?: string
+          jurisdiction_snapshot?: Json
+          missing_documents?: Json
+          model?: string | null
+          needs_professional_confirmation?: Json
+          project_context?: Json
+          project_id: string
+          prompt_version?: string | null
+          readiness_category?: string
+          readiness_score?: number | null
+          recommended_actions?: Json
+          revision_label?: string
+          sources?: Json
+          status?: string
+          submission_issues?: Json
+          updated_at?: string
+          user_id: string
+        }
+        Update: {
+          codes_researched?: Json
+          created_at?: string
+          document_ids?: string[]
+          error?: string | null
+          executive_summary?: string | null
+          id?: string
+          jurisdiction_snapshot?: Json
+          missing_documents?: Json
+          model?: string | null
+          needs_professional_confirmation?: Json
+          project_context?: Json
+          project_id?: string
+          prompt_version?: string | null
+          readiness_category?: string
+          readiness_score?: number | null
+          recommended_actions?: Json
+          revision_label?: string
+          sources?: Json
+          status?: string
+          submission_issues?: Json
+          updated_at?: string
+          user_id?: string
+        }
+        Relationships: [
+          {
+            foreignKeyName: "qaqc_reviews_project_id_fkey"
+            columns: ["project_id"]
+            isOneToOne: false
+            referencedRelation: "projects"
+            referencedColumns: ["id"]
+          },
+        ]
+      }
+      qaqc_revision_diffs: {
+        Row: {
+          added_sheets: Json
+          base_review_id: string
+          changes: Json
+          compare_review_id: string
+          created_at: string
+          id: string
+          project_id: string
+          removed_sheets: Json
+          revised_sheets: Json
+          summary: string | null
+          user_id: string
+        }
+        Insert: {
+          added_sheets?: Json
+          base_review_id: string
+          changes?: Json
+          compare_review_id: string
+          created_at?: string
+          id?: string
+          project_id: string
+          removed_sheets?: Json
+          revised_sheets?: Json
+          summary?: string | null
+          user_id: string
+        }
+        Update: {
+          added_sheets?: Json
+          base_review_id?: string
+          changes?: Json
+          compare_review_id?: string
+          created_at?: string
+          id?: string
+          project_id?: string
+          removed_sheets?: Json
+          revised_sheets?: Json
+          summary?: string | null
+          user_id?: string
+        }
+        Relationships: [
+          {
+            foreignKeyName: "qaqc_revision_diffs_base_review_id_fkey"
+            columns: ["base_review_id"]
+            isOneToOne: false
+            referencedRelation: "qaqc_reviews"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "qaqc_revision_diffs_compare_review_id_fkey"
+            columns: ["compare_review_id"]
+            isOneToOne: false
+            referencedRelation: "qaqc_reviews"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "qaqc_revision_diffs_project_id_fkey"
+            columns: ["project_id"]
+            isOneToOne: false
+            referencedRelation: "projects"
+            referencedColumns: ["id"]
+          },
+        ]
+      }
+      qaqc_sheets: {
+        Row: {
+          created_at: string
+          discipline: string
+          document_id: string | null
+          id: string
+          index_state: string
+          notes: string | null
+          professional_of_record: string | null
+          review_id: string
+          revision_date: string | null
+          revision_number: string | null
+          seal_status: string
+          sheet_number: string
+          sheet_title: string | null
+          sort_order: number
+          user_id: string
+        }
+        Insert: {
+          created_at?: string
+          discipline?: string
+          document_id?: string | null
+          id?: string
+          index_state?: string
+          notes?: string | null
+          professional_of_record?: string | null
+          review_id: string
+          revision_date?: string | null
+          revision_number?: string | null
+          seal_status?: string
+          sheet_number: string
+          sheet_title?: string | null
+          sort_order?: number
+          user_id: string
+        }
+        Update: {
+          created_at?: string
+          discipline?: string
+          document_id?: string | null
+          id?: string
+          index_state?: string
+          notes?: string | null
+          professional_of_record?: string | null
+          review_id?: string
+          revision_date?: string | null
+          revision_number?: string | null
+          seal_status?: string
+          sheet_number?: string
+          sheet_title?: string | null
+          sort_order?: number
+          user_id?: string
+        }
+        Relationships: [
+          {
+            foreignKeyName: "qaqc_sheets_document_id_fkey"
+            columns: ["document_id"]
+            isOneToOne: false
+            referencedRelation: "project_documents"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "qaqc_sheets_review_id_fkey"
+            columns: ["review_id"]
+            isOneToOne: false
+            referencedRelation: "qaqc_reviews"
             referencedColumns: ["id"]
           },
         ]
@@ -2407,6 +2756,217 @@ export type Database = {
           user_id?: string
         }
         Relationships: []
+      }
+      site_investigation_findings: {
+        Row: {
+          category: string
+          classification: string
+          created_at: string
+          detail: string | null
+          id: string
+          impact: string | null
+          investigation_id: string
+          sort_order: number
+          source_title: string | null
+          source_url: string | null
+          title: string
+          user_id: string
+          verification: string
+        }
+        Insert: {
+          category?: string
+          classification?: string
+          created_at?: string
+          detail?: string | null
+          id?: string
+          impact?: string | null
+          investigation_id: string
+          sort_order?: number
+          source_title?: string | null
+          source_url?: string | null
+          title: string
+          user_id: string
+          verification?: string
+        }
+        Update: {
+          category?: string
+          classification?: string
+          created_at?: string
+          detail?: string | null
+          id?: string
+          impact?: string | null
+          investigation_id?: string
+          sort_order?: number
+          source_title?: string | null
+          source_url?: string | null
+          title?: string
+          user_id?: string
+          verification?: string
+        }
+        Relationships: [
+          {
+            foreignKeyName: "site_investigation_findings_investigation_id_fkey"
+            columns: ["investigation_id"]
+            isOneToOne: false
+            referencedRelation: "site_investigations"
+            referencedColumns: ["id"]
+          },
+        ]
+      }
+      site_investigation_permits: {
+        Row: {
+          agency: string | null
+          approval: string
+          concurrent: boolean
+          created_at: string
+          id: string
+          investigation_id: string
+          sequence_order: number
+          source_url: string | null
+          timeline_estimate: string | null
+          trigger_condition: string | null
+          user_id: string
+          verification: string
+          why_required: string | null
+        }
+        Insert: {
+          agency?: string | null
+          approval: string
+          concurrent?: boolean
+          created_at?: string
+          id?: string
+          investigation_id: string
+          sequence_order?: number
+          source_url?: string | null
+          timeline_estimate?: string | null
+          trigger_condition?: string | null
+          user_id: string
+          verification?: string
+          why_required?: string | null
+        }
+        Update: {
+          agency?: string | null
+          approval?: string
+          concurrent?: boolean
+          created_at?: string
+          id?: string
+          investigation_id?: string
+          sequence_order?: number
+          source_url?: string | null
+          timeline_estimate?: string | null
+          trigger_condition?: string | null
+          user_id?: string
+          verification?: string
+          why_required?: string | null
+        }
+        Relationships: [
+          {
+            foreignKeyName: "site_investigation_permits_investigation_id_fkey"
+            columns: ["investigation_id"]
+            isOneToOne: false
+            referencedRelation: "site_investigations"
+            referencedColumns: ["id"]
+          },
+        ]
+      }
+      site_investigations: {
+        Row: {
+          address: string
+          assumptions: Json
+          client_name: string | null
+          created_at: string
+          document_ids: string[]
+          error: string | null
+          executive_summary: string | null
+          feasibility_rating: string
+          id: string
+          jurisdiction_snapshot: Json
+          model: string | null
+          notes: string | null
+          prepared_date: string | null
+          project_id: string
+          project_type_id: string | null
+          project_type_label: string | null
+          prompt_version: string | null
+          property_info: Json
+          report: Json
+          report_number: string | null
+          sources: Json
+          status: string
+          timeline: Json
+          updated_at: string
+          user_id: string
+        }
+        Insert: {
+          address: string
+          assumptions?: Json
+          client_name?: string | null
+          created_at?: string
+          document_ids?: string[]
+          error?: string | null
+          executive_summary?: string | null
+          feasibility_rating?: string
+          id?: string
+          jurisdiction_snapshot?: Json
+          model?: string | null
+          notes?: string | null
+          prepared_date?: string | null
+          project_id: string
+          project_type_id?: string | null
+          project_type_label?: string | null
+          prompt_version?: string | null
+          property_info?: Json
+          report?: Json
+          report_number?: string | null
+          sources?: Json
+          status?: string
+          timeline?: Json
+          updated_at?: string
+          user_id: string
+        }
+        Update: {
+          address?: string
+          assumptions?: Json
+          client_name?: string | null
+          created_at?: string
+          document_ids?: string[]
+          error?: string | null
+          executive_summary?: string | null
+          feasibility_rating?: string
+          id?: string
+          jurisdiction_snapshot?: Json
+          model?: string | null
+          notes?: string | null
+          prepared_date?: string | null
+          project_id?: string
+          project_type_id?: string | null
+          project_type_label?: string | null
+          prompt_version?: string | null
+          property_info?: Json
+          report?: Json
+          report_number?: string | null
+          sources?: Json
+          status?: string
+          timeline?: Json
+          updated_at?: string
+          user_id?: string
+        }
+        Relationships: [
+          {
+            foreignKeyName: "site_investigations_project_id_fkey"
+            columns: ["project_id"]
+            isOneToOne: false
+            referencedRelation: "projects"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "site_investigations_project_type_id_fkey"
+            columns: ["project_type_id"]
+            isOneToOne: false
+            referencedRelation: "project_types"
+            referencedColumns: ["id"]
+          },
+        ]
       }
       subscriptions: {
         Row: {
