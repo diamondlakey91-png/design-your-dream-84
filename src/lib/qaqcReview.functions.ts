@@ -641,14 +641,17 @@ export const generateQaQcReportPdf = createServerFn({ method: "POST" })
   .inputValidator((d: unknown) => z.object({ review_id: z.string().uuid() }).parse(d))
   .handler(async ({ data, context }) => {
     const sb = context.supabase;
-    const [r, sheets, findings] = await Promise.all([
+    const [r, sheets, findings, professionalReview] = await Promise.all([
       sb.from("qaqc_reviews").select("*").eq("id", data.review_id).maybeSingle(),
       sb.from("qaqc_sheets").select("*").eq("review_id", data.review_id).order("sort_order", { ascending: true }),
       sb.from("qaqc_findings").select("*").eq("review_id", data.review_id).order("finding_no", { ascending: true }),
+      sb.from("professional_reviews").select("*").eq("target_type", "qaqc_review").eq("target_id", data.review_id).order("created_at", { ascending: false }).limit(1).maybeSingle(),
     ]);
     // eslint-disable-next-line @typescript-eslint/no-explicit-any
     const review = r.data as any;
     if (!review) throw new Error("Review not found");
+    const professionalReviewRow = professionalReview.data;
+    const professionallyReviewed = professionalReviewRow?.status === "completed";
     const { data: project } = await sb.from("projects").select("name, location, jurisdiction, project_type").eq("id", review.project_id).maybeSingle();
 
     const { PDFDocument, StandardFonts, rgb } = await import("pdf-lib");
