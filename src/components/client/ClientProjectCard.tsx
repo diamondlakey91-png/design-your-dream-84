@@ -49,8 +49,8 @@ export function ClientProjectCard({ project, signals }: { project: ClientProject
       </div>
 
       {attention.length > 0 && (
-        <div className="mt-4 flex items-start gap-2 rounded-2xl border border-[oklch(0.85_0.16_72)]/35 bg-[oklch(0.85_0.16_72)]/10 px-3 py-2.5">
-          <AlertTriangle className="mt-0.5 size-4 shrink-0 text-[oklch(0.88_0.15_72)]" />
+        <div className="mt-4 flex items-start gap-2 rounded-2xl border border-[oklch(0.66_0.19_258)]/35 bg-[oklch(0.66_0.19_258)]/10 px-3 py-2.5">
+          <AlertTriangle className="mt-0.5 size-4 shrink-0 text-[oklch(0.72_0.17_258)]" />
           <p className="text-xs text-foreground">
             We need {attention.length} thing{attention.length === 1 ? "" : "s"} from you: {attention[0].whatIsNeeded}
             {attention.length > 1 ? ` and ${attention.length - 1} more.` : "."}

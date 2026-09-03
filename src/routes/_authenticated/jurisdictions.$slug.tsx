@@ -163,7 +163,7 @@ function JurisdictionDetail() {
                   <button
                     onClick={() => verify.mutate("review_recommended")}
                     disabled={verify.isPending}
-                    className="inline-flex items-center gap-1 rounded-md ring-1 ring-amber-500/30 bg-amber-500/10 text-amber-400 px-2 py-1 text-[11px] hover:bg-amber-500/20 disabled:opacity-50"
+                    className="inline-flex items-center gap-1 rounded-md ring-1 ring-sky-500/30 bg-sky-500/10 text-sky-400 px-2 py-1 text-[11px] hover:bg-sky-500/20 disabled:opacity-50"
                   >
                     <ShieldAlert className="size-3" /> Flag for review
                   </button>

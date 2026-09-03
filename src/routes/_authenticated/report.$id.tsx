@@ -298,13 +298,13 @@ function ReportDetailPage() {
           <>
             {/* Common rejection flags */}
             {(report.common_rejection_flags ?? []).length > 0 && (
-              <section className="rounded-xl border border-amber-500/30 bg-amber-500/5 p-4 space-y-2">
-                <div className="flex items-center gap-2 text-amber-300 text-[10px] font-mono uppercase tracking-widest">
+              <section className="rounded-xl border border-sky-500/30 bg-sky-500/5 p-4 space-y-2">
+                <div className="flex items-center gap-2 text-sky-300 text-[10px] font-mono uppercase tracking-widest">
                   <AlertTriangle className="size-4" /> Common rejection flags — fix before submittal
                 </div>
                 <ul className="space-y-1.5">
                   {report.common_rejection_flags.map((f, i) => (
-                    <li key={i} className="text-sm flex gap-2"><span className="text-amber-400">›</span><span>{f}</span></li>
+                    <li key={i} className="text-sm flex gap-2"><span className="text-sky-400">›</span><span>{f}</span></li>
                   ))}
                 </ul>
               </section>

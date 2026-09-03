@@ -185,7 +185,7 @@ export function JurisdictionConfirmCard({ projectId }: { projectId: string }) {
             </div>
             {candidates.length === 0 && (
               <div className="rounded-md border border-dashed border-border p-3 text-sm text-muted-foreground flex items-start gap-2">
-                <AlertTriangle className="size-4 text-amber-400 mt-0.5" />
+                <AlertTriangle className="size-4 text-sky-400 mt-0.5" />
                 <span>Exact authorities need confirmation for this jurisdiction. Request human verification below, or proceed with the roadmap marked "Needs Confirmation".</span>
               </div>
             )}
@@ -250,8 +250,8 @@ function StatusBadge({ status }: { status: string }) {
   if (status === "user_confirmed")
     return <Badge className="bg-emerald-500/10 text-emerald-400 border-emerald-500/30 border">Confirmed by user</Badge>;
   if (status === "pending_review")
-    return <Badge className="bg-amber-500/10 text-amber-400 border-amber-500/30 border">Pending human review</Badge>;
-  return <Badge className="bg-amber-500/10 text-amber-400 border-amber-500/30 border">Unconfirmed</Badge>;
+    return <Badge className="bg-sky-500/10 text-sky-400 border-sky-500/30 border">Pending human review</Badge>;
+  return <Badge className="bg-sky-500/10 text-sky-400 border-sky-500/30 border">Unconfirmed</Badge>;
 }
 
 function VerifBadge({ v }: { v: string }) {
@@ -261,6 +261,6 @@ function VerifBadge({ v }: { v: string }) {
       ? "bg-emerald-500/10 text-emerald-400 border-emerald-500/30"
       : v === "ai_assisted"
         ? "bg-blue-500/10 text-blue-400 border-blue-500/30"
-        : "bg-amber-500/10 text-amber-400 border-amber-500/30";
+        : "bg-sky-500/10 text-sky-400 border-sky-500/30";
   return <span className={`text-[10px] font-mono uppercase tracking-widest border px-2 py-0.5 rounded ${cls} shrink-0`}>{label}</span>;
 }

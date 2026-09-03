@@ -16,8 +16,8 @@ export type QaQcSheetRow = {
 const stateKlass: Record<string, string> = {
   present: "text-emerald-400",
   missing_from_upload: "text-red-400",
-  not_indexed: "text-amber-400",
-  duplicate: "text-orange-400",
+  not_indexed: "text-sky-400",
+  duplicate: "text-sky-400",
   superseded: "text-muted-foreground",
 };
 

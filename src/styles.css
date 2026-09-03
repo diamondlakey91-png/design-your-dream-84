@@ -86,7 +86,7 @@
 
   /* Status */
   --signal: oklch(0.75 0.16 155);   /* emerald */
-  --warn: oklch(0.78 0.16 72);      /* amber */
+  --warn: oklch(0.66 0.19 258);      /* amber */
   --danger: oklch(0.65 0.22 27);    /* red */
 }
 

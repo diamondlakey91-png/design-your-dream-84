@@ -74,7 +74,7 @@ function SharedReportPage() {
   const project = (result.project ?? {}) as { name?: string; jurisdiction?: string; location?: string; project_type?: string };
   const created = result.created_at ? new Date(result.created_at).toLocaleString() : "";
   const expires = result.expires_at ? new Date(result.expires_at).toLocaleDateString() : null;
-  const riskColor = report.overall_risk === "high" ? "text-destructive" : report.overall_risk === "medium" ? "text-amber-600" : "text-emerald-600";
+  const riskColor = report.overall_risk === "high" ? "text-destructive" : report.overall_risk === "medium" ? "text-sky-600" : "text-emerald-600";
 
   return (
     <Shell>
@@ -95,7 +95,7 @@ function SharedReportPage() {
         <div className="grid grid-cols-2 sm:grid-cols-4 gap-3">
           <Metric label="Plan Health" value={String(report.plan_health_score)} sub={`${report.overall_risk} risk`} valueClass={riskColor} />
           <Metric label="Findings" value={String(report.total_findings)} sub={`${report.by_severity.high} high`} subClass="text-destructive" />
-          <Metric label="Medium" value={String(report.by_severity.medium)} valueClass="text-amber-600" />
+          <Metric label="Medium" value={String(report.by_severity.medium)} valueClass="text-sky-600" />
           <Metric label="Low" value={String(report.by_severity.low)} valueClass="text-emerald-600" />
         </div>
 
@@ -123,7 +123,7 @@ function SharedReportPage() {
               {report.top_findings.map((f, i) => (
                 <li key={i} className="rounded-lg border border-border bg-card p-3 text-sm">
                   <div className="flex flex-wrap items-center gap-2">
-                    <span className={`text-[9px] font-mono uppercase px-1.5 py-0.5 rounded ${f.severity === "high" ? "bg-destructive/15 text-destructive" : f.severity === "medium" ? "bg-amber-500/15 text-amber-700 dark:text-amber-500" : "bg-emerald-500/15 text-emerald-700 dark:text-emerald-500"}`}>{f.severity}</span>
+                    <span className={`text-[9px] font-mono uppercase px-1.5 py-0.5 rounded ${f.severity === "high" ? "bg-destructive/15 text-destructive" : f.severity === "medium" ? "bg-sky-500/15 text-sky-700 dark:text-sky-500" : "bg-emerald-500/15 text-emerald-700 dark:text-emerald-500"}`}>{f.severity}</span>
                     <span className="text-[9px] font-mono uppercase text-muted-foreground">{f.category?.replace(/_/g, " ")}</span>
                     <span className="font-medium">{f.title}</span>
                   </div>

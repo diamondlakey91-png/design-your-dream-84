@@ -21,9 +21,9 @@ export function HealthScoreCard({ projectId }: { projectId: string }) {
   const { score, risk, reasons } = q.data;
   const riskColor =
     risk === "low" ? "text-emerald-600 dark:text-emerald-400 bg-emerald-500/15" :
-    risk === "medium" ? "text-amber-700 dark:text-amber-300 bg-amber-500/15" :
+    risk === "medium" ? "text-sky-700 dark:text-sky-300 bg-sky-500/15" :
     "text-destructive bg-destructive/15";
-  const scoreColor = score >= 80 ? "text-emerald-500" : score >= 60 ? "text-amber-500" : "text-destructive";
+  const scoreColor = score >= 80 ? "text-emerald-500" : score >= 60 ? "text-sky-500" : "text-destructive";
   return (
     <section className="p-4 bg-card ring-1 ring-black/5 rounded-xl">
       <div className="flex items-center gap-4">

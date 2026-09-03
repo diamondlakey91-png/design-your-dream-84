@@ -18,8 +18,8 @@ export function WelcomeBanner() {
   // 1. No active subscription — show subscribe prompt
   if (!isActive) {
     return (
-      <div className="mb-4 flex items-start gap-3 rounded-lg border border-amber-500/30 bg-amber-500/10 p-3 text-sm">
-        <AlertCircle className="mt-0.5 size-4 shrink-0 text-amber-500" />
+      <div className="mb-4 flex items-start gap-3 rounded-lg border border-sky-500/30 bg-sky-500/10 p-3 text-sm">
+        <AlertCircle className="mt-0.5 size-4 shrink-0 text-sky-500" />
         <div className="flex-1">
           <div className="font-medium text-foreground">Read-only mode</div>
           <div className="text-muted-foreground">Choose a plan to create projects and unlock AI Copilot, Plan Review, and Doc Reader.</div>

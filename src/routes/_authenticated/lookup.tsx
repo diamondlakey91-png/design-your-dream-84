@@ -182,7 +182,7 @@ function confidenceStyle(c: string) {
   switch (c) {
     case "high": return { bg: "bg-emerald-500/10", fg: "text-emerald-500", border: "border-emerald-500/30", label: "High confidence", Icon: ShieldCheck };
     case "medium": return { bg: "bg-brand/10", fg: "text-brand", border: "border-brand/30", label: "Medium confidence", Icon: ShieldQuestion };
-    case "low": return { bg: "bg-amber-500/10", fg: "text-amber-500", border: "border-amber-500/30", label: "Low confidence", Icon: ShieldAlert };
+    case "low": return { bg: "bg-sky-500/10", fg: "text-sky-500", border: "border-sky-500/30", label: "Low confidence", Icon: ShieldAlert };
     default: return { bg: "bg-muted", fg: "text-muted-foreground", border: "border-border", label: "No match", Icon: ShieldAlert };
   }
 }
@@ -212,11 +212,11 @@ function Results({ result }: { result: LookupResult }) {
         </div>
 
         {result.no_match_reason && (
-          <div className="flex items-start gap-2 rounded-md border border-amber-500/30 bg-amber-500/5 p-2.5 text-xs text-amber-600 dark:text-amber-400">
+          <div className="flex items-start gap-2 rounded-md border border-sky-500/30 bg-sky-500/5 p-2.5 text-xs text-sky-600 dark:text-sky-400">
             <Info className="size-3.5 shrink-0 mt-0.5" />
             <div>
               <div className="font-medium">Why matches are limited</div>
-              <p className="mt-0.5 text-amber-700/90 dark:text-amber-300/90">{result.no_match_reason}</p>
+              <p className="mt-0.5 text-sky-700/90 dark:text-sky-300/90">{result.no_match_reason}</p>
             </div>
           </div>
         )}
@@ -302,10 +302,10 @@ function SourceChip({ active, label }: { active?: boolean; label: string }) {
 }
 
 const UTILITY_META = {
-  one_call: { label: "811 One-Call", Icon: PhoneCall, tone: "text-amber-500 border-amber-500/30 bg-amber-500/10" },
+  one_call: { label: "811 One-Call", Icon: PhoneCall, tone: "text-sky-500 border-sky-500/30 bg-sky-500/10" },
   water_sewer: { label: "Water / Sewer", Icon: Droplets, tone: "text-sky-400 border-sky-500/30 bg-sky-500/10" },
-  gas: { label: "Natural Gas", Icon: Flame, tone: "text-orange-400 border-orange-500/30 bg-orange-500/10" },
-  electric: { label: "Electric", Icon: Zap, tone: "text-yellow-400 border-yellow-500/30 bg-yellow-500/10" },
+  gas: { label: "Natural Gas", Icon: Flame, tone: "text-sky-400 border-sky-500/30 bg-sky-500/10" },
+  electric: { label: "Electric", Icon: Zap, tone: "text-sky-400 border-sky-500/30 bg-sky-500/10" },
   telecom: { label: "Telecom / Fiber", Icon: Cable, tone: "text-violet-400 border-violet-500/30 bg-violet-500/10" },
   stormwater: { label: "Stormwater", Icon: CloudRain, tone: "text-teal-400 border-teal-500/30 bg-teal-500/10" },
 } as const;

@@ -105,7 +105,7 @@ function statusChip(status: string | undefined) {
   const v = (status || "").toLowerCase();
   if (v.includes("confirmed")) return "bg-emerald-500/15 text-emerald-300 ring-emerald-500/30";
   if (v.includes("insufficient")) return "bg-zinc-700/40 text-zinc-300 ring-zinc-500/30";
-  if (v.includes("verification")) return "bg-amber-500/15 text-amber-300 ring-amber-500/30";
+  if (v.includes("verification")) return "bg-sky-500/15 text-sky-300 ring-sky-500/30";
   if (v.includes("possibly")) return "bg-violet-500/15 text-violet-300 ring-violet-500/30";
   if (v.includes("likely")) return "bg-sky-500/15 text-sky-300 ring-sky-500/30";
   return "bg-zinc-800 text-zinc-300 ring-white/10";
@@ -114,7 +114,7 @@ function statusChip(status: string | undefined) {
 function priorityChip(p: string | undefined) {
   const v = (p || "").toLowerCase();
   if (v === "critical") return "bg-red-500/15 text-red-300 ring-red-500/30";
-  if (v === "high") return "bg-amber-500/15 text-amber-300 ring-amber-500/30";
+  if (v === "high") return "bg-sky-500/15 text-sky-300 ring-sky-500/30";
   if (v === "medium") return "bg-sky-500/15 text-sky-300 ring-sky-500/30";
   return "bg-zinc-800 text-zinc-400 ring-white/10";
 }
@@ -122,7 +122,7 @@ function priorityChip(p: string | undefined) {
 function severityChip(s: string | undefined) {
   const v = (s || "").toLowerCase();
   if (v === "red") return "bg-red-500/15 text-red-300 ring-red-500/30";
-  if (v === "amber") return "bg-amber-500/15 text-amber-300 ring-amber-500/30";
+  if (v === "amber") return "bg-sky-500/15 text-sky-300 ring-sky-500/30";
   return "bg-sky-500/15 text-sky-300 ring-sky-500/30";
 }
 
@@ -355,7 +355,7 @@ function AnalysisPage() {
                 </div>
               )}
 
-              <div className="rounded-xl bg-amber-500/5 ring-1 ring-amber-500/20 p-4 text-[12px] leading-relaxed text-amber-200/90">
+              <div className="rounded-xl bg-sky-500/5 ring-1 ring-sky-500/20 p-4 text-[12px] leading-relaxed text-sky-200/90">
                 {DISCLAIMER}
               </div>
             </>
@@ -690,7 +690,7 @@ function RisksSection({ risks, missing }: { risks: Array<Record<string, string>>
       <SectionTitle icon={<ShieldAlert className="size-4" />} title="Risks & missing information" />
       {missing.length > 0 && (
         <div className="mt-3">
-          <div className="text-[11px] font-mono uppercase tracking-widest text-amber-300/80">Missing info</div>
+          <div className="text-[11px] font-mono uppercase tracking-widest text-sky-300/80">Missing info</div>
           <ul className="mt-1 text-sm text-zinc-300 list-disc pl-5 space-y-0.5">
             {missing.map((m, i) => <li key={i}>{m}</li>)}
           </ul>
@@ -743,7 +743,7 @@ function SourcesSection({ sources }: { sources: Array<Record<string, unknown>> }
     <div className="rounded-2xl bg-white/[0.03] ring-1 ring-white/10 p-5">
       <SectionTitle icon={<LinkIcon className="size-4" />} title="Sources & verification" count={sources.length} />
       {sources.length === 0 ? (
-        <div className="mt-3 text-sm text-amber-300/90 bg-amber-500/5 ring-1 ring-amber-500/20 rounded-lg p-3">
+        <div className="mt-3 text-sm text-sky-300/90 bg-sky-500/5 ring-1 ring-sky-500/20 rounded-lg p-3">
           Official jurisdiction information has not yet been verified. Run a live jurisdiction refresh from the project page, or contact the local Building Department to confirm the requirements above.
         </div>
       ) : (
@@ -755,7 +755,7 @@ function SourcesSection({ sources }: { sources: Array<Record<string, unknown>> }
                 {s.official ? (
                   <span className="text-[10px] rounded-full px-2 py-0.5 ring-1 bg-emerald-500/10 text-emerald-300 ring-emerald-500/30">official</span>
                 ) : (
-                  <span className="text-[10px] rounded-full px-2 py-0.5 ring-1 bg-amber-500/10 text-amber-300 ring-amber-500/30">unverified</span>
+                  <span className="text-[10px] rounded-full px-2 py-0.5 ring-1 bg-sky-500/10 text-sky-300 ring-sky-500/30">unverified</span>
                 )}
               </div>
               <div className="text-[11px] text-zinc-500">{String(s.agency ?? "")}</div>

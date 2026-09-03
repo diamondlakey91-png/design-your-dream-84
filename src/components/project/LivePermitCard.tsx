@@ -127,7 +127,7 @@ export function LivePermitCard({
             </div>
             <span className={`text-[10px] font-mono uppercase tracking-widest px-2 py-1 rounded ${
               d?.status && /issued|approved|finaled|ready/i.test(d.status) ? "bg-emerald-500/15 text-emerald-600 dark:text-emerald-400" :
-              d?.status && /review|submitted|pending|plan/i.test(d.status) ? "bg-amber-500/15 text-amber-600 dark:text-amber-400" :
+              d?.status && /review|submitted|pending|plan/i.test(d.status) ? "bg-sky-500/15 text-sky-600 dark:text-sky-400" :
               d?.status && /expired|withdrawn|rejected/i.test(d.status) ? "bg-red-500/15 text-red-600 dark:text-red-400" :
               "bg-muted text-muted-foreground"
             }`}>
@@ -136,7 +136,7 @@ export function LivePermitCard({
           </div>
 
           {d && !d.found && d.no_match_reason && (
-            <p className="text-xs text-amber-600 dark:text-amber-400">{d.no_match_reason}</p>
+            <p className="text-xs text-sky-600 dark:text-sky-400">{d.no_match_reason}</p>
           )}
 
           {d && (
@@ -165,7 +165,7 @@ export function LivePermitCard({
                     <span className={`font-mono uppercase text-[10px] px-1.5 py-0.5 rounded ${
                       /approv/i.test(r.status) ? "bg-emerald-500/15 text-emerald-600 dark:text-emerald-400" :
                       /reject/i.test(r.status) ? "bg-red-500/15 text-red-600 dark:text-red-400" :
-                      "bg-amber-500/15 text-amber-600 dark:text-amber-400"
+                      "bg-sky-500/15 text-sky-600 dark:text-sky-400"
                     }`}>{r.status}</span>
                   </div>
                 ))}
@@ -258,7 +258,7 @@ export function LivePermitCard({
                           <span className="text-[10px] font-mono uppercase text-muted-foreground shrink-0">· {h.trigger}</span>
                           <span className={`text-[10px] font-mono uppercase tracking-widest px-1.5 py-0.5 rounded ml-1 truncate ${
                             /issued|approved|finaled|ready/i.test(h.status) ? "bg-emerald-500/15 text-emerald-600 dark:text-emerald-400" :
-                            /review|submitted|pending|plan/i.test(h.status) ? "bg-amber-500/15 text-amber-600 dark:text-amber-400" :
+                            /review|submitted|pending|plan/i.test(h.status) ? "bg-sky-500/15 text-sky-600 dark:text-sky-400" :
                             /expired|withdrawn|rejected/i.test(h.status) ? "bg-red-500/15 text-red-600 dark:text-red-400" :
                             "bg-muted text-muted-foreground"
                           }`}>{h.status || (h.found ? "Found" : "No match")}</span>

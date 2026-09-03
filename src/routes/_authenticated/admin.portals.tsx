@@ -186,7 +186,7 @@ function AdminPortalsPage() {
                     <span className="rounded bg-background border border-border px-1.5 py-0.5 text-[10px] font-mono text-muted-foreground">{r.state}</span>
                     <span className="rounded-full border border-border bg-background px-2 py-0.5 text-[10px] font-medium">{r.platform}</span>
                     {!r.is_active && (
-                      <span className="rounded-full border border-orange-500/40 bg-orange-500/10 text-orange-300 px-2 py-0.5 text-[10px]">disabled</span>
+                      <span className="rounded-full border border-sky-500/40 bg-sky-500/10 text-sky-300 px-2 py-0.5 text-[10px]">disabled</span>
                     )}
                   </div>
                   <a

@@ -17,7 +17,7 @@ export function ProjectTypeBadge({
   const additional = additionalIds.map((id) => byId.get(id)).filter(Boolean) as ReturnType<typeof byId.get> extends infer T ? NonNullable<T>[] : never;
 
   if (!primary && !fallbackText) {
-    return isLoading ? null : <Badge variant="outline" className="text-amber-300 border-amber-500/40">Project type needs confirmation</Badge>;
+    return isLoading ? null : <Badge variant="outline" className="text-sky-300 border-sky-500/40">Project type needs confirmation</Badge>;
   }
 
   if (compact) {

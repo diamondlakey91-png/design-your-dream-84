@@ -164,7 +164,7 @@ function Results({ intel }: { intel: PropertyIntel }) {
                   <ShieldCheck className="size-3" /> Cached jurisdiction profile
                 </span>
               ) : (
-                <span className="inline-flex items-center gap-1 rounded-full bg-amber-500/10 px-2 py-0.5 text-[10px] font-mono uppercase tracking-widest text-amber-300">
+                <span className="inline-flex items-center gap-1 rounded-full bg-sky-500/10 px-2 py-0.5 text-[10px] font-mono uppercase tracking-widest text-sky-300">
                   <ShieldQuestion className="size-3" /> No cached profile — AI inferred
                 </span>
               )}
@@ -292,8 +292,8 @@ function Results({ intel }: { intel: PropertyIntel }) {
       </div>
 
       {ai.disclaimers.length > 0 && (
-        <div className="rounded-xl border border-amber-500/30 bg-amber-500/5 p-4 text-xs text-amber-200/90 space-y-1.5">
-          <p className="font-mono uppercase tracking-widest text-[10px] text-amber-300">Disclaimers</p>
+        <div className="rounded-xl border border-sky-500/30 bg-sky-500/5 p-4 text-xs text-sky-200/90 space-y-1.5">
+          <p className="font-mono uppercase tracking-widest text-[10px] text-sky-300">Disclaimers</p>
           {ai.disclaimers.map((d, i) => (<p key={i}>{d}</p>))}
         </div>
       )}
@@ -333,7 +333,7 @@ function ConfidenceBadge({ value, compact }: { value: ConfidenceTag; compact?: b
   const map = {
     verified: { icon: <ShieldCheck className="size-3" />, label: "Verified", cls: "bg-emerald-500/10 text-emerald-300" },
     ai_assisted: { icon: <ShieldQuestion className="size-3" />, label: "AI-assisted", cls: "bg-sky-500/10 text-sky-300" },
-    needs_confirmation: { icon: <ShieldAlert className="size-3" />, label: "Confirm", cls: "bg-amber-500/10 text-amber-300" },
+    needs_confirmation: { icon: <ShieldAlert className="size-3" />, label: "Confirm", cls: "bg-sky-500/10 text-sky-300" },
   } as const;
   const m = map[value] ?? map.needs_confirmation;
   return (
@@ -344,7 +344,7 @@ function ConfidenceBadge({ value, compact }: { value: ConfidenceTag; compact?: b
 }
 
 function SeverityDot({ severity }: { severity: "info" | "watch" | "risk" }) {
-  const cls = severity === "risk" ? "bg-red-400" : severity === "watch" ? "bg-amber-400" : "bg-sky-400";
+  const cls = severity === "risk" ? "bg-red-400" : severity === "watch" ? "bg-sky-400" : "bg-sky-400";
   return <span className={`size-2 rounded-full ${cls}`} aria-hidden />;
 }
 

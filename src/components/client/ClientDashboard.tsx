@@ -111,7 +111,7 @@ export function ClientDashboard({ onCreateProject }: { onCreateProject: () => vo
         <div className="mb-3 flex flex-wrap items-center justify-between gap-2">
           <h2 id="needs-attention" className="text-lg font-semibold text-foreground">Needs Your Attention</h2>
           {model.allAttention.length > 0 && (
-            <span className="rounded-full border border-[oklch(0.85_0.16_72)]/40 bg-[oklch(0.85_0.16_72)]/12 px-3 py-1 text-xs font-medium text-[oklch(0.88_0.15_72)]">
+            <span className="rounded-full border border-[oklch(0.66_0.19_258)]/40 bg-[oklch(0.66_0.19_258)]/12 px-3 py-1 text-xs font-medium text-[oklch(0.72_0.17_258)]">
               {model.allAttention.length} item{model.allAttention.length === 1 ? "" : "s"}
             </span>
           )}
@@ -190,7 +190,7 @@ function SummaryCard({
   tone?: "default" | "blue" | "yellow" | "green"; icon: React.ReactNode;
 }) {
   const accent =
-    tone === "yellow" ? "text-[oklch(0.88_0.15_72)]" :
+    tone === "yellow" ? "text-[oklch(0.72_0.17_258)]" :
     tone === "green" ? "text-[oklch(0.82_0.15_155)]" :
     tone === "blue" ? "text-primary" : "text-muted-foreground";
   return (

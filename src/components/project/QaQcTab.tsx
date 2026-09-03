@@ -13,7 +13,7 @@ import { Textarea } from "@/components/ui/textarea";
 
 const statusIcon = {
   pass: <CheckCircle2 className="size-4 text-emerald-500" />,
-  warn: <AlertTriangle className="size-4 text-amber-500" />,
+  warn: <AlertTriangle className="size-4 text-sky-500" />,
   fail: <XCircle className="size-4 text-destructive" />,
   unknown: <HelpCircle className="size-4 text-muted-foreground" />,
 } as const;
@@ -185,7 +185,7 @@ export function QaQcTab({ projectId }: { projectId: string }) {
                       f.severity === "high"
                         ? "bg-destructive/15 text-destructive"
                         : f.severity === "medium"
-                          ? "bg-amber-500/15 text-amber-600"
+                          ? "bg-sky-500/15 text-sky-600"
                           : "bg-muted text-muted-foreground"
                     }`}
                   >
@@ -290,7 +290,7 @@ export function QaQcTab({ projectId }: { projectId: string }) {
           {sign.isPending ? "Recording…" : d.gate_passed ? "Sign off as submittal-ready" : "Record override sign-off"}
         </Button>
         {d.latest_signoff_stale && (
-          <p className="text-[11px] text-amber-600">
+          <p className="text-[11px] text-sky-600">
             Plans changed since the last sign-off — re-run the gate and sign off again before submitting.
           </p>
         )}
@@ -306,7 +306,7 @@ export function QaQcTab({ projectId }: { projectId: string }) {
                     {s.signed_by_role ? ` — ${s.signed_by_role}` : ""}{" "}
                     <span
                       className={`ml-1 rounded px-1.5 py-0.5 text-[10px] font-mono uppercase ${
-                        s.overridden ? "bg-amber-500/15 text-amber-600" : "bg-emerald-500/15 text-emerald-600"
+                        s.overridden ? "bg-sky-500/15 text-sky-600" : "bg-emerald-500/15 text-emerald-600"
                       }`}
                     >
                       {s.overridden ? "override" : "passed"}
@@ -316,7 +316,7 @@ export function QaQcTab({ projectId }: { projectId: string }) {
                     {String(s.scope).replace(/_/g, " ")} · {new Date(s.created_at).toLocaleString()}
                   </p>
                   {s.notes && <p className="mt-1 text-xs text-muted-foreground">{s.notes}</p>}
-                  {s.override_reason && <p className="mt-1 text-xs text-amber-600">Override: {s.override_reason}</p>}
+                  {s.override_reason && <p className="mt-1 text-xs text-sky-600">Override: {s.override_reason}</p>}
                 </div>
                 <button
                   onClick={() => removeSign.mutate(s.id)}

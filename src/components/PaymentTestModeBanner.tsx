@@ -10,7 +10,7 @@ export function PaymentTestModeBanner() {
   }
   if (clientToken.startsWith("pk_test_")) {
     return (
-      <div className="w-full bg-orange-100 border-b border-orange-300 px-4 py-2 text-center text-sm text-orange-800">
+      <div className="w-full bg-sky-100 border-b border-sky-300 px-4 py-2 text-center text-sm text-sky-800">
         All payments made in the preview are in test mode.{" "}
         <a
           href="https://docs.lovable.dev/features/payments#test-and-live-environments"

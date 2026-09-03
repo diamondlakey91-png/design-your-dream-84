@@ -6,7 +6,7 @@ import { generateBatchReportPdf, batchReviewPlans } from "@/lib/planReview.funct
 import { ShareReportDialog } from "@/components/project/ShareReportDialog";
 
 export function BatchReport({ report, projectId, onClose }: { report: Awaited<ReturnType<typeof batchReviewPlans>>; projectId: string; onClose: () => void }) {
-  const riskColor = report.overall_risk === "high" ? "text-destructive" : report.overall_risk === "medium" ? "text-amber-600" : "text-emerald-600";
+  const riskColor = report.overall_risk === "high" ? "text-destructive" : report.overall_risk === "medium" ? "text-sky-600" : "text-emerald-600";
   const [shareOpen, setShareOpen] = useState(false);
   const pdfFn = useServerFn(generateBatchReportPdf);
   const pdf = useMutation({
@@ -52,7 +52,7 @@ export function BatchReport({ report, projectId, onClose }: { report: Awaited<Re
         </div>
         <div className="rounded-lg border border-border bg-background p-2">
           <p className="text-[10px] font-mono uppercase text-muted-foreground">Medium</p>
-          <p className="text-2xl font-bold text-amber-600">{report.by_severity.medium}</p>
+          <p className="text-2xl font-bold text-sky-600">{report.by_severity.medium}</p>
         </div>
         <div className="rounded-lg border border-border bg-background p-2">
           <p className="text-[10px] font-mono uppercase text-muted-foreground">Low</p>
@@ -83,7 +83,7 @@ export function BatchReport({ report, projectId, onClose }: { report: Awaited<Re
             {report.top_findings.map((f, i) => (
               <li key={i} className="text-xs rounded-md border border-border bg-background p-2">
                 <div className="flex items-center gap-2">
-                  <span className={`text-[9px] font-mono uppercase px-1.5 py-0.5 rounded ${f.severity === "high" ? "bg-destructive/15 text-destructive" : f.severity === "medium" ? "bg-amber-500/15 text-amber-700 dark:text-amber-500" : "bg-emerald-500/15 text-emerald-700 dark:text-emerald-500"}`}>{f.severity}</span>
+                  <span className={`text-[9px] font-mono uppercase px-1.5 py-0.5 rounded ${f.severity === "high" ? "bg-destructive/15 text-destructive" : f.severity === "medium" ? "bg-sky-500/15 text-sky-700 dark:text-sky-500" : "bg-emerald-500/15 text-emerald-700 dark:text-emerald-500"}`}>{f.severity}</span>
                   <span className="text-[9px] font-mono uppercase text-muted-foreground">{f.category.replace(/_/g, " ")}</span>
                   <span className="font-medium">{f.title}</span>
                 </div>

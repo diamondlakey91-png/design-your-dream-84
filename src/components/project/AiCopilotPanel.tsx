@@ -162,7 +162,7 @@ export function AiCopilotPanel({ projectId }: { projectId: string }) {
             <div className="p-3 rounded-lg bg-background ring-1 ring-black/5 space-y-3 text-sm">
               <div className="flex items-center gap-2">
                 <span className="text-xs font-mono uppercase tracking-wider text-muted-foreground">Overall risk</span>
-                <span className={`text-xs font-mono uppercase tracking-wider px-2 py-0.5 rounded ${risk.data.overall_risk === "high" ? "bg-red-500/15 text-red-600" : risk.data.overall_risk === "medium" ? "bg-amber-500/15 text-amber-700" : "bg-emerald-500/15 text-emerald-700"}`}>{risk.data.overall_risk}</span>
+                <span className={`text-xs font-mono uppercase tracking-wider px-2 py-0.5 rounded ${risk.data.overall_risk === "high" ? "bg-red-500/15 text-red-600" : risk.data.overall_risk === "medium" ? "bg-sky-500/15 text-sky-700" : "bg-emerald-500/15 text-emerald-700"}`}>{risk.data.overall_risk}</span>
               </div>
               {(risk.data.risks ?? []).length === 0 ? (
                 <div className="text-xs text-muted-foreground">No risks detected from current data.</div>
@@ -171,7 +171,7 @@ export function AiCopilotPanel({ projectId }: { projectId: string }) {
                   {(risk.data.risks ?? []).map((r, i) => (
                     <li key={i} className="p-2 rounded bg-card ring-1 ring-black/5">
                       <div className="flex items-center gap-2">
-                        <span className={`text-[10px] font-mono uppercase tracking-wider px-1.5 py-0.5 rounded ${r.severity === "high" ? "bg-red-500/15 text-red-600" : r.severity === "medium" ? "bg-amber-500/15 text-amber-700" : "bg-emerald-500/15 text-emerald-700"}`}>{r.severity}</span>
+                        <span className={`text-[10px] font-mono uppercase tracking-wider px-1.5 py-0.5 rounded ${r.severity === "high" ? "bg-red-500/15 text-red-600" : r.severity === "medium" ? "bg-sky-500/15 text-sky-700" : "bg-emerald-500/15 text-emerald-700"}`}>{r.severity}</span>
                         <div className="font-medium">{r.title}</div>
                       </div>
                       <div className="text-xs text-muted-foreground mt-1">{r.detail}</div>

@@ -33,7 +33,7 @@ type Project = {
 const COLUMNS = [
   { key: "draft", label: "Draft", dot: "bg-muted-foreground", tint: "bg-secondary/60" },
   { key: "submitted", label: "Submitted", dot: "bg-primary", tint: "bg-primary/10" },
-  { key: "review", label: "In Review", dot: "bg-[oklch(0.85_0.16_72)]", tint: "bg-[oklch(0.85_0.16_72)]/10" },
+  { key: "review", label: "In Review", dot: "bg-[oklch(0.66_0.19_258)]", tint: "bg-[oklch(0.66_0.19_258)]/10" },
   { key: "corrections", label: "Corrections", dot: "bg-destructive", tint: "bg-destructive/10" },
   { key: "approved", label: "Approved", dot: "bg-[oklch(0.75_0.16_155)]", tint: "bg-[oklch(0.75_0.16_155)]/10" },
 ] as const;

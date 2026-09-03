@@ -29,10 +29,10 @@ const PLATFORM_STYLES: Record<PortalPlatform, string> = {
   Accela: "bg-blue-500/15 text-blue-300 border-blue-500/30",
   EnerGov: "bg-purple-500/15 text-purple-300 border-purple-500/30",
   ProjectDox: "bg-emerald-500/15 text-emerald-300 border-emerald-500/30",
-  Momentum: "bg-orange-500/15 text-orange-300 border-orange-500/30",
+  Momentum: "bg-sky-500/15 text-sky-300 border-sky-500/30",
   OpenGov: "bg-cyan-500/15 text-cyan-300 border-cyan-500/30",
   CitizenServe: "bg-pink-500/15 text-pink-300 border-pink-500/30",
-  MyGovernmentOnline: "bg-yellow-500/15 text-yellow-300 border-yellow-500/30",
+  MyGovernmentOnline: "bg-sky-500/15 text-sky-300 border-sky-500/30",
   Cityworks: "bg-indigo-500/15 text-indigo-300 border-indigo-500/30",
   Custom: "bg-zinc-500/15 text-zinc-300 border-zinc-500/30",
 };

@@ -201,7 +201,7 @@ function AdminHealthPortalsPage() {
                       <span key={s} className="rounded-full border border-emerald-500/30 bg-emerald-500/10 px-2 py-0.5 text-[10px] text-emerald-300">{s}</span>
                     ))}
                     {!r.is_active && (
-                      <span className="rounded-full border border-orange-500/40 bg-orange-500/10 text-orange-300 px-2 py-0.5 text-[10px]">disabled</span>
+                      <span className="rounded-full border border-sky-500/40 bg-sky-500/10 text-sky-300 px-2 py-0.5 text-[10px]">disabled</span>
                     )}
                     {(() => {
                       const m = verifyMeta(r.verification_status);
@@ -238,7 +238,7 @@ function AdminHealthPortalsPage() {
                     <button
                       title="Flag for review"
                       onClick={() => verifyMut.mutate({ id: r.id, status: "review_recommended" })}
-                      className="rounded p-1 text-amber-400/70 hover:bg-amber-500/10 hover:text-amber-400"
+                      className="rounded p-1 text-sky-400/70 hover:bg-sky-500/10 hover:text-sky-400"
                     >
                       <ShieldAlert className="size-3.5" />
                     </button>

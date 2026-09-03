@@ -13,8 +13,8 @@ export const QAQC_SEVERITIES: Array<{
   weight: number;
 }> = [
   { id: "critical", label: "Critical", definition: "Potential life-safety, jurisdiction rejection, or major design issue.", klass: "text-red-400 bg-red-500/10 ring-red-500/30", weight: 18 },
-  { id: "high", label: "High", definition: "Likely to cause correction comments, redesign, or permit delay.", klass: "text-orange-400 bg-orange-500/10 ring-orange-500/30", weight: 9 },
-  { id: "medium", label: "Medium", definition: "Coordination, completeness, or documentation issue.", klass: "text-amber-400 bg-amber-500/10 ring-amber-500/30", weight: 4 },
+  { id: "high", label: "High", definition: "Likely to cause correction comments, redesign, or permit delay.", klass: "text-sky-400 bg-sky-500/10 ring-sky-500/30", weight: 9 },
+  { id: "medium", label: "Medium", definition: "Coordination, completeness, or documentation issue.", klass: "text-sky-400 bg-sky-500/10 ring-sky-500/30", weight: 4 },
   { id: "low", label: "Low", definition: "Minor clarification or quality issue.", klass: "text-sky-400 bg-sky-500/10 ring-sky-500/30", weight: 1.5 },
   { id: "informational", label: "Informational", definition: "Recommendation or item for confirmation.", klass: "text-muted-foreground bg-muted/40 ring-border", weight: 0.5 },
 ];
@@ -99,8 +99,8 @@ export const READINESS_BANDS: Array<{
   klass: string;
 }> = [
   { id: "not_ready", label: "Not Ready", definition: "Major items appear incomplete.", minScore: 0, klass: "text-red-400 bg-red-500/10 ring-red-500/30" },
-  { id: "needs_corrections", label: "Needs Corrections", definition: "Meaningful QA/QC items remain.", minScore: 55, klass: "text-orange-400 bg-orange-500/10 ring-orange-500/30" },
-  { id: "substantially_ready", label: "Substantially Ready", definition: "Minor or confirmatory items remain.", minScore: 78, klass: "text-amber-400 bg-amber-500/10 ring-amber-500/30" },
+  { id: "needs_corrections", label: "Needs Corrections", definition: "Meaningful QA/QC items remain.", minScore: 55, klass: "text-sky-400 bg-sky-500/10 ring-sky-500/30" },
+  { id: "substantially_ready", label: "Substantially Ready", definition: "Minor or confirmatory items remain.", minScore: 78, klass: "text-sky-400 bg-sky-500/10 ring-sky-500/30" },
   { id: "ready_for_human_final_review", label: "Ready for Human Final Review", definition: "No major AI-identified issues remain.", minScore: 92, klass: "text-emerald-400 bg-emerald-500/10 ring-emerald-500/30" },
 ];
 
@@ -133,8 +133,8 @@ export const QAQC_VERIFICATION_LABELS = [
   { id: "verified_requirement", label: "Verified jurisdiction requirement", klass: "text-emerald-400 bg-emerald-500/10 ring-emerald-500/30" },
   { id: "ai_suggested", label: "AI-identified potential issue", klass: "text-sky-400 bg-sky-500/10 ring-sky-500/30" },
   { id: "coordination_issue", label: "Design coordination issue", klass: "text-violet-400 bg-violet-500/10 ring-violet-500/30" },
-  { id: "missing_information", label: "Missing information", klass: "text-amber-400 bg-amber-500/10 ring-amber-500/30" },
-  { id: "human_review_recommended", label: "Human professional review recommended", klass: "text-orange-400 bg-orange-500/10 ring-orange-500/30" },
+  { id: "missing_information", label: "Missing information", klass: "text-sky-400 bg-sky-500/10 ring-sky-500/30" },
+  { id: "human_review_recommended", label: "Human professional review recommended", klass: "text-sky-400 bg-sky-500/10 ring-sky-500/30" },
   { id: "agency_confirmation_required", label: "Agency confirmation required", klass: "text-muted-foreground bg-muted/40 ring-border" },
 ] as const;
 

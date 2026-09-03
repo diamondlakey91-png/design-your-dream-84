@@ -422,9 +422,9 @@ export const TONE_CLASSES: Record<ClientTone, { badge: string; dot: string; bar:
   },
   blue: { badge: "border-primary/40 bg-primary/12 text-primary", dot: "bg-primary", bar: "bg-primary" },
   yellow: {
-    badge: "border-[oklch(0.85_0.16_72)]/40 bg-[oklch(0.85_0.16_72)]/12 text-[oklch(0.88_0.15_72)]",
-    dot: "bg-[oklch(0.85_0.16_72)]",
-    bar: "bg-[oklch(0.85_0.16_72)]",
+    badge: "border-[oklch(0.66_0.19_258)]/40 bg-[oklch(0.66_0.19_258)]/12 text-[oklch(0.72_0.17_258)]",
+    dot: "bg-[oklch(0.66_0.19_258)]",
+    bar: "bg-[oklch(0.66_0.19_258)]",
   },
   red: { badge: "border-destructive/40 bg-destructive/12 text-destructive", dot: "bg-destructive", bar: "bg-destructive" },
   gray: { badge: "border-border bg-secondary/60 text-muted-foreground", dot: "bg-muted-foreground", bar: "bg-muted-foreground" },

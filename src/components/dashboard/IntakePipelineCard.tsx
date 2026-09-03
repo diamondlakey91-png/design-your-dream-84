@@ -17,9 +17,9 @@ const STATE_STYLE: Record<PipelineState, { label: string; chip: string; dot: str
   },
   waiting: {
     label: "Waiting",
-    chip: "border-amber-500/40 bg-amber-500/10 text-amber-400",
-    dot: "border-amber-500/70 shadow-[0_0_12px_oklch(0.78_0.16_75/0.5)]",
-    rail: "bg-amber-500/30",
+    chip: "border-sky-500/40 bg-sky-500/10 text-sky-400",
+    dot: "border-sky-500/70 shadow-[0_0_12px_oklch(0.78_0.16_75/0.5)]",
+    rail: "bg-sky-500/30",
   },
   pending: {
     label: "Pending",
