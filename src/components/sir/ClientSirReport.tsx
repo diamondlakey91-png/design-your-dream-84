@@ -103,8 +103,8 @@ export function ClientSirReport({
           <p className="mt-1 text-xs text-slate-400">{section.intro}</p>
           <div className="mt-3 grid gap-4">
             {section.modules.map((mod) => (
-              <div key={mod.id}>
-                <p className="text-xs font-semibold uppercase tracking-wide text-slate-400">{mod.title}</p>
+              <div key={mod.key}>
+                <p className="text-xs font-semibold uppercase tracking-wide text-slate-400">{mod.label}</p>
                 {mod.summary && <p className="mt-1 text-sm text-slate-300">{mod.summary}</p>}
                 <ul className="mt-2 grid gap-2">
                   {mod.findings
