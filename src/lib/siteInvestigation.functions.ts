@@ -414,21 +414,58 @@ Return JSON: { "executive_summary": "", "feasibility_rating": "green|yellow|oran
         })));
       }
 
-      const orderedSections = SI_REPORT_SECTIONS.map((s) => {
+      const validRisks = new Set(RISK_CATEGORIES.map((r) => r.id as string));
+      if (result.risks.length) {
+        await sb.from("site_investigation_risks").insert(result.risks.map((r, i) => ({
+          investigation_id: inv.id,
+          user_id: context.userId,
+          category: validRisks.has(r.category) ? r.category : "schedule",
+          level: r.level,
+          why: r.why || null,
+          supporting_info: r.supporting_info || null,
+          mitigation: r.mitigation || null,
+          verification: r.verification,
+          parcel_label: r.parcel_label || null,
+          sort_order: i,
+        })));
+      }
+
+      if (result.parcel_notes.length && data.parcels.length) {
+        const { data: rows } = await sb.from("site_investigation_parcels").select("id, label").eq("investigation_id", inv.id);
+        for (const note of result.parcel_notes) {
+          const match = (rows ?? []).find((r: { label: string | null }) => (r.label ?? "").toLowerCase() === note.label.toLowerCase());
+          if (!match) continue;
+          await sb.from("site_investigation_parcels").update({
+            zoning: note.zoning || null,
+            land_use: note.land_use || null,
+            jurisdiction: note.jurisdiction || null,
+            notes: note.notes || null,
+            verification: note.verification,
+          }).eq("id", (match as { id: string }).id);
+        }
+      }
+
+      const activeKeys = new Set(activeSectionKeys(plan));
+      const orderedSections = SI_REPORT_SECTIONS.filter((s) => activeKeys.has(s.key)).map((s) => {
         const found = result.sections.find((x) => x.key === s.key);
         return { key: s.key, no: s.no, title: s.title, body: found?.body ?? "", bullets: found?.bullets ?? [] };
-      });
+      }).filter((s) => s.body || s.bullets.length);
 
       await sb.from("site_investigations").update({
         status: "complete",
+        progress_step: null,
         executive_summary: result.executive_summary || null,
         feasibility_rating: result.feasibility_rating,
         property_info: result.property_info,
+        feasibility_snapshot: result.feasibility_snapshot as never,
+        deal_killers: result.deal_killers as never,
+        due_diligence: result.due_diligence as never,
         report: {
           sections: orderedSections,
           feasibility_rationale: result.feasibility_rationale,
           outstanding_questions: result.outstanding_questions,
           recommended_next_steps: result.recommended_next_steps,
+          no_deal_killers_text: result.deal_killers.length ? null : NO_DEAL_KILLERS_TEXT,
           disclaimer: SITE_INVESTIGATION_DISCLAIMER,
         },
         timeline: result.timeline,
