@@ -147,7 +147,7 @@ function ProjectDetail() {
       {/* Tabs */}
       <nav className="sticky top-0 z-10 bg-background/95 backdrop-blur border-b border-border">
         <div className="flex overflow-x-auto">
-          {(["overview", "scope", "site", "checklist", "docs", "planqaqc", "qaqc", "responses", "deadlines", "inspections", "timeline"] as Tab[]).map((t) => (
+          {(TABS as readonly Tab[]).map((t) => (
             <button
               key={t}
               onClick={() => setTab(t)}
