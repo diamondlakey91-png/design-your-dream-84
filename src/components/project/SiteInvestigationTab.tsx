@@ -91,7 +91,7 @@ export function SiteInvestigationTab({
           acreage: acreage ? Number(acreage) : undefined,
           building_sf: buildingSf ? Number(buildingSf) : undefined,
           parcels: parcels
-            .filter((p) => p.label || p.parcel_number || p.address)
+            .filter((p) => p.label || p.parcel_number)
             .map((p, i) => ({
               label: p.label || `Parcel ${String.fromCharCode(65 + i)}`,
               parcel_number: p.parcel_number || undefined,
