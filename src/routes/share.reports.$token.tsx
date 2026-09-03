@@ -154,7 +154,13 @@ function SharedReportPage() {
 function Shell({ children }: { children: React.ReactNode }) {
   return (
     <div className="min-h-screen bg-background text-foreground">
-      <div className="max-w-3xl mx-auto px-6 py-10">{children}</div>
+      <div className="max-w-3xl mx-auto px-6 py-10">
+        <div className="mb-8 flex items-center gap-2.5">
+          <PermivioMark className="h-7 w-7" />
+          <span className="text-base font-semibold tracking-tight">PERMIVIO</span>
+        </div>
+        {children}
+      </div>
     </div>
   );
 }
