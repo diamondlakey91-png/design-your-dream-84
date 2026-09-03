@@ -337,27 +337,29 @@ function drawBlock(ctx: Ctx, block: ReportBlock) {
 
     case "callout": {
       const lines = wrap(block.text, ctx.regular, 9.5, CONTENT_W - 24);
-      const height = lines.length * 13 + 34;
-      ensure(ctx, height);
+      const height = lines.length * 13 + 40;
+      gap(ctx, 6);
+      ensure(ctx, height + 6);
+      const top = ctx.y + 10;
       ctx.page.drawRectangle({
         x: MARGIN,
-        y: ctx.y - height + 22,
+        y: top - height,
         width: CONTENT_W,
         height,
         color: BAND,
         borderColor: LINE,
         borderWidth: 0.6,
       });
-      ctx.page.drawText(sanitize(block.title), { x: MARGIN + 12, y: ctx.y + 4, size: 10, font: ctx.bold, color: NAVY });
-      ctx.y -= 18;
-      let cy = ctx.y;
+      ctx.page.drawText(sanitize(block.title), { x: MARGIN + 12, y: top - 20, size: 10, font: ctx.bold, color: NAVY });
+      let cy = top - 38;
       for (const line of lines) {
         ctx.page.drawText(line, { x: MARGIN + 12, y: cy, size: 9.5, font: ctx.regular, color: INK });
         cy -= 13;
       }
-      ctx.y = cy - 14;
+      ctx.y = top - height - 12;
       break;
     }
+
   }
 }
 
