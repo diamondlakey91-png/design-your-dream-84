@@ -106,6 +106,6 @@ export const SI_TIMELINE_PHASES = [
 ] as const;
 
 export const SITE_INVESTIGATION_DISCLAIMER =
-  "PERMIVIO provides permitting intelligence and pre-development due diligence. This report is not a survey, zoning determination, engineering opinion, environmental assessment, or legal advice. Findings should be confirmed with the authority having jurisdiction and the appropriate licensed professionals.";
+  "Permivio provides AI-assisted permitting research, project intelligence, due-diligence screening, document analysis, and workflow support using available public sources and client-provided information. Findings may require confirmation by the applicable Authority Having Jurisdiction, utility provider, property professional, attorney, architect, engineer, surveyor, environmental professional, or other qualified party. Permivio does not guarantee entitlement, permit issuance, utility capacity, code compliance, cost, or schedule. Professional-review status applies only when an authorized human reviewer has completed and recorded that review.";
 
 export const UTILITY_CAPACITY_CAVEAT = "Utility capacity requires provider confirmation.";
