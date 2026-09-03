@@ -93,6 +93,9 @@ Address elements from the geocoder — POSTAL/MAILING ONLY, not a jurisdiction d
 - ZIP: ${g.postalCode ?? "unknown"}
 Parcel identifier provided by the client: ${input.knownParcelId ?? "none"}
 
+AUTHORITATIVE BOUNDARY DETERMINATION (read directly from official government GIS — you may NOT contradict, soften or re-derive this)
+${input.authoritativeBoundary ?? "(no government boundary service could be reached — treat corporate-limit status as undetermined and say what must be confirmed)"}
+
 PROJECT
 Client objective: ${input.clientObjective}
 Project type: ${input.projectType ?? "not stated"}
