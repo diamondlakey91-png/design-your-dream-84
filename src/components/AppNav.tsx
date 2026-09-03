@@ -9,6 +9,7 @@ import {
   ClipboardList,
   CircleHelp,
   CreditCard,
+  FileCheck2,
   FileSearch,
   FolderKanban,
   LayoutDashboard,
@@ -58,10 +59,16 @@ const TOOLS: NavLink[] = [
     description: "Feasibility & site screening",
   },
   {
-    to: "/report",
-    label: "Plan Review / QA-QC",
+    to: "/plan-qaqc",
+    label: "Plan QA/QC Report",
     icon: FileSearch,
-    description: "Compliance & plan review reports",
+    description: "Plan set review, missing sheets, PDF findings",
+  },
+  {
+    to: "/report",
+    label: "Compliance Reports",
+    icon: FileCheck2,
+    description: "Multi-department compliance research",
   },
   {
     to: "/assistant/permits",
