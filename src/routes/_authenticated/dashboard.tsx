@@ -77,12 +77,16 @@ function Dashboard() {
       <div className="px-6 pt-8 pb-6 lg:px-2">
       <PermivioPageHeader
         eyebrow={mode === "client" ? "Your projects" : email ? `Signed in · ${email}` : "System Live"}
-        context={mode === "client" && company ? company : undefined}
         title={mode === "client" ? (who ? `${greeting()}, ${who}` : "Welcome back") : "Command Center"}
         subtitle={
-          mode === "client"
-            ? "Here’s what’s happening with your projects."
-            : "Everything that needs your attention across permits, reviews, inspections, and closeout."
+          mode === "client" ? (
+            <span className="block space-y-0.5">
+              {company ? <span className="block text-sm font-medium text-brand">{company}</span> : null}
+              <span className="block">Here’s what’s happening with your projects.</span>
+            </span>
+          ) : (
+            "Everything that needs your attention across permits, reviews, inspections, and closeout."
+          )
         }
         actions={<>
           <div className="hidden flex-col items-end sm:flex">
