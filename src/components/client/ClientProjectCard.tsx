@@ -1,12 +1,11 @@
 import { Link } from "@tanstack/react-router";
-import { ArrowRight, AlertTriangle, MapPin, Building2, Clock } from "lucide-react";
+import { ArrowRight, Info, MapPin, Building2, Clock } from "lucide-react";
 import { formatDistanceToNow, isToday, format, parseISO } from "date-fns";
 import {
   TONE_CLASSES,
   attentionItems,
   clientStatus,
   currentPhase,
-  milestoneState,
   nextStep,
   type ClientProjectInput,
   type ClientSignals,
@@ -26,7 +25,6 @@ function updatedLabel(iso: string) {
 export function ClientProjectCard({ project, signals }: { project: ClientProjectInput; signals: ClientSignals }) {
   const attention = attentionItems(project, signals);
   const status = clientStatus(project, signals, attention.length);
-  const ms = milestoneState(project, signals);
   const tone = TONE_CLASSES[status.tone];
 
   return (
@@ -61,7 +59,7 @@ export function ClientProjectCard({ project, signals }: { project: ClientProject
 
       <dl className="mt-5 grid gap-4 sm:grid-cols-2">
         <div>
-          <dt className="text-[11px] font-medium uppercase tracking-wider text-muted-foreground">Current phase</dt>
+          <dt className="text-[11px] font-medium uppercase tracking-wider text-muted-foreground">Current step</dt>
           <dd className="mt-1 text-sm text-foreground">{currentPhase(project, signals)}</dd>
         </div>
         <div>

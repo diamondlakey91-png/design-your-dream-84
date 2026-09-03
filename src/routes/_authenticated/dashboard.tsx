@@ -16,8 +16,6 @@ import { ProjectTypeSelector } from "@/components/project-type/ProjectTypeSelect
 import { setProjectTypeForProject } from "@/lib/projectTypes.functions";
 import { useProjectTypes } from "@/hooks/useProjectTypes";
 import { IntakePipelineCard } from "@/components/dashboard/IntakePipelineCard";
-import { useViewMode } from "@/hooks/useViewMode";
-import { ViewModeToggle } from "@/components/client/ViewModeToggle";
 import { ClientDashboard } from "@/components/client/ClientDashboard";
 import { getClientDashboard } from "@/lib/clientDashboard.functions";
 import { greeting, firstName } from "@/lib/clientView";
@@ -44,7 +42,7 @@ function Dashboard() {
     supabase.auth.getUser().then(({ data }) => setEmail(data.user?.email ?? null));
   }, []);
 
-  const { mode, setMode } = useViewMode();
+  const mode: "client" | "pro" = "client";
   const clientFn = useServerFn(getClientDashboard);
   const clientQ = useQuery({ queryKey: ["client-dashboard"], queryFn: () => clientFn() });
   const who = firstName(clientQ.data?.profile?.full_name ?? null, email);
@@ -87,7 +85,6 @@ function Dashboard() {
             : "Everything that needs your attention across permits, reviews, inspections, and closeout."
         }
         actions={<>
-          <ViewModeToggle mode={mode} onChange={setMode} />
           <div className="hidden flex-col items-end sm:flex">
             <span className="font-mono text-[10px] uppercase tracking-tight text-muted-foreground">Active</span>
             <span className="text-lg font-semibold text-foreground">
