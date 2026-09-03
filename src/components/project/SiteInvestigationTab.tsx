@@ -11,6 +11,7 @@ import {
   deleteSiteInvestigation,
   addSiteInvestigationPermitsToChecklist,
   generateSiteInvestigationPdf,
+  planSiteInvestigation,
 } from "@/lib/siteInvestigation.functions";
 import {
   SI_FINDING_CATEGORIES,
@@ -19,6 +20,13 @@ import {
   classificationMeta,
   ratingMeta,
 } from "@/lib/siteInvestigationConfig";
+import {
+  REPORT_DEPTHS,
+  riskCategoryLabel,
+  riskLevelMeta,
+  ddPriorityLabel,
+  NO_DEAL_KILLERS_TEXT,
+} from "@/lib/siteInvestigationEngine";
 import { ProfessionalReviewButton } from "@/components/project/ProfessionalReviewButton";
 import { Input } from "@/components/ui/input";
 import { Textarea } from "@/components/ui/textarea";
@@ -40,12 +48,22 @@ export function SiteInvestigationTab({
   const delFn = useServerFn(deleteSiteInvestigation);
   const addFn = useServerFn(addSiteInvestigationPermitsToChecklist);
   const pdfFn = useServerFn(generateSiteInvestigationPdf);
+  const planFn = useServerFn(planSiteInvestigation);
 
   const [address, setAddress] = useState(defaultAddress ?? "");
   const [projectType, setProjectType] = useState(defaultProjectType ?? "");
   const [client, setClient] = useState("");
   const [notes, setNotes] = useState("");
+  const [acreage, setAcreage] = useState("");
+  const [buildingSf, setBuildingSf] = useState("");
+  const [depth, setDepth] = useState("");
+  const [parcels, setParcels] = useState<Array<{ label: string; parcel_number: string; acreage: string; phase: string }>>([]);
   const [active, setActive] = useState<string | null>(null);
+
+  const planned = useQuery({
+    queryKey: ["si-plan", projectId, projectType, notes],
+    queryFn: () => planFn({ data: { project_id: projectId, project_type_label: projectType || undefined, scope_text: notes || undefined } }),
+  });
 
   const list = useQuery({
     queryKey: ["site-investigations", projectId],
@@ -69,6 +87,17 @@ export function SiteInvestigationTab({
           project_type_label: projectType || undefined,
           notes: notes || undefined,
           client_name: client || undefined,
+          report_depth: depth || undefined,
+          acreage: acreage ? Number(acreage) : undefined,
+          building_sf: buildingSf ? Number(buildingSf) : undefined,
+          parcels: parcels
+            .filter((p) => p.label || p.parcel_number || p.address)
+            .map((p, i) => ({
+              label: p.label || `Parcel ${String.fromCharCode(65 + i)}`,
+              parcel_number: p.parcel_number || undefined,
+              acreage: p.acreage ? Number(p.acreage) : undefined,
+              phase: p.phase || undefined,
+            })),
         },
       }),
     onSuccess: (res) => {
