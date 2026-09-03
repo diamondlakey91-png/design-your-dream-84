@@ -1,4 +1,5 @@
 import { createFileRoute, Link } from "@tanstack/react-router";
+import { PermivioPageHeader } from "@/components/PermivioPageHeader";
 import { useQuery } from "@tanstack/react-query";
 import { useServerFn } from "@tanstack/react-start";
 import { useMemo, useState } from "react";
@@ -74,16 +75,11 @@ function ProjectsPage() {
     <AppShell>
       <div className="mx-auto w-full max-w-7xl px-4 py-8 sm:px-6 lg:px-8">
         {/* Header */}
-        <header className="grid grid-cols-[minmax(0,1fr)_auto] items-start gap-4 sm:flex sm:items-center sm:justify-between">
-          <div className="flex min-w-0 items-center gap-4">
-            <div className="grid size-12 shrink-0 place-items-center rounded-2xl border border-border bg-card">
-              <FolderKanban className="size-5 text-primary" />
-            </div>
-            <div className="min-w-0">
-              <h1 className="truncate text-2xl font-semibold text-foreground sm:text-3xl">Projects</h1>
-              <p className="truncate text-sm text-muted-foreground">Manage your permit projects and track their status.</p>
-            </div>
-          </div>
+        <PermivioPageHeader
+          eyebrow="Projects"
+          title="Projects"
+          subtitle="Manage your permit projects and track their status."
+          actions={<>
           <div className="flex shrink-0 items-center gap-2">
             <Link
               to="/harvest"
