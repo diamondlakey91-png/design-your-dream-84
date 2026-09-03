@@ -1,5 +1,20 @@
 import { createFileRoute, Link } from "@tanstack/react-router";
-import { ArrowRight, BookOpen, Building2, CheckCircle2, ClipboardList, MapPinCheck, Sparkles, Zap } from "lucide-react";
+import {
+  ArrowRight,
+  BookOpen,
+  Building2,
+  CheckCircle2,
+  ClipboardList,
+  FileSearch,
+  Layers,
+  MapPinCheck,
+  MessagesSquare,
+  Play,
+  Route as RouteIcon,
+  ShieldCheck,
+  Sparkles,
+  Users,
+} from "lucide-react";
 import heroAsset from "@/assets/permivio-hero.png.asset.json";
 
 export const Route = createFileRoute("/")({
@@ -154,7 +169,7 @@ function Landing() {
             },
             {
               step: "3",
-              icon: Route,
+              icon: RouteIcon,
               title: "Permivio builds your project path",
               body: "You get the likely approvals, the documents to gather, the order things happen in, and what needs attention first.",
             },
@@ -198,7 +213,7 @@ function Landing() {
               to: "/site-investigation" as const,
             },
             {
-              icon: Route,
+              icon: RouteIcon,
               name: "Permit Roadmap",
               question: "What do I need to get approved?",
               body: "See likely permits, agencies, required documents, dependencies, submission sequence, and estimated project timeline.",
@@ -441,7 +456,7 @@ function Landing() {
                 body: "Permivio works from the actual project property, jurisdiction, proposed use, and scope — not just generic ZIP-code information.",
               },
               {
-                icon: Route,
+                icon: RouteIcon,
                 title: "From feasibility to CO",
                 body: "Site Investigation → Project Setup → Permit Roadmap → Plans → QA/QC → Submission → Corrections → Utilities → Inspections → Certificate of Occupancy.",
               },
