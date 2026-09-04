@@ -201,13 +201,22 @@ export const draftMatrixResponse = createServerFn({ method: "POST" })
       .eq("id", row.project_id)
       .maybeSingle();
 
+    // Live municipal evidence for correction analysis: the controlling authority
+    // and that authority's own resubmittal / code-amendment pages.
+    const { gatherMunicipalEvidence } = await import("@/lib/liveMunicipalEvidence.server");
+    const live = await gatherMunicipalEvidence({
+      jurisdiction: project?.jurisdiction ?? null,
+      address: project?.location ?? null,
+      topics: ["resubmittal_procedure", "adopted_codes", "submittal_standards"],
+    }).catch(() => null);
+
     const content = await callLovableAI(
       aiKey,
       [
         {
           role: "system",
           content:
-            "You are a permit expeditor drafting formal plan-review comment responses. Output plain text only — a single response paragraph, no headings, no sign-off. Never invent sheet numbers or code sections that were not provided. Never assert a code violation as confirmed.",
+            "You are a permit expeditor drafting formal plan-review comment responses. Output plain text only — a single response paragraph, no headings, no sign-off. Never invent sheet numbers or code sections that were not provided. Never assert a code violation as confirmed. When a live evidence block is supplied, it was retrieved from official government records: follow that jurisdiction's stated resubmittal procedure and adopted code edition, cite only URLs and code editions that appear in it, and say a requirement must be confirmed with the agency when it is absent.",
         },
         {
           role: "user",
@@ -219,6 +228,8 @@ Sheet: ${row.sheet_reference || "—"}
 Code reference: ${row.code_reference || "—"}
 Reviewer comment: ${row.comment_text}
 Existing notes: ${row.response_text || "—"}
+
+${live?.block ?? ""}
 
 Write a ${data.tone === "concise" ? "2-3 sentence" : "3-5 sentence"} professional response to this reviewer comment: acknowledge it, state what was corrected or clarified, and cite the sheet/code only if given above.`,
         },
