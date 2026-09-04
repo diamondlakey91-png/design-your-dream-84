@@ -269,7 +269,64 @@ export function buildSirReport(research: any): SirCoverageSection[] {
       })),
     });
   }
+  // Floodplain: real flood authority contacts and official floodplain map
+  // portals, plus the effective FEMA zone only when a map service returned one.
+  const flood: any = research.flood ?? null;
+  if (flood) {
+    const findings: SirFinding[] = [];
+    findings.push({
+      id: "flood:zone",
+      title: flood.zone
+        ? `Effective FEMA flood zone: ${flood.zone.zone}${flood.zone.subtype ? ` (${flood.zone.subtype})` : ""}${
+            flood.zone.sfha === true ? " — Special Flood Hazard Area" : flood.zone.sfha === false ? " — outside the mapped SFHA" : ""
+          }`
+        : "Effective FEMA flood zone — not established by Permivio",
+      detail: flood.lookup_note ?? "",
+      meta: [flood.zone?.firmPanel ? `FIRM panel ${flood.zone.firmPanel}` : null, "The floodplain administrator's determination of record governs permitting"].filter(Boolean) as string[],
+      verification: flood.zone ? "verified" : "needs_confirmation",
+      source: citableSource(flood.zone?.sourceUrl),
+    });
+    for (const [i, c] of ((flood.contacts ?? []) as any[]).entries()) {
+      findings.push({
+        id: `flood:contact:${i}`,
+        title: c.official_name,
+        detail: c.responsibility ?? "",
+        meta: [label(c.role), c.phone ? `Phone: ${c.phone}` : null].filter(Boolean) as string[],
+        verification: asVerification(c.verification),
+        source: citableSource(c.website),
+      });
+    }
+    for (const [i, m] of ((flood.maps ?? []) as any[]).entries()) {
+      findings.push({
+        id: `flood:map:${i}`,
+        title: m.title,
+        detail: `Official floodplain map resource published by ${m.publisher}.`,
+        meta: [label(m.kind)],
+        verification: /^federal/.test(String(m.kind)) ? "verified" : "needs_confirmation",
+        source: citableSource(m.url),
+      });
+    }
+    for (const [i, im] of ((flood.implications ?? []) as string[]).entries()) {
+      findings.push({
+        id: `flood:implication:${i}`,
+        title: "Floodplain permitting implication",
+        detail: im,
+        meta: [],
+        verification: "ai_assisted",
+        source: null,
+      });
+    }
+    siteModules.push({
+      key: "flood",
+      label: "Floodplain authority & flood maps",
+      summary: flood.lookup_note ?? "",
+      verification: flood.zone ? "verified" : "needs_confirmation",
+      findings,
+    });
+  }
+
   const environmental: any[] = research.environmental ?? [];
+
   if (environmental.length) {
     siteModules.push({
       key: "environmental",
