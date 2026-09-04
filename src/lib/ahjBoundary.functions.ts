@@ -12,6 +12,9 @@ import { z } from "zod";
 
 const Input = z.object({ query: z.string().trim().min(3).max(300) });
 
+type Coords = number[] | number[][] | number[][][] | number[][][][];
+export type BoundaryGeometry = { type: string; coordinates: Coords };
+
 export type AhjBoundaryResult =
   | { ok: false; error: string }
   | {
@@ -30,7 +33,7 @@ export type AhjBoundaryResult =
       state: string | null;
       flood_zone: string | null;
       /** GeoJSON geometry of the controlling authority's boundary, when retrieved. */
-      boundary: unknown | null;
+      boundary: BoundaryGeometry | null;
       boundary_source: { title: string; url: string } | null;
       sources: Array<{ title: string; url: string }>;
       unavailable: string[];
@@ -47,12 +50,12 @@ function boundaryUrl(layer: string, geoid: string): string {
   );
 }
 
-async function fetchBoundary(layer: string, geoid: string): Promise<{ geometry: unknown; url: string } | null> {
+async function fetchBoundary(layer: string, geoid: string): Promise<{ geometry: BoundaryGeometry; url: string } | null> {
   const url = boundaryUrl(layer, geoid);
   try {
     const resp = await fetch(url, { signal: AbortSignal.timeout(20000), headers: { Accept: "application/json" } });
     if (!resp.ok) return null;
-    const j = (await resp.json()) as { features?: Array<{ geometry?: unknown }> };
+    const j = (await resp.json()) as { features?: Array<{ geometry?: BoundaryGeometry }> };
     const geometry = j.features?.[0]?.geometry ?? null;
     return geometry ? { geometry, url } : null;
   } catch {
@@ -95,7 +98,7 @@ export const resolveAhjBoundary = createServerFn({ method: "POST" })
     const place = geo?.census?.place ?? null;
     const countyFips = geo?.census?.countyFips ?? null;
 
-    let boundary: unknown | null = null;
+    let boundary: BoundaryGeometry | null = null;
     let boundary_source: { title: string; url: string } | null = null;
     if (place?.geoid) {
       const b = await fetchBoundary(PLACES_LAYER, place.geoid);
@@ -139,6 +142,7 @@ export const resolveAhjBoundary = createServerFn({ method: "POST" })
       flood_zone: geo?.flood?.zone ?? null,
       boundary,
       boundary_source,
+      sources,
       unavailable: [...new Set(unavailable)],
     };
   });

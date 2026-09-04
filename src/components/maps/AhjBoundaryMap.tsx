@@ -36,7 +36,8 @@ export function AhjBoundaryMap({ query, title = "AHJ boundary & site location" }
     setBusy(true);
     setError(null);
     resolveFn({ data: { query: q } })
-      .then((res) => {
+      .then((raw) => {
+        const res = raw as AhjBoundaryResult;
         if (cancelled) return;
         if (!res.ok) setError(res.error);
         else setData(res);
