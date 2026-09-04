@@ -107,9 +107,9 @@ async function resolveAhj(address: string): Promise<{
       address: g.formatted_address ?? address,
       lat: g.lat,
       lng: g.lng,
-      postalCity: g.city ?? null,
+      postalCity: g.components.locality ?? null,
     });
-    const state = geo.census?.stateAbbr ?? geo.census?.state ?? g.state ?? null;
+    const state = geo.census?.stateAbbr ?? geo.census?.state ?? g.components.state_code ?? g.components.state ?? null;
     const controlling = geo.determination.place_in_control ?? geo.census?.county ?? null;
     const label = controlling ? [controlling, state].filter(Boolean).join(", ") : null;
     return { geo, label };
