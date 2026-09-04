@@ -200,26 +200,23 @@ export async function fccArea(lat: number, lng: number): Promise<FccArea | null>
   };
 }
 
-/** FEMA National Flood Hazard Layer — flood zone at the point. */
+/**
+ * FEMA National Flood Hazard Layer — effective flood zone at the point.
+ * Delegates to the shared flood lookup, which tries every published NFHL host
+ * and never estimates a zone. Real flood authority contacts and official
+ * floodplain map portals come from `@/lib/floodData.server`.
+ */
 export async function femaFloodZone(lat: number, lng: number): Promise<FloodZone | null> {
-  const geometry = encodeURIComponent(JSON.stringify({ x: lng, y: lat, spatialReference: { wkid: 4326 } }));
-  const url =
-    `https://hazards.fema.gov/arcgis/rest/services/public/NFHL/MapServer/28/query?geometry=${geometry}` +
-    `&geometryType=esriGeometryPoint&inSR=4326&spatialRel=esriSpatialRelIntersects` +
-    `&outFields=FLD_ZONE,ZONE_SUBTY,SFHA_TF,DFIRM_ID,FIRM_PAN&returnGeometry=false&f=json`;
-  const j = await getJson<{ features?: Array<{ attributes?: Record<string, unknown> }> }>(url, 20000);
-  const a = j.features?.[0]?.attributes;
-  if (!a) return null;
-  const zone = typeof a['FLD_ZONE'] === "string" ? a['FLD_ZONE'] : null;
-  if (!zone) return null;
-  const sfha = typeof a['SFHA_TF'] === "string" ? a['SFHA_TF'].toUpperCase() === "T" : null;
-  return {
-    zone,
-    subtype: typeof a['ZONE_SUBTY'] === "string" ? a['ZONE_SUBTY'] : null,
-    sfha,
-    firmPanel: typeof a['FIRM_PAN'] === "string" ? a['FIRM_PAN'] : null,
-    sourceUrl: url,
-  };
+  const { resolveFloodProfile } = await import("@/lib/floodData.server");
+  const profile = await resolveFloodProfile({
+    address: null,
+    lat,
+    lng,
+    locality: null,
+    county: null,
+    state: null,
+  });
+  return profile.zone;
 }
 
 /** Census LSAD code → readable entity type, so "city" vs "town" is not guessed. */
