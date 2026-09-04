@@ -149,7 +149,53 @@ export const ResearchSchema = z.object({
     })
     .optional(),
 
+  // Floodplain package: the effective flood zone only when an official FEMA map
+  // service answered, plus the real flood authority contacts and official
+  // floodplain map portals for the jurisdiction. Never model-generated.
+  flood: z
+    .object({
+      zone: z
+        .object({
+          zone: z.string().max(40),
+          subtype: looseText(120).optional(),
+          sfha: z.boolean().nullable().optional(),
+          firmPanel: looseText(60).optional(),
+          sourceUrl: z.string().max(1000),
+        })
+        .nullable()
+        .optional(),
+      lookup_status: looseEnum(
+        ["retrieved", "no_mapped_zone_returned", "service_unavailable", "no_coordinates"] as const,
+        "service_unavailable",
+      ),
+      lookup_note: z.string().max(1200),
+      contacts: z
+        .array(
+          z.object({
+            role: z.string().max(60),
+            official_name: z.string().max(300),
+            responsibility: z.string().max(800),
+            website: looseText(600).optional(),
+            phone: looseText(40).optional(),
+            verification: Verification,
+          }),
+        )
+        .max(8),
+      maps: z
+        .array(
+          z.object({
+            title: z.string().max(300),
+            url: z.string().max(1000),
+            publisher: z.string().max(200),
+            kind: z.string().max(40),
+          }),
+        )
+        .max(10),
+      implications: z.array(z.string().max(400)).max(8),
+    })
+    .optional(),
 });
+
 
 export type SirResearch = z.infer<typeof ResearchSchema>;
 
