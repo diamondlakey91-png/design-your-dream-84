@@ -6,6 +6,7 @@ import { Input } from "@/components/ui/input";
 import { Label } from "@/components/ui/label";
 import { MapPin, Landmark, ShieldCheck, ShieldAlert, ShieldQuestion, HelpCircle, AlertTriangle, Loader2, Building2 } from "lucide-react";
 import { runParcelJurisdiction } from "@/features/agents/parcelJurisdiction.functions";
+import { AhjBoundaryMap } from "@/components/maps/AhjBoundaryMap";
 
 /**
  * Property, Parcel & Jurisdiction Agent — client-facing panel.
