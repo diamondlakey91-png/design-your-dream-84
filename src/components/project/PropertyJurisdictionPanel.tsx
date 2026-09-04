@@ -6,6 +6,7 @@ import { Input } from "@/components/ui/input";
 import { Label } from "@/components/ui/label";
 import { MapPin, Landmark, ShieldCheck, ShieldAlert, ShieldQuestion, HelpCircle, AlertTriangle, Loader2, Building2 } from "lucide-react";
 import { runParcelJurisdiction } from "@/features/agents/parcelJurisdiction.functions";
+import { AhjBoundaryMap } from "@/components/maps/AhjBoundaryMap";
 
 /**
  * Property, Parcel & Jurisdiction Agent — client-facing panel.
@@ -227,6 +228,8 @@ export function PropertyJurisdictionPanel({
             </dl>
             <p className="mt-4 rounded border border-sky-500/30 bg-sky-500/5 p-3 text-xs text-sky-200">{n.postal_city_note}</p>
           </section>
+
+          <AhjBoundaryMap query={n.normalized_address || address} />
 
           {result.geography && (
             <section className="rounded-lg border border-border bg-card p-5">

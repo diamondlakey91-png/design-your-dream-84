@@ -16,6 +16,7 @@ import {
   type PermitGroup,
 } from "@/lib/permitFinder";
 import { FRIENDLY_PROJECT_TYPES } from "@/lib/projectTypeMap";
+import { AhjBoundaryMap } from "@/components/maps/AhjBoundaryMap";
 
 export const Route = createFileRoute("/_authenticated/assistant/permits")({
   head: () => ({
@@ -231,6 +232,7 @@ function PermitFinderPage() {
 
           {report && (
             <section className="space-y-5">
+              <AhjBoundaryMap query={report.jurisdiction} title="Authority in control — map view" />
               <div className="rounded-2xl bg-zinc-900 ring-1 ring-white/5 p-5">
                 <div className="flex flex-wrap items-center justify-between gap-3">
                   <div>

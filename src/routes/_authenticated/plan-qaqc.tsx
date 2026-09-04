@@ -8,6 +8,7 @@ import { PermivioPageHeader } from "@/components/PermivioPageHeader";
 import { PlanQaQcTab } from "@/components/project/PlanQaQcTab";
 import { listProjects } from "@/lib/projects.functions";
 import { PERMIVIO_PROFESSIONAL_DISCLAIMER } from "@/lib/qaqcConfig";
+import { AhjBoundaryMap } from "@/components/maps/AhjBoundaryMap";
 
 export const Route = createFileRoute("/_authenticated/plan-qaqc")({
   head: () => ({
@@ -104,6 +105,15 @@ function PlanQaQcReportPage() {
             </p>
           )}
         </div>
+
+        {active && (
+          <div className="mt-6">
+            <AhjBoundaryMap
+              query={active.location || active.jurisdiction}
+              title="Authority in control for this plan review"
+            />
+          </div>
+        )}
 
         <div className="mt-6">
           {active ? (
