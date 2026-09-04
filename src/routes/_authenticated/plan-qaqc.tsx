@@ -105,6 +105,15 @@ function PlanQaQcReportPage() {
           )}
         </div>
 
+        {active && (
+          <div className="mt-6">
+            <AhjBoundaryMap
+              query={active.location || active.jurisdiction}
+              title="Authority in control for this plan review"
+            />
+          </div>
+        )}
+
         <div className="mt-6">
           {active ? (
             <PlanQaQcTab projectId={active.id} userId={active.user_id} />
