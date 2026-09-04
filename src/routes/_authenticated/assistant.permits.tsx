@@ -231,6 +231,7 @@ function PermitFinderPage() {
 
           {report && (
             <section className="space-y-5">
+              <AhjBoundaryMap query={report.jurisdiction} title="Authority in control — map view" />
               <div className="rounded-2xl bg-zinc-900 ring-1 ring-white/5 p-5">
                 <div className="flex flex-wrap items-center justify-between gap-3">
                   <div>
