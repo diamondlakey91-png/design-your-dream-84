@@ -8,6 +8,7 @@ import { PermivioPageHeader } from "@/components/PermivioPageHeader";
 import { PlanQaQcTab } from "@/components/project/PlanQaQcTab";
 import { listProjects } from "@/lib/projects.functions";
 import { PERMIVIO_PROFESSIONAL_DISCLAIMER } from "@/lib/qaqcConfig";
+import { AhjBoundaryMap } from "@/components/maps/AhjBoundaryMap";
 
 export const Route = createFileRoute("/_authenticated/plan-qaqc")({
   head: () => ({
