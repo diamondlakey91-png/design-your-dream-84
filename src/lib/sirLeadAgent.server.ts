@@ -398,6 +398,23 @@ export async function runSirLeadAgent(row: SirRequestRow): Promise<{
     if (h) allowed.add(h);
   }
 
+  // Real flood data: the FEMA effective flood-zone lookup at the site plus the
+  // flood authority contacts and official floodplain map portals for this
+  // jurisdiction. Never estimated — an unreachable service is reported as such.
+  const flood = await resolveFloodProfile({
+    address: resolved.formatted_address ?? row.site_address ?? null,
+    lat: resolved.lat,
+    lng: resolved.lng,
+    locality: resolved.locality,
+    county: resolved.county,
+    state: resolved.state,
+    authorities: resolved.authorities,
+  });
+  for (const url of [...flood.maps.map((m) => m.url), ...flood.contacts.map((c) => c.website ?? "")]) {
+    const h = url ? hostOf(url) : null;
+    if (h && !SEARCH_HOSTS.test(h)) allowed.add(h);
+  }
+
   const audit: SirResearchAudit = {
     version: SIR_LEAD_AGENT_VERSION,
     model: SIR_LEAD_AGENT_MODEL,
@@ -410,7 +427,12 @@ export async function runSirLeadAgent(row: SirRequestRow): Promise<{
     coverage_gaps: [],
   };
 
-  const facts = projectBlock(row, resolved);
+  const facts = `${projectBlock(row, resolved)}
+FLOOD DATA ON FILE (use verbatim; do not restate a flood zone that is not listed here):
+- Effective FEMA flood zone at the site: ${flood.zone ? `${flood.zone.zone}${flood.zone.subtype ? ` (${flood.zone.subtype})` : ""}${flood.zone.sfha === null ? "" : flood.zone.sfha ? " — inside a Special Flood Hazard Area" : " — outside the mapped SFHA"}${flood.zone.firmPanel ? `, FIRM panel ${flood.zone.firmPanel}` : ""}` : "NOT ESTABLISHED — no flood zone may be stated in this report"}
+- Lookup status: ${flood.lookup_status}. ${flood.lookup_note}
+- Floodplain authority contacts on file: ${flood.contacts.map((c) => c.official_name).join(" | ")}`;
+
   const evidence = evidenceBlock(context, sources);
   // Reasoning models spend part of the budget before emitting JSON, so a
   // truncated first pass is retried once with a larger budget rather than
