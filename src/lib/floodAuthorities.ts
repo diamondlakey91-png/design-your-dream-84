@@ -199,7 +199,7 @@ export function buildFloodProfile(input: {
     website:
       local?.website ??
       (jurisdictionName && state
-        ? govSearchUrl(`${jurisdictionName} ${state} floodplain administrator floodplain development permit`)
+        ? govSearchUrl(jurisdictionName, state, "floodplain administrator floodplain development permit")
         : null),
     phone: null,
     verification: "needs_confirmation",
@@ -239,7 +239,7 @@ export function buildFloodProfile(input: {
   if (jurisdictionName && state) {
     maps.push({
       title: `${jurisdictionName}, ${state} — local floodplain / GIS flood map lookup`,
-      url: govSearchUrl(`${jurisdictionName} ${state} flood map GIS floodplain`),
+      url: govSearchUrl(jurisdictionName, state, "flood map GIS floodplain"),
       publisher: `${jurisdictionName} government`,
       kind: "local_flood_map",
     });
