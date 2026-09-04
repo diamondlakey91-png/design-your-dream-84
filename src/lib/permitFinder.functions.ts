@@ -73,6 +73,21 @@ export const findPermitRequirements = createServerFn({ method: "POST" })
 
     const jc = await loadJurisdictionContextBlock(context.supabase, data.jurisdiction);
 
+    // Live municipal evidence: government boundary data resolves the controlling
+    // authority, and official agency pages supply the requirement facts.
+    let siteAddress: string | null = null;
+    if (data.project_id) {
+      const { data: proj } = await context.supabase
+        .from("projects").select("location").eq("id", data.project_id).maybeSingle();
+      siteAddress = (proj?.location as string | null) ?? null;
+    }
+    const { gatherMunicipalEvidence } = await import("@/lib/liveMunicipalEvidence.server");
+    const live = await gatherMunicipalEvidence({
+      jurisdiction: data.jurisdiction,
+      address: siteAddress,
+      topics: ["permit_requirements", "adopted_codes", "zoning", "fire", "health", "site_utilities", "inspections_co"],
+    }).catch(() => null);
+
     const categoryList = PERMIT_CATEGORIES.map(
       (c) => `- ${c.key} | ${c.label} | typical authority family: ${c.authority}`,
     ).join("\n");
@@ -98,7 +113,7 @@ JSON shape:
 }
 
 Rules:
-- Use "confirmed_by_source" ONLY for facts present in [JURISDICTION CONTEXT]. Everything else is "ai_assisted" or "needs_confirmation".
+- Use "confirmed_by_source" ONLY for facts present in [JURISDICTION CONTEXT], [OFFICIAL GOVERNMENT GIS RECORDS] or [OFFICIAL JURISDICTION DOCUMENTS]. Everything else is "ai_assisted" or "needs_confirmation".
 - Never invent fees, URLs, contacts, code amendments, or review durations. If no verified source exists, return sources: [].
 - Never state that a project is code compliant, approved, or that no permits are needed. Determinations are research, not agency determinations.
 - Name the agency generically (e.g. "Fire Marshal") unless the context block names the actual department.
@@ -115,7 +130,7 @@ CHANGE OF USE: ${data.change_of_use}
 
 CATEGORY KEYS — return one finding for each, in this order:
 ${categoryList}
-${jc.block}
+${jc.block}${live?.block ?? ""}
 
 Produce the JSON object now.`;
 
@@ -196,17 +211,36 @@ Produce the JSON object now.`;
       .filter((s) => /^https?:\/\//i.test(s.url))
       .slice(0, 12);
 
+    // Merge the pages we actually retrieved so the report cites real records,
+    // not only what the model chose to echo back.
+    const liveSources = (live?.sources ?? [])
+      .filter((s) => s.retrieved)
+      .map((s) => ({ title: s.title || s.url, url: s.url, official: s.official }));
+    const govSources = (live?.gov_evidence ?? []).map((g) => ({ title: g.title, url: g.url, official: true }));
+    const mergedSources = [...govSources, ...liveSources, ...sources].filter(
+      (s, i, arr) => arr.findIndex((o) => o.url === s.url) === i,
+    ).slice(0, 20);
+
+    const ahjAssumptions = live?.ahj
+      ? [
+          `Controlling authority resolved from government boundary data: ${live.ahj.controlling_authority ?? "undetermined"} (${live.ahj.incorporation_status.replace(/_/g, " ")}).`,
+          live.ahj.postal_city_is_controlling === false
+            ? "The mailing-address city is not the permitting authority for this site — apply to the authority named above."
+            : "",
+        ].filter(Boolean)
+      : [];
+
     return {
       jurisdiction: data.jurisdiction,
       project_type: data.project_type,
       scope: data.scope,
-      assumptions: strList(parsed["assumptions"]),
+      assumptions: [...ahjAssumptions, ...strList(parsed["assumptions"])],
       findings,
       sequence,
       missing_info: strList(parsed["missing_info"]),
       confirm_with_agency: strList(parsed["confirm_with_agency"]),
-      sources,
-      jurisdiction_data_on_file: jc.hasData,
+      sources: mergedSources,
+      jurisdiction_data_on_file: jc.hasData || !!live?.has_official_sources,
       generated_at: new Date().toISOString(),
     };
   });

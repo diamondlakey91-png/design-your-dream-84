@@ -178,6 +178,16 @@ export const enrichRoadmapWithAI = createServerFn({ method: "POST" })
       ? await fanoutResearch(fcKey, scope as never).catch(() => [])
       : [];
 
+    // Live municipal evidence: authoritative boundary data (Census/TIGER, FEMA)
+    // plus official agency documents for the authority that actually controls
+    // the parcel — not the postal city.
+    const { gatherMunicipalEvidence } = await import("@/lib/liveMunicipalEvidence.server");
+    const live = await gatherMunicipalEvidence({
+      address: (scope.address as string | null) ?? null,
+      jurisdiction: null,
+      topics: ["permit_requirements", "fee_schedule", "adopted_codes", "zoning", "fire", "site_utilities", "inspections_co"],
+    }).catch(() => null);
+
     const researchBlock = scraped.length
       ? `\n\n[LIVE JURISDICTION RESEARCH — ${scraped.length} pages]\n` +
         scraped.map((s, i) => `--- SOURCE ${i + 1} ---\nURL: ${s.url}\nTITLE: ${s.title}\n\n${s.markdown}`).join("\n\n")
@@ -209,9 +219,11 @@ export const enrichRoadmapWithAI = createServerFn({ method: "POST" })
       `(2) Never invent phone numbers, fees, or review timelines. If the excerpts don't cover them, leave the field null. ` +
       `(3) Only add \`new_permits\` when the excerpts clearly indicate a jurisdiction-specific permit missing from the baseline. ` +
       `(4) Prefer .gov / .us URLs. (5) Keep summaries under 3 sentences. ` +
-      `(6) When you are less than confident an item applies, add a followup question instead of asserting it.`;
+      `(6) When you are less than confident an item applies, add a followup question instead of asserting it. ` +
+      `(7) When a [CONTROLLING AUTHORITY] block is present, it was resolved from official boundary data — route permits to that authority and never to the mailing-address city when they differ.`;
 
     const prompt =
+      (live?.block ?? "") +
       `SCOPE:\n${JSON.stringify(scopeSummary, null, 2)}\n\n` +
       `BASELINE ROADMAP:\n${JSON.stringify(baseline, null, 2)}\n` +
       researchBlock +
@@ -240,6 +252,18 @@ export const enrichRoadmapWithAI = createServerFn({ method: "POST" })
         quote: (s.quote ?? "").slice(0, 400) || null,
         kind,
       });
+    }
+    // Government GIS records and retrieved official pages are evidence regardless
+    // of whether the model cited them.
+    for (const g of live?.gov_evidence ?? []) {
+      if (sourceUrlSet.has(g.url)) continue;
+      sourceUrlSet.add(g.url);
+      sourceRows.push({ url: g.url, title: g.title, publisher: "U.S. government GIS", quote: g.excerpt.slice(0, 400) || null, kind: "agency_site" });
+    }
+    for (const s of live?.sources ?? []) {
+      if (!s.retrieved || sourceUrlSet.has(s.url)) continue;
+      sourceUrlSet.add(s.url);
+      sourceRows.push({ url: s.url, title: s.title || null, publisher: s.publisher, quote: null, kind: "agency_site" });
     }
     // Also add scraped pages that AI didn't cite — they still form the evidence pool.
     for (const s of scraped) {

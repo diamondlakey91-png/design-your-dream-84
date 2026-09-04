@@ -142,7 +142,17 @@ export async function runPlanReviewForDocument(
   const { context: amendmentsContext, sources: amendmentSources } =
     await fetchJurisdictionAmendments(fcKey, juris);
 
-  const jurisBlock = [profileContext, amendmentsContext].filter(Boolean).join("\n\n===\n\n");
+  // Live municipal evidence — the controlling authority resolved from government
+  // boundary data plus the jurisdiction's own adopted-code and submittal pages.
+  const { gatherMunicipalEvidence } = await import("@/lib/liveMunicipalEvidence.server");
+  const live = await gatherMunicipalEvidence({
+    jurisdiction: project?.jurisdiction ?? null,
+    address: (project?.location as string | null) ?? null,
+    topics: ["adopted_codes", "submittal_standards", "resubmittal_procedure"],
+  }).catch(() => null);
+  for (const ls of live?.sources ?? []) if (ls.retrieved && !amendmentSources.includes(ls.url)) amendmentSources.push(ls.url);
+
+  const jurisBlock = [profileContext, amendmentsContext, live?.block ?? ""].filter(Boolean).join("\n\n===\n\n");
 
   const instruction = `You are Permivio's AI-assisted plan-review agent. Identify potential coordination, completeness, submission, and code-related concerns in construction drawings for ${ptype} in ${juris} for evaluation by the applicable design professional and Authority Having Jurisdiction. You are not a licensed architect, engineer, or plan examiner and must never state that a design is code compliant or approved. Prioritize issues THIS jurisdiction's plan checker would likely flag — using the jurisdiction's LOCAL amendments to the model codes wherever provided below, not just the base IBC/IFC/ADA.
 
@@ -589,6 +599,15 @@ Code: ${f.code_reference || "—"}${f.local_amendment ? ` (Local: ${f.local_amen
 Sheet: ${f.sheet_reference || "—"}
 Proposed fix: ${f.recommendation || "—"}`).join("\n\n");
 
+    // Live municipal evidence — the jurisdiction's own resubmittal procedure and
+    // adopted code edition, retrieved from official records.
+    const { gatherMunicipalEvidence: gatherEvidenceForLetter } = await import("@/lib/liveMunicipalEvidence.server");
+    const liveLetter = await gatherEvidenceForLetter({
+      jurisdiction: project?.jurisdiction ?? null,
+      address: (project?.location as string | null) ?? null,
+      topics: ["resubmittal_procedure", "adopted_codes", "submittal_standards"],
+    }).catch(() => null);
+
     const prompt = `You are drafting a formal comment-response letter from the design team back to the ${juris} plan reviewer for project "${project?.name ?? ""}"${project?.location ? ` at ${project.location}` : ""}.
 
 For EACH finding below, write a concise, professional response in this exact format:
@@ -604,8 +623,10 @@ Rules:
 - Start with a one-paragraph cover note addressed to the plan reviewer, then the numbered responses.
 - End with a single-line sign-off placeholder.
 
+- Follow the resubmittal procedure stated in the live evidence block when one is present, and cite only code editions, forms and URLs that appear there. Say a requirement must be confirmed with the agency when it is absent.
+
 FINDINGS:
-${findingsBlock}`;
+${findingsBlock}${liveLetter?.block ?? ""}`;
 
     const resp = await fetch("https://ai.gateway.lovable.dev/v1/chat/completions", {
       method: "POST",

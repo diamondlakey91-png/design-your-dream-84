@@ -158,6 +158,7 @@ async function researchJurisdictionCodes(
   sb: any,
   jurisdiction: string,
   state: string | null,
+  address: string | null = null,
 ): Promise<{ codes: CodeRow[]; sources: Array<{ url: string; title: string }>; context: string }> {
   const codes: CodeRow[] = [];
   const sources: Array<{ url: string; title: string }> = [];
@@ -228,6 +229,18 @@ async function researchJurisdictionCodes(
       .maybeSingle();
     if (prof) context = `CACHED JURISDICTION PROFILE\n${JSON.stringify(prof).slice(0, 2500)}\n\n${context}`;
   }
+
+  // 4) Live municipal evidence — controlling authority from government boundary
+  //    data plus official adopted-code / submittal-standard pages.
+  const { gatherMunicipalEvidence } = await import("@/lib/liveMunicipalEvidence.server");
+  const live = await gatherMunicipalEvidence({
+    jurisdiction: jurisdiction || null,
+    address,
+    topics: ["adopted_codes", "submittal_standards", "resubmittal_procedure"],
+  }).catch(() => null);
+  if (live?.block) context = `${context}\n\n${live.block}`;
+  for (const g of live?.gov_evidence ?? []) sources.push({ url: g.url, title: g.title });
+  for (const ls of live?.sources ?? []) if (ls.retrieved) sources.push({ url: ls.url, title: ls.title });
 
   return { codes, sources, context };
 }
@@ -314,7 +327,12 @@ export const runQaQcReview = createServerFn({ method: "POST" })
     if (insErr || !review) throw new Error(insErr?.message ?? "Could not start review");
 
     try {
-      const { codes, sources, context: codeContext } = await researchJurisdictionCodes(sb, jurisdiction, state);
+      const { codes, sources, context: codeContext } = await researchJurisdictionCodes(
+        sb,
+        jurisdiction,
+        state,
+        (ctx.confirmation?.['formatted_address'] as string | undefined) ?? (ctx.project['location'] as string | undefined) ?? null,
+      );
       const projectBlock = contextBlock(ctx);
       const fileParts: ContentPart[] = [];
       for (const d of docs) {
