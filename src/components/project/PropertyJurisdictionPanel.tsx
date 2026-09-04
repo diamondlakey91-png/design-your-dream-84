@@ -228,6 +228,8 @@ export function PropertyJurisdictionPanel({
             <p className="mt-4 rounded border border-sky-500/30 bg-sky-500/5 p-3 text-xs text-sky-200">{n.postal_city_note}</p>
           </section>
 
+          <AhjBoundaryMap query={n.normalized_address || address} />
+
           {result.geography && (
             <section className="rounded-lg border border-border bg-card p-5">
               <div className="flex items-center gap-2">
