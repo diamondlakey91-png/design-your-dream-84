@@ -16,6 +16,7 @@ import {
   type PermitGroup,
 } from "@/lib/permitFinder";
 import { FRIENDLY_PROJECT_TYPES } from "@/lib/projectTypeMap";
+import { AhjBoundaryMap } from "@/components/maps/AhjBoundaryMap";
 
 export const Route = createFileRoute("/_authenticated/assistant/permits")({
   head: () => ({
