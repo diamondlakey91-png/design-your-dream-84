@@ -32,6 +32,7 @@ import {
   type SirRequestRow,
   type SirResearch,
 } from "@/lib/sirResearch.server";
+import { resolveFloodProfile } from "@/lib/floodData.server";
 
 export const SIR_LEAD_AGENT_MODEL = "google/gemini-2.5-pro";
 export const SIR_LEAD_AGENT_VERSION = "lead-project-intelligence-1";
@@ -669,6 +670,7 @@ Open questions from the lead agent: ${plan.open_questions.join("; ") || "(none)"
     access,
     environmental,
     fees,
+    flood,
     timeline: decision?.timeline ?? [],
     research_scope: clip(plan.research_scope, 200),
     turnaround: plan.turnaround,
