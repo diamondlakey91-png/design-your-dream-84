@@ -142,7 +142,17 @@ export async function runPlanReviewForDocument(
   const { context: amendmentsContext, sources: amendmentSources } =
     await fetchJurisdictionAmendments(fcKey, juris);
 
-  const jurisBlock = [profileContext, amendmentsContext].filter(Boolean).join("\n\n===\n\n");
+  // Live municipal evidence — the controlling authority resolved from government
+  // boundary data plus the jurisdiction's own adopted-code and submittal pages.
+  const { gatherMunicipalEvidence } = await import("@/lib/liveMunicipalEvidence.server");
+  const live = await gatherMunicipalEvidence({
+    jurisdiction: project?.jurisdiction ?? null,
+    address: (project?.location as string | null) ?? null,
+    topics: ["adopted_codes", "submittal_standards", "resubmittal_procedure"],
+  }).catch(() => null);
+  for (const ls of live?.sources ?? []) if (ls.retrieved && !amendmentSources.includes(ls.url)) amendmentSources.push(ls.url);
+
+  const jurisBlock = [profileContext, amendmentsContext, live?.block ?? ""].filter(Boolean).join("\n\n===\n\n");
 
   const instruction = `You are Permivio's AI-assisted plan-review agent. Identify potential coordination, completeness, submission, and code-related concerns in construction drawings for ${ptype} in ${juris} for evaluation by the applicable design professional and Authority Having Jurisdiction. You are not a licensed architect, engineer, or plan examiner and must never state that a design is code compliant or approved. Prioritize issues THIS jurisdiction's plan checker would likely flag — using the jurisdiction's LOCAL amendments to the model codes wherever provided below, not just the base IBC/IFC/ADA.
 
