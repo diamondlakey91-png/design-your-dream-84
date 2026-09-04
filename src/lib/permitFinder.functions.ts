@@ -73,6 +73,21 @@ export const findPermitRequirements = createServerFn({ method: "POST" })
 
     const jc = await loadJurisdictionContextBlock(context.supabase, data.jurisdiction);
 
+    // Live municipal evidence: government boundary data resolves the controlling
+    // authority, and official agency pages supply the requirement facts.
+    let siteAddress: string | null = null;
+    if (data.project_id) {
+      const { data: proj } = await context.supabase
+        .from("projects").select("location").eq("id", data.project_id).maybeSingle();
+      siteAddress = (proj?.location as string | null) ?? null;
+    }
+    const { gatherMunicipalEvidence } = await import("@/lib/liveMunicipalEvidence.server");
+    const live = await gatherMunicipalEvidence({
+      jurisdiction: data.jurisdiction,
+      address: siteAddress,
+      topics: ["permit_requirements", "adopted_codes", "zoning", "fire", "health", "site_utilities", "inspections_co"],
+    }).catch(() => null);
+
     const categoryList = PERMIT_CATEGORIES.map(
       (c) => `- ${c.key} | ${c.label} | typical authority family: ${c.authority}`,
     ).join("\n");
