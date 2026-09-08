@@ -39,13 +39,20 @@ const OrderInput = z.object({
   environment: z.enum(["sandbox", "live"]),
 });
 
-type OrderResult = { orderId: string; clientSecret: string } | { error: string };
+type OrderResult =
+  | { orderId: string; clientSecret: string; comped?: boolean }
+  | { error: string };
 
 /**
  * Creates a real order row (status = payment_required) and a Stripe Checkout
  * session for it. The order is only marked paid — and an entitlement granted —
  * by the verified Stripe webhook, never by the browser.
+ *
+ * Platform administrators are an explicit exception: their orders are recorded
+ * as internal, no-charge orders (amount 0) with an admin-granted entitlement, so
+ * Permivio staff can run every tool and report without paying.
  */
+
 export const createServiceOrder = createServerFn({ method: "POST" })
   .middleware([requireSupabaseAuth])
   .inputValidator((input: unknown) => OrderInput.parse(input))
@@ -74,6 +81,9 @@ export const createServiceOrder = createServerFn({ method: "POST" })
     const amount = quote.total_cents;
     if (amount <= 0) return { error: "This service is not priced yet. Please contact Permivio." };
 
+    // Permivio platform administrators use every tool and report at no charge.
+    const { data: isPlatformAdmin } = await supabase.rpc("has_role", { _user_id: userId, _role: "admin" });
+    const comped = isPlatformAdmin === true;
 
     const { data: order, error: oErr } = await supabase
       .from("service_orders")
@@ -82,12 +92,14 @@ export const createServiceOrder = createServerFn({ method: "POST" })
         project_id: data.projectId ?? null,
         product_id: product.id,
         delivery_tier: data.deliveryTier,
-        status: "payment_required",
-        amount_cents: amount,
+        status: comped ? "paid" : "payment_required",
+        amount_cents: comped ? 0 : amount,
         currency: product.currency,
         rush: data.rush,
         environment: data.environment,
-        client_notes: data.clientNotes ?? null,
+        client_notes: comped
+          ? [data.clientNotes, "Internal Permivio administrator order — no charge."].filter(Boolean).join(" — ")
+          : data.clientNotes ?? null,
       })
       .select("id")
       .single();
@@ -100,10 +112,26 @@ export const createServiceOrder = createServerFn({ method: "POST" })
         product_id: product.id,
         delivery_tier: data.deliveryTier,
         quantity: 1,
-        unit_amount_cents: line.amount_cents,
+        unit_amount_cents: comped ? 0 : line.amount_cents,
         label: line.label,
       })),
     );
+
+    if (comped) {
+      await supabase.from("service_entitlements").insert({
+        user_id: userId,
+        order_id: order.id,
+        product_id: product.id,
+        project_id: data.projectId ?? null,
+        delivery_tier: data.deliveryTier,
+        entitlement_type: "admin_grant",
+        entitlement_status: "active",
+        granted_by: userId,
+      });
+      return { orderId: order.id, clientSecret: "", comped: true };
+    }
+
+
 
 
     try {
