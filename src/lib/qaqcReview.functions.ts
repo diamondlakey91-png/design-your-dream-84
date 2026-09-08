@@ -330,12 +330,25 @@ export const runQaQcReview = createServerFn({ method: "POST" })
     if (insErr || !review) throw new Error(insErr?.message ?? "Could not start review");
 
     try {
-      const { codes, sources, context: codeContext } = await researchJurisdictionCodes(
+      const { codes, sources, context: codeContext, agency_contacts } = await researchJurisdictionCodes(
         sb,
         jurisdiction,
         state,
         (ctx.confirmation?.['formatted_address'] as string | undefined) ?? (ctx.project['location'] as string | undefined) ?? null,
       );
+      if (agency_contacts.length) {
+        // Keep the retrieved agency contacts on the review so the report shows
+        // who to actually call, with the page each detail came from.
+        await sb
+          .from("qaqc_reviews")
+          .update({
+            project_context: ({
+              ...((review.project_context ?? {}) as Record<string, unknown>),
+              agency_contacts,
+            } as Record<string, unknown>) as never,
+          })
+          .eq("id", review.id);
+      }
       const projectBlock = contextBlock(ctx);
       const fileParts: ContentPart[] = [];
       for (const d of docs) {
