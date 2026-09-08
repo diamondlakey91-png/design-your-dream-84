@@ -197,8 +197,10 @@ export function PlanQaQcTab({ projectId, userId }: { projectId: string; userId: 
           {!docs.isLoading && planDocs.length === 0 && (
             <p className="text-sm text-muted-foreground">
               Upload a plan set above (PDF or image sheets) — uploads are saved to this project's documents.
+              One combined permit set is fine, even a very large one: it is read in page ranges automatically.
             </p>
           )}
+
           {planDocs.slice(0, 30).map((doc) => (
             <label key={doc.id} className="flex items-center gap-2 rounded-lg border border-border/60 px-3 py-2 text-xs">
               <input
