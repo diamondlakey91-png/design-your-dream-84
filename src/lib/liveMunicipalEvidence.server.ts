@@ -162,6 +162,8 @@ export async function gatherMunicipalEvidence(opts: {
   jurisdiction?: string | null;
   address?: string | null;
   topics: EvidenceTopic[];
+  /** Authority families whose live contact record should be retrieved. */
+  contactRoles?: AgencyRole[];
   /** Pages scraped per topic. Default 2. */
   perTopic?: number;
 }): Promise<MunicipalEvidencePack> {
