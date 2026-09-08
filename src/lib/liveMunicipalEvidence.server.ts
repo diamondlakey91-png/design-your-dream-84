@@ -197,14 +197,20 @@ export async function gatherMunicipalEvidence(opts: {
     : null;
 
   let sources: MunicipalSource[] = [];
+  let agency_contacts: AgencyContact[] = [];
   const fcKey = process.env["FIRECRAWL_API_KEY"];
   if (!fcKey) {
     unavailable.push("Official document retrieval (Firecrawl not configured)");
   } else if (jurisdiction_label) {
     const perTopic = opts.perTopic ?? 2;
-    const batches = await Promise.all(
-      opts.topics.map((t) => retrieveTopic(fcKey, jurisdiction_label, t, perTopic).catch(() => [] as MunicipalSource[])),
-    );
+    const [batches, contactRes] = await Promise.all([
+      Promise.all(
+        opts.topics.map((t) => retrieveTopic(fcKey, jurisdiction_label, t, perTopic).catch(() => [] as MunicipalSource[])),
+      ),
+      opts.contactRoles?.length
+        ? gatherAgencyContacts({ jurisdiction: jurisdiction_label, roles: opts.contactRoles }).catch(() => null)
+        : Promise.resolve(null),
+    ]);
     const seen = new Set<string>();
     for (const b of batches) {
       for (const s of b) {
@@ -215,7 +221,14 @@ export async function gatherMunicipalEvidence(opts: {
     }
     sources = sources.filter((s) => s.excerpt.trim().length > 0);
     if (sources.length === 0) unavailable.push(`No official web sources retrieved for ${jurisdiction_label}`);
+    if (contactRes) {
+      agency_contacts = contactRes.contacts;
+      unavailable.push(...contactRes.unavailable);
+    } else if (opts.contactRoles?.length) {
+      unavailable.push("Agency contact directory could not be retrieved on this run");
+    }
   }
+
 
   const govLines = (geo?.evidence ?? []).map(
     (e, i) => `GOV RECORD ${i + 1} — ${e.title}\nURL: ${e.url}\n${e.excerpt}`,
