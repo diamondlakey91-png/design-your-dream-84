@@ -39,13 +39,20 @@ const OrderInput = z.object({
   environment: z.enum(["sandbox", "live"]),
 });
 
-type OrderResult = { orderId: string; clientSecret: string } | { error: string };
+type OrderResult =
+  | { orderId: string; clientSecret: string; comped?: boolean }
+  | { error: string };
 
 /**
  * Creates a real order row (status = payment_required) and a Stripe Checkout
  * session for it. The order is only marked paid — and an entitlement granted —
  * by the verified Stripe webhook, never by the browser.
+ *
+ * Platform administrators are an explicit exception: their orders are recorded
+ * as internal, no-charge orders (amount 0) with an admin-granted entitlement, so
+ * Permivio staff can run every tool and report without paying.
  */
+
 export const createServiceOrder = createServerFn({ method: "POST" })
   .middleware([requireSupabaseAuth])
   .inputValidator((input: unknown) => OrderInput.parse(input))
