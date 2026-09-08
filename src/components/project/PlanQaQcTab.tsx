@@ -18,6 +18,8 @@ import { PERMIVIO_PROFESSIONAL_DISCLAIMER, readinessMeta, severityMeta } from "@
 import { QaQcInventoryTable, type QaQcSheetRow } from "@/components/project/QaQcInventoryTable";
 import { QaQcFindingList, type QaQcFindingRow } from "@/components/project/QaQcFindingList";
 import { ProfessionalReviewButton } from "@/components/project/ProfessionalReviewButton";
+import { AgencyContactList } from "@/components/research/AgencyContactList";
+import type { AgencyContact } from "@/lib/agencyContacts";
 import { Input } from "@/components/ui/input";
 
 export function PlanQaQcTab({ projectId, userId }: { projectId: string; userId: string }) {
