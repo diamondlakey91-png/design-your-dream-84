@@ -241,6 +241,7 @@ Produce the JSON object now.`;
       missing_info: strList(parsed["missing_info"]),
       confirm_with_agency: strList(parsed["confirm_with_agency"]),
       sources: mergedSources,
+      agency_contacts: live?.agency_contacts ?? [],
       jurisdiction_data_on_file: jc.hasData || !!live?.has_official_sources,
       generated_at: new Date().toISOString(),
     };
