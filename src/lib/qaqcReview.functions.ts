@@ -326,7 +326,7 @@ export const runQaQcReview = createServerFn({ method: "POST" })
   .inputValidator((d: unknown) =>
     z.object({
       project_id: z.string().uuid(),
-      document_ids: z.array(z.string().uuid()).min(1).max(8),
+      document_ids: z.array(z.string().uuid()).min(1).max(25),
       revision_label: z.string().max(40).default("Rev A"),
     }).parse(d),
   )
