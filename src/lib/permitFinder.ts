@@ -7,6 +7,10 @@
  * "verification_needed" row so no category can silently disappear from the report.
  */
 
+import type { AgencyContact } from "@/lib/agencyContacts";
+
+
+
 export type PermitDetermination =
   | "required"
   | "likely_required"
