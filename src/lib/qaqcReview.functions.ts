@@ -21,24 +21,58 @@ export const QAQC_MODEL = "google/gemini-2.5-pro";
 
 type ContentPart = { type: "text"; text: string } | { type: "file"; file: { filename: string; file_data: string } } | { type: "image_url"; image_url: { url: string } };
 
-async function docToContentPart(
+type PlanBatch = { label: string; parts: ContentPart[]; pages: number };
+
+/**
+ * Reads the selected plan documents and turns them into batches small enough
+ * for one AI pass. A single very large permit set is split into page ranges, so
+ * clients never have to break the set apart by discipline themselves.
+ */
+async function buildPlanBatches(
   // eslint-disable-next-line @typescript-eslint/no-explicit-any
   sb: any,
-  doc: { id: string; name: string; mime_type: string | null; storage_path: string },
-): Promise<ContentPart | null> {
-  const { data: signed } = await sb.storage.from("project-docs").createSignedUrl(doc.storage_path, 900);
-  if (!signed?.signedUrl) return null;
-  const mime = doc.mime_type || "application/pdf";
-  if (mime.startsWith("image/")) return { type: "image_url", image_url: { url: signed.signedUrl } };
-  const isPdf = mime === "application/pdf" || doc.name.toLowerCase().endsWith(".pdf");
-  if (!isPdf) return null;
-  const resp = await fetch(signed.signedUrl);
-  if (!resp.ok) return null;
-  const buf = new Uint8Array(await resp.arrayBuffer());
-  let bin = "";
-  for (let i = 0; i < buf.length; i += 0x8000) bin += String.fromCharCode(...buf.subarray(i, i + 0x8000));
-  return { type: "file", file: { filename: doc.name, file_data: `data:${mime};base64,${btoa(bin)}` } };
+  docs: Array<{ id: string; name: string; mime_type: string | null; storage_path: string }>,
+): Promise<PlanBatch[]> {
+  const { splitPdfIntoChunks, MAX_PAGES_PER_CALL } = await import("@/lib/pdfChunk.server");
+  const items: Array<{ label: string; part: ContentPart; pages: number }> = [];
+
+  for (const doc of docs) {
+    const { data: signed } = await sb.storage.from("project-docs").createSignedUrl(doc.storage_path, 1800);
+    if (!signed?.signedUrl) continue;
+    const mime = doc.mime_type || "application/pdf";
+    if (mime.startsWith("image/")) {
+      items.push({ label: doc.name, part: { type: "image_url", image_url: { url: signed.signedUrl } }, pages: 1 });
+      continue;
+    }
+    const isPdf = mime === "application/pdf" || doc.name.toLowerCase().endsWith(".pdf");
+    if (!isPdf) continue;
+    const resp = await fetch(signed.signedUrl);
+    if (!resp.ok) continue;
+    const bytes = new Uint8Array(await resp.arrayBuffer());
+    const chunks = await splitPdfIntoChunks(bytes, doc.name);
+    for (const c of chunks) {
+      items.push({
+        label: c.label,
+        part: { type: "file", file: { filename: doc.name, file_data: `data:application/pdf;base64,${c.base64}` } },
+        pages: c.pages || MAX_PAGES_PER_CALL,
+      });
+    }
+  }
+
+  const batches: PlanBatch[] = [];
+  let cur: PlanBatch | null = null;
+  for (const it of items) {
+    if (!cur || cur.pages + it.pages > MAX_PAGES_PER_CALL) {
+      cur = { label: it.label, parts: [], pages: 0 };
+      batches.push(cur);
+    }
+    cur.parts.push({ type: "text", text: `PLAN FILE SEGMENT: ${it.label}` });
+    cur.parts.push(it.part);
+    cur.pages += it.pages;
+  }
+  return batches;
 }
+
 
 async function callMultimodalJSON<T>(system: string, parts: ContentPart[], schema: z.ZodType<T>): Promise<T> {
   const aiKey = process.env['LOVABLE_API_KEY'];
