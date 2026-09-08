@@ -123,6 +123,7 @@ function CheckoutPage() {
         },
       });
       if ("error" in res) setError(res.error);
+      else if (res.comped) navigate({ to: "/tools/checkout", search: { product: search.product, tier, project: projectId, rush, order_id: res.orderId } });
       else setClientSecret(res.clientSecret);
     } catch (e) {
       setError(

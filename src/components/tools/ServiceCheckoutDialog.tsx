@@ -43,6 +43,7 @@ export function ServiceCheckoutDialog({
         },
       });
       if ("error" in res) setError(res.error);
+      else if (res.comped) window.location.assign(`/tools/checkout?order_id=${res.orderId}`);
       else setClientSecret(res.clientSecret);
     } catch (e) {
       setError(
