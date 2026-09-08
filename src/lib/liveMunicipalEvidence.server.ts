@@ -255,6 +255,8 @@ export async function gatherMunicipalEvidence(opts: {
     );
   }
   if (govLines.length) parts.push(`[OFFICIAL GOVERNMENT GIS RECORDS]\n${govLines.join("\n\n")}`);
+  const contactBlock = agencyContactsBlock(agency_contacts);
+  if (contactBlock) parts.push(contactBlock);
   if (srcLines.length) parts.push(`[OFFICIAL JURISDICTION DOCUMENTS — ${sources.length} retrieved]\n${srcLines.join("\n\n---\n\n")}`);
   if (unavailable.length) parts.push(`[SERVICES UNAVAILABLE ON THIS RUN]\n- ${unavailable.join("\n- ")}`);
   if (parts.length) {
@@ -274,8 +276,10 @@ export async function gatherMunicipalEvidence(opts: {
     ahj,
     gov_evidence: geo?.evidence ?? [],
     sources,
+    agency_contacts,
     block: parts.length ? `\n\n${parts.join("\n\n")}` : "",
     has_official_sources: sources.some((s) => s.retrieved) || !!ahj?.authoritative,
     unavailable,
   };
 }
+
