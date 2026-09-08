@@ -542,10 +542,15 @@ Return JSON: { "findings": [{ "severity": "critical|high|medium|low|informationa
       const dedupeKey = (f: FindingsOut["findings"][number]) =>
         `${f.category}|${f.sheet_number.trim().toLowerCase()}|${f.summary.trim().toLowerCase().slice(0, 120)}`;
       const seenFindings = new Set<string>();
-
-
       const allFindings = results.flatMap((r) => r.findings)
         .filter((f) => !containsProhibitedAssertion(f.summary))
+        .filter((f) => {
+          const k = dedupeKey(f);
+          if (seenFindings.has(k)) return false;
+          seenFindings.add(k);
+          return true;
+        })
+
         .slice(0, 200);
       const validCats = new Set(QAQC_CATEGORIES.map((c) => c.id as string));
 
