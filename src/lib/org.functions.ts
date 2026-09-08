@@ -73,8 +73,14 @@ export const getOrgContext = createServerFn({ method: "GET" })
 
     const roles = memberships.map((m) => m.role);
     const isPlatformAdmin = isAdmin === true;
+    // Administrators of a permitting firm / platform organization work professionally;
+    // administrators of their own personal client organization do not.
+    const adminOfProfessionalOrg = memberships.some(
+      (m) => m.role === "org_admin" && (m.organization?.kind === "professional" || m.organization?.kind === "platform"),
+    );
     const experience: "client" | "pro" =
-      isPlatformAdmin || roles.some((r) => PROFESSIONAL_ROLES.includes(r)) ? "pro" : "client";
+      isPlatformAdmin || adminOfProfessionalOrg || roles.some((r) => PROFESSIONAL_ROLES.includes(r)) ? "pro" : "client";
+
 
     return {
       memberships,
