@@ -19,6 +19,8 @@
 import { geocode } from "@/lib/geocoding.shared";
 import { resolveAuthoritativeGeography, type AuthoritativeGeography, type GovEvidenceItem } from "@/lib/govGis.server";
 import { firecrawlSearch, firecrawlScrape } from "@/lib/firecrawl.shared";
+import { gatherAgencyContacts, agencyContactsBlock } from "@/lib/agencyContacts.server";
+import type { AgencyContact, AgencyRole } from "@/lib/agencyContacts";
 
 export type EvidenceTopic =
   | "permit_requirements"
