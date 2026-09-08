@@ -77,7 +77,7 @@ export function PlanQaQcTab({ projectId, userId }: { projectId: string; userId: 
         if (id) added.push(id);
       }
       await qc.invalidateQueries({ queryKey: ["docs", projectId] });
-      setSelected((prev) => [...prev, ...added].slice(0, 8));
+      setSelected((prev) => [...prev, ...added].slice(0, 25));
       toast.success(`${added.length} plan file(s) uploaded and selected`);
     } catch (e) {
       toast.error(e instanceof Error ? e.message : "Upload failed");
