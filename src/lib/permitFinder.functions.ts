@@ -86,6 +86,7 @@ export const findPermitRequirements = createServerFn({ method: "POST" })
       jurisdiction: data.jurisdiction,
       address: siteAddress,
       topics: ["permit_requirements", "adopted_codes", "zoning", "fire", "health", "site_utilities", "inspections_co"],
+      contactRoles: ["building", "planning_zoning", "fire", "health", "public_works", "utilities"],
     }).catch(() => null);
 
     const categoryList = PERMIT_CATEGORIES.map(
