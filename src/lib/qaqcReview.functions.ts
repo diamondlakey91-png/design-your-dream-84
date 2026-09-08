@@ -491,18 +491,22 @@ Return JSON: { "sheets": [...], "index_sheets_not_uploaded": [], "uploaded_sheet
       ];
 
       const results: FindingsOut[] = [];
-      for (const g of groups) {
-        const catText = QAQC_CATEGORIES.filter((c) => g.ids.includes(c.id))
-          .map((c) => `${c.no}. ${c.label} (id: ${c.id}) — check: ${c.checks.join(", ")}`)
-          .join("\n");
-        const out = await callMultimodalJSON(
-          "You are a commercial permit expediter and senior plan-QC reviewer performing a jurisdiction-specific pre-submission quality-control review. You never state that something is a confirmed code violation. You never write 'code compliant', 'plans approved', 'code certified', or 'engineering approved'. You do not perform or certify engineering.",
-          [
-            {
-              type: "text",
-              text: `Perform a pre-submission QA/QC review of this plan set for the categories below only.
+      for (const b of batches) {
+        for (const g of groups) {
+          const catText = QAQC_CATEGORIES.filter((c) => g.ids.includes(c.id))
+            .map((c) => `${c.no}. ${c.label} (id: ${c.id}) — check: ${c.checks.join(", ")}`)
+            .join("\n");
+          const out = await callMultimodalJSON(
+            "You are a commercial permit expediter and senior plan-QC reviewer performing a jurisdiction-specific pre-submission quality-control review. You never state that something is a confirmed code violation. You never write 'code compliant', 'plans approved', 'code certified', or 'engineering approved'. You do not perform or certify engineering.",
+            [
+              {
+                type: "text",
+                text: `Perform a pre-submission QA/QC review of this plan set for the categories below only.
 
 ${projectBlock}
+
+SEGMENT UNDER REVIEW: ${b.label}
+This may be one page range of a larger permit set. Review only the sheets in this segment, but use the full drawing inventory below for context. Do not report a sheet or discipline as missing if the inventory shows it elsewhere in the set.
 
 ADOPTED CODES ON FILE FOR THIS JURISDICTION:
 ${codeBlock}
@@ -510,7 +514,7 @@ ${codeBlock}
 JURISDICTION RESEARCH EXCERPTS (prefer these over generic knowledge; cite their URLs in jurisdiction_source_url):
 ${codeContext.slice(0, 9000) || "(none retrieved — mark jurisdiction-specific claims as agency_confirmation_required)"}
 
-DRAWING INVENTORY ALREADY EXTRACTED:
+DRAWING INVENTORY ALREADY EXTRACTED (whole set):
 ${inventoryDigest}
 
 CATEGORIES TO REVIEW (${g.label}):
@@ -525,13 +529,20 @@ RULES:
 - category must be one of the ids listed above. discipline should be one of: ${QAQC_DISCIPLINES.join(", ")}.
 
 Return JSON: { "findings": [{ "severity": "critical|high|medium|low|informational", "category": "...", "discipline": "...", "sheet_number": "", "sheet_title": "", "location": "", "summary": "", "plain_language": "", "why_it_matters": "", "code_basis": "", "jurisdiction_source_url": "", "recommended_action": "", "responsible_discipline": "", "verification": "..." }], "missing_documents": [{"name":"","reason":"","blocking":false}], "submission_issues": [], "needs_professional_confirmation": [], "recommended_actions": [], "executive_summary": "" }`,
-            },
-            ...fileParts,
-          ],
-          FindingsSchema,
-        ) as unknown as FindingsOut;
-        results.push(out);
+              },
+              ...b.parts,
+            ],
+            FindingsSchema,
+          ) as unknown as FindingsOut;
+          results.push(out);
+        }
       }
+
+      // Same issue found in several segments should appear once.
+      const dedupeKey = (f: FindingsOut["findings"][number]) =>
+        `${f.category}|${f.sheet_number.trim().toLowerCase()}|${f.summary.trim().toLowerCase().slice(0, 120)}`;
+      const seenFindings = new Set<string>();
+
 
       const allFindings = results.flatMap((r) => r.findings)
         .filter((f) => !containsProhibitedAssertion(f.summary))
