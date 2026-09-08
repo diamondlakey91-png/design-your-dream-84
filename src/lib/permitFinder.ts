@@ -115,6 +115,8 @@ export type PermitFinderReport = {
   missing_info: string[];
   confirm_with_agency: string[];
   sources: Array<{ title: string; url: string; official: boolean }>;
+  /** Live contact records for the authorities that control this site. */
+  agency_contacts: AgencyContact[];
   jurisdiction_data_on_file: boolean;
   generated_at: string;
 };
