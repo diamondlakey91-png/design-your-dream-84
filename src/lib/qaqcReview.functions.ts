@@ -385,22 +385,16 @@ export const runQaQcReview = createServerFn({ method: "POST" })
           .eq("id", review.id);
       }
       const projectBlock = contextBlock(ctx);
-      const fileParts: ContentPart[] = [];
-      for (const d of docs) {
-        const part = await docToContentPart(sb, d);
-        if (part) fileParts.push(part);
-      }
-      if (!fileParts.length) throw new Error("Selected documents could not be read (PDF or image only).");
+      const batches = await buildPlanBatches(sb, docs);
+      if (!batches.length) throw new Error("Selected documents could not be read (PDF or image only).");
 
-      // ---- Pass 1: drawing set inventory
-      const inventory = await callMultimodalJSON(
-        "You are a senior permit expediter building a drawing set inventory before submission. You never invent sheets that are not visible. Report only what the documents show.",
-        [
-          {
-            type: "text",
-            text: `Build a complete DRAWING INVENTORY for the uploaded plan set and compare it against the drawing index printed on the cover/index sheet.
+      // ---- Pass 1: drawing set inventory (one pass per plan-set segment)
+      const inventoryPrompt = (segment: string) => `Build a complete DRAWING INVENTORY for this segment of the uploaded plan set and compare it against the drawing index printed on the cover/index sheet.
 
 ${projectBlock}
+
+SEGMENT UNDER REVIEW: ${segment}
+This may be one part of a larger permit set that was split by page range. Only report sheets you can actually see in this segment. Do not assume a sheet is missing from the upload just because it is not in this segment — list index sheets you cannot see in index_sheets_not_uploaded only if the drawing index is visible here.
 
 For every sheet you can see, report: sheet_number, sheet_title, discipline (one of: ${QAQC_DISCIPLINES.join(", ")}), revision_number, revision_date, professional_of_record, seal_status (sealed_signed | sealed_unsigned | not_visible | illegible), index_state (present | missing_from_upload | not_indexed | duplicate | superseded), notes.
 
@@ -408,12 +402,39 @@ Also report: index_sheets_not_uploaded, uploaded_sheets_not_indexed, duplicate_s
 
 Rules: if a seal or signature may be present (faint, scanned, digital), use sealed_signed or illegible — never claim it is missing unless the title block is clearly blank. Leave a field as an empty string when it is not shown.
 
-Return JSON: { "sheets": [...], "index_sheets_not_uploaded": [], "uploaded_sheets_not_indexed": [], "duplicate_sheet_numbers": [], "missing_number_sequences": [], "missing_disciplines": [], "conflicting_dates": [], "project_information": {}, "observations": [] }`,
-          },
-          ...fileParts,
-        ],
-        InventorySchema,
-      ) as unknown as Inventory;
+Return JSON: { "sheets": [...], "index_sheets_not_uploaded": [], "uploaded_sheets_not_indexed": [], "duplicate_sheet_numbers": [], "missing_number_sequences": [], "missing_disciplines": [], "conflicting_dates": [], "project_information": {}, "observations": [] }`;
+
+      const inventoryParts: Inventory[] = [];
+      for (const b of batches) {
+        const out = await callMultimodalJSON(
+          "You are a senior permit expediter building a drawing set inventory before submission. You never invent sheets that are not visible. Report only what the documents show.",
+          [{ type: "text", text: inventoryPrompt(b.label) }, ...b.parts],
+          InventorySchema,
+        ) as unknown as Inventory;
+        inventoryParts.push(out);
+      }
+
+      const uniq = (xs: string[]) => Array.from(new Set(xs.map((x) => x.trim()).filter(Boolean)));
+      const inventory: Inventory = {
+        sheets: inventoryParts.flatMap((p) => p.sheets).slice(0, 400),
+        index_sheets_not_uploaded: uniq(inventoryParts.flatMap((p) => p.index_sheets_not_uploaded)),
+        uploaded_sheets_not_indexed: uniq(inventoryParts.flatMap((p) => p.uploaded_sheets_not_indexed)),
+        duplicate_sheet_numbers: uniq(inventoryParts.flatMap((p) => p.duplicate_sheet_numbers)),
+        missing_number_sequences: uniq(inventoryParts.flatMap((p) => p.missing_number_sequences)),
+        missing_disciplines: uniq(inventoryParts.flatMap((p) => p.missing_disciplines)),
+        conflicting_dates: uniq(inventoryParts.flatMap((p) => p.conflicting_dates)),
+        project_information: Object.assign({}, ...inventoryParts.map((p) => p.project_information)) as Record<string, string>,
+        observations: uniq(inventoryParts.flatMap((p) => p.observations)),
+      };
+      // A sheet seen in another segment is not missing from the upload.
+      const seenNumbers = new Set(inventory.sheets.map((s) => s.sheet_number.trim().toLowerCase()).filter(Boolean));
+      inventory.index_sheets_not_uploaded = inventory.index_sheets_not_uploaded.filter(
+        (n) => !seenNumbers.has(n.trim().toLowerCase()),
+      );
+      // Disciplines present in any segment are not missing overall.
+      const seenDisciplines = new Set(inventory.sheets.map((s) => s.discipline));
+      inventory.missing_disciplines = inventory.missing_disciplines.filter((d) => !seenDisciplines.has(d));
+
 
       const sheetRows = inventory.sheets
         .filter((s) => s.sheet_number || s.sheet_title)
