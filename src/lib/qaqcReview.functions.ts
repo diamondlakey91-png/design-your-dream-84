@@ -159,7 +159,7 @@ async function researchJurisdictionCodes(
   jurisdiction: string,
   state: string | null,
   address: string | null = null,
-): Promise<{ codes: CodeRow[]; sources: Array<{ url: string; title: string }>; context: string }> {
+): Promise<{ codes: CodeRow[]; sources: Array<{ url: string; title: string }>; context: string; agency_contacts: AgencyContact[] }> {
   const codes: CodeRow[] = [];
   const sources: Array<{ url: string; title: string }> = [];
 
