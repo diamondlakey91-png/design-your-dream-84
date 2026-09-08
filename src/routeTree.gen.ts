@@ -53,6 +53,7 @@ import { Route as AuthenticatedAssistantScreensRouteImport } from './routes/_aut
 import { Route as AuthenticatedAssistantPermitsRouteImport } from './routes/_authenticated/assistant.permits'
 import { Route as AuthenticatedAssistantAnalysisRouteImport } from './routes/_authenticated/assistant.analysis'
 import { Route as AuthenticatedAssistantThreadIdRouteImport } from './routes/_authenticated/assistant.$threadId'
+import { Route as AuthenticatedAdminUsersRouteImport } from './routes/_authenticated/admin.users'
 import { Route as AuthenticatedAdminToolsRouteImport } from './routes/_authenticated/admin.tools'
 import { Route as AuthenticatedAdminSirRouteImport } from './routes/_authenticated/admin.sir'
 import { Route as AuthenticatedAdminPortalsRouteImport } from './routes/_authenticated/admin.portals'
@@ -301,6 +302,11 @@ const AuthenticatedAssistantThreadIdRoute =
     path: '/$threadId',
     getParentRoute: () => AuthenticatedAssistantRoute,
   } as any)
+const AuthenticatedAdminUsersRoute = AuthenticatedAdminUsersRouteImport.update({
+  id: '/admin/users',
+  path: '/admin/users',
+  getParentRoute: () => AuthenticatedRouteRoute,
+} as any)
 const AuthenticatedAdminToolsRoute = AuthenticatedAdminToolsRouteImport.update({
   id: '/admin/tools',
   path: '/admin/tools',
@@ -388,6 +394,7 @@ export interface FileRoutesByFullPath {
   '/admin/portals': typeof AuthenticatedAdminPortalsRoute
   '/admin/sir': typeof AuthenticatedAdminSirRoute
   '/admin/tools': typeof AuthenticatedAdminToolsRoute
+  '/admin/users': typeof AuthenticatedAdminUsersRoute
   '/assistant/$threadId': typeof AuthenticatedAssistantThreadIdRoute
   '/assistant/analysis': typeof AuthenticatedAssistantAnalysisRoute
   '/assistant/permits': typeof AuthenticatedAssistantPermitsRoute
@@ -442,6 +449,7 @@ export interface FileRoutesByTo {
   '/admin/portals': typeof AuthenticatedAdminPortalsRoute
   '/admin/sir': typeof AuthenticatedAdminSirRoute
   '/admin/tools': typeof AuthenticatedAdminToolsRoute
+  '/admin/users': typeof AuthenticatedAdminUsersRoute
   '/assistant/$threadId': typeof AuthenticatedAssistantThreadIdRoute
   '/assistant/analysis': typeof AuthenticatedAssistantAnalysisRoute
   '/assistant/permits': typeof AuthenticatedAssistantPermitsRoute
@@ -498,6 +506,7 @@ export interface FileRoutesById {
   '/_authenticated/admin/portals': typeof AuthenticatedAdminPortalsRoute
   '/_authenticated/admin/sir': typeof AuthenticatedAdminSirRoute
   '/_authenticated/admin/tools': typeof AuthenticatedAdminToolsRoute
+  '/_authenticated/admin/users': typeof AuthenticatedAdminUsersRoute
   '/_authenticated/assistant/$threadId': typeof AuthenticatedAssistantThreadIdRoute
   '/_authenticated/assistant/analysis': typeof AuthenticatedAssistantAnalysisRoute
   '/_authenticated/assistant/permits': typeof AuthenticatedAssistantPermitsRoute
@@ -555,6 +564,7 @@ export interface FileRouteTypes {
     | '/admin/portals'
     | '/admin/sir'
     | '/admin/tools'
+    | '/admin/users'
     | '/assistant/$threadId'
     | '/assistant/analysis'
     | '/assistant/permits'
@@ -609,6 +619,7 @@ export interface FileRouteTypes {
     | '/admin/portals'
     | '/admin/sir'
     | '/admin/tools'
+    | '/admin/users'
     | '/assistant/$threadId'
     | '/assistant/analysis'
     | '/assistant/permits'
@@ -664,6 +675,7 @@ export interface FileRouteTypes {
     | '/_authenticated/admin/portals'
     | '/_authenticated/admin/sir'
     | '/_authenticated/admin/tools'
+    | '/_authenticated/admin/users'
     | '/_authenticated/assistant/$threadId'
     | '/_authenticated/assistant/analysis'
     | '/_authenticated/assistant/permits'
@@ -1021,6 +1033,13 @@ declare module '@tanstack/react-router' {
       preLoaderRoute: typeof AuthenticatedAssistantThreadIdRouteImport
       parentRoute: typeof AuthenticatedAssistantRoute
     }
+    '/_authenticated/admin/users': {
+      id: '/_authenticated/admin/users'
+      path: '/admin/users'
+      fullPath: '/admin/users'
+      preLoaderRoute: typeof AuthenticatedAdminUsersRouteImport
+      parentRoute: typeof AuthenticatedRouteRoute
+    }
     '/_authenticated/admin/tools': {
       id: '/_authenticated/admin/tools'
       path: '/admin/tools'
@@ -1176,6 +1195,7 @@ interface AuthenticatedRouteRouteChildren {
   AuthenticatedAdminPortalsRoute: typeof AuthenticatedAdminPortalsRoute
   AuthenticatedAdminSirRoute: typeof AuthenticatedAdminSirRoute
   AuthenticatedAdminToolsRoute: typeof AuthenticatedAdminToolsRoute
+  AuthenticatedAdminUsersRoute: typeof AuthenticatedAdminUsersRoute
   AuthenticatedFeasibilityIdRoute: typeof AuthenticatedFeasibilityIdRoute
   AuthenticatedInspectionsIdRoute: typeof AuthenticatedInspectionsIdRoute
   AuthenticatedProjectsIdRoute: typeof AuthenticatedProjectsIdRoute
@@ -1207,6 +1227,7 @@ const AuthenticatedRouteRouteChildren: AuthenticatedRouteRouteChildren = {
   AuthenticatedAdminPortalsRoute: AuthenticatedAdminPortalsRoute,
   AuthenticatedAdminSirRoute: AuthenticatedAdminSirRoute,
   AuthenticatedAdminToolsRoute: AuthenticatedAdminToolsRoute,
+  AuthenticatedAdminUsersRoute: AuthenticatedAdminUsersRoute,
   AuthenticatedFeasibilityIdRoute: AuthenticatedFeasibilityIdRoute,
   AuthenticatedInspectionsIdRoute: AuthenticatedInspectionsIdRoute,
   AuthenticatedProjectsIdRoute: AuthenticatedProjectsIdRoute,
