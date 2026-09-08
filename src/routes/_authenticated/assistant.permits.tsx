@@ -389,6 +389,14 @@ function PermitFinderPage() {
               )}
 
               <div className="rounded-2xl bg-zinc-900 ring-1 ring-white/5 p-5">
+                <h3 className="text-sm font-semibold">Who to contact</h3>
+                <p className="mt-1 text-xs text-zinc-400">
+                  Retrieved from each authority's own official page. Only details published by the agency are shown.
+                </p>
+                <AgencyContactList contacts={report.agency_contacts ?? []} className="mt-3" />
+              </div>
+
+              <div className="rounded-2xl bg-zinc-900 ring-1 ring-white/5 p-5">
                 <h3 className="text-sm font-semibold">Sources</h3>
                 {report.sources.length === 0 ? (
                   <p className="text-xs text-zinc-400 mt-2">
