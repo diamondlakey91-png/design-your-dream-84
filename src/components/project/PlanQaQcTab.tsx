@@ -77,7 +77,7 @@ export function PlanQaQcTab({ projectId, userId }: { projectId: string; userId: 
         if (id) added.push(id);
       }
       await qc.invalidateQueries({ queryKey: ["docs", projectId] });
-      setSelected((prev) => [...prev, ...added].slice(0, 8));
+      setSelected((prev) => [...prev, ...added].slice(0, 25));
       toast.success(`${added.length} plan file(s) uploaded and selected`);
     } catch (e) {
       toast.error(e instanceof Error ? e.message : "Upload failed");
@@ -197,8 +197,10 @@ export function PlanQaQcTab({ projectId, userId }: { projectId: string; userId: 
           {!docs.isLoading && planDocs.length === 0 && (
             <p className="text-sm text-muted-foreground">
               Upload a plan set above (PDF or image sheets) — uploads are saved to this project's documents.
+              One combined permit set is fine, even a very large one: it is read in page ranges automatically.
             </p>
           )}
+
           {planDocs.slice(0, 30).map((doc) => (
             <label key={doc.id} className="flex items-center gap-2 rounded-lg border border-border/60 px-3 py-2 text-xs">
               <input

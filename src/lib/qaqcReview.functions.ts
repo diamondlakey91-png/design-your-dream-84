@@ -21,24 +21,58 @@ export const QAQC_MODEL = "google/gemini-2.5-pro";
 
 type ContentPart = { type: "text"; text: string } | { type: "file"; file: { filename: string; file_data: string } } | { type: "image_url"; image_url: { url: string } };
 
-async function docToContentPart(
+type PlanBatch = { label: string; parts: ContentPart[]; pages: number };
+
+/**
+ * Reads the selected plan documents and turns them into batches small enough
+ * for one AI pass. A single very large permit set is split into page ranges, so
+ * clients never have to break the set apart by discipline themselves.
+ */
+async function buildPlanBatches(
   // eslint-disable-next-line @typescript-eslint/no-explicit-any
   sb: any,
-  doc: { id: string; name: string; mime_type: string | null; storage_path: string },
-): Promise<ContentPart | null> {
-  const { data: signed } = await sb.storage.from("project-docs").createSignedUrl(doc.storage_path, 900);
-  if (!signed?.signedUrl) return null;
-  const mime = doc.mime_type || "application/pdf";
-  if (mime.startsWith("image/")) return { type: "image_url", image_url: { url: signed.signedUrl } };
-  const isPdf = mime === "application/pdf" || doc.name.toLowerCase().endsWith(".pdf");
-  if (!isPdf) return null;
-  const resp = await fetch(signed.signedUrl);
-  if (!resp.ok) return null;
-  const buf = new Uint8Array(await resp.arrayBuffer());
-  let bin = "";
-  for (let i = 0; i < buf.length; i += 0x8000) bin += String.fromCharCode(...buf.subarray(i, i + 0x8000));
-  return { type: "file", file: { filename: doc.name, file_data: `data:${mime};base64,${btoa(bin)}` } };
+  docs: Array<{ id: string; name: string; mime_type: string | null; storage_path: string }>,
+): Promise<PlanBatch[]> {
+  const { splitPdfIntoChunks, MAX_PAGES_PER_CALL } = await import("@/lib/pdfChunk.server");
+  const items: Array<{ label: string; part: ContentPart; pages: number }> = [];
+
+  for (const doc of docs) {
+    const { data: signed } = await sb.storage.from("project-docs").createSignedUrl(doc.storage_path, 1800);
+    if (!signed?.signedUrl) continue;
+    const mime = doc.mime_type || "application/pdf";
+    if (mime.startsWith("image/")) {
+      items.push({ label: doc.name, part: { type: "image_url", image_url: { url: signed.signedUrl } }, pages: 1 });
+      continue;
+    }
+    const isPdf = mime === "application/pdf" || doc.name.toLowerCase().endsWith(".pdf");
+    if (!isPdf) continue;
+    const resp = await fetch(signed.signedUrl);
+    if (!resp.ok) continue;
+    const bytes = new Uint8Array(await resp.arrayBuffer());
+    const chunks = await splitPdfIntoChunks(bytes, doc.name);
+    for (const c of chunks) {
+      items.push({
+        label: c.label,
+        part: { type: "file", file: { filename: doc.name, file_data: `data:application/pdf;base64,${c.base64}` } },
+        pages: c.pages || MAX_PAGES_PER_CALL,
+      });
+    }
+  }
+
+  const batches: PlanBatch[] = [];
+  let cur: PlanBatch | null = null;
+  for (const it of items) {
+    if (!cur || cur.pages + it.pages > MAX_PAGES_PER_CALL) {
+      cur = { label: it.label, parts: [], pages: 0 };
+      batches.push(cur);
+    }
+    cur.parts.push({ type: "text", text: `PLAN FILE SEGMENT: ${it.label}` });
+    cur.parts.push(it.part);
+    cur.pages += it.pages;
+  }
+  return batches;
 }
+
 
 async function callMultimodalJSON<T>(system: string, parts: ContentPart[], schema: z.ZodType<T>): Promise<T> {
   const aiKey = process.env['LOVABLE_API_KEY'];
@@ -292,7 +326,7 @@ export const runQaQcReview = createServerFn({ method: "POST" })
   .inputValidator((d: unknown) =>
     z.object({
       project_id: z.string().uuid(),
-      document_ids: z.array(z.string().uuid()).min(1).max(8),
+      document_ids: z.array(z.string().uuid()).min(1).max(25),
       revision_label: z.string().max(40).default("Rev A"),
     }).parse(d),
   )
@@ -351,22 +385,16 @@ export const runQaQcReview = createServerFn({ method: "POST" })
           .eq("id", review.id);
       }
       const projectBlock = contextBlock(ctx);
-      const fileParts: ContentPart[] = [];
-      for (const d of docs) {
-        const part = await docToContentPart(sb, d);
-        if (part) fileParts.push(part);
-      }
-      if (!fileParts.length) throw new Error("Selected documents could not be read (PDF or image only).");
+      const batches = await buildPlanBatches(sb, docs);
+      if (!batches.length) throw new Error("Selected documents could not be read (PDF or image only).");
 
-      // ---- Pass 1: drawing set inventory
-      const inventory = await callMultimodalJSON(
-        "You are a senior permit expediter building a drawing set inventory before submission. You never invent sheets that are not visible. Report only what the documents show.",
-        [
-          {
-            type: "text",
-            text: `Build a complete DRAWING INVENTORY for the uploaded plan set and compare it against the drawing index printed on the cover/index sheet.
+      // ---- Pass 1: drawing set inventory (one pass per plan-set segment)
+      const inventoryPrompt = (segment: string) => `Build a complete DRAWING INVENTORY for this segment of the uploaded plan set and compare it against the drawing index printed on the cover/index sheet.
 
 ${projectBlock}
+
+SEGMENT UNDER REVIEW: ${segment}
+This may be one part of a larger permit set that was split by page range. Only report sheets you can actually see in this segment. Do not assume a sheet is missing from the upload just because it is not in this segment — list index sheets you cannot see in index_sheets_not_uploaded only if the drawing index is visible here.
 
 For every sheet you can see, report: sheet_number, sheet_title, discipline (one of: ${QAQC_DISCIPLINES.join(", ")}), revision_number, revision_date, professional_of_record, seal_status (sealed_signed | sealed_unsigned | not_visible | illegible), index_state (present | missing_from_upload | not_indexed | duplicate | superseded), notes.
 
@@ -374,12 +402,39 @@ Also report: index_sheets_not_uploaded, uploaded_sheets_not_indexed, duplicate_s
 
 Rules: if a seal or signature may be present (faint, scanned, digital), use sealed_signed or illegible — never claim it is missing unless the title block is clearly blank. Leave a field as an empty string when it is not shown.
 
-Return JSON: { "sheets": [...], "index_sheets_not_uploaded": [], "uploaded_sheets_not_indexed": [], "duplicate_sheet_numbers": [], "missing_number_sequences": [], "missing_disciplines": [], "conflicting_dates": [], "project_information": {}, "observations": [] }`,
-          },
-          ...fileParts,
-        ],
-        InventorySchema,
-      ) as unknown as Inventory;
+Return JSON: { "sheets": [...], "index_sheets_not_uploaded": [], "uploaded_sheets_not_indexed": [], "duplicate_sheet_numbers": [], "missing_number_sequences": [], "missing_disciplines": [], "conflicting_dates": [], "project_information": {}, "observations": [] }`;
+
+      const inventoryParts: Inventory[] = [];
+      for (const b of batches) {
+        const out = await callMultimodalJSON(
+          "You are a senior permit expediter building a drawing set inventory before submission. You never invent sheets that are not visible. Report only what the documents show.",
+          [{ type: "text", text: inventoryPrompt(b.label) }, ...b.parts],
+          InventorySchema,
+        ) as unknown as Inventory;
+        inventoryParts.push(out);
+      }
+
+      const uniq = (xs: string[]) => Array.from(new Set(xs.map((x) => x.trim()).filter(Boolean)));
+      const inventory: Inventory = {
+        sheets: inventoryParts.flatMap((p) => p.sheets).slice(0, 400),
+        index_sheets_not_uploaded: uniq(inventoryParts.flatMap((p) => p.index_sheets_not_uploaded)),
+        uploaded_sheets_not_indexed: uniq(inventoryParts.flatMap((p) => p.uploaded_sheets_not_indexed)),
+        duplicate_sheet_numbers: uniq(inventoryParts.flatMap((p) => p.duplicate_sheet_numbers)),
+        missing_number_sequences: uniq(inventoryParts.flatMap((p) => p.missing_number_sequences)),
+        missing_disciplines: uniq(inventoryParts.flatMap((p) => p.missing_disciplines)),
+        conflicting_dates: uniq(inventoryParts.flatMap((p) => p.conflicting_dates)),
+        project_information: Object.assign({}, ...inventoryParts.map((p) => p.project_information)) as Record<string, string>,
+        observations: uniq(inventoryParts.flatMap((p) => p.observations)),
+      };
+      // A sheet seen in another segment is not missing from the upload.
+      const seenNumbers = new Set(inventory.sheets.map((s) => s.sheet_number.trim().toLowerCase()).filter(Boolean));
+      inventory.index_sheets_not_uploaded = inventory.index_sheets_not_uploaded.filter(
+        (n) => !seenNumbers.has(n.trim().toLowerCase()),
+      );
+      // Disciplines present in any segment are not missing overall.
+      const seenDisciplines = new Set(inventory.sheets.map((s) => s.discipline));
+      inventory.missing_disciplines = inventory.missing_disciplines.filter((d) => !seenDisciplines.has(d));
+
 
       const sheetRows = inventory.sheets
         .filter((s) => s.sheet_number || s.sheet_title)
@@ -436,18 +491,22 @@ Return JSON: { "sheets": [...], "index_sheets_not_uploaded": [], "uploaded_sheet
       ];
 
       const results: FindingsOut[] = [];
-      for (const g of groups) {
-        const catText = QAQC_CATEGORIES.filter((c) => g.ids.includes(c.id))
-          .map((c) => `${c.no}. ${c.label} (id: ${c.id}) — check: ${c.checks.join(", ")}`)
-          .join("\n");
-        const out = await callMultimodalJSON(
-          "You are a commercial permit expediter and senior plan-QC reviewer performing a jurisdiction-specific pre-submission quality-control review. You never state that something is a confirmed code violation. You never write 'code compliant', 'plans approved', 'code certified', or 'engineering approved'. You do not perform or certify engineering.",
-          [
-            {
-              type: "text",
-              text: `Perform a pre-submission QA/QC review of this plan set for the categories below only.
+      for (const b of batches) {
+        for (const g of groups) {
+          const catText = QAQC_CATEGORIES.filter((c) => g.ids.includes(c.id))
+            .map((c) => `${c.no}. ${c.label} (id: ${c.id}) — check: ${c.checks.join(", ")}`)
+            .join("\n");
+          const out = await callMultimodalJSON(
+            "You are a commercial permit expediter and senior plan-QC reviewer performing a jurisdiction-specific pre-submission quality-control review. You never state that something is a confirmed code violation. You never write 'code compliant', 'plans approved', 'code certified', or 'engineering approved'. You do not perform or certify engineering.",
+            [
+              {
+                type: "text",
+                text: `Perform a pre-submission QA/QC review of this plan set for the categories below only.
 
 ${projectBlock}
+
+SEGMENT UNDER REVIEW: ${b.label}
+This may be one page range of a larger permit set. Review only the sheets in this segment, but use the full drawing inventory below for context. Do not report a sheet or discipline as missing if the inventory shows it elsewhere in the set.
 
 ADOPTED CODES ON FILE FOR THIS JURISDICTION:
 ${codeBlock}
@@ -455,7 +514,7 @@ ${codeBlock}
 JURISDICTION RESEARCH EXCERPTS (prefer these over generic knowledge; cite their URLs in jurisdiction_source_url):
 ${codeContext.slice(0, 9000) || "(none retrieved — mark jurisdiction-specific claims as agency_confirmation_required)"}
 
-DRAWING INVENTORY ALREADY EXTRACTED:
+DRAWING INVENTORY ALREADY EXTRACTED (whole set):
 ${inventoryDigest}
 
 CATEGORIES TO REVIEW (${g.label}):
@@ -470,16 +529,28 @@ RULES:
 - category must be one of the ids listed above. discipline should be one of: ${QAQC_DISCIPLINES.join(", ")}.
 
 Return JSON: { "findings": [{ "severity": "critical|high|medium|low|informational", "category": "...", "discipline": "...", "sheet_number": "", "sheet_title": "", "location": "", "summary": "", "plain_language": "", "why_it_matters": "", "code_basis": "", "jurisdiction_source_url": "", "recommended_action": "", "responsible_discipline": "", "verification": "..." }], "missing_documents": [{"name":"","reason":"","blocking":false}], "submission_issues": [], "needs_professional_confirmation": [], "recommended_actions": [], "executive_summary": "" }`,
-            },
-            ...fileParts,
-          ],
-          FindingsSchema,
-        ) as unknown as FindingsOut;
-        results.push(out);
+              },
+              ...b.parts,
+            ],
+            FindingsSchema,
+          ) as unknown as FindingsOut;
+          results.push(out);
+        }
       }
 
+      // Same issue found in several segments should appear once.
+      const dedupeKey = (f: FindingsOut["findings"][number]) =>
+        `${f.category}|${f.sheet_number.trim().toLowerCase()}|${f.summary.trim().toLowerCase().slice(0, 120)}`;
+      const seenFindings = new Set<string>();
       const allFindings = results.flatMap((r) => r.findings)
         .filter((f) => !containsProhibitedAssertion(f.summary))
+        .filter((f) => {
+          const k = dedupeKey(f);
+          if (seenFindings.has(k)) return false;
+          seenFindings.add(k);
+          return true;
+        })
+
         .slice(0, 200);
       const validCats = new Set(QAQC_CATEGORIES.map((c) => c.id as string));
 
