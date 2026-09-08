@@ -45,8 +45,10 @@ export type AdminUserRow = {
 };
 
 async function assertAdmin(supabase: { rpc: (...args: never[]) => unknown }, userId: string) {
-  const call = supabase.rpc as unknown as (fn: string, args: Record<string, unknown>) => Promise<{ data: unknown }>;
-  const { data } = await call("has_role", { _user_id: userId, _role: "admin" });
+  const client = supabase as unknown as {
+    rpc: (fn: string, args: Record<string, unknown>) => Promise<{ data: unknown }>;
+  };
+  const { data } = await client.rpc("has_role", { _user_id: userId, _role: "admin" });
   if (data !== true) throw new Error("Administrator access required.");
 }
 
