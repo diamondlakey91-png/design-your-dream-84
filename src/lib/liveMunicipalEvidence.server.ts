@@ -59,11 +59,14 @@ export type MunicipalEvidencePack = {
   } | null;
   gov_evidence: GovEvidenceItem[];
   sources: MunicipalSource[];
+  /** Real contact records read off official agency pages. */
+  agency_contacts: AgencyContact[];
   /** Prompt-ready block. Empty string when nothing could be retrieved. */
   block: string;
   has_official_sources: boolean;
   unavailable: string[];
 };
+
 
 const OFFICIAL_RE = /(^|\.)([a-z0-9-]+\.)?(gov|mil)(\/|$|:)|\.us(\/|$|:)|municode|ecode360|codepublishing|amlegal|generalcode|library\.municode/i;
 
