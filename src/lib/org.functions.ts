@@ -16,15 +16,20 @@ export type OrgRole =
   | "authorized_reviewer"
   | "org_admin";
 
-/** Roles that get the detailed professional workspace rather than the simplified client view. */
+/**
+ * Roles that get the detailed professional workspace rather than the simplified client view.
+ * "org_admin" is intentionally excluded: every client who creates a project becomes the
+ * administrator of their own personal (kind = "client") organization, which does not make
+ * them a permitting professional.
+ */
 export const PROFESSIONAL_ROLES: OrgRole[] = [
   "project_manager",
   "permit_manager",
   "researcher",
   "qaqc_reviewer",
   "authorized_reviewer",
-  "org_admin",
 ];
+
 
 export type OrgMembership = {
   organization_id: string;
