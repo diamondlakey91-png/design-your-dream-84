@@ -3,6 +3,7 @@ import { requireSupabaseAuth } from "@/integrations/supabase/auth-middleware";
 import { z } from "zod";
 import { toSlug } from "@/lib/ai.shared";
 import { firecrawlSearch, firecrawlScrape } from "@/lib/firecrawl.shared";
+import type { AgencyContact } from "@/lib/agencyContacts";
 import {
   QAQC_CATEGORIES,
   QAQC_DISCIPLINES,
