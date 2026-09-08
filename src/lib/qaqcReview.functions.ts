@@ -3,6 +3,7 @@ import { requireSupabaseAuth } from "@/integrations/supabase/auth-middleware";
 import { z } from "zod";
 import { toSlug } from "@/lib/ai.shared";
 import { firecrawlSearch, firecrawlScrape } from "@/lib/firecrawl.shared";
+import type { AgencyContact } from "@/lib/agencyContacts";
 import {
   QAQC_CATEGORIES,
   QAQC_DISCIPLINES,
@@ -159,7 +160,7 @@ async function researchJurisdictionCodes(
   jurisdiction: string,
   state: string | null,
   address: string | null = null,
-): Promise<{ codes: CodeRow[]; sources: Array<{ url: string; title: string }>; context: string }> {
+): Promise<{ codes: CodeRow[]; sources: Array<{ url: string; title: string }>; context: string; agency_contacts: AgencyContact[] }> {
   const codes: CodeRow[] = [];
   const sources: Array<{ url: string; title: string }> = [];
 
@@ -231,19 +232,22 @@ async function researchJurisdictionCodes(
   }
 
   // 4) Live municipal evidence — controlling authority from government boundary
-  //    data plus official adopted-code / submittal-standard pages.
+  //    data, official adopted-code / submittal-standard pages, and the real
+  //    contact record for each reviewing authority.
   const { gatherMunicipalEvidence } = await import("@/lib/liveMunicipalEvidence.server");
   const live = await gatherMunicipalEvidence({
     jurisdiction: jurisdiction || null,
     address,
     topics: ["adopted_codes", "submittal_standards", "resubmittal_procedure"],
+    contactRoles: ["building", "planning_zoning", "fire", "health"],
   }).catch(() => null);
   if (live?.block) context = `${context}\n\n${live.block}`;
   for (const g of live?.gov_evidence ?? []) sources.push({ url: g.url, title: g.title });
   for (const ls of live?.sources ?? []) if (ls.retrieved) sources.push({ url: ls.url, title: ls.title });
 
-  return { codes, sources, context };
+  return { codes, sources, context, agency_contacts: live?.agency_contacts ?? [] };
 }
+
 
 // -------------------------------------------------------------- project context
 
@@ -327,12 +331,25 @@ export const runQaQcReview = createServerFn({ method: "POST" })
     if (insErr || !review) throw new Error(insErr?.message ?? "Could not start review");
 
     try {
-      const { codes, sources, context: codeContext } = await researchJurisdictionCodes(
+      const { codes, sources, context: codeContext, agency_contacts } = await researchJurisdictionCodes(
         sb,
         jurisdiction,
         state,
         (ctx.confirmation?.['formatted_address'] as string | undefined) ?? (ctx.project['location'] as string | undefined) ?? null,
       );
+      if (agency_contacts.length) {
+        // Keep the retrieved agency contacts on the review so the report shows
+        // who to actually call, with the page each detail came from.
+        await sb
+          .from("qaqc_reviews")
+          .update({
+            project_context: ({
+              ...((review.project_context ?? {}) as Record<string, unknown>),
+              agency_contacts,
+            } as Record<string, unknown>) as never,
+          })
+          .eq("id", review.id);
+      }
       const projectBlock = contextBlock(ctx);
       const fileParts: ContentPart[] = [];
       for (const d of docs) {

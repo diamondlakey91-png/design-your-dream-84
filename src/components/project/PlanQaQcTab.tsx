@@ -18,6 +18,8 @@ import { PERMIVIO_PROFESSIONAL_DISCLAIMER, readinessMeta, severityMeta } from "@
 import { QaQcInventoryTable, type QaQcSheetRow } from "@/components/project/QaQcInventoryTable";
 import { QaQcFindingList, type QaQcFindingRow } from "@/components/project/QaQcFindingList";
 import { ProfessionalReviewButton } from "@/components/project/ProfessionalReviewButton";
+import { AgencyContactList } from "@/components/research/AgencyContactList";
+import type { AgencyContact } from "@/lib/agencyContacts";
 import { Input } from "@/components/ui/input";
 
 export function PlanQaQcTab({ projectId, userId }: { projectId: string; userId: string }) {
@@ -285,8 +287,18 @@ export function PlanQaQcTab({ projectId, userId }: { projectId: string; userId: 
             </div>
           )}
 
+          {/* Reviewing authorities — real contacts retrieved from agency pages */}
+          <div className="rounded-xl border border-border bg-card/60 p-4">
+            <p className="text-[11px] font-mono uppercase tracking-wider text-muted-foreground">Reviewing authorities — who to contact</p>
+            <AgencyContactList
+              contacts={((d.review.project_context ?? {}) as { agency_contacts?: AgencyContact[] }).agency_contacts ?? []}
+              className="mt-2"
+            />
+          </div>
+
           {/* Codes researched */}
           <div className="rounded-xl border border-border bg-card/60 p-4">
+
             <p className="text-[11px] font-mono uppercase tracking-wider text-muted-foreground">Jurisdiction codes used for this review</p>
             {((d.review.codes_researched ?? []) as Array<Record<string, string>>).length === 0 ? (
               <p className="mt-1.5 text-sm text-muted-foreground">

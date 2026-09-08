@@ -86,6 +86,7 @@ export const findPermitRequirements = createServerFn({ method: "POST" })
       jurisdiction: data.jurisdiction,
       address: siteAddress,
       topics: ["permit_requirements", "adopted_codes", "zoning", "fire", "health", "site_utilities", "inspections_co"],
+      contactRoles: ["building", "planning_zoning", "fire", "health", "public_works", "utilities"],
     }).catch(() => null);
 
     const categoryList = PERMIT_CATEGORIES.map(
@@ -240,6 +241,7 @@ Produce the JSON object now.`;
       missing_info: strList(parsed["missing_info"]),
       confirm_with_agency: strList(parsed["confirm_with_agency"]),
       sources: mergedSources,
+      agency_contacts: live?.agency_contacts ?? [],
       jurisdiction_data_on_file: jc.hasData || !!live?.has_official_sources,
       generated_at: new Date().toISOString(),
     };

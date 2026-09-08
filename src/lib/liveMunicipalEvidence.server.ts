@@ -19,6 +19,8 @@
 import { geocode } from "@/lib/geocoding.shared";
 import { resolveAuthoritativeGeography, type AuthoritativeGeography, type GovEvidenceItem } from "@/lib/govGis.server";
 import { firecrawlSearch, firecrawlScrape } from "@/lib/firecrawl.shared";
+import { gatherAgencyContacts, agencyContactsBlock } from "@/lib/agencyContacts.server";
+import type { AgencyContact, AgencyRole } from "@/lib/agencyContacts";
 
 export type EvidenceTopic =
   | "permit_requirements"
@@ -57,11 +59,14 @@ export type MunicipalEvidencePack = {
   } | null;
   gov_evidence: GovEvidenceItem[];
   sources: MunicipalSource[];
+  /** Real contact records read off official agency pages. */
+  agency_contacts: AgencyContact[];
   /** Prompt-ready block. Empty string when nothing could be retrieved. */
   block: string;
   has_official_sources: boolean;
   unavailable: string[];
 };
+
 
 const OFFICIAL_RE = /(^|\.)([a-z0-9-]+\.)?(gov|mil)(\/|$|:)|\.us(\/|$|:)|municode|ecode360|codepublishing|amlegal|generalcode|library\.municode/i;
 
@@ -157,6 +162,8 @@ export async function gatherMunicipalEvidence(opts: {
   jurisdiction?: string | null;
   address?: string | null;
   topics: EvidenceTopic[];
+  /** Authority families whose live contact record should be retrieved. */
+  contactRoles?: AgencyRole[];
   /** Pages scraped per topic. Default 2. */
   perTopic?: number;
 }): Promise<MunicipalEvidencePack> {
@@ -190,14 +197,20 @@ export async function gatherMunicipalEvidence(opts: {
     : null;
 
   let sources: MunicipalSource[] = [];
+  let agency_contacts: AgencyContact[] = [];
   const fcKey = process.env["FIRECRAWL_API_KEY"];
   if (!fcKey) {
     unavailable.push("Official document retrieval (Firecrawl not configured)");
   } else if (jurisdiction_label) {
     const perTopic = opts.perTopic ?? 2;
-    const batches = await Promise.all(
-      opts.topics.map((t) => retrieveTopic(fcKey, jurisdiction_label, t, perTopic).catch(() => [] as MunicipalSource[])),
-    );
+    const [batches, contactRes] = await Promise.all([
+      Promise.all(
+        opts.topics.map((t) => retrieveTopic(fcKey, jurisdiction_label, t, perTopic).catch(() => [] as MunicipalSource[])),
+      ),
+      opts.contactRoles?.length
+        ? gatherAgencyContacts({ jurisdiction: jurisdiction_label, roles: opts.contactRoles }).catch(() => null)
+        : Promise.resolve(null),
+    ]);
     const seen = new Set<string>();
     for (const b of batches) {
       for (const s of b) {
@@ -208,7 +221,14 @@ export async function gatherMunicipalEvidence(opts: {
     }
     sources = sources.filter((s) => s.excerpt.trim().length > 0);
     if (sources.length === 0) unavailable.push(`No official web sources retrieved for ${jurisdiction_label}`);
+    if (contactRes) {
+      agency_contacts = contactRes.contacts;
+      unavailable.push(...contactRes.unavailable);
+    } else if (opts.contactRoles?.length) {
+      unavailable.push("Agency contact directory could not be retrieved on this run");
+    }
   }
+
 
   const govLines = (geo?.evidence ?? []).map(
     (e, i) => `GOV RECORD ${i + 1} — ${e.title}\nURL: ${e.url}\n${e.excerpt}`,
@@ -235,6 +255,8 @@ export async function gatherMunicipalEvidence(opts: {
     );
   }
   if (govLines.length) parts.push(`[OFFICIAL GOVERNMENT GIS RECORDS]\n${govLines.join("\n\n")}`);
+  const contactBlock = agencyContactsBlock(agency_contacts);
+  if (contactBlock) parts.push(contactBlock);
   if (srcLines.length) parts.push(`[OFFICIAL JURISDICTION DOCUMENTS — ${sources.length} retrieved]\n${srcLines.join("\n\n---\n\n")}`);
   if (unavailable.length) parts.push(`[SERVICES UNAVAILABLE ON THIS RUN]\n- ${unavailable.join("\n- ")}`);
   if (parts.length) {
@@ -254,8 +276,10 @@ export async function gatherMunicipalEvidence(opts: {
     ahj,
     gov_evidence: geo?.evidence ?? [],
     sources,
+    agency_contacts,
     block: parts.length ? `\n\n${parts.join("\n\n")}` : "",
     has_official_sources: sources.some((s) => s.retrieved) || !!ahj?.authoritative,
     unavailable,
   };
 }
+

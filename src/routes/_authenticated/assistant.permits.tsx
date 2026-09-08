@@ -17,6 +17,7 @@ import {
 } from "@/lib/permitFinder";
 import { FRIENDLY_PROJECT_TYPES } from "@/lib/projectTypeMap";
 import { AhjBoundaryMap } from "@/components/maps/AhjBoundaryMap";
+import { AgencyContactList } from "@/components/research/AgencyContactList";
 
 export const Route = createFileRoute("/_authenticated/assistant/permits")({
   head: () => ({
@@ -386,6 +387,14 @@ function PermitFinderPage() {
                   )}
                 </div>
               )}
+
+              <div className="rounded-2xl bg-zinc-900 ring-1 ring-white/5 p-5">
+                <h3 className="text-sm font-semibold">Who to contact</h3>
+                <p className="mt-1 text-xs text-zinc-400">
+                  Retrieved from each authority's own official page. Only details published by the agency are shown.
+                </p>
+                <AgencyContactList contacts={report.agency_contacts ?? []} className="mt-3" />
+              </div>
 
               <div className="rounded-2xl bg-zinc-900 ring-1 ring-white/5 p-5">
                 <h3 className="text-sm font-semibold">Sources</h3>
