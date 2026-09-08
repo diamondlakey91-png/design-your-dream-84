@@ -231,19 +231,22 @@ async function researchJurisdictionCodes(
   }
 
   // 4) Live municipal evidence — controlling authority from government boundary
-  //    data plus official adopted-code / submittal-standard pages.
+  //    data, official adopted-code / submittal-standard pages, and the real
+  //    contact record for each reviewing authority.
   const { gatherMunicipalEvidence } = await import("@/lib/liveMunicipalEvidence.server");
   const live = await gatherMunicipalEvidence({
     jurisdiction: jurisdiction || null,
     address,
     topics: ["adopted_codes", "submittal_standards", "resubmittal_procedure"],
+    contactRoles: ["building", "planning_zoning", "fire", "health"],
   }).catch(() => null);
   if (live?.block) context = `${context}\n\n${live.block}`;
   for (const g of live?.gov_evidence ?? []) sources.push({ url: g.url, title: g.title });
   for (const ls of live?.sources ?? []) if (ls.retrieved) sources.push({ url: ls.url, title: ls.title });
 
-  return { codes, sources, context };
+  return { codes, sources, context, agency_contacts: live?.agency_contacts ?? [] };
 }
+
 
 // -------------------------------------------------------------- project context
 
