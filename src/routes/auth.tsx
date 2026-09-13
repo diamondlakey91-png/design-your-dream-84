@@ -6,7 +6,7 @@ import { supabase } from "@/integrations/supabase/client";
 import { lovable } from "@/integrations/lovable/index";
 import { toast } from "sonner";
 import { PermivioMark } from "@/components/PermivioMark";
-import { ArrowLeft } from "lucide-react";
+import { ArrowLeft, MailCheck } from "lucide-react";
 
 const authSearchSchema = z.object({
   next: fallback(z.string(), "").default(""),
@@ -38,10 +38,11 @@ function AuthPage() {
     (/(permivio-native|capacitor|CapacitorWebView)/i.test(window.navigator.userAgent) ||
       // Capacitor injects window.Capacitor on native
       Boolean((window as unknown as { Capacitor?: unknown }).Capacitor));
-  const [mode, setMode] = useState<"sign-in" | "sign-up">("sign-in");
+  const [mode, setMode] = useState<"sign-in" | "sign-up" | "forgot">("sign-in");
   const [email, setEmail] = useState("");
   const [password, setPassword] = useState("");
   const [busy, setBusy] = useState(false);
+  const [confirmSent, setConfirmSent] = useState(false);
 
   const goAfterAuth = () => {
     if (returnTo) window.location.href = returnTo;
@@ -76,17 +77,30 @@ function AuthPage() {
     e.preventDefault();
     setBusy(true);
     try {
+      if (mode === "forgot") {
+        const { error } = await supabase.auth.resetPasswordForEmail(email, {
+          redirectTo: `${window.location.origin}/reset-password`,
+        });
+        if (error) throw error;
+        toast.success("Password reset link sent — check your email.");
+        setMode("sign-in");
+        return;
+      }
       if (mode === "sign-up") {
         const emailRedirectTo = returnTo
           ? `${window.location.origin}${returnTo}`
           : window.location.origin;
-        const { error } = await supabase.auth.signUp({
+        const { data, error } = await supabase.auth.signUp({
           email,
           password,
           options: { emailRedirectTo },
         });
         if (error) throw error;
-        toast.success("Account created. Signing you in…");
+        if (!data.session) {
+          // Email confirmation required — do not navigate.
+          setConfirmSent(true);
+          return;
+        }
       } else {
         const { error } = await supabase.auth.signInWithPassword({ email, password });
         if (error) throw error;
@@ -98,6 +112,34 @@ function AuthPage() {
       setBusy(false);
     }
   };
+
+  if (confirmSent) {
+    return (
+      <div className="min-h-screen bg-background">
+        <div className="mx-auto flex min-h-screen max-w-md flex-col px-6 py-10">
+          <div className="mb-8 flex items-center gap-2">
+            <PermivioMark className="h-9 w-9" />
+            <span className="text-lg font-semibold tracking-tight">PERMIVIO</span>
+          </div>
+          <div className="rounded-2xl border border-border bg-card p-8 text-center">
+            <MailCheck className="mx-auto size-10 text-brand" />
+            <h1 className="mt-4 text-2xl font-semibold tracking-tight">Check your email.</h1>
+            <p className="mt-2 text-sm text-muted-foreground">
+              We sent a confirmation link to <span className="font-medium text-foreground">{email}</span>.
+              Click it to activate your account, then sign in.
+            </p>
+            <button
+              onClick={() => { setConfirmSent(false); setMode("sign-in"); }}
+              className="mt-6 inline-flex h-11 w-full items-center justify-center rounded-lg bg-brand text-sm font-semibold text-brand-foreground"
+            >
+              Back to sign in
+            </button>
+          </div>
+          <BrowseLinks />
+        </div>
+      </div>
+    );
+  }
 
   return (
     <div className="min-h-screen bg-background">
@@ -112,18 +154,20 @@ function AuthPage() {
         </div>
 
         <p className="font-mono text-[11px] uppercase tracking-widest text-muted-foreground">
-          {mode === "sign-in" ? "OP_SIGN_IN" : "OP_CREATE_ACCOUNT"}
+          {mode === "sign-in" ? "OP_SIGN_IN" : mode === "sign-up" ? "OP_CREATE_ACCOUNT" : "OP_RESET_PASSWORD"}
         </p>
         <h1 className="mt-2 text-3xl font-semibold tracking-tight">
-          {mode === "sign-in" ? "Welcome back." : "Set up your workspace."}
+          {mode === "sign-in" ? "Welcome back." : mode === "sign-up" ? "Set up your workspace." : "Reset your password."}
         </h1>
         <p className="mt-2 text-sm text-muted-foreground">
           {mode === "sign-in"
             ? "Sign in to view your active sites and deadlines."
-            : "Create a Permivio account to start tracking your first project."}
+            : mode === "sign-up"
+              ? "Create a Permivio account to start tracking your first project."
+              : "Enter your account email and we'll send you a reset link."}
         </p>
 
-        {!isNativeApp && (
+        {!isNativeApp && mode !== "forgot" && (
           <>
             <button
               onClick={handleGoogle}
@@ -141,7 +185,7 @@ function AuthPage() {
             </div>
           </>
         )}
-        {isNativeApp && <div className="mt-8" />}
+        {(isNativeApp || mode === "forgot") && <div className="mt-8" />}
 
         <form onSubmit={handleSubmit} className="flex flex-col gap-3">
           <label className="flex flex-col gap-1.5">
@@ -152,30 +196,77 @@ function AuthPage() {
               className="h-11 rounded-lg border border-input bg-card px-3 text-sm outline-none focus:border-brand"
             />
           </label>
-          <label className="flex flex-col gap-1.5">
-            <span className="font-mono text-[10px] uppercase tracking-widest text-muted-foreground">PASSWORD</span>
-            <input
-              type="password" required minLength={6}
-              autoComplete={mode === "sign-in" ? "current-password" : "new-password"}
-              value={password} onChange={(e) => setPassword(e.target.value)}
-              className="h-11 rounded-lg border border-input bg-card px-3 text-sm outline-none focus:border-brand"
-            />
-          </label>
+          {mode !== "forgot" && (
+            <label className="flex flex-col gap-1.5">
+              <span className="font-mono text-[10px] uppercase tracking-widest text-muted-foreground">PASSWORD</span>
+              <input
+                type="password" required minLength={6}
+                autoComplete={mode === "sign-in" ? "current-password" : "new-password"}
+                value={password} onChange={(e) => setPassword(e.target.value)}
+                className="h-11 rounded-lg border border-input bg-card px-3 text-sm outline-none focus:border-brand"
+              />
+            </label>
+          )}
           <button
             type="submit" disabled={busy}
             className="mt-2 inline-flex h-11 items-center justify-center rounded-lg bg-brand text-sm font-semibold text-brand-foreground disabled:opacity-50"
           >
-            {busy ? "Working…" : mode === "sign-in" ? "Sign in" : "Create account"}
+            {busy ? "Working…" : mode === "sign-in" ? "Sign in" : mode === "sign-up" ? "Create account" : "Send reset link"}
           </button>
         </form>
+
+        {mode === "sign-in" && (
+          <button
+            type="button"
+            onClick={() => setMode("forgot")}
+            className="mt-4 text-sm text-muted-foreground hover:text-foreground"
+          >
+            Forgot your password?
+          </button>
+        )}
 
         <button
           type="button"
           onClick={() => setMode(mode === "sign-in" ? "sign-up" : "sign-in")}
-          className="mt-6 text-sm text-muted-foreground hover:text-foreground"
+          className="mt-3 text-sm text-muted-foreground hover:text-foreground"
         >
           {mode === "sign-in" ? "New here? Create an account →" : "Already have an account? Sign in →"}
         </button>
+
+        <BrowseLinks />
+      </div>
+    </div>
+  );
+}
+
+function BrowseLinks() {
+  return (
+    <div className="mt-10 border-t border-border pt-6">
+      <p className="font-mono text-[10px] uppercase tracking-widest text-muted-foreground">
+        Just looking around?
+      </p>
+      <p className="mt-2 text-sm text-muted-foreground">
+        You don't need an account to explore Permivio.
+      </p>
+      <div className="mt-4 grid gap-2">
+        <Link
+          to="/pricing"
+          className="flex items-center justify-between rounded-lg border border-border bg-card px-4 py-3 text-sm font-medium hover:bg-muted"
+        >
+          See plans & pricing <span aria-hidden>→</span>
+        </Link>
+        <Link
+          to="/site-investigation"
+          className="flex items-center justify-between rounded-lg border border-border bg-card px-4 py-3 text-sm font-medium hover:bg-muted"
+        >
+          Request a Site Investigation Report <span aria-hidden>→</span>
+        </Link>
+        <Link
+          to="/"
+          className="flex items-center justify-between rounded-lg border border-border bg-card px-4 py-3 text-sm font-medium hover:bg-muted"
+        >
+          Back to the homepage <span aria-hidden>→</span>
+        </Link>
       </div>
     </div>
   );
