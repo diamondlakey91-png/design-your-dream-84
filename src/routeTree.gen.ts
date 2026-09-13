@@ -11,6 +11,7 @@
 import { Route as rootRouteImport } from './routes/__root'
 import { Route as SitemapDotxmlRouteImport } from './routes/sitemap[.]xml'
 import { Route as SiteInvestigationRouteImport } from './routes/site-investigation'
+import { Route as ResetPasswordRouteImport } from './routes/reset-password'
 import { Route as PricingRouteImport } from './routes/pricing'
 import { Route as McpRouteImport } from './routes/mcp'
 import { Route as DemoRouteImport } from './routes/demo'
@@ -73,6 +74,11 @@ const SitemapDotxmlRoute = SitemapDotxmlRouteImport.update({
 const SiteInvestigationRoute = SiteInvestigationRouteImport.update({
   id: '/site-investigation',
   path: '/site-investigation',
+  getParentRoute: () => rootRouteImport,
+} as any)
+const ResetPasswordRoute = ResetPasswordRouteImport.update({
+  id: '/reset-password',
+  path: '/reset-password',
   getParentRoute: () => rootRouteImport,
 } as any)
 const PricingRoute = PricingRouteImport.update({
@@ -371,6 +377,7 @@ export interface FileRoutesByFullPath {
   '/demo': typeof DemoRoute
   '/mcp': typeof McpRoute
   '/pricing': typeof PricingRoute
+  '/reset-password': typeof ResetPasswordRoute
   '/site-investigation': typeof SiteInvestigationRoute
   '/sitemap.xml': typeof SitemapDotxmlRoute
   '/.mcp/list-tools': typeof Char91DotmcpChar93ListToolsRoute
@@ -427,6 +434,7 @@ export interface FileRoutesByTo {
   '/demo': typeof DemoRoute
   '/mcp': typeof McpRoute
   '/pricing': typeof PricingRoute
+  '/reset-password': typeof ResetPasswordRoute
   '/site-investigation': typeof SiteInvestigationRoute
   '/sitemap.xml': typeof SitemapDotxmlRoute
   '/.mcp/list-tools': typeof Char91DotmcpChar93ListToolsRoute
@@ -483,6 +491,7 @@ export interface FileRoutesById {
   '/demo': typeof DemoRoute
   '/mcp': typeof McpRoute
   '/pricing': typeof PricingRoute
+  '/reset-password': typeof ResetPasswordRoute
   '/site-investigation': typeof SiteInvestigationRoute
   '/sitemap.xml': typeof SitemapDotxmlRoute
   '/.mcp/list-tools': typeof Char91DotmcpChar93ListToolsRoute
@@ -541,6 +550,7 @@ export interface FileRouteTypes {
     | '/demo'
     | '/mcp'
     | '/pricing'
+    | '/reset-password'
     | '/site-investigation'
     | '/sitemap.xml'
     | '/.mcp/list-tools'
@@ -597,6 +607,7 @@ export interface FileRouteTypes {
     | '/demo'
     | '/mcp'
     | '/pricing'
+    | '/reset-password'
     | '/site-investigation'
     | '/sitemap.xml'
     | '/.mcp/list-tools'
@@ -652,6 +663,7 @@ export interface FileRouteTypes {
     | '/demo'
     | '/mcp'
     | '/pricing'
+    | '/reset-password'
     | '/site-investigation'
     | '/sitemap.xml'
     | '/.mcp/list-tools'
@@ -710,6 +722,7 @@ export interface RootRouteChildren {
   DemoRoute: typeof DemoRoute
   McpRoute: typeof McpRoute
   PricingRoute: typeof PricingRoute
+  ResetPasswordRoute: typeof ResetPasswordRoute
   SiteInvestigationRoute: typeof SiteInvestigationRoute
   SitemapDotxmlRoute: typeof SitemapDotxmlRoute
   Char91DotmcpChar93ListToolsRoute: typeof Char91DotmcpChar93ListToolsRoute
@@ -737,6 +750,13 @@ declare module '@tanstack/react-router' {
       path: '/site-investigation'
       fullPath: '/site-investigation'
       preLoaderRoute: typeof SiteInvestigationRouteImport
+      parentRoute: typeof rootRouteImport
+    }
+    '/reset-password': {
+      id: '/reset-password'
+      path: '/reset-password'
+      fullPath: '/reset-password'
+      preLoaderRoute: typeof ResetPasswordRouteImport
       parentRoute: typeof rootRouteImport
     }
     '/pricing': {
@@ -1252,6 +1272,7 @@ const rootRouteChildren: RootRouteChildren = {
   DemoRoute: DemoRoute,
   McpRoute: McpRoute,
   PricingRoute: PricingRoute,
+  ResetPasswordRoute: ResetPasswordRoute,
   SiteInvestigationRoute: SiteInvestigationRoute,
   SitemapDotxmlRoute: SitemapDotxmlRoute,
   Char91DotmcpChar93ListToolsRoute: Char91DotmcpChar93ListToolsRoute,
