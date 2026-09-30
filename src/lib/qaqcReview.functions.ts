@@ -1,3 +1,4 @@
+import { aiFetch } from "@/lib/aiFetch";
 import { createServerFn } from "@tanstack/react-start";
 import { requireSupabaseAuth } from "@/integrations/supabase/auth-middleware";
 import { z } from "zod";
@@ -78,7 +79,7 @@ async function buildPlanBatches(
 async function callMultimodalJSON<T>(system: string, parts: ContentPart[], schema: z.ZodType<T>): Promise<T> {
   const aiKey = process.env['LOVABLE_API_KEY'];
   if (!aiKey) throw new Error("AI is not configured");
-  const resp = await fetch("https://ai.gateway.lovable.dev/v1/chat/completions", {
+  const resp = await aiFetch("https://ai.gateway.lovable.dev/v1/chat/completions", {
     method: "POST",
     headers: { "Content-Type": "application/json", "Lovable-API-Key": aiKey },
     body: JSON.stringify({

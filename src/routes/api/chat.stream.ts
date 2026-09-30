@@ -1,3 +1,4 @@
+import { aiFetch } from "@/lib/aiFetch";
 import { createFileRoute } from "@tanstack/react-router";
 import { createClient } from "@supabase/supabase-js";
 import type { Database } from "@/integrations/supabase/types";
@@ -150,7 +151,7 @@ export const Route = createFileRoute("/api/chat/stream")({
           { role: "user", content },
         ];
 
-        const upstream = await fetch("https://ai.gateway.lovable.dev/v1/chat/completions", {
+        const upstream = await aiFetch("https://ai.gateway.lovable.dev/v1/chat/completions", {
           method: "POST",
           headers: { "Content-Type": "application/json", "Lovable-API-Key": LOVABLE_API_KEY },
           body: JSON.stringify({ model: "google/gemini-2.5-flash", messages, stream: true }),

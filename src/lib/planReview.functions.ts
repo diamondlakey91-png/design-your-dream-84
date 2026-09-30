@@ -1,3 +1,4 @@
+import { aiFetch } from "@/lib/aiFetch";
 import { createServerFn } from "@tanstack/react-start";
 import { requireSupabaseAuth } from "@/integrations/supabase/auth-middleware";
 import { z } from "zod";
@@ -221,7 +222,7 @@ LOCATION (VERY IMPORTANT for markup): for every finding you visually identify on
     contentParts.push({ type: "file", file: { filename: doc.name, file_data: `data:${mime};base64,${b64}` } });
   }
 
-  const resp = await fetch("https://ai.gateway.lovable.dev/v1/chat/completions", {
+  const resp = await aiFetch("https://ai.gateway.lovable.dev/v1/chat/completions", {
     method: "POST",
     headers: { "Content-Type": "application/json", "Lovable-API-Key": aiKey },
     body: JSON.stringify({
@@ -297,7 +298,7 @@ Return ONLY JSON:
     }
 
     try {
-      const vResp = await fetch("https://ai.gateway.lovable.dev/v1/chat/completions", {
+      const vResp = await aiFetch("https://ai.gateway.lovable.dev/v1/chat/completions", {
         method: "POST",
         headers: { "Content-Type": "application/json", "Lovable-API-Key": aiKey },
         body: JSON.stringify({
@@ -388,7 +389,7 @@ export const batchReviewPlans = createServerFn({ method: "POST" })
     project_id: z.string().uuid(),
     force: z.boolean().optional().default(false),
   }).parse(input))
-  .handler(async ({ data, context }) => {
+  .handler(async ({ data, context }) => { const __m = await import("@/lib/aiMeter.server"); return __m.runMeteredAi({ db: context.supabase, userId: context.userId, operation: "batch_plan_review", creditType: "plan_review_credits", key: __m.meterKey("batch_plan_review", context.userId, data), projectId: (data as { project_id?: string | null }).project_id ?? null }, async () => {
     requireFeature(await getEntitlement(context.supabase, context.userId), "planReview");
     const { supabase, userId } = context;
 
@@ -504,7 +505,7 @@ export const batchReviewPlans = createServerFn({ method: "POST" })
     });
 
     return report;
-  });
+  }); });
 
 // ============= Plan Review → Fix List / Reviewer Response =============
 type PlanReviewFinding = {
@@ -580,7 +581,7 @@ export const addPlanReviewFixesToChecklist = createServerFn({ method: "POST" })
 export const draftReviewerResponse = createServerFn({ method: "POST" })
   .middleware([requireSupabaseAuth])
   .inputValidator((input: unknown) => z.object({ document_id: z.string().uuid() }).parse(input))
-  .handler(async ({ data, context }) => {
+  .handler(async ({ data, context }) => { const __m = await import("@/lib/aiMeter.server"); return __m.runMeteredAi({ db: context.supabase, userId: context.userId, operation: "draft_reviewer_response", creditType: "correction_review_credits", key: __m.meterKey("draft_reviewer_response", context.userId, data), projectId: (data as { project_id?: string | null }).project_id ?? null }, async () => {
     const aiKey = process.env.LOVABLE_API_KEY;
     if (!aiKey) throw new Error("AI is not configured");
 
@@ -638,7 +639,7 @@ Rules:
 FINDINGS:
 ${findingsBlock}${liveLetter?.block ?? ""}`;
 
-    const resp = await fetch("https://ai.gateway.lovable.dev/v1/chat/completions", {
+    const resp = await aiFetch("https://ai.gateway.lovable.dev/v1/chat/completions", {
       method: "POST",
       headers: { "Content-Type": "application/json", "Lovable-API-Key": aiKey },
       body: JSON.stringify({
@@ -671,7 +672,7 @@ ${findingsBlock}${liveLetter?.block ?? ""}`;
     });
 
     return { letter, finding_count: findings.length };
-  });
+  }); });
 // ---- Summarize reviewer comments across all analyzed docs ----
 const ReviewerSummarySchema = z.object({
   top_themes: z.array(z.string()).max(8).default([]),

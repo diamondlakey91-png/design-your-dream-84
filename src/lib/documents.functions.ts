@@ -1,3 +1,4 @@
+import { aiFetch } from "@/lib/aiFetch";
 import { createServerFn } from "@tanstack/react-start";
 import { requireSupabaseAuth } from "@/integrations/supabase/auth-middleware";
 import { z } from "zod";
@@ -112,7 +113,7 @@ const DocAnalysisSchema = z.object({
 export const analyzeDocument = createServerFn({ method: "POST" })
   .middleware([requireSupabaseAuth])
   .inputValidator((input: unknown) => z.object({ id: z.string().uuid() }).parse(input))
-  .handler(async ({ data, context }) => {
+  .handler(async ({ data, context }) => { const __m = await import("@/lib/aiMeter.server"); return __m.runMeteredAi({ db: context.supabase, userId: context.userId, operation: "document_analysis", creditType: "ai_queries", key: __m.meterKey("document_analysis", context.userId, data), projectId: (data as { project_id?: string | null }).project_id ?? null }, async () => {
     requireFeature(await getEntitlement(context.supabase, context.userId), "docReader");
     const aiKey = process.env.LOVABLE_API_KEY;
     if (!aiKey) throw new Error("AI is not configured");
@@ -167,7 +168,7 @@ Rules: never invent items not in the document. If the document is just an approv
       });
     }
 
-    const resp = await fetch("https://ai.gateway.lovable.dev/v1/chat/completions", {
+    const resp = await aiFetch("https://ai.gateway.lovable.dev/v1/chat/completions", {
       method: "POST",
       headers: { "Content-Type": "application/json", "Lovable-API-Key": aiKey },
       body: JSON.stringify({
@@ -214,4 +215,4 @@ Rules: never invent items not in the document. If the document is just an approv
     });
 
     return { document: updated, analysis: parsed };
-  });
+  }); });

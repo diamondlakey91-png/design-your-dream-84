@@ -1,3 +1,4 @@
+import { aiFetch } from "@/lib/aiFetch";
 import { createServerFn } from "@tanstack/react-start";
 import { z } from "zod";
 import { requireSupabaseAuth } from "@/integrations/supabase/auth-middleware";
@@ -68,7 +69,7 @@ function extractJsonObject(raw: string): Record<string, unknown> {
 export const findPermitRequirements = createServerFn({ method: "POST" })
   .middleware([requireSupabaseAuth])
   .inputValidator((input: unknown) => InputSchema.parse(input))
-  .handler(async ({ data, context }): Promise<PermitFinderReport> => {
+  .handler(async ({ data, context }) => { const __m = await import("@/lib/aiMeter.server"); return __m.runMeteredAi({ db: context.supabase, userId: context.userId, operation: "permit_finder", creditType: "ai_queries", key: __m.meterKey("permit_finder", context.userId, data), projectId: (data as { project_id?: string | null }).project_id ?? null }, async (): Promise<PermitFinderReport> => {
     const apiKey = process.env["LOVABLE_API_KEY"];
     if (!apiKey) throw new Error("AI is not configured for this workspace.");
 
@@ -136,7 +137,7 @@ ${jc.block}${live?.block ?? ""}
 
 Produce the JSON object now.`;
 
-    const res = await fetch("https://ai.gateway.lovable.dev/v1/chat/completions", {
+    const res = await aiFetch("https://ai.gateway.lovable.dev/v1/chat/completions", {
       method: "POST",
       headers: { "Content-Type": "application/json", "Lovable-API-Key": apiKey },
       body: JSON.stringify({
@@ -246,4 +247,4 @@ Produce the JSON object now.`;
       jurisdiction_data_on_file: jc.hasData || !!live?.has_official_sources,
       generated_at: new Date().toISOString(),
     };
-  });
+  }); });
