@@ -58,6 +58,8 @@ export function normalizeScope(input: { scopeText: string | null; workType: stri
   const out = new Map<ScopeAttribute, DerivedAttribute>();
   for (const [key, re] of PATTERNS) {
     const m = original.match(re);
+    // Negated mentions ("no change of occupancy", "without structural work") do not derive the attribute.
+    if (m && /\b(no|not|without|excluding|none|nor)\s+(\w+\s+){0,2}$/i.test(original.slice(Math.max(0, (m.index ?? 0) - 30), m.index ?? 0))) continue;
     if (m) out.set(key, { key, value: true, origin: "scope_text", evidence: `Scope text mentions "${m[0]}"` });
   }
   const wt = (input.workType ?? "").toLowerCase();

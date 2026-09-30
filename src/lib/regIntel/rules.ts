@@ -147,7 +147,7 @@ const RULES: Rule[] = [
       category: "health",
       agency: h?.name ?? "State/county health authority",
       trigger: c.hasSepticDocument ? "A septic site plan is in the project documents" : "Scope mentions septic",
-      why: "New dwellings served by an onsite system need an OSTDS construction permit before the building permit is issued in many Florida jurisdictions.",
+      why: c.state === "FL" ? "New dwellings served by an onsite system need an OSTDS construction permit before the building permit is issued in many Florida jurisdictions." : "New dwellings served by an onsite system normally need an onsite sewage / septic permit from the health authority before the building permit is issued.",
       prerequisites: [],
       source: h?.source ?? null,
       verification: "potential",
@@ -256,9 +256,9 @@ const RULES: Rule[] = [
     const f = agency(c, "fire");
     return {
       key: "fire_review", requirement_type: "approval",
-      name: "Fire plan review (Florida Fire Prevention Code)", category: "fire",
+      name: c.state === "FL" ? "Fire plan review (Florida Fire Prevention Code)" : "Fire plan review (adopted fire code)", category: "fire",
       agency: f?.name ?? "Local fire marshal",
-      trigger: "Commercial occupancy work", why: "Commercial work is reviewed against the Florida Fire Prevention Code; whether review is part of the building permit or separate depends on the AHJ.",
+      trigger: "Commercial occupancy work", why: `Commercial work is reviewed against ${c.state === "FL" ? "the Florida Fire Prevention Code" : "the fire code adopted for this jurisdiction"}; whether review is part of the building permit or separate depends on the AHJ.`,
       prerequisites: [], source: c.stateCfg?.codes.find((v) => v.discipline === "fire")?.source ?? null, verification: "needs_verification",
     };
   },
@@ -267,9 +267,9 @@ const RULES: Rule[] = [
     if (!commercial(c) || !tiLike(c)) return null;
     return {
       key: "accessibility_compliance", requirement_type: "supporting_document",
-      name: "Accessibility compliance (FBC–Accessibility) on the drawings", category: "building",
+      name: c.state === "FL" ? "Accessibility compliance (FBC–Accessibility) on the drawings" : "Accessibility compliance on the drawings (adopted accessibility code / ADA)", category: "building",
       agency: agency(c, "building")?.name ?? "Building department",
-      trigger: "Alteration of a commercial space", why: "Alterations to public accommodations must comply with FBC–Accessibility, including path-of-travel provisions where they apply.",
+      trigger: "Alteration of a commercial space", why: `Alterations to public accommodations must comply with ${c.state === "FL" ? "FBC–Accessibility" : "the adopted accessibility code and the ADA Standards"}, including path-of-travel provisions where they apply.`,
       prerequisites: [], source: c.stateCfg?.codes.find((v) => v.discipline === "accessibility")?.source ?? null, verification: "needs_verification",
     };
   },
