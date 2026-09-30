@@ -1087,6 +1087,104 @@ export type Database = {
           },
         ]
       }
+      code_adoption_evidence: {
+        Row: {
+          adopted: string | null
+          authority: string
+          created_at: string
+          discovered_by: string
+          edition: string | null
+          effective_from: string | null
+          effective_to: string | null
+          family: string
+          id: string
+          is_primary: boolean
+          jurisdiction_key: string | null
+          layer: string
+          local_only: boolean
+          model: string | null
+          note: string | null
+          proposed: boolean
+          quote: string
+          recheck_after: string | null
+          resolved_status: string | null
+          retrieved_at: string
+          source_published_at: string | null
+          source_status: string
+          source_type: string
+          state: string
+          superseded_by: string | null
+          updated_at: string
+          url: string
+        }
+        Insert: {
+          adopted?: string | null
+          authority: string
+          created_at?: string
+          discovered_by?: string
+          edition?: string | null
+          effective_from?: string | null
+          effective_to?: string | null
+          family: string
+          id?: string
+          is_primary?: boolean
+          jurisdiction_key?: string | null
+          layer?: string
+          local_only?: boolean
+          model?: string | null
+          note?: string | null
+          proposed?: boolean
+          quote?: string
+          recheck_after?: string | null
+          resolved_status?: string | null
+          retrieved_at?: string
+          source_published_at?: string | null
+          source_status?: string
+          source_type: string
+          state: string
+          superseded_by?: string | null
+          updated_at?: string
+          url: string
+        }
+        Update: {
+          adopted?: string | null
+          authority?: string
+          created_at?: string
+          discovered_by?: string
+          edition?: string | null
+          effective_from?: string | null
+          effective_to?: string | null
+          family?: string
+          id?: string
+          is_primary?: boolean
+          jurisdiction_key?: string | null
+          layer?: string
+          local_only?: boolean
+          model?: string | null
+          note?: string | null
+          proposed?: boolean
+          quote?: string
+          recheck_after?: string | null
+          resolved_status?: string | null
+          retrieved_at?: string
+          source_published_at?: string | null
+          source_status?: string
+          source_type?: string
+          state?: string
+          superseded_by?: string | null
+          updated_at?: string
+          url?: string
+        }
+        Relationships: [
+          {
+            foreignKeyName: "code_adoption_evidence_superseded_by_fkey"
+            columns: ["superseded_by"]
+            isOneToOne: false
+            referencedRelation: "code_adoption_evidence"
+            referencedColumns: ["id"]
+          },
+        ]
+      }
       code_adoptions: {
         Row: {
           code_family: string
