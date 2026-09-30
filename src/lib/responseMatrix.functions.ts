@@ -183,9 +183,29 @@ export const importCommentsFromDocuments = createServerFn({ method: "POST" })
 export const draftMatrixResponse = createServerFn({ method: "POST" })
   .middleware([requireSupabaseAuth])
   .inputValidator((input: unknown) =>
-    z.object({ id: z.string().uuid(), tone: z.enum(["formal", "concise"]).default("formal") }).parse(input),
+    z.object({
+      id: z.string().uuid(),
+      tone: z.enum(["formal", "concise"]).default("formal"),
+      request_id: z.string().uuid().optional(),
+    }).parse(input),
   )
   .handler(async ({ data, context }) => {
+    const { withIncludedUsage, requestKey } = await import("@/lib/commerce.server");
+    return withIncludedUsage(
+      context.supabase,
+      context.userId,
+      "correction_review_credits",
+      requestKey("correction_draft", [data.id, data.tone], data.request_id),
+      { reason: "Correction response draft" },
+      () => runDraftMatrixResponse(data, context),
+    );
+  });
+
+async function runDraftMatrixResponse(
+  data: { id: string; tone: "formal" | "concise" },
+  context: { supabase: any; userId: string }, // eslint-disable-line @typescript-eslint/no-explicit-any
+) {
+  {
     const aiKey = process.env["LOVABLE_API_KEY"];
     if (!aiKey) throw new Error("AI is not configured");
 
@@ -250,4 +270,5 @@ Write a ${data.tone === "concise" ? "2-3 sentence" : "3-5 sentence"} professiona
       .single();
     if (error) throw new Error(error.message);
     return updated;
-  });
+  }
+}
