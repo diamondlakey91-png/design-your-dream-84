@@ -335,36 +335,84 @@ function contextBlock(ctx: Awaited<ReturnType<typeof loadProjectContext>>): stri
 
 // ------------------------------------------------------------------ run review
 
+export function planSetLabel(ps: { title: string; version_number: number | null }): string {
+  const v = ps.version_number ? `V${ps.version_number}` : "";
+  return v && !new RegExp(`\\b${v}\\b`, "i").test(ps.title) ? `${ps.title} (${v})` : ps.title;
+}
+
+/** Map a finding's segment-relative page to the real document + page. Never guesses. */
+function locateFinding(
+  b: PlanBatch,
+  f: { segment?: string; page?: number | null; bbox?: { x: number; y: number; w: number; h: number } | null },
+): { document_id: string | null; abs_page: number | null; bbox: { x: number; y: number; w: number; h: number } | null } {
+  const label = (f.segment ?? "").trim().toLowerCase();
+  const seg = b.segments.find((x) => x.label.trim().toLowerCase() === label) ?? (b.segments.length === 1 ? b.segments[0] : null);
+  if (!seg) return { document_id: null, abs_page: null, bbox: null };
+  const abs = f.page ? seg.firstPage + f.page - 1 : null;
+  const box = f.bbox;
+  const okBox = box && box.x + box.w <= 1.001 && box.y + box.h <= 1.001 && box.w * box.h < 0.9 ? box : null;
+  return { document_id: seg.docId, abs_page: abs, bbox: abs ? okBox : null };
+}
+
 export const runQaQcReview = createServerFn({ method: "POST" })
   .middleware([requireSupabaseAuth])
   .inputValidator((d: unknown) =>
     z.object({
       project_id: z.string().uuid(),
-      document_ids: z.array(z.string().uuid()).min(1).max(25),
+      plan_set_id: z.string().uuid().optional(),
+      document_ids: z.array(z.string().uuid()).min(1).max(25).optional(),
       revision_label: z.string().max(40).default("Rev A"),
-    }).parse(d),
+      // One id per pre-run screen: repeat clicks reuse it, so only one run/charge happens.
+      request_id: z.string().uuid(),
+    }).refine((v) => Boolean(v.plan_set_id || v.document_ids?.length), "Choose a plan set to review").parse(d),
   )
   .handler(async ({ data, context }) => {
     const sb = context.supabase;
     const ctx = await loadProjectContext(sb, data.project_id);
     if (!ctx.project) throw new Error("Project not found");
 
+    let documentIds = data.document_ids ?? [];
+    let planSet: { id: string; title: string; version_number: number | null; document_ids: string[] | null; sheet_count: number | null } | null = null;
+    if (data.plan_set_id) {
+      const { data: ps } = await sb
+        .from("plan_sets")
+        .select("id, project_id, title, version_number, document_ids, sheet_count")
+        .eq("id", data.plan_set_id)
+        .maybeSingle();
+      if (!ps || ps.project_id !== data.project_id) throw new Error("Plan set not found on this project");
+      planSet = ps;
+      documentIds = (ps.document_ids ?? []).slice(0, 25);
+    }
+    if (!documentIds.length) throw new Error("This plan set has no files to review");
+
     const { data: docs } = await sb
       .from("project_documents")
       .select("id, name, mime_type, storage_path")
-      .in("id", data.document_ids);
+      .eq("project_id", data.project_id)
+      .in("id", documentIds);
     if (!docs?.length) throw new Error("No readable plan documents selected");
 
     const jurisdiction = String(ctx.project['jurisdiction'] ?? "");
     const state = (ctx.confirmation?.['state'] as string | undefined) ?? null;
+    const revisionLabel = planSet ? planSetLabel(planSet).slice(0, 40) : data.revision_label;
+    const key = `qaqc:${data.project_id}:${data.plan_set_id ?? "files"}:${data.request_id}`;
 
+    // Same fail-closed meter as every paid run: claim key (duplicate clicks) →
+    // charge Plan Review credit → run → log tokens/cost; refund on failure.
+    const { runMeteredAi } = await import("@/lib/aiMeter.server");
+    return runMeteredAi(
+      { db: sb, userId: context.userId, operation: "plan_qaqc", creditType: "plan_review_credits", key, projectId: data.project_id },
+      async () => {
     const { data: review, error: insErr } = await sb
       .from("qaqc_reviews")
       .insert({
         user_id: context.userId,
         project_id: data.project_id,
-        revision_label: data.revision_label,
-        document_ids: data.document_ids,
+        plan_set_id: planSet?.id ?? null,
+        request_key: key,
+        started_at: new Date().toISOString(),
+        revision_label: revisionLabel,
+        document_ids: docs.map((d: { id: string }) => d.id),
         status: "running",
         model: QAQC_MODEL,
         prompt_version: QAQC_PROMPT_VERSION,
@@ -377,20 +425,6 @@ export const runQaQcReview = createServerFn({ method: "POST" })
       .select("*")
       .single();
     if (insErr || !review) throw new Error(insErr?.message ?? "Could not start review");
-
-    // Server-side entitlement: plans with a Plan Review allowance consume one
-    // credit per review (idempotent per review id); restored on system failure.
-    const { chargeIncludedUsage, refundCredit } = await import("@/lib/commerce.server");
-    let usageId: string | null = null;
-    try {
-      usageId = (await chargeIncludedUsage(sb, context.userId, "plan_review_credits", `qaqc:${review.id}`, {
-        projectId: data.project_id,
-        reason: `Plan QA/QC review (${data.revision_label})`,
-      })).usageId;
-    } catch (e) {
-      await sb.from("qaqc_reviews").update({ status: "error", error: (e as Error).message }).eq("id", review.id);
-      throw e;
-    }
 
     try {
       const { codes, sources, context: codeContext, agency_contacts } = await researchJurisdictionCodes(
@@ -569,7 +603,7 @@ Return JSON: { "findings": [{ "severity": "critical|high|medium|low|informationa
             ],
             FindingsSchema,
           ) as unknown as FindingsOut;
-          results.push(out);
+          results.push({ ...out, findings: out.findings.map((f) => ({ ...f, ...locateFinding(b, f) })) });
         }
       }
 
@@ -608,6 +642,11 @@ Return JSON: { "findings": [{ "severity": "critical|high|medium|low|informationa
           recommended_action: f.recommended_action || null,
           responsible_discipline: f.responsible_discipline || null,
           verification: f.verification,
+          document_id: f.document_id ?? null,
+          page: f.abs_page ?? null,
+          bbox: f.abs_page && f.bbox ? f.bbox : null,
+          related_sheets: (f.related_sheets ?? []).map((x) => x.trim()).filter(Boolean).slice(0, 8),
+          confidence: f.confidence ?? null,
         })));
       }
 
@@ -623,6 +662,8 @@ Return JSON: { "findings": [{ "severity": "critical|high|medium|low|informationa
 
       await sb.from("qaqc_reviews").update({
         status: "complete",
+        completed_at: new Date().toISOString(),
+        sheet_count: sheetRows.length,
         inventory_gaps: {
           index_sheets_not_uploaded: inventory.index_sheets_not_uploaded,
           uploaded_sheets_not_indexed: inventory.uploaded_sheets_not_indexed,
@@ -648,21 +689,14 @@ Return JSON: { "findings": [{ "severity": "critical|high|medium|low|informationa
         needs_professional_confirmation: results.flatMap((r) => r.needs_professional_confirmation),
       }).eq("id", review.id);
 
-      await sb.from("activity").insert({
-        project_id: data.project_id,
-        user_id: context.userId,
-        description: `Plan QA/QC review (${data.revision_label}) complete — ${allFindings.length} findings · ${readinessMeta(category).label}`,
-      });
-
-      await (await import("@/lib/aiMeter.server")).logAiCall({ userId: context.userId, operation: "plan_qaqc", success: true, projectId: data.project_id, creditType: "plan_review_credits", creditTransactionId: usageId, internal: !usageId, key: `qaqc:${review.id}` });
-      return { review_id: review.id as string, findings: allFindings.length, readiness_score: score, readiness_category: category };
+      return { review_id: review.id as string, findings: allFindings.length };
     } catch (e) {
-      const msg = e instanceof Error ? e.message : "QA/QC review failed";
-      await (await import("@/lib/aiMeter.server")).logAiCall({ userId: context.userId, operation: "plan_qaqc", success: false, error: msg, projectId: data.project_id, creditType: "plan_review_credits", creditTransactionId: usageId, refunded: Boolean(usageId), key: `qaqc:${review.id}` });
-      await sb.from("qaqc_reviews").update({ status: "error", error: msg }).eq("id", review.id);
-      if (usageId) await refundCredit(usageId, "QA/QC review failed — credit restored");
+      const msg = e instanceof Error ? e.message : "Plan Review failed";
+      await sb.from("qaqc_reviews").update({ status: "error", error: msg, completed_at: new Date().toISOString() }).eq("id", review.id);
       throw new Error(msg);
     }
+      },
+    );
   });
 
 // ------------------------------------------------------------------- read APIs
