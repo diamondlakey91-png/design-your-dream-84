@@ -21,3 +21,13 @@
 - [ ] Phase 2C — built in preview, not published; awaiting approval (Phase 2D not started)
 - [ ] L1 jurisdiction profile creation + created_by/verified_by visible to customers
 - [ ] L3 empty-organization first-member edge case
+
+## Phase 2C.1 — Property, Jurisdiction & Regulatory Intelligence (preview only, not published)
+- [ ] Regulatory facts store + provenance, source hierarchy, verification rules
+- [ ] Providers: Census, county GIS (parcel/zoning/FLU/overlays), FEMA NFHL, FL code adoption
+- [ ] Scope normalization + scope→permit engine + roadmap import (no duplicates)
+- [ ] Background research job with visible steps, persisted state, refresh/invalidation, usage tracking (correction upload)
+- [ ] Fix Jurisdiction Confirmation showing "Unincorporated" without evidence
+- [ ] Plan Review consumes regulatory profile context
+- [ ] Multi-fixture acceptance matrix + tests + security checks; Bermudez regulatory report
+- Bermudez Plan Review stays blocked; no test customer/credit yet; do not publish
