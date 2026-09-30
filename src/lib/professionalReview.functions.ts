@@ -15,6 +15,11 @@ export const requestProfessionalReview = createServerFn({ method: "POST" })
   )
   .handler(async ({ data, context }) => {
     const sb = context.supabase;
+    // Reviewer identity is reviewer-controlled; a customer's preferred reviewer is kept as a request note.
+    const pref = data.reviewer_name?.trim();
+    const notes = [pref ? `Preferred reviewer: ${pref}` : null, data.requested_notes?.trim() || null]
+      .filter(Boolean)
+      .join("\n") || null;
     const { data: row, error } = await sb
       .from("professional_reviews")
       .insert({
@@ -22,8 +27,7 @@ export const requestProfessionalReview = createServerFn({ method: "POST" })
         project_id: data.project_id ?? null,
         target_type: data.target_type,
         target_id: data.target_id,
-        requested_notes: data.requested_notes ?? null,
-        reviewer_name: data.reviewer_name ?? null,
+        requested_notes: notes,
         status: "requested",
       })
       .select("*")
@@ -49,6 +53,7 @@ export const listProfessionalReviews = createServerFn({ method: "GET" })
     return { reviews: rows ?? [] };
   });
 
+/** Reviewer/admin only — customers cannot set status, reviewer or reviewer notes. */
 export const updateProfessionalReview = createServerFn({ method: "POST" })
   .middleware([requireSupabaseAuth])
   .inputValidator((d: unknown) =>
@@ -60,6 +65,8 @@ export const updateProfessionalReview = createServerFn({ method: "POST" })
     }).parse(d),
   )
   .handler(async ({ data, context }) => {
+    const { data: isAdmin } = await context.supabase.rpc("has_role", { _user_id: context.userId, _role: "admin" });
+    if (!isAdmin) throw new Error("Only Permivio reviewers can update a professional review.");
     const { error } = await context.supabase
       .from("professional_reviews")
       .update({

@@ -259,20 +259,28 @@ export const createQaSignoff = createServerFn({ method: "POST" })
         signed_by_name: z.string().min(1).max(200),
         signed_by_role: z.string().max(200).optional(),
         notes: z.string().max(4000).optional(),
-        gate_passed: z.boolean(),
-        overridden: z.boolean().default(false),
+        // Client values are ignored — the gate result and snapshot are recomputed on the server.
+        gate_passed: z.boolean().optional(),
+        overridden: z.boolean().optional(),
         override_reason: z.string().max(2000).optional(),
-        snapshot: z.record(z.string(), z.unknown()).default({}),
+        snapshot: z.record(z.string(), z.unknown()).optional(),
       })
       .parse(input),
   )
   .handler(async ({ data, context }) => {
-    if (!data.gate_passed && !data.overridden)
-      throw new Error("QA/QC gate has blocking items. Resolve them or record an explicit override reason.");
-    if (data.overridden && !(data.override_reason ?? "").trim())
-      throw new Error("An override requires a written reason.");
+    // Caller must be able to write this project (RLS-checked as the caller).
+    const { data: canWrite } = await context.supabase.rpc("can_write_project", { _project_id: data.project_id });
+    if (!canWrite) throw new Error("You don't have permission to sign off on this project.");
 
-    const { data: row, error } = await context.supabase
+    // Recompute the gate server-side — never trust a client-supplied gate result.
+    const status = await getQaQcStatus({ data: { project_id: data.project_id } } as never) as Awaited<ReturnType<typeof getQaQcStatus>>;
+    const gatePassed = !!status.gate_passed;
+    const overridden = !gatePassed;
+    const reason = (data.override_reason ?? "").trim();
+    if (overridden && !reason) throw new Error("QA/QC gate has blocking items. Resolve them or record an explicit override reason.");
+
+    const { supabaseAdmin } = await import("@/integrations/supabase/client.server");
+    const { data: row, error } = await supabaseAdmin
       .from("qa_signoffs")
       .insert({
         user_id: context.userId,
@@ -281,10 +289,18 @@ export const createQaSignoff = createServerFn({ method: "POST" })
         signed_by_name: data.signed_by_name.trim(),
         signed_by_role: data.signed_by_role?.trim() || null,
         notes: data.notes?.trim() || null,
-        gate_passed: data.gate_passed,
-        overridden: data.overridden,
-        override_reason: data.override_reason?.trim() || null,
-        snapshot: data.snapshot as never,
+        gate_passed: gatePassed,
+        overridden,
+        override_reason: overridden ? reason : null,
+        snapshot: {
+          plans_total: status.counts.plans_total,
+          plans_reviewed: status.counts.plans_reviewed,
+          findings_by_severity: status.counts.findings_by_severity,
+          comments_open: status.counts.comments_open,
+          blockers: status.blockers,
+          warnings: status.warnings,
+          recorded_by: "server",
+        } as never,
       })
       .select("*")
       .single();
@@ -293,7 +309,7 @@ export const createQaSignoff = createServerFn({ method: "POST" })
     await context.supabase.from("activity").insert({
       project_id: data.project_id,
       user_id: context.userId,
-      description: `QA/QC ${data.scope.replace(/_/g, " ")} sign-off by ${data.signed_by_name.trim()}${data.overridden ? " (override)" : ""}`,
+      description: `QA/QC ${data.scope.replace(/_/g, " ")} sign-off by ${data.signed_by_name.trim()}${overridden ? " (override)" : ""}`,
     });
 
     return row;
