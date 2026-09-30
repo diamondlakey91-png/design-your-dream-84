@@ -124,7 +124,7 @@ export const advanceRegulatoryResearch = createServerFn({ method: "POST" })
       ...(job.state ?? {}),
       address: job.address, scopeText: inp.scopeText, workType: inp.project?.work_type ?? null, projectType: inp.project?.project_type ?? null,
       scopeCorrections: inp.corrections, hasSepticDocument: inp.hasSeptic, storedJurisdiction: inp.stored,
-      applicationDate: inp.applicationDate,
+      applicationDate: inp.applicationDate, requestedBy: job.requested_by ?? null, projectId: job.project_id,
     };
     const step = steps[idx]!;
     step.status = "running";
