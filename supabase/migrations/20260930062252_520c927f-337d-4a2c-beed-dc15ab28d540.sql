@@ -1,0 +1,1 @@
+CREATE UNIQUE INDEX IF NOT EXISTS ai_usage_log_request_key_uniq ON public.ai_usage_log(request_key) WHERE request_key IS NOT NULL;

@@ -65,38 +65,59 @@ export type MeterArgs = {
   organizationId?: string | null;
 };
 
-/** Charge (fail-closed) → run → log; refund + log on failure. */
+/** Thrown when the same run is already in progress or already completed. */
+export class DuplicateRunError extends Error {
+  constructor(message = "This run is already in progress or was just completed. Refresh to see the result.") {
+    super(message);
+    this.name = "DuplicateRunError";
+  }
+}
+
+/** Claim → charge (fail-closed) → run → log; refund + log on failure. */
 export async function runMeteredAi<T>(a: MeterArgs, run: () => Promise<T>): Promise<T> {
+  const { supabaseAdmin } = await import("@/integrations/supabase/client.server");
+  const logs = supabaseAdmin.from("ai_usage_log") as any; // eslint-disable-line @typescript-eslint/no-explicit-any
+  // Claim the request key first (unique index) so a repeat click can't run the AI twice.
+  const { data: claim, error: claimErr } = await logs
+    .insert({
+      user_id: a.userId, organization_id: a.organizationId ?? null, project_id: a.projectId ?? null,
+      operation: a.operation, provider: "lovable_ai_gateway", credit_type: a.creditType,
+      success: false, error: "running", internal_use: a.creditType === null, request_key: a.key,
+    })
+    .select("id")
+    .single();
+  if (claimErr) {
+    if (claimErr.code === "23505") throw new DuplicateRunError();
+    throw new Error("We couldn't start this run. Please try again.");
+  }
+  const claimId = claim.id as string;
   let usageId: string | null = null;
   let internal = a.creditType === null;
-  if (a.creditType && a.userId) {
-    const c = await chargeIncludedUsage(a.db, a.userId, a.creditType, a.key, { projectId: a.projectId, reason: a.operation });
-    usageId = c.usageId;
-    internal = c.internal;
+  try {
+    if (a.creditType && a.userId) {
+      const c = await chargeIncludedUsage(a.db, a.userId, a.creditType, a.key, { projectId: a.projectId, reason: a.operation });
+      usageId = c.usageId;
+      internal = c.internal;
+    }
+  } catch (e) {
+    // Blocked before the AI was called: no usage row is kept.
+    await logs.delete().eq("id", claimId);
+    throw e;
   }
   const u: Usage = { model: null, input: 0, output: 0, calls: 0 };
-  const base = {
-    user_id: a.userId,
-    organization_id: a.organizationId ?? null,
-    project_id: a.projectId ?? null,
-    operation: a.operation,
-    provider: "lovable_ai_gateway",
-    credit_type: a.creditType,
-    credits_charged: usageId ? 1 : 0,
-    credit_transaction_id: usageId,
-    internal_use: internal,
-    request_key: a.key,
-  };
+  const base = { credits_charged: usageId ? 1 : 0, credit_transaction_id: usageId, internal_use: internal };
   try {
     const out = await store.run(u, run);
-    await writeLog({ ...base, success: true, model: u.model, input_tokens: u.input, output_tokens: u.output, estimated_cost: estimate(u) });
+    await logs.update({ ...base, success: true, error: null, model: u.model, input_tokens: u.input, output_tokens: u.output, estimated_cost: estimate(u) }).eq("id", claimId);
     return out;
   } catch (e) {
     if (usageId) await refundCredit(usageId, `${a.operation} failed — credit restored`);
-    await writeLog({
+    await logs.update({
       ...base, success: false, error: String((e as Error)?.message ?? e).slice(0, 500),
       refunded: Boolean(usageId), model: u.model, input_tokens: u.input, output_tokens: u.output, estimated_cost: estimate(u),
-    });
+      // Free the key so the customer can retry after a failure.
+      request_key: `${a.key}:failed:${Date.now()}`,
+    }).eq("id", claimId);
     throw e;
   }
 }
