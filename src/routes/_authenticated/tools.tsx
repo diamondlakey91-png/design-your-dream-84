@@ -8,6 +8,11 @@ import { ServiceProductCard } from "@/components/tools/ServiceProductCard";
 import { FullServiceDialog } from "@/components/tools/FullServiceDialog";
 import { PurchasedServicesList, type ReportVersion } from "@/components/tools/PurchasedServicesList";
 import { getToolsOverview } from "@/lib/toolsReports.functions";
+import { redeemServiceWithCredit } from "@/lib/commerce.functions";
+import { getStripeEnvironment } from "@/lib/stripe";
+import { ENTITLEMENT_LABEL } from "@/lib/commerceLabels";
+import { Link } from "@tanstack/react-router";
+import { toast } from "sonner";
 import {
   DISCLAIMER,
   recommendFor,
@@ -47,6 +52,18 @@ function ToolsAndReportsPage() {
   });
 
   const [projectId, setProjectId] = useState<string>("");
+  const redeemFn = useServerFn(redeemServiceWithCredit);
+  const membership = data?.membership ?? { active: false, planName: null, discountPercent: 0 };
+  const balances = (data?.balances ?? {}) as Record<string, number>;
+  const redeem = async (product: ServiceProduct, tier: DeliveryTier) => {
+    let env: "sandbox" | "live" = "sandbox";
+    try { env = getStripeEnvironment(); } catch { /* credit redemption needs no card */ }
+    const res = await redeemFn({
+      data: { productId: product.id, projectId: projectId || null, deliveryTier: tier, requestId: crypto.randomUUID(), environment: env },
+    });
+    if ("error" in res) toast.error(res.error);
+    else window.location.assign(`/tools/checkout?order_id=${res.orderId}`);
+  };
   const [fullService, setFullService] = useState(false);
 
   const products = (data?.products ?? []) as unknown as ServiceProduct[];
@@ -133,6 +150,28 @@ function ToolsAndReportsPage() {
         </div>
       ) : (
         <section className="space-y-4">
+          <div className="grid gap-4 md:grid-cols-2">
+            <div className="rounded-3xl border border-border bg-card p-5">
+              <p className="text-xs font-semibold uppercase tracking-wider text-primary">Buy a report</p>
+              <p className="mt-1 text-sm text-muted-foreground">
+                Need one specific permitting deliverable? Order it below — no subscription required. Your purchases stay saved to your project.
+              </p>
+            </div>
+            <div className="rounded-3xl border border-border bg-card p-5">
+              <p className="text-xs font-semibold uppercase tracking-wider text-primary">Permivio Membership</p>
+              <p className="mt-1 text-sm text-muted-foreground">
+                {membership.active
+                  ? `You're on ${membership.planName ?? "a Permivio membership"}. Member pricing and included credits apply automatically below.`
+                  : "Managing ongoing projects? Membership adds continued access to Permivio tools, included credits and member pricing."}
+              </p>
+              <Link
+                to={membership.active ? "/settings" : "/pricing"}
+                className="mt-3 inline-flex rounded-xl border border-border px-3 py-1.5 text-xs font-semibold text-foreground hover:border-primary/50"
+              >
+                {membership.active ? "View billing & allowances" : "Explore membership"}
+              </Link>
+            </div>
+          </div>
           <h2 className="text-sm font-semibold uppercase tracking-wider text-muted-foreground">Available services</h2>
           <div className="grid gap-4 lg:grid-cols-2">
             {ranked.map(({ product, rec }) => (
@@ -147,6 +186,19 @@ function ToolsAndReportsPage() {
                   })
                 }
                 onFullService={() => setFullService(true)}
+                memberPriceCents={
+                  membership.active
+                    ? (product as ServiceProduct & { subscriber_price_cents?: number | null }).subscriber_price_cents ?? null
+                    : null
+                }
+                creditsAvailable={(() => {
+                  const p = product as ServiceProduct & { credit_type?: string | null; credits_consumed?: number };
+                  if (!membership.active || !p.credit_type || !p.credits_consumed) return null;
+                  const available = balances[p.credit_type] ?? 0;
+                  if (available <= 0) return null;
+                  return { available, needed: p.credits_consumed, label: ENTITLEMENT_LABEL[p.credit_type as never] ?? "credits" };
+                })()}
+                onUseCredit={(tier) => redeem(product, tier)}
               />
             ))}
           </div>
