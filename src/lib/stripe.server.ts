@@ -73,7 +73,7 @@ export function getStripeErrorMessage(error: unknown): string {
   return 'Stripe request failed';
 }
 
-export async function verifyWebhook(req: Request, env: StripeEnv): Promise<{ type: string; data: { object: unknown } }> {
+export async function verifyWebhook(req: Request, env: StripeEnv): Promise<{ id: string; type: string; data: { object: unknown } }> {
   const signature = req.headers.get("stripe-signature");
   const body = await req.text();
   const secret = env === 'sandbox'
