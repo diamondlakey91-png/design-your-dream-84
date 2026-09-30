@@ -26,6 +26,12 @@ export async function aiGatewayFetch(input: string, init?: RequestInit): Promise
     try { const m = JSON.parse(init.body)?.model; if (m) u.model = m; } catch { /* ignore */ }
   }
   const res = await fetch(input, init);
+  if (!u) {
+    // Call outside a metered run: still record it as internal, non-billable use.
+    let model: string | null = null;
+    try { model = typeof init?.body === "string" ? JSON.parse(init.body)?.model ?? null : null; } catch { /* ignore */ }
+    void writeLog({ user_id: null, operation: "unmetered_ai_call", provider: "lovable_ai_gateway", model, success: res.ok, internal_use: true, error: res.ok ? null : `HTTP ${res.status}` });
+  }
   if (u) {
     u.calls++;
     if ((res.headers.get("content-type") ?? "").includes("application/json")) {
@@ -108,4 +114,15 @@ export async function logAiCall(row: {
     internal_use: row.internal ?? false, request_key: row.key ?? null, refunded: row.refunded ?? false,
     provider: "lovable_ai_gateway",
   });
+}
+
+(globalThis as { __permivioAiFetch?: typeof aiGatewayFetch }).__permivioAiFetch = aiGatewayFetch;
+
+/** Duplicate-request key: same user + same input within 5 minutes = one charge. */
+export function meterKey(op: string, userId: string, data: unknown): string {
+  const rid = (data as { request_id?: string } | null)?.request_id;
+  const str = JSON.stringify(data ?? null);
+  let h = 5381;
+  for (let i = 0; i < str.length; i++) h = ((h << 5) + h + str.charCodeAt(i)) | 0;
+  return [op, userId, (h >>> 0).toString(36), rid ?? `t${Math.floor(Date.now() / 300_000)}`].join(":");
 }

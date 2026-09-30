@@ -371,12 +371,12 @@ export const runQaQcReview = createServerFn({ method: "POST" })
     const { chargeIncludedUsage, refundCredit } = await import("@/lib/commerce.server");
     let usageId: string | null = null;
     try {
-      usageId = await chargeIncludedUsage(sb, context.userId, "plan_review_credits", `qaqc:${review.id}`, {
+      usageId = (await chargeIncludedUsage(sb, context.userId, "plan_review_credits", `qaqc:${review.id}`, {
         projectId: data.project_id,
         reason: `Plan QA/QC review (${data.revision_label})`,
-      });
+      })).usageId;
     } catch (e) {
-      await sb.from("qaqc_reviews").update({ status: "error", error: "No Plan Review credit available" }).eq("id", review.id);
+      await sb.from("qaqc_reviews").update({ status: "error", error: (e as Error).message }).eq("id", review.id);
       throw e;
     }
 
