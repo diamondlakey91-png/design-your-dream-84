@@ -41,4 +41,5 @@ export const TRANSACTION_LABEL: Record<string, string> = {
   refund: "Restored",
   adjustment: "Adjustment",
   expiration: "Expired",
+  promotional_grant: "Beta / promotional grant",
 };
