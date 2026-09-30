@@ -2,6 +2,7 @@ import { aiFetch } from "@/lib/aiFetch";
 import { createServerFn } from "@tanstack/react-start";
 import { requireSupabaseAuth } from "@/integrations/supabase/auth-middleware";
 import { z } from "zod";
+import { DOCUMENT_CATEGORIES, guessCategory } from "@/lib/roadmapWorkflow";
 import { getEntitlement, requireFeature } from "@/lib/entitlements";
 
 // ---- Documents ----
@@ -37,12 +38,14 @@ export const registerDocument = createServerFn({ method: "POST" })
       size_bytes: z.number().int().min(0).default(0),
       stage: z.number().int().min(0).max(4).nullable().optional(),
       permit_item_id: z.string().uuid().nullable().optional(),
+      document_category: z.enum(DOCUMENT_CATEGORIES).optional(),
     }).parse(input),
   )
   .handler(async ({ data, context }) => {
     const { data: row, error } = await context.supabase
       .from("project_documents")
       .insert({
+        document_category: data.document_category ?? guessCategory(data.name, data.mime_type),
         user_id: context.userId,
         project_id: data.project_id,
         name: data.name,
@@ -54,12 +57,7 @@ export const registerDocument = createServerFn({ method: "POST" })
       })
       .select("*").single();
     if (error) throw new Error(error.message);
-    await context.supabase.from("activity").insert({
-      user_id: context.userId,
-      project_id: data.project_id,
-      description: `Uploaded document: ${data.name}${typeof data.stage === "number" ? ` (Stage ${data.stage + 1})` : ""}`,
-    });
-    return row;
+    return row; // "Document uploaded" is logged by the DB activity trigger
   });
 
 export const updateDocumentLinkage = createServerFn({ method: "POST" })
@@ -69,10 +67,20 @@ export const updateDocumentLinkage = createServerFn({ method: "POST" })
       id: z.string().uuid(),
       stage: z.number().int().min(0).max(4).nullable().optional(),
       permit_item_id: z.string().uuid().nullable().optional(),
+      document_category: z.enum(DOCUMENT_CATEGORIES).optional(),
     }).parse(input),
   )
   .handler(async ({ data, context }) => {
-    const patch: { stage?: number | null; permit_item_id?: string | null } = {};
+    const patch: { stage?: number | null; permit_item_id?: string | null; document_category?: string } = {};
+    if (data.document_category) patch.document_category = data.document_category;
+    if (data.permit_item_id) {
+      // the roadmap item must belong to the same project as the document
+      const [{ data: doc }, { data: item }] = await Promise.all([
+        context.supabase.from("project_documents").select("project_id").eq("id", data.id).maybeSingle(),
+        context.supabase.from("permit_items").select("project_id").eq("id", data.permit_item_id).maybeSingle(),
+      ]);
+      if (!doc || !item || doc.project_id !== item.project_id) throw new Error("That roadmap item isn't on this project");
+    }
     if (data.stage !== undefined) patch.stage = data.stage;
     if (data.permit_item_id !== undefined) patch.permit_item_id = data.permit_item_id;
     const { data: row, error } = await context.supabase
