@@ -125,7 +125,7 @@ function PlanCard({ plan }: { plan: PlanRow }) {
               label={ENTITLEMENT_LABEL[key]}
               configured={!!cur}
               limit={cur ? (cur.limit_value == null ? "" : String(cur.limit_value)) : ""}
-              period={cur?.period ?? (key.endsWith("_credits") || key === "ai_queries" ? "monthly" : "none")}
+              period={cur?.period ?? (key.endsWith("_credits") || key === "ai_queries" || key === "ai_messages" ? "monthly" : "none")}
               onSave={(limit, period) => saveEnt.mutate({ key, limit, period })}
               onRemove={() => saveEnt.mutate({ key, limit: "", period: "none", remove: true })}
             />
@@ -189,7 +189,7 @@ function AdjustCredits() {
       <div className="mt-2 grid gap-2 md:grid-cols-4">
         <Input value={userId} onChange={(e) => setUserId(e.target.value)} placeholder="Customer user ID" />
         <select value={type} onChange={(e) => setType(e.target.value)} className="h-9 rounded-md border border-input bg-background px-2 text-sm">
-          {ENTITLEMENT_ORDER.filter((k) => k.endsWith("_credits") || k === "ai_queries").map((k) => (
+          {ENTITLEMENT_ORDER.filter((k) => k.endsWith("_credits") || k === "ai_queries" || k === "ai_messages").map((k) => (
             <option key={k} value={k}>{ENTITLEMENT_LABEL[k]}</option>
           ))}
         </select>
