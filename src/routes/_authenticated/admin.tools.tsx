@@ -19,6 +19,7 @@ import { Input } from "@/components/ui/input";
 import { Textarea } from "@/components/ui/textarea";
 import { Label } from "@/components/ui/label";
 import { MembershipPlansAdmin } from "@/components/billing/MembershipPlansAdmin";
+import { AiUsageAdmin } from "@/components/billing/AiUsageAdmin";
 
 export const Route = createFileRoute("/_authenticated/admin/tools")({
   component: AdminToolsPage,
@@ -116,7 +117,7 @@ function AdminToolsPage() {
   const orderFn = useServerFn(updateServiceOrderAdmin);
   const qc = useQueryClient();
 
-  const [tab, setTab] = useState<"products" | "orders" | "plans">("products");
+  const [tab, setTab] = useState<"products" | "orders" | "plans" | "usage">("products");
   const [form, setForm] = useState<ProductForm | null>(null);
   const [query, setQuery] = useState("");
 
@@ -229,7 +230,7 @@ function AdminToolsPage() {
         </header>
 
         <div className="flex gap-2">
-          {(["products", "orders", "plans"] as const).map((t) => (
+          {(["products", "orders", "plans", "usage"] as const).map((t) => (
             <button
               key={t}
               onClick={() => setTab(t)}
@@ -237,12 +238,13 @@ function AdminToolsPage() {
                 tab === t ? "border-brand text-brand" : "border-border text-muted-foreground hover:border-brand/60"
               }`}
             >
-              {t === "products" ? "Products & pricing" : t === "orders" ? "Client orders" : "Membership plans"}
+              {t === "products" ? "Products & pricing" : t === "orders" ? "Client orders" : t === "plans" ? "Membership plans" : "AI usage"}
             </button>
           ))}
         </div>
 
         {tab === "plans" && <MembershipPlansAdmin />}
+        {tab === "usage" && <AiUsageAdmin />}
 
         {tab === "products" && (
           <>

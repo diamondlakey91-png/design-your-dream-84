@@ -245,3 +245,21 @@ export const adjustCreditsAdmin = createServerFn({ method: "POST" })
     if (error) throw new Error(error.message);
     return { ok: true };
   });
+
+/** Admin-only: every AI call across the platform (most recent first). */
+export const listAiUsageAdmin = createServerFn({ method: "GET" })
+  .middleware([requireSupabaseAuth])
+  .handler(async ({ context }) => {
+    await assertAdmin(context.supabase as never, context.userId);
+    const { data, error } = await (context.supabase as never as { from: (t: string) => any }) // eslint-disable-line @typescript-eslint/no-explicit-any
+      .from("ai_usage_log")
+      .select("id,created_at,user_id,project_id,operation,model,success,error,input_tokens,output_tokens,estimated_cost,credit_type,credits_charged,refunded,internal_use")
+      .order("created_at", { ascending: false })
+      .limit(200);
+    if (error) throw new Error(error.message);
+    return (data ?? []) as Array<{
+      id: string; created_at: string; user_id: string | null; project_id: string | null; operation: string; model: string | null;
+      success: boolean; error: string | null; input_tokens: number; output_tokens: number; estimated_cost: number;
+      credit_type: string | null; credits_charged: number; refunded: boolean; internal_use: boolean;
+    }>;
+  });
