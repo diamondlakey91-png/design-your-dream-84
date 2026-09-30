@@ -141,7 +141,7 @@ Produce the JSON object now.`;
       body: JSON.stringify({
         model: "google/gemini-2.5-pro",
         messages: [
-          { role: "system", content: sys },
+          { role: "system", content: withRegulatoryGrounding(sys, "research") },
           { role: "user", content: user },
         ],
         temperature: 0.2,
