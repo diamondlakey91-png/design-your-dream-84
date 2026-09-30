@@ -2227,6 +2227,7 @@ export type Database = {
           notes: string
           owner_name: string | null
           project_id: string
+          regulatory_fact_id: string | null
           required: boolean
           requirement_confidence: string
           review_timing: string | null
@@ -2254,6 +2255,7 @@ export type Database = {
           notes?: string
           owner_name?: string | null
           project_id: string
+          regulatory_fact_id?: string | null
           required?: boolean
           requirement_confidence?: string
           review_timing?: string | null
@@ -2281,6 +2283,7 @@ export type Database = {
           notes?: string
           owner_name?: string | null
           project_id?: string
+          regulatory_fact_id?: string | null
           required?: boolean
           requirement_confidence?: string
           review_timing?: string | null
@@ -2304,6 +2307,13 @@ export type Database = {
             columns: ["project_id"]
             isOneToOne: false
             referencedRelation: "projects"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "permit_items_regulatory_fact_id_fkey"
+            columns: ["regulatory_fact_id"]
+            isOneToOne: false
+            referencedRelation: "project_regulatory_facts"
             referencedColumns: ["id"]
           },
         ]
@@ -2844,6 +2854,98 @@ export type Database = {
           },
           {
             foreignKeyName: "project_documents_project_id_fkey"
+            columns: ["project_id"]
+            isOneToOne: false
+            referencedRelation: "projects"
+            referencedColumns: ["id"]
+          },
+        ]
+      }
+      project_regulatory_facts: {
+        Row: {
+          conflicts: Json
+          created_at: string
+          created_by: string | null
+          display_value: string | null
+          effective_date: string | null
+          fact_key: string
+          fact_type: string
+          id: string
+          label: string
+          limitation: string | null
+          origin: string
+          project_id: string
+          provider: string
+          recheck_after: string | null
+          retrieved_at: string
+          source_org: string | null
+          source_tier: number
+          source_title: string | null
+          source_updated_at: string | null
+          source_url: string | null
+          updated_at: string
+          value: Json
+          verification: string
+          verified_at: string | null
+          verified_by: string | null
+        }
+        Insert: {
+          conflicts?: Json
+          created_at?: string
+          created_by?: string | null
+          display_value?: string | null
+          effective_date?: string | null
+          fact_key: string
+          fact_type: string
+          id?: string
+          label: string
+          limitation?: string | null
+          origin?: string
+          project_id: string
+          provider: string
+          recheck_after?: string | null
+          retrieved_at?: string
+          source_org?: string | null
+          source_tier?: number
+          source_title?: string | null
+          source_updated_at?: string | null
+          source_url?: string | null
+          updated_at?: string
+          value?: Json
+          verification?: string
+          verified_at?: string | null
+          verified_by?: string | null
+        }
+        Update: {
+          conflicts?: Json
+          created_at?: string
+          created_by?: string | null
+          display_value?: string | null
+          effective_date?: string | null
+          fact_key?: string
+          fact_type?: string
+          id?: string
+          label?: string
+          limitation?: string | null
+          origin?: string
+          project_id?: string
+          provider?: string
+          recheck_after?: string | null
+          retrieved_at?: string
+          source_org?: string | null
+          source_tier?: number
+          source_title?: string | null
+          source_updated_at?: string | null
+          source_url?: string | null
+          updated_at?: string
+          value?: Json
+          verification?: string
+          verified_at?: string | null
+          verified_by?: string | null
+        }
+        Relationships: [
+          {
+            foreignKeyName: "project_regulatory_facts_project_id_fkey"
             columns: ["project_id"]
             isOneToOne: false
             referencedRelation: "projects"
@@ -3556,6 +3658,80 @@ export type Database = {
             columns: ["review_id"]
             isOneToOne: false
             referencedRelation: "qaqc_reviews"
+            referencedColumns: ["id"]
+          },
+        ]
+      }
+      regulatory_research_jobs: {
+        Row: {
+          address: string
+          address_hash: string
+          created_at: string
+          current_step: number
+          error: string | null
+          escalations: Json
+          finished_at: string | null
+          id: string
+          lease_until: string | null
+          project_id: string
+          requested_by: string | null
+          scope_hash: string | null
+          started_at: string | null
+          state: Json
+          status: string
+          steps: Json
+          trigger: string
+          updated_at: string
+          usage: Json
+        }
+        Insert: {
+          address: string
+          address_hash: string
+          created_at?: string
+          current_step?: number
+          error?: string | null
+          escalations?: Json
+          finished_at?: string | null
+          id?: string
+          lease_until?: string | null
+          project_id: string
+          requested_by?: string | null
+          scope_hash?: string | null
+          started_at?: string | null
+          state?: Json
+          status?: string
+          steps?: Json
+          trigger?: string
+          updated_at?: string
+          usage?: Json
+        }
+        Update: {
+          address?: string
+          address_hash?: string
+          created_at?: string
+          current_step?: number
+          error?: string | null
+          escalations?: Json
+          finished_at?: string | null
+          id?: string
+          lease_until?: string | null
+          project_id?: string
+          requested_by?: string | null
+          scope_hash?: string | null
+          started_at?: string | null
+          state?: Json
+          status?: string
+          steps?: Json
+          trigger?: string
+          updated_at?: string
+          usage?: Json
+        }
+        Relationships: [
+          {
+            foreignKeyName: "regulatory_research_jobs_project_id_fkey"
+            columns: ["project_id"]
+            isOneToOne: false
+            referencedRelation: "projects"
             referencedColumns: ["id"]
           },
         ]

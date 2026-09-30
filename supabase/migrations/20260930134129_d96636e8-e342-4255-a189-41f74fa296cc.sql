@@ -1,0 +1,1 @@
+ALTER TABLE public.regulatory_research_jobs ADD COLUMN IF NOT EXISTS state jsonb NOT NULL DEFAULT '{}'::jsonb;
