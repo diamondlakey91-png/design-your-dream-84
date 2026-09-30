@@ -98,6 +98,10 @@ export type StateConfig = {
   pendingEditionPattern?: { re: RegExp; note: string };
   buildingPermitStatute?: SourceRef & { confirmPattern: RegExp };
   productApproval?: SourceRef;
+  codeResources?: SourceRef;
+  amendmentRegistry?: SourceRef;
+  fireAmendmentList?: SourceRef;
+  noticeOfCommencement?: SourceRef & { confirmPattern: RegExp };
 };
 
 const FBC: SourceRef = { org: "Florida Building Commission", title: "Florida Building Commission — home page (effective edition notice)", url: "https://www.floridabuilding.org/c/default.aspx", tier: 2 };
@@ -115,11 +119,15 @@ export const STATE_CONFIGS: Record<string, StateConfig> = {
       { key: "fbc_fuel_gas", family: "Florida Building Code — Fuel Gas", discipline: "fuel_gas", edition: "8th Edition (2023)", effective: "2023-12-31", source: FBC, confirmPattern: FBC_RE },
       { key: "fbc_energy", family: "Florida Building Code — Energy Conservation", discipline: "energy", edition: "8th Edition (2023)", effective: "2023-12-31", source: FBC, confirmPattern: FBC_RE },
       { key: "fbc_accessibility", family: "Florida Building Code — Accessibility", discipline: "accessibility", edition: "8th Edition (2023)", effective: "2023-12-31", source: FBC, confirmPattern: FBC_RE, note: "Applies to one- and two-family dwellings only where required by the code." },
-      { key: "nec", family: "National Electrical Code (NFPA 70) as referenced by FBC 8th Edition", discipline: "electrical", edition: "Edition referenced by FBC 8th Edition — not confirmed from an automated source", effective: null, source: FBC, confirmPattern: null, note: "Confirm the NFPA 70 edition referenced in FBC–Building Chapter 27 / FBC–Residential Part VIII." },
-      { key: "ffpc", family: "Florida Fire Prevention Code", discipline: "fire", edition: "Current edition not confirmed from an automated source", effective: null, source: { org: "Florida Division of State Fire Marshal", title: "Florida Fire Prevention Code", url: "https://www.myfloridacfo.com/division/sfm/", tier: 4 }, confirmPattern: null, note: "Generally not applied to one- and two-family dwelling plan review; confirm applicability." },
+      { key: "nec", family: "National Electrical Code (NFPA 70), as referenced by FBC", discipline: "electrical", edition: "Referenced NFPA 70 edition not confirmed", effective: null, source: { org: "Florida Building Commission", title: "FBC 8th Edition — Chapter 27 Electrical / Chapter 35 Referenced Standards", url: "https://codes.iccsafe.org/content/FLBC2023P1/chapter-27-electrical", tier: 2 }, confirmPattern: null, note: "Florida adopts NFPA 70 by reference through the FBC (Chapter 27 / Chapter 35). The official read-only code viewer does not allow automated reading, so the referenced edition is not stated here until confirmed." },
+      { key: "ffpc", family: "Florida Fire Prevention Code", discipline: "fire", edition: "8th Edition (2023)", effective: "2023-12-31", source: { org: "Florida Division of State Fire Marshal", title: "Florida Fire Prevention Code (FFPC)", url: "https://www.myfloridacfo.com/division/sfm/bfp/florida-fire-prevention-code", tier: 2 }, confirmPattern: /8th Edition \(2023\)[^()]{0,120}\(Effective date: December 31, 2023\)/i, note: "Based on the 2021 editions of NFPA 1 and NFPA 101 with Florida amendments." },
     ],
     pendingEditionPattern: { re: /9th Edition \(2026\)/i, note: "The Florida Building Commission lists a 9th Edition (2026) FBC as a draft/upcoming edition. The applicable edition depends on the permit application date — re-check before submission if applying on or after its effective date." },
-    buildingPermitStatute: { org: "Florida Legislature", title: "Section 553.79, Florida Statutes — Permits; applications; issuance", url: "https://www.leg.state.fl.us/statutes/index.cfm?App_mode=Display_Statute&URL=0500-0599/0553/Sections/0553.79.html", tier: 4, confirmPattern: /permit/i },
+    buildingPermitStatute: { org: "Florida Legislature", title: "Section 553.79, Florida Statutes — Permits; applications; issuance", url: "https://www.leg.state.fl.us/statutes/index.cfm?App_mode=Display_Statute&URL=0500-0599/0553/Sections/0553.79.html", tier: 4, confirmPattern: /without first obtaining a permit/i },
+    codeResources: { org: "Florida Building Commission", title: "Code Resources and supplements to the FBC", url: "https://www.floridabuilding.org/fbc/Links_to_Code_Resources.html", tier: 2 },
+    amendmentRegistry: { org: "Florida Building Commission (BCIS)", title: "Find an Amendment or Declaratory Statement", url: "https://floridabuilding.org/bc/bc_srch.aspx", tier: 2 },
+    fireAmendmentList: { org: "Florida Division of State Fire Marshal", title: "Local Amendments to the Florida Fire Prevention Code", url: "https://www.myfloridacfo.com/division/sfm/bfp/local-amendments", tier: 2 },
+    noticeOfCommencement: { org: "Florida Legislature", title: "Section 713.135, Florida Statutes — Notice of commencement and applicability of lien", url: "https://www.leg.state.fl.us/statutes/index.cfm?App_mode=Display_Statute&URL=0700-0799/0713/Sections/0713.135.html", tier: 4, confirmPattern: /notice of commencement/i },
     productApproval: { org: "Florida Building Commission", title: "Florida Product Approval (Rule 61G20-3, F.A.C.)", url: "https://www.floridabuilding.org/pr/pr_app_srch.aspx", tier: 2 },
   },
 };
@@ -135,4 +143,39 @@ export function coverageFor(state: string | null, countyFips: string | null): { 
   const st = state ? STATE_COVERAGE[state.toUpperCase()] : undefined;
   if (st) return { level: st.level, note: st.note };
   return { level: "human_verification", note: "Outside launch geography — federal layers only; human verification required." };
+}
+
+// ------------------------------------------------------------------ capability coverage registry
+// Architecture coverage ≠ validated data coverage. Each capability is tracked separately per jurisdiction.
+
+export type CapabilityLevel = "supported_structured" | "supported_official_research" | "partial" | "human_likely" | "unsupported";
+export const CAPABILITY_LABEL: Record<CapabilityLevel, string> = {
+  supported_structured: "Supported — structured authoritative data",
+  supported_official_research: "Supported — official-source research",
+  partial: "Partial",
+  human_likely: "Human verification likely",
+  unsupported: "Unsupported",
+};
+export const CAPABILITIES = ["address", "parcel", "municipal_boundary", "ahj", "flood", "zoning", "code_edition", "local_amendments", "permit_requirements"] as const;
+export type Capability = (typeof CAPABILITIES)[number];
+export const CAPABILITY_NAME: Record<Capability, string> = {
+  address: "Address & coordinates", parcel: "Parcel / APN", municipal_boundary: "City / county boundary", ahj: "Permitting authority",
+  flood: "FEMA flood", zoning: "Zoning & land use", code_edition: "Code editions", local_amendments: "Local amendments", permit_requirements: "Scope requirements",
+};
+
+export function capabilityCoverage(state: string | null, countyFips: string | null, incorporated: boolean | null): Record<Capability, CapabilityLevel> {
+  const county = countyConfigFor(state, countyFips);
+  const st = state ? STATE_CONFIGS[state.toUpperCase()] : undefined;
+  const inCity = incorporated === true;
+  return {
+    address: "supported_structured",
+    parcel: county?.layers.parcel ? "supported_structured" : "unsupported",
+    municipal_boundary: county?.layers.cityLimits ? "supported_structured" : "partial",
+    ahj: county && !inCity ? "supported_official_research" : "human_likely",
+    flood: "supported_structured",
+    zoning: county?.layers.zoning && !inCity ? "supported_structured" : "unsupported",
+    code_edition: st ? "supported_official_research" : "unsupported",
+    local_amendments: st?.amendmentRegistry ? "partial" : "unsupported",
+    permit_requirements: county && !inCity ? "partial" : st ? "human_likely" : "unsupported",
+  };
 }

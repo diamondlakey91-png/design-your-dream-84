@@ -49,6 +49,7 @@ export type Fact = {
   source_updated_at?: string | null;
   effective_date?: string | null;
   recheck_after?: string | null;
+  requirement_type?: string | null;
 };
 
 /**

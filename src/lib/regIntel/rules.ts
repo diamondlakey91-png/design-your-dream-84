@@ -20,10 +20,32 @@ export type RuleContext = {
   hasSepticDocument: boolean;
   /** Keys of official sources whose content was confirmed during Research & Verify. */
   confirmedSources: Set<string>;
+  /** Nationwide: governing jurisdiction name and its discovered building/permits page. */
+  ahjName?: string | null;
+  ahjSource?: { url: string; title: string } | null;
+};
+
+const tiLike = (c: RuleContext) => c.scope.has("tenant_improvement") || c.scope.has("alteration") || c.scope.has("addition");
+const commercial = (c: RuleContext) => c.scope.has("commercial") || c.scope.has("mixed_use");
+
+/**
+ * Regulatory requirement types — kept distinct so the roadmap never turns a supporting document
+ * or an automatically generated sub-permit into a stand-alone "permit".
+ */
+export type RequirementType = "permit" | "approval" | "prerequisite" | "supporting_document" | "inspection" | "associated" | "potential";
+export const REQUIREMENT_TYPE_LABEL: Record<RequirementType, string> = {
+  permit: "Separate permit / application",
+  approval: "Approval / review",
+  prerequisite: "Prerequisite",
+  supporting_document: "Required supporting document",
+  inspection: "Inspection-related requirement",
+  associated: "Handled under the main permit (confirm)",
+  potential: "Potential requirement",
 };
 
 export type Candidate = {
   key: string;
+  requirement_type: RequirementType;
   name: string;
   category: string;
   agency: string;
@@ -37,21 +59,27 @@ export type Candidate = {
 
 type Rule = (c: RuleContext) => Candidate | null;
 
-const agency = (c: RuleContext, role: string) => c.county?.unincorporatedAgencies.find((a) => a.role === role);
+const agency = (c: RuleContext, role: string): { name: string; source: SourceRef } | undefined => {
+  const known = c.county?.unincorporatedAgencies.find((a) => a.role === role);
+  if (known) return known;
+  if (!c.ahjName || (role !== "building" && role !== "planning_zoning")) return undefined;
+  return { name: `${c.ahjName} ${role === "building" ? "building department" : "planning / zoning"}`, source: c.ahjSource ? { org: c.ahjName, title: c.ahjSource.title, url: c.ahjSource.url, tier: 3 } : { org: c.ahjName, title: "Governing jurisdiction", url: "", tier: 4 } };
+};
 
 const RULES: Rule[] = [
   // Building permit — new residential construction.
   (c) => {
-    if (!c.scope.has("new_construction") && !c.scope.has("addition") && !c.scope.has("alteration")) return null;
+    if (!c.scope.has("new_construction") && !tiLike(c)) return null;
     const bld = agency(c, "building");
     const statute = c.stateCfg?.buildingPermitStatute ?? null;
     const confirmed = !!statute && c.confirmedSources.has("building_permit_statute") && c.incorporation !== "undetermined" && !!bld;
     return {
       key: "building_permit",
-      name: c.scope.has("residential") ? "Residential building permit" : "Building permit",
+      requirement_type: "permit",
+      name: c.scope.has("tenant_improvement") ? "Commercial alteration (tenant improvement) building permit" : c.scope.has("residential") && c.scope.has("new_construction") ? "Residential building permit — new dwelling" : "Building permit",
       category: "building",
       agency: bld?.name ?? "Building department (AHJ not resolved)",
-      trigger: c.scope.has("new_construction") ? "Scope includes new construction" : "Scope includes construction work",
+      trigger: c.scope.has("new_construction") ? "Scope includes new construction" : "Scope includes work on an existing building",
       why: statute ? "State law requires a building permit before constructing a building; the AHJ is resolved from boundary data." : "Construction work generally requires a building permit — no state source configured.",
       prerequisites: [],
       source: statute,
@@ -64,11 +92,12 @@ const RULES: Rule[] = [
     const bld = agency(c, "building");
     return {
       key: `${t}_trade`,
-      name: `${t[0]!.toUpperCase()}${t.slice(1)} trade permit / approval`,
+      requirement_type: "associated",
+      name: `${t[0]!.toUpperCase()}${t.slice(1)} scope (trade permit or sub-permit)`,
       category: t,
       agency: bld?.name ?? "Building department",
       trigger: `Scope includes ${t} work`,
-      why: `The ${t} work must be permitted and inspected by a licensed contractor. Whether this AHJ issues a separate trade permit or covers it under the building permit was not confirmed from an official source.`,
+      why: `The ${t} work is permitted and inspected by the building authority. Whether it is a separate trade permit or a sub-permit generated under the main building permit was not confirmed from an official ${bld ? bld.name : "AHJ"} source, so it is not listed as a separate permit.`,
       prerequisites: ["building_permit"],
       source: bld?.source ?? null,
       verification: "needs_verification",
@@ -79,6 +108,7 @@ const RULES: Rule[] = [
     if (!c.flood || c.flood.sfha !== true) return null;
     return {
       key: "floodplain_review",
+      requirement_type: "approval",
       name: "Floodplain development review / flood-resistant construction compliance",
       category: "site",
       agency: c.county ? `${c.county.name} floodplain administrator` : "Local floodplain administrator",
@@ -94,6 +124,7 @@ const RULES: Rule[] = [
     if (!c.flood || c.flood.sfha !== true) return null;
     return {
       key: "elevation_certificate",
+      requirement_type: "inspection",
       name: "FEMA Elevation Certificate (construction drawings / under construction / finished)",
       category: "site",
       agency: c.county ? `${c.county.name} floodplain administrator` : "Local floodplain administrator",
@@ -111,6 +142,7 @@ const RULES: Rule[] = [
     const h = agency(c, "health");
     return {
       key: "onsite_sewage",
+      requirement_type: "permit",
       name: "Onsite sewage treatment and disposal system (septic) construction permit",
       category: "health",
       agency: h?.name ?? "State/county health authority",
@@ -124,10 +156,11 @@ const RULES: Rule[] = [
   },
   // Zoning compliance.
   (c) => {
-    if (!c.scope.has("new_construction")) return null;
+    if (!c.scope.has("new_construction") && !(commercial(c) && tiLike(c))) return null;
     const pz = agency(c, "planning_zoning");
     return {
       key: "zoning_compliance",
+      requirement_type: "approval",
       name: "Zoning compliance (use, setbacks, lot standards)",
       category: "zoning",
       agency: pz?.name ?? "Planning / zoning department",
@@ -144,7 +177,8 @@ const RULES: Rule[] = [
     if (!c.scope.has("new_construction") && !c.scope.has("product_approvals")) return null;
     return {
       key: "product_approvals",
-      name: "Florida product approvals for exterior envelope components",
+      requirement_type: "supporting_document",
+      name: "Florida product approvals for exterior envelope components (submittal documents)",
       category: "building",
       agency: "Florida Building Commission (state or local product approval)",
       trigger: c.scope.has("product_approvals") ? "Scope lists product-approval documentation" : "New construction exterior envelope",
@@ -156,12 +190,13 @@ const RULES: Rule[] = [
   },
   // Energy compliance documentation.
   (c) => {
-    if (!c.scope.has("new_construction") || !c.stateCfg) return null;
+    if ((!c.scope.has("new_construction") && !tiLike(c)) || !c.stateCfg) return null;
     const energy = c.stateCfg.codes.find((v) => v.discipline === "energy");
     if (!energy) return null;
     return {
       key: "energy_compliance",
-      name: "Energy code compliance documentation",
+      requirement_type: "supporting_document",
+      name: "Energy code compliance calculations / forms (submittal documents)",
       category: "building",
       agency: agency(c, "building")?.name ?? "Building department",
       trigger: "New conditioned building",
@@ -175,7 +210,7 @@ const RULES: Rule[] = [
   (c) => {
     if (!c.historic) return null;
     return {
-      key: "historic_review", name: "Historic preservation review", category: "other", agency: "Historic preservation authority",
+      key: "historic_review", requirement_type: "approval", name: "Historic preservation review", category: "other", agency: "Historic preservation authority",
       trigger: "Parcel intersects a mapped historic register site", why: "Mapped historic resources can require preservation review.",
       prerequisites: [], source: null, verification: "needs_verification",
     };
@@ -184,10 +219,58 @@ const RULES: Rule[] = [
   (c) => {
     if (!c.scope.has("change_of_occupancy") && !c.scope.has("change_of_use")) return null;
     return {
-      key: "change_of_occupancy", name: "Change of occupancy / use review (zoning, building, fire)", category: "building",
+      key: "change_of_occupancy", requirement_type: "approval", name: "Change of occupancy / use review (zoning, building, fire)", category: "building",
       agency: agency(c, "building")?.name ?? "Building department", trigger: "Scope implies a change of occupancy/use",
       why: "A change of occupancy can trigger zoning use approval, building code upgrades and fire review.", prerequisites: [],
       source: null, verification: "needs_verification",
+    };
+  },
+  // Notice of Commencement — statewide lien-law prerequisite; applicability depends on contract value.
+  (c) => {
+    const noc = c.stateCfg?.noticeOfCommencement;
+    if (!noc || (!c.scope.has("new_construction") && !tiLike(c))) return null;
+    return {
+      key: "notice_of_commencement", requirement_type: "prerequisite",
+      name: "Recorded Notice of Commencement (before the first inspection)", category: "other",
+      agency: "County Clerk of Court (recording) → building department",
+      trigger: "Improvement to real property", why: "Florida's construction lien law requires a recorded Notice of Commencement to be filed with the building department before the first inspection when the improvement exceeds the statutory value threshold.",
+      prerequisites: ["building_permit"], source: noc,
+      verification: "needs_verification",
+      note: c.confirmedSources.has("notice_of_commencement") ? "Statute text confirmed from the official source; applicability depends on the contract value, which is not in the project record." : "Statute text was not confirmed during this run.",
+    };
+  },
+  // Stormwater / lot grading — never assumed; flagged for new construction only.
+  (c) => {
+    if (!c.scope.has("new_construction")) return null;
+    return {
+      key: "stormwater_grading", requirement_type: "potential",
+      name: "Stormwater / lot grading plan", category: "site",
+      agency: c.county ? `${c.county.name} (development review)` : "Local development review",
+      trigger: "New construction adds impervious area", why: "Many jurisdictions require a lot grading / drainage plan with a new dwelling. This jurisdiction's specific requirement was not confirmed from an official source.",
+      prerequisites: [], source: c.county?.zoningCode ?? null, verification: "potential",
+    };
+  },
+  // Commercial fire review.
+  (c) => {
+    if (!commercial(c) || (!tiLike(c) && !c.scope.has("new_construction"))) return null;
+    const f = agency(c, "fire");
+    return {
+      key: "fire_review", requirement_type: "approval",
+      name: "Fire plan review (Florida Fire Prevention Code)", category: "fire",
+      agency: f?.name ?? "Local fire marshal",
+      trigger: "Commercial occupancy work", why: "Commercial work is reviewed against the Florida Fire Prevention Code; whether review is part of the building permit or separate depends on the AHJ.",
+      prerequisites: [], source: c.stateCfg?.codes.find((v) => v.discipline === "fire")?.source ?? null, verification: "needs_verification",
+    };
+  },
+  // Accessibility documentation for commercial alterations.
+  (c) => {
+    if (!commercial(c) || !tiLike(c)) return null;
+    return {
+      key: "accessibility_compliance", requirement_type: "supporting_document",
+      name: "Accessibility compliance (FBC–Accessibility) on the drawings", category: "building",
+      agency: agency(c, "building")?.name ?? "Building department",
+      trigger: "Alteration of a commercial space", why: "Alterations to public accommodations must comply with FBC–Accessibility, including path-of-travel provisions where they apply.",
+      prerequisites: [], source: c.stateCfg?.codes.find((v) => v.discipline === "accessibility")?.source ?? null, verification: "needs_verification",
     };
   },
 ];
