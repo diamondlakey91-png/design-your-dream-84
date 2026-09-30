@@ -111,7 +111,7 @@ export function OverviewTab({
         <MetaCard icon={<Landmark className="size-4" />} label="Jurisdiction" value={project.jurisdiction || "—"} />
       </section>
 
-      <section>
+      {!onOpenTab && <section>
         <p className="font-mono text-[10px] uppercase tracking-widest text-muted-foreground mb-3">RECENT_ACTIVITY</p>
         {activity.length === 0 ? (
           <div className="p-4 text-sm text-muted-foreground text-center rounded-xl border border-dashed border-border">No activity yet.</div>
@@ -128,7 +128,7 @@ export function OverviewTab({
             ))}
           </div>
         )}
-      </section>
+      </section>}
     </>
   );
 }

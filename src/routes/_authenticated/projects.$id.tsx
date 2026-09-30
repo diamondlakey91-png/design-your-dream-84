@@ -28,6 +28,7 @@ import { PlanQaQcTab } from "@/components/project/PlanQaQcTab";
 import { SiteInvestigationTab } from "@/components/project/SiteInvestigationTab";
 import { IntelligenceTab } from "@/components/project/IntelligenceTab";
 import { PropertyJurisdictionPanel } from "@/components/project/PropertyJurisdictionPanel";
+import { ProjectFoundationPanel, ProjectPhaseChips } from "@/components/project/ProjectFoundationPanel";
 import { useViewMode } from "@/hooks/useViewMode";
 import { ViewModeToggle } from "@/components/client/ViewModeToggle";
 import { ClientProjectView } from "@/components/client/ClientProjectView";
@@ -92,6 +93,7 @@ function ProjectDetail() {
               {project.jurisdiction && <span className="inline-flex items-center gap-1"><Landmark className="size-3.5" />{project.jurisdiction}</span>}
               {project.location && <span className="inline-flex items-center gap-1"><MapPin className="size-3.5" />{project.location}</span>}
               {project.project_type && <span className="inline-flex items-center gap-1">· {project.project_type}</span>}
+              <ProjectPhaseChips projectId={id} />
             </span>
           }
           actions={<>
@@ -136,7 +138,8 @@ function ProjectDetail() {
 
 
       {!showPro && (
-        <div className="p-6">
+        <div className="p-6 space-y-6">
+          <ProjectFoundationPanel projectId={id} onOpenTab={(t) => { setTab(t); setForcedPro(true); }} />
           <ClientProjectView
             project={project as unknown as ClientProjectInput}
             onOpenTab={(t) => { setTab(t as Tab); setForcedPro(true); }}
@@ -164,7 +167,9 @@ function ProjectDetail() {
                     ? "plan qa/qc"
                     : t === "site"
                       ? "site investigation"
-                      : t}
+                      : t === "timeline"
+                        ? "activity"
+                        : t}
             </button>
           ))}
         </div>
@@ -172,7 +177,7 @@ function ProjectDetail() {
 
       <div className="p-6 space-y-6">
         {tab === "overview" && (
-          <OverviewTab project={project} stage={stage} activity={activity} onChange={() => qc.invalidateQueries({ queryKey: ["project", id] })} />
+          <OverviewTab project={project} stage={stage} activity={activity} onOpenTab={(t) => setTab(t)} onChange={() => { qc.invalidateQueries({ queryKey: ["project", id] }); qc.invalidateQueries({ queryKey: ["project-foundation", id] }); }} />
         )}
         {tab === "intelligence" && <IntelligenceTab projectId={id} />}
         {tab === "property" && (
