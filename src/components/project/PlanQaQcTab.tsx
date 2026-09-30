@@ -28,7 +28,7 @@ import type { AgencyContact } from "@/lib/agencyContacts";
 export function PlanQaQcTab({ projectId }: { projectId: string; userId: string }) {
   const qc = useQueryClient();
   const { mode } = useViewMode();
-  const professional = mode === "professional";
+  const professional = mode === "pro";
   const overviewFn = useServerFn(getPlanReviewOverview);
   const getFn = useServerFn(getQaQcReview);
   const runFn = useServerFn(runQaQcReview);
