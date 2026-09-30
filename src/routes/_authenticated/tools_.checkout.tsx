@@ -42,10 +42,14 @@ function Section({ title, children }: { title: string; children: React.ReactNode
 
 function CheckoutPage() {
   const search = Route.useSearch();
-  const navigate = useNavigate();
+  // Two separate components so each has a constant hook count — switching
+  // between them via client-side navigation never changes hooks in-flight.
+  return search.order_id ? <OrderStatusView orderId={search.order_id} /> : <CheckoutForm />;
+}
 
-  // ---- Paid order view -----------------------------------------------------
-  if (search.order_id) return <OrderStatusView orderId={search.order_id} />;
+function CheckoutForm() {
+  const search = Route.useSearch();
+  const navigate = useNavigate();
 
   const fetchContext = useServerFn(getCheckoutContext);
   const createOrder = useServerFn(createServiceOrder);
