@@ -14,14 +14,17 @@ import { LiveJurisdictionSync } from "@/components/project/LiveJurisdictionSync"
 import { AiCopilotPanel } from "@/components/project/AiCopilotPanel";
 import { MetaCard } from "@/components/project/MetaCard";
 import { ProjectTypeBadge } from "@/components/project-type/ProjectTypeBadge";
+import { ProjectFoundationPanel } from "@/components/project/ProjectFoundationPanel";
+import type { ProjectTabKey } from "@/lib/projectFoundation";
 
 export function OverviewTab({
-  project, stage, activity, onChange,
+  project, stage, activity, onChange, onOpenTab,
 }: {
   project: { id: string; user_id: string; name: string; project_type: string; location: string; jurisdiction: string; current_stage: number; permit_count: number; permits_issued: number; linked_permit_number?: string | null; linked_permit_url?: string | null; linked_permit_data?: unknown; linked_permit_synced_at?: string | null };
   stage: number;
   activity: Array<{ id: string; description: string; created_at: string }>;
   onChange: () => void;
+  onOpenTab?: (t: ProjectTabKey) => void;
 }) {
   const advanceFn = useServerFn(advanceStage);
   const summarizeFn = useServerFn(summarizeProjectNextSteps);
@@ -39,6 +42,7 @@ export function OverviewTab({
 
   return (
     <>
+      {onOpenTab && <ProjectFoundationPanel projectId={project.id} onOpenTab={onOpenTab} />}
       <HealthScoreCard projectId={project.id} />
       <PermitRoadmap
         projectId={project.id}
