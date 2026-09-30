@@ -167,6 +167,11 @@ export function BriefProgress({
                   ))}
               </dl>
             </section>
+
+            <AhjAuthorityPanel
+              query={data.brief.site_address || data.brief.jurisdiction}
+              title="Controlling authority & agency contacts"
+            />
           </div>
 
           <div className="grid gap-4">
