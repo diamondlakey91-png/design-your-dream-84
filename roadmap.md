@@ -18,6 +18,6 @@
 - [x] H1/M1/M2/M3/M4 beta-blocking fixes (SIR insert, QA/QC sign-offs, professional reviews, filing status, jurisdiction human-verified)
 - [x] Phase 2A — Project Foundation (workspace header, overview, intake, jurisdiction context, activity, Next Actions)
 - [x] Phase 2B — Roadmap + Documents (built in preview, not published; awaiting approval)
-- [ ] Phase 2C — not started (awaiting approval)
+- [ ] Phase 2C — built in preview, not published; awaiting approval (Phase 2D not started)
 - [ ] L1 jurisdiction profile creation + created_by/verified_by visible to customers
 - [ ] L3 empty-organization first-member edge case
