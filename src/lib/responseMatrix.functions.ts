@@ -190,13 +190,16 @@ export const draftMatrixResponse = createServerFn({ method: "POST" })
     }).parse(input),
   )
   .handler(async ({ data, context }) => {
-    const { withIncludedUsage, requestKey } = await import("@/lib/commerce.server");
-    return withIncludedUsage(
-      context.supabase,
-      context.userId,
-      "correction_review_credits",
-      requestKey("correction_draft", [data.id, data.tone], data.request_id),
-      { reason: "Correction response draft" },
+    const { runMeteredAi, meterKey } = await import("@/lib/aiMeter.server");
+    return runMeteredAi(
+      {
+        db: context.supabase,
+        userId: context.userId,
+        operation: "correction_review",
+        creditType: "correction_review_credits",
+        key: meterKey("correction_draft", context.userId, { id: data.id, tone: data.tone, request_id: data.request_id ?? null }),
+        projectId: null,
+      },
       () => runDraftMatrixResponse(data, context),
     );
   });
