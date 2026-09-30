@@ -3151,24 +3151,89 @@ export type Database = {
           },
         ]
       }
+      qaqc_evaluations: {
+        Row: {
+          accuracy: string | null
+          created_at: string
+          evaluator_id: string
+          finding_id: string | null
+          id: string
+          kind: string
+          notes: string | null
+          review_id: string
+          sheet_number: string | null
+          updated_at: string
+          usefulness: string | null
+        }
+        Insert: {
+          accuracy?: string | null
+          created_at?: string
+          evaluator_id?: string
+          finding_id?: string | null
+          id?: string
+          kind: string
+          notes?: string | null
+          review_id: string
+          sheet_number?: string | null
+          updated_at?: string
+          usefulness?: string | null
+        }
+        Update: {
+          accuracy?: string | null
+          created_at?: string
+          evaluator_id?: string
+          finding_id?: string | null
+          id?: string
+          kind?: string
+          notes?: string | null
+          review_id?: string
+          sheet_number?: string | null
+          updated_at?: string
+          usefulness?: string | null
+        }
+        Relationships: [
+          {
+            foreignKeyName: "qaqc_evaluations_finding_id_fkey"
+            columns: ["finding_id"]
+            isOneToOne: false
+            referencedRelation: "qaqc_findings"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "qaqc_evaluations_review_id_fkey"
+            columns: ["review_id"]
+            isOneToOne: false
+            referencedRelation: "qaqc_reviews"
+            referencedColumns: ["id"]
+          },
+        ]
+      }
       qaqc_findings: {
         Row: {
+          bbox: Json | null
           category: string
           code_basis: string | null
+          confidence: string | null
           created_at: string
           discipline: string
+          document_id: string | null
           finding_no: number
           id: string
           jurisdiction_source_url: string | null
           location: string | null
+          page: number | null
           plain_language: string | null
           recommended_action: string | null
+          related_sheets: string[]
           resolved: boolean
           responsible_discipline: string | null
           review_id: string
           severity: string
           sheet_number: string | null
           sheet_title: string | null
+          status: string
+          status_changed_at: string | null
+          status_changed_by: string | null
           summary: string
           updated_at: string
           user_id: string
@@ -3176,22 +3241,30 @@ export type Database = {
           why_it_matters: string | null
         }
         Insert: {
+          bbox?: Json | null
           category?: string
           code_basis?: string | null
+          confidence?: string | null
           created_at?: string
           discipline?: string
+          document_id?: string | null
           finding_no: number
           id?: string
           jurisdiction_source_url?: string | null
           location?: string | null
+          page?: number | null
           plain_language?: string | null
           recommended_action?: string | null
+          related_sheets?: string[]
           resolved?: boolean
           responsible_discipline?: string | null
           review_id: string
           severity?: string
           sheet_number?: string | null
           sheet_title?: string | null
+          status?: string
+          status_changed_at?: string | null
+          status_changed_by?: string | null
           summary: string
           updated_at?: string
           user_id: string
@@ -3199,22 +3272,30 @@ export type Database = {
           why_it_matters?: string | null
         }
         Update: {
+          bbox?: Json | null
           category?: string
           code_basis?: string | null
+          confidence?: string | null
           created_at?: string
           discipline?: string
+          document_id?: string | null
           finding_no?: number
           id?: string
           jurisdiction_source_url?: string | null
           location?: string | null
+          page?: number | null
           plain_language?: string | null
           recommended_action?: string | null
+          related_sheets?: string[]
           resolved?: boolean
           responsible_discipline?: string | null
           review_id?: string
           severity?: string
           sheet_number?: string | null
           sheet_title?: string | null
+          status?: string
+          status_changed_at?: string | null
+          status_changed_by?: string | null
           summary?: string
           updated_at?: string
           user_id?: string
@@ -3222,6 +3303,13 @@ export type Database = {
           why_it_matters?: string | null
         }
         Relationships: [
+          {
+            foreignKeyName: "qaqc_findings_document_id_fkey"
+            columns: ["document_id"]
+            isOneToOne: false
+            referencedRelation: "project_documents"
+            referencedColumns: ["id"]
+          },
           {
             foreignKeyName: "qaqc_findings_review_id_fkey"
             columns: ["review_id"]
@@ -3234,6 +3322,7 @@ export type Database = {
       qaqc_reviews: {
         Row: {
           codes_researched: Json
+          completed_at: string | null
           created_at: string
           document_ids: string[]
           error: string | null
@@ -3244,14 +3333,18 @@ export type Database = {
           missing_documents: Json
           model: string | null
           needs_professional_confirmation: Json
+          plan_set_id: string | null
           project_context: Json
           project_id: string
           prompt_version: string | null
           readiness_category: string
           readiness_score: number | null
           recommended_actions: Json
+          request_key: string | null
           revision_label: string
+          sheet_count: number | null
           sources: Json
+          started_at: string | null
           status: string
           submission_issues: Json
           updated_at: string
@@ -3259,6 +3352,7 @@ export type Database = {
         }
         Insert: {
           codes_researched?: Json
+          completed_at?: string | null
           created_at?: string
           document_ids?: string[]
           error?: string | null
@@ -3269,14 +3363,18 @@ export type Database = {
           missing_documents?: Json
           model?: string | null
           needs_professional_confirmation?: Json
+          plan_set_id?: string | null
           project_context?: Json
           project_id: string
           prompt_version?: string | null
           readiness_category?: string
           readiness_score?: number | null
           recommended_actions?: Json
+          request_key?: string | null
           revision_label?: string
+          sheet_count?: number | null
           sources?: Json
+          started_at?: string | null
           status?: string
           submission_issues?: Json
           updated_at?: string
@@ -3284,6 +3382,7 @@ export type Database = {
         }
         Update: {
           codes_researched?: Json
+          completed_at?: string | null
           created_at?: string
           document_ids?: string[]
           error?: string | null
@@ -3294,20 +3393,31 @@ export type Database = {
           missing_documents?: Json
           model?: string | null
           needs_professional_confirmation?: Json
+          plan_set_id?: string | null
           project_context?: Json
           project_id?: string
           prompt_version?: string | null
           readiness_category?: string
           readiness_score?: number | null
           recommended_actions?: Json
+          request_key?: string | null
           revision_label?: string
+          sheet_count?: number | null
           sources?: Json
+          started_at?: string | null
           status?: string
           submission_issues?: Json
           updated_at?: string
           user_id?: string
         }
         Relationships: [
+          {
+            foreignKeyName: "qaqc_reviews_plan_set_id_fkey"
+            columns: ["plan_set_id"]
+            isOneToOne: false
+            referencedRelation: "plan_sets"
+            referencedColumns: ["id"]
+          },
           {
             foreignKeyName: "qaqc_reviews_project_id_fkey"
             columns: ["project_id"]
