@@ -31,3 +31,7 @@
 - [ ] Plan Review consumes regulatory profile context
 - [ ] Multi-fixture acceptance matrix + tests + security checks; Bermudez regulatory report
 - Bermudez Plan Review stays blocked; no test customer/credit yet; do not publish
+
+## Phase 2C.1 nationwide correction (preview only)
+- [ ] Generic jurisdiction discovery for unknown jurisdictions (no county-by-county config)
+- [ ] Pasco becomes one discovered provider, not the target

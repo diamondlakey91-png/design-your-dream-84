@@ -1943,34 +1943,55 @@ export type Database = {
       }
       official_sources: {
         Row: {
+          category: string | null
           created_at: string
+          discovered_by: string | null
           fetched_at: string
           id: string
+          jurisdiction_key: string | null
           kind: Database["public"]["Enums"]["source_kind"]
+          meta: Json
           publisher: string | null
           quote: string | null
+          recheck_after: string | null
           title: string
+          trust: string | null
           url: string
+          verification: string
         }
         Insert: {
+          category?: string | null
           created_at?: string
+          discovered_by?: string | null
           fetched_at?: string
           id?: string
+          jurisdiction_key?: string | null
           kind?: Database["public"]["Enums"]["source_kind"]
+          meta?: Json
           publisher?: string | null
           quote?: string | null
+          recheck_after?: string | null
           title: string
+          trust?: string | null
           url: string
+          verification?: string
         }
         Update: {
+          category?: string | null
           created_at?: string
+          discovered_by?: string | null
           fetched_at?: string
           id?: string
+          jurisdiction_key?: string | null
           kind?: Database["public"]["Enums"]["source_kind"]
+          meta?: Json
           publisher?: string | null
           quote?: string | null
+          recheck_after?: string | null
           title?: string
+          trust?: string | null
           url?: string
+          verification?: string
         }
         Relationships: []
       }
@@ -2230,6 +2251,7 @@ export type Database = {
           regulatory_fact_id: string | null
           required: boolean
           requirement_confidence: string
+          requirement_type: string | null
           review_timing: string | null
           roadmap_permit_id: string | null
           sort_order: number
@@ -2258,6 +2280,7 @@ export type Database = {
           regulatory_fact_id?: string | null
           required?: boolean
           requirement_confidence?: string
+          requirement_type?: string | null
           review_timing?: string | null
           roadmap_permit_id?: string | null
           sort_order?: number
@@ -2286,6 +2309,7 @@ export type Database = {
           regulatory_fact_id?: string | null
           required?: boolean
           requirement_confidence?: string
+          requirement_type?: string | null
           review_timing?: string | null
           roadmap_permit_id?: string | null
           sort_order?: number
@@ -2872,13 +2896,16 @@ export type Database = {
           fact_type: string
           id: string
           label: string
+          last_verified_at: string | null
           limitation: string | null
           origin: string
           project_id: string
           provider: string
           recheck_after: string | null
+          requirement_type: string | null
           retrieved_at: string
           source_org: string | null
+          source_status: string | null
           source_tier: number
           source_title: string | null
           source_updated_at: string | null
@@ -2899,13 +2926,16 @@ export type Database = {
           fact_type: string
           id?: string
           label: string
+          last_verified_at?: string | null
           limitation?: string | null
           origin?: string
           project_id: string
           provider: string
           recheck_after?: string | null
+          requirement_type?: string | null
           retrieved_at?: string
           source_org?: string | null
+          source_status?: string | null
           source_tier?: number
           source_title?: string | null
           source_updated_at?: string | null
@@ -2926,13 +2956,16 @@ export type Database = {
           fact_type?: string
           id?: string
           label?: string
+          last_verified_at?: string | null
           limitation?: string | null
           origin?: string
           project_id?: string
           provider?: string
           recheck_after?: string | null
+          requirement_type?: string | null
           retrieved_at?: string
           source_org?: string | null
+          source_status?: string | null
           source_tier?: number
           source_title?: string | null
           source_updated_at?: string | null
@@ -3735,6 +3768,42 @@ export type Database = {
             referencedColumns: ["id"]
           },
         ]
+      }
+      regulatory_source_health: {
+        Row: {
+          checked_at: string
+          consecutive_failures: number
+          endpoint: string | null
+          label: string
+          last_error: string | null
+          last_failure_at: string | null
+          last_ok_at: string | null
+          provider: string
+          status: string
+        }
+        Insert: {
+          checked_at?: string
+          consecutive_failures?: number
+          endpoint?: string | null
+          label: string
+          last_error?: string | null
+          last_failure_at?: string | null
+          last_ok_at?: string | null
+          provider: string
+          status?: string
+        }
+        Update: {
+          checked_at?: string
+          consecutive_failures?: number
+          endpoint?: string | null
+          label?: string
+          last_error?: string | null
+          last_failure_at?: string | null
+          last_ok_at?: string | null
+          provider?: string
+          status?: string
+        }
+        Relationships: []
       }
       report_shares: {
         Row: {
