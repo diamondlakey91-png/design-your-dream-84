@@ -1,3 +1,4 @@
+import { aiFetch } from "@/lib/aiFetch";
 import { createFileRoute } from "@tanstack/react-router";
 import { createClient } from "@supabase/supabase-js";
 import type { Database } from "@/integrations/supabase/types";
@@ -150,7 +151,23 @@ export const Route = createFileRoute("/api/chat/stream")({
           { role: "user", content },
         ];
 
-        const upstream = await fetch("https://ai.gateway.lovable.dev/v1/chat/completions", {
+        // Each message is a paid "Run": fail-closed credit charge, refunded on failure.
+        const { chargeIncludedUsage, refundCredit, CreditRequiredError } = await import("@/lib/commerce.server");
+        const { logAiCall } = await import("@/lib/aiMeter.server");
+        const chargeKeyStr = `chat:${threadId}:${userId}:${(history ?? []).length}`;
+        let charge: { usageId: string | null; internal: boolean };
+        try {
+          charge = await chargeIncludedUsage(supabase, userId, "ai_queries", chargeKeyStr, { projectId: thread.project_id ?? null, reason: "AI Assistant message" });
+        } catch (e) {
+          const msg = e instanceof CreditRequiredError ? e.message : "We couldn't apply your credit. Please try again.";
+          return new Response(msg, { status: 402 });
+        }
+        const failRun = async (err: string) => {
+          if (charge.usageId) await refundCredit(charge.usageId, "AI Assistant message failed — credit restored");
+          await logAiCall({ userId, operation: "assistant_chat", model: "google/gemini-2.5-flash", success: false, error: err, projectId: thread.project_id ?? null, creditType: "ai_queries", creditTransactionId: charge.usageId, internal: charge.internal, key: chargeKeyStr, refunded: Boolean(charge.usageId) });
+        };
+
+        const upstream = await aiFetch("https://ai.gateway.lovable.dev/v1/chat/completions", {
           method: "POST",
           headers: { "Content-Type": "application/json", "Lovable-API-Key": LOVABLE_API_KEY },
           body: JSON.stringify({ model: "google/gemini-2.5-flash", messages, stream: true }),
@@ -158,6 +175,7 @@ export const Route = createFileRoute("/api/chat/stream")({
 
         if (!upstream.ok || !upstream.body) {
           const txt = await upstream.text().catch(() => "");
+          await failRun(`HTTP ${upstream.status}`);
           if (upstream.status === 429) return new Response("Too many requests — try again in a moment.", { status: 429 });
           if (upstream.status === 402) return new Response("AI credits exhausted. Please top up.", { status: 402 });
           return new Response(`AI error: ${txt.slice(0, 200)}`, { status: 502 });
@@ -193,6 +211,7 @@ export const Route = createFileRoute("/api/chat/stream")({
                   } catch { /* ignore keep-alives / partial */ }
                 }
               }
+              await logAiCall({ userId, operation: "assistant_chat", model: "google/gemini-2.5-flash", success: true, projectId: thread.project_id ?? null, creditType: "ai_queries", creditTransactionId: charge.usageId, internal: charge.internal, key: chargeKeyStr });
               // Persist assistant message
               if (full.trim()) {
                 await supabase.from("chat_messages").insert({
@@ -207,6 +226,7 @@ export const Route = createFileRoute("/api/chat/stream")({
                   .eq("id", threadId);
               }
             } catch (e) {
+              await failRun(e instanceof Error ? e.message : "stream error");
               controller.enqueue(encoder.encode(`\n\n[stream error: ${e instanceof Error ? e.message : "unknown"}]`));
             } finally {
               controller.close();

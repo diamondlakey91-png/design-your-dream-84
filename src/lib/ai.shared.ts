@@ -1,3 +1,4 @@
+import { aiFetch } from "@/lib/aiFetch";
 import { z } from "zod";
 import { findHealthAgencyDeepLinks, buildHealthAgencyEntryFromMapping, type HealthAgencyServiceType } from "@/lib/healthAgencyRegistry";
 
@@ -5,7 +6,7 @@ import { findHealthAgencyDeepLinks, buildHealthAgencyEntryFromMapping, type Heal
 // jurisdiction-profiles, plan-review, and permit-analysis server function modules.
 
 export async function callLovableAI(apiKey: string, messages: Array<{ role: string; content: string }>, model = "google/gemini-2.5-pro") {
-  const resp = await fetch("https://ai.gateway.lovable.dev/v1/chat/completions", {
+  const resp = await aiFetch("https://ai.gateway.lovable.dev/v1/chat/completions", {
     method: "POST",
     headers: { "Content-Type": "application/json", "Lovable-API-Key": apiKey },
     body: JSON.stringify({ model, messages }),
@@ -197,7 +198,7 @@ export async function callGeminiJSON<T>(
 ): Promise<T> {
   const aiKey = process.env.LOVABLE_API_KEY;
   if (!aiKey) throw new Error("AI is not configured");
-  const resp = await fetch("https://ai.gateway.lovable.dev/v1/chat/completions", {
+  const resp = await aiFetch("https://ai.gateway.lovable.dev/v1/chat/completions", {
     method: "POST",
     headers: { "Content-Type": "application/json", "Lovable-API-Key": aiKey },
     body: JSON.stringify({

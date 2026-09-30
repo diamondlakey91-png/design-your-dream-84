@@ -219,7 +219,7 @@ export const runSiteInvestigation = createServerFn({ method: "POST" })
       previous_investigation_id: z.string().uuid().optional(),
     }).parse(d),
   )
-  .handler(async ({ data, context }) => {
+  .handler(async ({ data, context }) => { const __m = await import("@/lib/aiMeter.server"); return __m.runMeteredAi({ db: context.supabase, userId: context.userId, operation: "site_investigation", creditType: null, key: __m.meterKey("site_investigation", context.userId, data), projectId: (data as { project_id?: string | null }).project_id ?? null }, async () => {
     const sb = context.supabase;
     const [{ data: project }, { data: scopeRows }, { data: confRows }] = await Promise.all([
       sb.from("projects").select("*").eq("id", data.project_id).maybeSingle(),
@@ -510,7 +510,7 @@ Return JSON: { "executive_summary": "", "feasibility_rating": "green|yellow|oran
       await sb.from("site_investigations").update({ status: "error", error: msg }).eq("id", inv.id);
       throw new Error(msg);
     }
-  });
+  }); });
 
 export const listSiteInvestigations = createServerFn({ method: "GET" })
   .middleware([requireSupabaseAuth])

@@ -1,3 +1,4 @@
+import { aiFetch } from "@/lib/aiFetch";
 import { createServerFn } from "@tanstack/react-start";
 import { requireSupabaseAuth } from "@/integrations/supabase/auth-middleware";
 import { z } from "zod";
@@ -78,7 +79,7 @@ async function buildPlanBatches(
 async function callMultimodalJSON<T>(system: string, parts: ContentPart[], schema: z.ZodType<T>): Promise<T> {
   const aiKey = process.env['LOVABLE_API_KEY'];
   if (!aiKey) throw new Error("AI is not configured");
-  const resp = await fetch("https://ai.gateway.lovable.dev/v1/chat/completions", {
+  const resp = await aiFetch("https://ai.gateway.lovable.dev/v1/chat/completions", {
     method: "POST",
     headers: { "Content-Type": "application/json", "Lovable-API-Key": aiKey },
     body: JSON.stringify({
@@ -370,12 +371,12 @@ export const runQaQcReview = createServerFn({ method: "POST" })
     const { chargeIncludedUsage, refundCredit } = await import("@/lib/commerce.server");
     let usageId: string | null = null;
     try {
-      usageId = await chargeIncludedUsage(sb, context.userId, "plan_review_credits", `qaqc:${review.id}`, {
+      usageId = (await chargeIncludedUsage(sb, context.userId, "plan_review_credits", `qaqc:${review.id}`, {
         projectId: data.project_id,
         reason: `Plan QA/QC review (${data.revision_label})`,
-      });
+      })).usageId;
     } catch (e) {
-      await sb.from("qaqc_reviews").update({ status: "error", error: "No Plan Review credit available" }).eq("id", review.id);
+      await sb.from("qaqc_reviews").update({ status: "error", error: (e as Error).message }).eq("id", review.id);
       throw e;
     }
 
@@ -638,9 +639,11 @@ Return JSON: { "findings": [{ "severity": "critical|high|medium|low|informationa
         description: `Plan QA/QC review (${data.revision_label}) complete — ${allFindings.length} findings · ${readinessMeta(category).label}`,
       });
 
+      await (await import("@/lib/aiMeter.server")).logAiCall({ userId: context.userId, operation: "plan_qaqc", success: true, projectId: data.project_id, creditType: "plan_review_credits", creditTransactionId: usageId, internal: !usageId, key: `qaqc:${review.id}` });
       return { review_id: review.id as string, findings: allFindings.length, readiness_score: score, readiness_category: category };
     } catch (e) {
       const msg = e instanceof Error ? e.message : "QA/QC review failed";
+      await (await import("@/lib/aiMeter.server")).logAiCall({ userId: context.userId, operation: "plan_qaqc", success: false, error: msg, projectId: data.project_id, creditType: "plan_review_credits", creditTransactionId: usageId, refunded: Boolean(usageId), key: `qaqc:${review.id}` });
       await sb.from("qaqc_reviews").update({ status: "error", error: msg }).eq("id", review.id);
       if (usageId) await refundCredit(usageId, "QA/QC review failed — credit restored");
       throw new Error(msg);

@@ -1,3 +1,4 @@
+import { aiFetch } from "@/lib/aiFetch";
 import { createServerFn } from "@tanstack/react-start";
 import { requireSupabaseAuth } from "@/integrations/supabase/auth-middleware";
 import { z } from "zod";
@@ -52,7 +53,7 @@ function extractJsonObject(raw: string): unknown {
 export const generatePermitAnalysis = createServerFn({ method: "POST" })
   .middleware([requireSupabaseAuth])
   .inputValidator((input: unknown) => PermitIntakeSchema.parse(input))
-  .handler(async ({ data, context }) => {
+  .handler(async ({ data, context }) => { const __m = await import("@/lib/aiMeter.server"); return __m.runMeteredAi({ db: context.supabase, userId: context.userId, operation: "permit_analysis", creditType: "ai_queries", key: __m.meterKey("permit_analysis", context.userId, data), projectId: (data as { project_id?: string | null }).project_id ?? null }, async () => {
     const apiKey = process.env.LOVABLE_API_KEY;
     if (!apiKey) throw new Error("AI is not configured");
 
@@ -108,7 +109,7 @@ Rules:
 
     const user = `${intakeBlock}${jc.block}\n\nProduce the JSON object now.`;
 
-    const res = await fetch("https://ai.gateway.lovable.dev/v1/chat/completions", {
+    const res = await aiFetch("https://ai.gateway.lovable.dev/v1/chat/completions", {
       method: "POST",
       headers: { "Content-Type": "application/json", Authorization: `Bearer ${apiKey}` },
       body: JSON.stringify({
@@ -141,7 +142,7 @@ Rules:
       .single();
     if (error) throw new Error(error.message);
     return row;
-  });
+  }); });
 
 
 export const listPermitAnalyses = createServerFn({ method: "GET" })

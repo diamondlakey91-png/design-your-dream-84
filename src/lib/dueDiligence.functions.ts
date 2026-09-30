@@ -97,7 +97,7 @@ export const generateDueDiligence = createServerFn({ method: "POST" })
   .inputValidator((input: unknown) =>
     z.object({ project_id: z.string().uuid() }).parse(input),
   )
-  .handler(async ({ data, context }) => {
+  .handler(async ({ data, context }) => { const __m = await import("@/lib/aiMeter.server"); return __m.runMeteredAi({ db: context.supabase, userId: context.userId, operation: "due_diligence", creditType: "ai_queries", key: __m.meterKey("due_diligence", context.userId, data), projectId: (data as { project_id?: string | null }).project_id ?? null }, async () => {
     const { supabase, userId } = context;
 
     const { data: proj } = await supabase
@@ -340,7 +340,7 @@ ${!confirmed ? "IMPORTANT: The jurisdiction is NOT yet user-confirmed. Downgrade
     if (uErr) throw new Error(uErr.message);
 
     return { report, generated_at: new Date().toISOString() };
-  });
+  }); });
 
 // ---------------- Fetch ----------------
 export const getDueDiligence = createServerFn({ method: "GET" })

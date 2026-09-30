@@ -87,7 +87,7 @@ export function BillingPanel() {
               <p className="text-xs text-muted-foreground">{ENTITLEMENT_LABEL[a.type]}</p>
               <p className="mt-1 text-lg font-semibold text-foreground">{a.remaining} remaining</p>
               <p className="text-[11px] text-muted-foreground">
-                {a.included == null ? "Not included in your plan" : `${a.included} included per period`} · {a.used} used this period
+                {a.included == null ? "Not included in your plan" : `${a.included} included per period`} · {a.used} used this period · 1 credit per AI run
               </p>
             </div>
           ))}

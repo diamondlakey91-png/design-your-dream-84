@@ -14,3 +14,4 @@
 - All AI review/research system prompts must be built with `withRegulatoryGrounding()` from `src/lib/regulatoryGrounding.ts` — one shared evidence/citation standard keeps every agent from fabricating code citations.
 - Credit balances come only from the append-only `credit_transactions` ledger; writes go through `consume_credit`/`refund_credit` (service role) or the verified payment webhook — auditable, idempotent, never a mutable counter.
 - Plan limits, allowances and member prices are data (`subscription_plans`, `plan_entitlements`, `service_products`), read via `src/lib/commerce.server.ts` — so pricing changes never need code changes.
+- Every paid AI "Run" goes through `runMeteredAi` (src/lib/aiMeter.server.ts) and every gateway call through `aiFetch` — credits are fail-closed (no credit = no run, admins = logged internal use) and every call lands in `ai_usage_log`.
