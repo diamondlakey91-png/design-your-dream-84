@@ -1,5 +1,6 @@
 import { createFileRoute, Link } from "@tanstack/react-router";
 import { PermivioPageHeader } from "@/components/PermivioPageHeader";
+import { AhjAuthorityPanel } from "@/components/research/AhjAuthorityPanel";
 import { useMutation, useQuery, useQueryClient } from "@tanstack/react-query";
 import { useServerFn } from "@tanstack/react-start";
 import { useMemo, useState } from "react";
@@ -372,6 +373,7 @@ function FilingDetail({
   const [approver, setApprover] = useState("");
   const [conf, setConf] = useState("");
   const [source, setSource] = useState("");
+  const [livePortals, setLivePortals] = useState<Array<{ label: string; url: string }>>([]);
 
   const toggle = (idx: number) => {
     const next = preflight.map((item, i) => (i === idx ? { ...item, done: !item.done } : item));
