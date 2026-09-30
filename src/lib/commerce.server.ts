@@ -215,3 +215,30 @@ export async function grantPeriodAllowances(admin: Db, args: {
   }
   return granted;
 }
+
+/**
+ * Run a metered operation with credit protection: charge (idempotent on key),
+ * run, and restore the credit automatically if the run fails.
+ */
+export async function withIncludedUsage<T>(
+  db: Db,
+  userId: string,
+  type: CreditType,
+  key: string,
+  meta: { projectId?: string | null; reason: string },
+  run: () => Promise<T>,
+): Promise<T> {
+  const usageId = await chargeIncludedUsage(db, userId, type, key, meta);
+  try {
+    return await run();
+  } catch (e) {
+    if (usageId) await refundCredit(usageId, `${meta.reason} failed — credit restored`);
+    throw e;
+  }
+}
+
+/** Duplicate-request key: the caller's request id, else a short time window. */
+export function requestKey(prefix: string, parts: string[], requestId?: string | null): string {
+  const bucket = requestId ?? `t${Math.floor(Date.now() / (5 * 60_000))}`;
+  return [prefix, ...parts, bucket].join(":");
+}

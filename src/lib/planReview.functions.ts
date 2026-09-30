@@ -684,9 +684,25 @@ const ReviewerSummarySchema = z.object({
 
 export const summarizeReviewerComments = createServerFn({ method: "POST" })
   .middleware([requireSupabaseAuth])
-  .inputValidator((input: unknown) => z.object({ project_id: z.string().uuid() }).parse(input))
+  .inputValidator((input: unknown) =>
+    z.object({ project_id: z.string().uuid(), request_id: z.string().uuid().optional() }).parse(input),
+  )
   .handler(async ({ data, context }) => {
     requireFeature(await getEntitlement(context.supabase, context.userId), "aiCopilot");
+    const { withIncludedUsage, requestKey } = await import("@/lib/commerce.server");
+    return withIncludedUsage(
+      context.supabase,
+      context.userId,
+      "correction_review_credits",
+      requestKey("correction_review", [data.project_id], data.request_id),
+      { projectId: data.project_id, reason: "Correction Review" },
+      () => runReviewerSummary(context.supabase, data.project_id),
+    );
+  });
+
+async function runReviewerSummary(supabase: any, projectId: string) { // eslint-disable-line @typescript-eslint/no-explicit-any
+    const context = { supabase };
+    const data = { project_id: projectId };
     const { data: docs } = await context.supabase
 
       .from("project_documents")
@@ -701,7 +717,7 @@ ${JSON.stringify(analyzed)}
 Return ONLY JSON: { "top_themes": ["..."], "by_discipline": [{ "discipline": "Mechanical", "items": ["..."] }], "suggested_response_order": ["do this first", "..."] }.
 Only use facts present. Skip disciplines with no comments.`;
     return callGeminiJSON(prompt, "You group construction plan-review comments into actionable themes. Output JSON only.", ReviewerSummarySchema);
-  });
+}
 // ---- Schedule risks ----
 const RiskSchema = z.object({
   overall_risk: z.enum(["low", "medium", "high"]).default("medium"),
