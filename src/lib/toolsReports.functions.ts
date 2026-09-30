@@ -19,6 +19,11 @@ export const getToolsOverview = createServerFn({ method: "GET" })
       supabase.from("service_upgrade_requests").select("*").eq("user_id", userId).order("created_at", { ascending: false }),
     ]);
     if (products.error) throw new Error(products.error.message);
+    const { getMembership, creditBalance, CREDIT_TYPES } = await import("@/lib/commerce.server");
+    const membership = await getMembership(supabase, userId);
+    const balances = Object.fromEntries(
+      await Promise.all(CREDIT_TYPES.map(async (t) => [t, await creditBalance(supabase, userId, t)] as const)),
+    ) as Record<string, number>;
     return {
       products: products.data ?? [],
       projects: projects.data ?? [],
@@ -26,6 +31,12 @@ export const getToolsOverview = createServerFn({ method: "GET" })
       entitlements: entitlements.data ?? [],
       versions: versions.data ?? [],
       requests: requests.data ?? [],
+      membership: {
+        active: membership.active,
+        planName: membership.plan?.name ?? null,
+        discountPercent: membership.limits.subscriber_discount_percent?.limit ?? 0,
+      },
+      balances,
     };
   });
 
