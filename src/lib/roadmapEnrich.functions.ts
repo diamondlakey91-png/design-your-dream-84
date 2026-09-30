@@ -4,6 +4,7 @@
 // Phase 4 helpers: send to checklist, export roadmap PDF, answer follow-ups.
 
 import { createServerFn } from "@tanstack/react-start";
+import { withRegulatoryGrounding } from "@/lib/regulatoryGrounding";
 import { requireSupabaseAuth } from "@/integrations/supabase/auth-middleware";
 import { z } from "zod";
 import { callGeminiJSON } from "@/lib/ai.shared";
@@ -213,14 +214,16 @@ export const enrichRoadmapWithAI = createServerFn({ method: "POST" })
       agencies: agencies.map((a) => ({ name: a.name, level: a.level, verification: a.verification })),
     };
 
-    const system =
-      `You are a senior permit expeditor working for Permivio. Enrich an existing rule-engine roadmap with jurisdiction-specific facts sourced ONLY from the scraped excerpts below. ` +
+    const agentInstructions =
+      `Enrich an existing rule-engine roadmap with jurisdiction-specific facts sourced ONLY from the scraped excerpts below. ` +
       `RULES: (1) Every permit/document/agency update MUST reference at least one source_url copied verbatim from the excerpts, OR omit that entry. ` +
       `(2) Never invent phone numbers, fees, or review timelines. If the excerpts don't cover them, leave the field null. ` +
       `(3) Only add \`new_permits\` when the excerpts clearly indicate a jurisdiction-specific permit missing from the baseline. ` +
       `(4) Prefer .gov / .us URLs. (5) Keep summaries under 3 sentences. ` +
       `(6) When you are less than confident an item applies, add a followup question instead of asserting it. ` +
       `(7) When a [CONTROLLING AUTHORITY] block is present, it was resolved from official boundary data — route permits to that authority and never to the mailing-address city when they differ.`;
+
+    const system = withRegulatoryGrounding(agentInstructions, "research");
 
     const prompt =
       (live?.block ?? "") +

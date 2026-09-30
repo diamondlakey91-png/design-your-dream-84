@@ -2215,6 +2215,151 @@ export type Database = {
           },
         ]
       }
+      plan_set_sheets: {
+        Row: {
+          created_at: string
+          discipline: string | null
+          document_id: string | null
+          id: string
+          page_index: number | null
+          plan_set_id: string
+          revision_date: string | null
+          revision_number: string | null
+          sheet_number: string | null
+          sheet_title: string | null
+          user_id: string
+        }
+        Insert: {
+          created_at?: string
+          discipline?: string | null
+          document_id?: string | null
+          id?: string
+          page_index?: number | null
+          plan_set_id: string
+          revision_date?: string | null
+          revision_number?: string | null
+          sheet_number?: string | null
+          sheet_title?: string | null
+          user_id?: string
+        }
+        Update: {
+          created_at?: string
+          discipline?: string | null
+          document_id?: string | null
+          id?: string
+          page_index?: number | null
+          plan_set_id?: string
+          revision_date?: string | null
+          revision_number?: string | null
+          sheet_number?: string | null
+          sheet_title?: string | null
+          user_id?: string
+        }
+        Relationships: [
+          {
+            foreignKeyName: "plan_set_sheets_document_id_fkey"
+            columns: ["document_id"]
+            isOneToOne: false
+            referencedRelation: "project_documents"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "plan_set_sheets_plan_set_id_fkey"
+            columns: ["plan_set_id"]
+            isOneToOne: false
+            referencedRelation: "plan_sets"
+            referencedColumns: ["id"]
+          },
+        ]
+      }
+      plan_sets: {
+        Row: {
+          archived: boolean
+          created_at: string
+          disciplines: string[]
+          document_ids: string[]
+          id: string
+          issue_date: string | null
+          jurisdiction: string | null
+          notes: string | null
+          occupancy: string | null
+          project_id: string | null
+          project_type: string | null
+          reused_from_id: string | null
+          revision_label: string | null
+          sheet_count: number
+          source_review_id: string | null
+          tags: string[]
+          title: string
+          updated_at: string
+          user_id: string
+        }
+        Insert: {
+          archived?: boolean
+          created_at?: string
+          disciplines?: string[]
+          document_ids?: string[]
+          id?: string
+          issue_date?: string | null
+          jurisdiction?: string | null
+          notes?: string | null
+          occupancy?: string | null
+          project_id?: string | null
+          project_type?: string | null
+          reused_from_id?: string | null
+          revision_label?: string | null
+          sheet_count?: number
+          source_review_id?: string | null
+          tags?: string[]
+          title: string
+          updated_at?: string
+          user_id?: string
+        }
+        Update: {
+          archived?: boolean
+          created_at?: string
+          disciplines?: string[]
+          document_ids?: string[]
+          id?: string
+          issue_date?: string | null
+          jurisdiction?: string | null
+          notes?: string | null
+          occupancy?: string | null
+          project_id?: string | null
+          project_type?: string | null
+          reused_from_id?: string | null
+          revision_label?: string | null
+          sheet_count?: number
+          source_review_id?: string | null
+          tags?: string[]
+          title?: string
+          updated_at?: string
+          user_id?: string
+        }
+        Relationships: [
+          {
+            foreignKeyName: "plan_sets_project_id_fkey"
+            columns: ["project_id"]
+            isOneToOne: false
+            referencedRelation: "projects"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "plan_sets_reused_from_id_fkey"
+            columns: ["reused_from_id"]
+            isOneToOne: false
+            referencedRelation: "plan_sets"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "plan_sets_source_review_id_fkey"
+            columns: ["source_review_id"]
+            isOneToOne: false
+            referencedRelation: "qaqc_reviews"
+            referencedColumns: ["id"]
+          },
+        ]
+      }
       portal_credentials: {
         Row: {
           created_at: string

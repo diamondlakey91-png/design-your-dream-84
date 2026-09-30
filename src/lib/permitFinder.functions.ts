@@ -2,6 +2,7 @@ import { createServerFn } from "@tanstack/react-start";
 import { z } from "zod";
 import { requireSupabaseAuth } from "@/integrations/supabase/auth-middleware";
 import { loadJurisdictionContextBlock } from "@/lib/ai.shared";
+import { withRegulatoryGrounding } from "@/lib/regulatoryGrounding";
 import {
   PERMIT_CATEGORIES,
   type PermitDetermination,
@@ -141,7 +142,7 @@ Produce the JSON object now.`;
       body: JSON.stringify({
         model: "google/gemini-2.5-pro",
         messages: [
-          { role: "system", content: sys },
+          { role: "system", content: withRegulatoryGrounding(sys, "research") },
           { role: "user", content: user },
         ],
         temperature: 0.2,

@@ -28,6 +28,7 @@ import {
   X,
   MapPinned,
   Scale,
+  Layers,
 } from "lucide-react";
 import { supabase } from "@/integrations/supabase/client";
 import { PermivioLogo } from "@/components/PermivioMark";
@@ -113,6 +114,7 @@ const TOOLS_PRO: NavLink[] = [
   },
   { to: "/lookup", label: "Permit Lookup", icon: MapPin, description: "Live permits by address" },
   { to: "/filing", label: "Permit Filing", icon: Send, description: "Submission workflow" },
+  { to: "/plans", label: "Plan Set Library", icon: Layers, description: "Search and reuse past plan sets" },
   { to: "/portals", label: "Portal Directory", icon: Library, description: "Mapped agency portals" },
 ];
 

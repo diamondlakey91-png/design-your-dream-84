@@ -6,6 +6,7 @@ import { toast } from "sonner";
 import { ArrowRight, Loader2, MapPinCheck } from "lucide-react";
 import { AppShell } from "@/components/AppShell";
 import { PermivioPageHeader } from "@/components/PermivioPageHeader";
+import { AhjAuthorityPanel } from "@/components/research/AhjAuthorityPanel";
 import { listMySirBriefs, submitSirBrief, type SirBriefInput } from "@/lib/sirClient.functions";
 import { SIR_AI_RESEARCH_DISCLAIMER } from "@/lib/sirReport";
 
@@ -215,6 +216,11 @@ export function BriefWorkspace({
           </form>
           <p className="mt-4 text-xs leading-relaxed text-slate-500">{SIR_AI_RESEARCH_DISCLAIMER}</p>
         </section>
+
+        <AhjAuthorityPanel
+          query={(form.siteAddress ?? "").trim() || (form.jurisdiction ?? "").trim()}
+          title="Who controls permitting at this site"
+        />
 
         <section className="rounded-2xl border border-white/10 bg-white/[0.02] p-5">
           <h2 className="text-sm font-semibold text-white">Your briefs</h2>

@@ -1,6 +1,7 @@
 import { createServerFn } from "@tanstack/react-start";
 import { requireSupabaseAuth } from "@/integrations/supabase/auth-middleware";
 import { z } from "zod";
+import { withRegulatoryGrounding } from "@/lib/regulatoryGrounding";
 import { toSlug } from "@/lib/ai.shared";
 import { firecrawlSearch, firecrawlScrape } from "@/lib/firecrawl.shared";
 import type { AgencyContact } from "@/lib/agencyContacts";
@@ -407,7 +408,9 @@ Return JSON: { "sheets": [...], "index_sheets_not_uploaded": [], "uploaded_sheet
       const inventoryParts: Inventory[] = [];
       for (const b of batches) {
         const out = await callMultimodalJSON(
-          "You are a senior permit expediter building a drawing set inventory before submission. You never invent sheets that are not visible. Report only what the documents show.",
+          withRegulatoryGrounding(
+            "Build a drawing set inventory before submission. Never invent sheets that are not visible. Report only what the documents show.",
+          ),
           [{ type: "text", text: inventoryPrompt(b.label) }, ...b.parts],
           InventorySchema,
         ) as unknown as Inventory;
@@ -497,7 +500,9 @@ Return JSON: { "sheets": [...], "index_sheets_not_uploaded": [], "uploaded_sheet
             .map((c) => `${c.no}. ${c.label} (id: ${c.id}) — check: ${c.checks.join(", ")}`)
             .join("\n");
           const out = await callMultimodalJSON(
-            "You are a commercial permit expediter and senior plan-QC reviewer performing a jurisdiction-specific pre-submission quality-control review. You never state that something is a confirmed code violation. You never write 'code compliant', 'plans approved', 'code certified', or 'engineering approved'. You do not perform or certify engineering.",
+          withRegulatoryGrounding(
+            "Commercial permit expediting and senior plan-QC role performing a jurisdiction-specific pre-submission quality-control review. Never state that something is a confirmed code violation. Never write 'code compliant', 'plans approved', 'code certified', or 'engineering approved'. Do not perform or certify engineering.",
+          ),
             [
               {
                 type: "text",

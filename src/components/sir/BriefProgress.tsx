@@ -8,6 +8,7 @@ import { PermivioPageHeader } from "@/components/PermivioPageHeader";
 import { downloadMySirReportPdf, getMySirBrief } from "@/lib/sirClient.functions";
 import { ClientSirReport } from "@/components/sir/ClientSirReport";
 import { SIR_AI_RESEARCH_DISCLAIMER, type SirFindingReviews } from "@/lib/sirReport";
+import { AhjAuthorityPanel } from "@/components/research/AhjAuthorityPanel";
 
 /* eslint-disable @typescript-eslint/no-explicit-any */
 
@@ -167,6 +168,11 @@ export function BriefProgress({
                   ))}
               </dl>
             </section>
+
+            <AhjAuthorityPanel
+              query={data.brief.site_address || data.brief.jurisdiction}
+              title="Controlling authority & agency contacts"
+            />
           </div>
 
           <div className="grid gap-4">
