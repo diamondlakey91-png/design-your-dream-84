@@ -124,7 +124,7 @@ type Inventory = {
 };
 
 type FindingsOut = {
-  findings: Array<{ severity: string; category: string; discipline: string; sheet_number: string; sheet_title: string; location: string; summary: string; plain_language: string; why_it_matters: string; code_basis: string; jurisdiction_source_url: string; recommended_action: string; responsible_discipline: string; verification: string; segment?: string; page?: number | null; bbox?: { x: number; y: number; w: number; h: number } | null; related_sheets?: string[]; confidence?: "high" | "medium" | "low" | null }>;
+  findings: Array<{ severity: string; category: string; discipline: string; sheet_number: string; sheet_title: string; location: string; summary: string; plain_language: string; why_it_matters: string; code_basis: string; jurisdiction_source_url: string; recommended_action: string; responsible_discipline: string; verification: string; segment?: string; page?: number | null; bbox?: { x: number; y: number; w: number; h: number } | null; related_sheets?: string[]; confidence?: "high" | "medium" | "low" | null; document_id?: string | null; abs_page?: number | null }>;
   missing_documents: Array<{ name: string; reason: string; blocking: boolean }>;
   submission_issues: string[];
   needs_professional_confirmation: string[];
