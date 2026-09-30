@@ -690,12 +690,17 @@ async function temporalCodeFacts(s: PipelineState, n: Net, db: any, scope: Set<S
   // Dynamic code stack: every family relevant to this scope is shown, even when no evidence was found.
   const relevant = ALL_FAMILIES.filter((f) => codeApplicability(f, scope).applicability !== "not_primary");
   const families = [...new Set([...evidence.map((e) => e.family), ...(only ? [] : relevant)])].filter((f) => !only || only.includes(f));
+  // A "state baseline" may only be Verified when its citation is on a STATE government host
+  // (a city page quoting the state code is useful evidence, not the legal authority).
+  const regRows = await dotgovRows(n);
+  const stateHosts = new Set(regRows.filter((r) => r.type.startsWith("State") && r.state.toUpperCase() === s.state).map((r) => r.domain));
+  const onStateHost = (url: string | null | undefined) => { try { const h = new URL(url!).hostname.toLowerCase().replace(/^www\./, ""); return [...stateHosts].some((d) => h === d || h.endsWith(`.${d}`)) || /\.state\.[a-z]{2}\.us$/.test(h); } catch { return false; } };
   for (const fam of families) {
     const r = resolveFamily(s.state!, fam, evidence, cd.date);
     const app = codeApplicability(fam, scope);
     const localState = LOCAL_ADOPTION_STATES.includes(s.state ?? "");
-    const verification = r.status === "current_verified" && !localState ? "verified" : "needs_verification";
     const ref = r.current ? r.current.evidence[0]! : (r.future[0] ?? r.proposed[0])?.evidence[0] ?? evidence.find((e) => e.family === fam) ?? null;
+    const verification = r.status === "current_verified" && !localState && (onStateHost(ref?.url) || (r.current?.evidence ?? []).some((e) => onStateHost(e.url))) ? "verified" : "needs_verification";
     const evRec = (p: { edition: string; status: string; effective_from: string | null; effective_to: string | null; evidence: CodeEvidence[] }) => ({ edition: p.edition, status: p.status, status_label: TEMPORAL_LABEL[p.status as keyof typeof TEMPORAL_LABEL], effective_from: p.effective_from, effective_to: p.effective_to, sources: p.evidence.map((e) => ({ authority: e.authority, url: e.url, quote: e.quote, source_type: SOURCE_TYPE_LABEL[e.source_type], primary: e.primary, published: e.published ?? null })) });
     out.push(mk({
       fact_type: "code", fact_key: `temporal:${fam}`, label: `${FAMILY_LABEL[fam]} — ${s.state} state baseline`,
