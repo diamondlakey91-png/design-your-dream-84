@@ -492,6 +492,34 @@ function FilingDetail({
         )}
       </section>
 
+      {/* Live authority, contacts and portals */}
+      {filing.jurisdiction.trim() && (
+        <div className="mt-4">
+          <AhjAuthorityPanel
+            query={filing.jurisdiction}
+            title="Who this filing goes to"
+            onResolved={(r) => setLivePortals(r.portals)}
+          />
+          {livePortals.length > 0 && !filing.portal_url && (
+            <div className="mt-3 grid gap-2">
+              <p className="text-xs text-muted-foreground">
+                Save one of these official portals to this filing:
+              </p>
+              {livePortals.map((p) => (
+                <button
+                  key={p.url}
+                  disabled={busy}
+                  onClick={() => onPatch({ portal_url: p.url, portal_name: p.label })}
+                  className="inline-flex h-9 items-center justify-center rounded-xl border border-primary/50 px-3 text-xs font-semibold text-primary disabled:opacity-40"
+                >
+                  Use {p.label}
+                </button>
+              ))}
+            </div>
+          )}
+        </div>
+      )}
+
       {/* Submission */}
       <section className="mt-4 rounded-2xl border border-border bg-background/40 p-4">
         <h3 className="flex items-center gap-2 text-sm font-semibold text-foreground">
