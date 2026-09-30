@@ -26,7 +26,7 @@ export function AiUsageAdmin() {
                   <td className="py-2 pr-3 whitespace-nowrap">{new Date(r.created_at).toLocaleString()}</td>
                   <td className="py-2 pr-3">{r.operation.replace(/_/g, " ")}</td>
                   <td className="py-2 pr-3 text-muted-foreground">{r.model ?? "—"}</td>
-                  <td className={`py-2 pr-3 ${r.success ? "text-success" : "text-destructive"}`} title={r.error ?? undefined}>{r.success ? "Success" : "Failed"}</td>
+                  <td className={`py-2 pr-3 ${r.success ? "text-foreground" : "text-destructive"}`} title={r.error ?? undefined}>{r.success ? "Success" : "Failed"}</td>
                   <td className="py-2 pr-3">{r.input_tokens} / {r.output_tokens}</td>
                   <td className="py-2 pr-3">${Number(r.estimated_cost).toFixed(4)}</td>
                   <td className="py-2 pr-3">{r.credits_charged}{r.refunded ? " (restored)" : ""}</td>
