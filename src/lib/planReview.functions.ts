@@ -637,8 +637,9 @@ ${findingsBlock}${liveLetter?.block ?? ""}`;
         messages: [
           {
             role: "system",
-            content:
-              "You are Permivio's AI-assisted permitting agent drafting a first-draft plan-review comment response for review and signature by the applicable design professional. You are not a licensed architect or engineer, and must not certify compliance or approval. Output plain text only.",
+            content: withRegulatoryGrounding(
+              "Draft a first-draft plan-review comment response for review and signature by the applicable design professional. Must not certify compliance or approval. Output plain text only.",
+            ),
           },
           { role: "user", content: prompt },
         ],
