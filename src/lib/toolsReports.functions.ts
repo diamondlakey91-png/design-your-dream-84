@@ -19,6 +19,11 @@ export const getToolsOverview = createServerFn({ method: "GET" })
       supabase.from("service_upgrade_requests").select("*").eq("user_id", userId).order("created_at", { ascending: false }),
     ]);
     if (products.error) throw new Error(products.error.message);
+    const { getMembership, creditBalance, CREDIT_TYPES } = await import("@/lib/commerce.server");
+    const membership = await getMembership(supabase, userId);
+    const balances = Object.fromEntries(
+      await Promise.all(CREDIT_TYPES.map(async (t) => [t, await creditBalance(supabase, userId, t)] as const)),
+    ) as Record<string, number>;
     return {
       products: products.data ?? [],
       projects: projects.data ?? [],
@@ -26,6 +31,12 @@ export const getToolsOverview = createServerFn({ method: "GET" })
       entitlements: entitlements.data ?? [],
       versions: versions.data ?? [],
       requests: requests.data ?? [],
+      membership: {
+        active: membership.active,
+        planName: membership.plan?.name ?? null,
+        discountPercent: membership.limits.subscriber_discount_percent?.limit ?? 0,
+      },
+      balances,
     };
   });
 
@@ -78,7 +89,13 @@ export const createServiceOrder = createServerFn({ method: "POST" })
 
     // Server-side pricing — never trust an amount from the browser.
     const quote = priceBreakdown(product as unknown as ServiceProduct, data.deliveryTier, data.rush);
-    const amount = quote.total_cents;
+    if (quote.total_cents <= 0) return { error: "This service is not priced yet. Please contact Permivio." };
+    // Subscriber pricing comes only from admin-configured product/plan data.
+    const { getMembership, memberDiscountCents } = await import("@/lib/commerce.server");
+    const membership = await getMembership(supabase, userId);
+    const memberDiscount = memberDiscountCents(product as never, quote.total_cents, membership);
+    if (memberDiscount > 0) quote.lines.push({ label: "Permivio member pricing", amount_cents: -memberDiscount } as never);
+    const amount = quote.total_cents - memberDiscount;
     if (amount <= 0) return { error: "This service is not priced yet. Please contact Permivio." };
 
     // Permivio platform administrators use every tool and report at no charge.
@@ -94,6 +111,8 @@ export const createServiceOrder = createServerFn({ method: "POST" })
         delivery_tier: data.deliveryTier,
         status: comped ? "paid" : "payment_required",
         amount_cents: comped ? 0 : amount,
+        discount_cents: comped ? 0 : memberDiscount,
+        payment_method: comped ? "admin" : "stripe",
         currency: product.currency,
         rush: data.rush,
         environment: data.environment,

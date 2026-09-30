@@ -1224,6 +1224,103 @@ export type Database = {
           },
         ]
       }
+      credit_transactions: {
+        Row: {
+          created_at: string
+          created_by: string | null
+          credit_type: string
+          id: string
+          idempotency_key: string | null
+          order_id: string | null
+          organization_id: string | null
+          product_id: string | null
+          project_id: string | null
+          quantity: number
+          reason: string | null
+          related_transaction_id: string | null
+          subscription_id: string | null
+          transaction_type: string
+          user_id: string
+        }
+        Insert: {
+          created_at?: string
+          created_by?: string | null
+          credit_type: string
+          id?: string
+          idempotency_key?: string | null
+          order_id?: string | null
+          organization_id?: string | null
+          product_id?: string | null
+          project_id?: string | null
+          quantity: number
+          reason?: string | null
+          related_transaction_id?: string | null
+          subscription_id?: string | null
+          transaction_type: string
+          user_id: string
+        }
+        Update: {
+          created_at?: string
+          created_by?: string | null
+          credit_type?: string
+          id?: string
+          idempotency_key?: string | null
+          order_id?: string | null
+          organization_id?: string | null
+          product_id?: string | null
+          project_id?: string | null
+          quantity?: number
+          reason?: string | null
+          related_transaction_id?: string | null
+          subscription_id?: string | null
+          transaction_type?: string
+          user_id?: string
+        }
+        Relationships: [
+          {
+            foreignKeyName: "credit_transactions_order_id_fkey"
+            columns: ["order_id"]
+            isOneToOne: false
+            referencedRelation: "service_orders"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "credit_transactions_organization_id_fkey"
+            columns: ["organization_id"]
+            isOneToOne: false
+            referencedRelation: "organizations"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "credit_transactions_product_id_fkey"
+            columns: ["product_id"]
+            isOneToOne: false
+            referencedRelation: "service_products"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "credit_transactions_project_id_fkey"
+            columns: ["project_id"]
+            isOneToOne: false
+            referencedRelation: "projects"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "credit_transactions_related_transaction_id_fkey"
+            columns: ["related_transaction_id"]
+            isOneToOne: false
+            referencedRelation: "credit_transactions"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "credit_transactions_subscription_id_fkey"
+            columns: ["subscription_id"]
+            isOneToOne: false
+            referencedRelation: "subscriptions"
+            referencedColumns: ["id"]
+          },
+        ]
+      }
       deadlines: {
         Row: {
           created_at: string
@@ -1885,6 +1982,27 @@ export type Database = {
         }
         Relationships: []
       }
+      payment_webhook_events: {
+        Row: {
+          environment: string
+          event_id: string
+          event_type: string
+          processed_at: string
+        }
+        Insert: {
+          environment: string
+          event_id: string
+          event_type: string
+          processed_at?: string
+        }
+        Update: {
+          environment?: string
+          event_id?: string
+          event_type?: string
+          processed_at?: string
+        }
+        Relationships: []
+      }
       permit_analyses: {
         Row: {
           analysis: Json
@@ -2211,6 +2329,44 @@ export type Database = {
             columns: ["project_id"]
             isOneToOne: false
             referencedRelation: "projects"
+            referencedColumns: ["id"]
+          },
+        ]
+      }
+      plan_entitlements: {
+        Row: {
+          created_at: string
+          entitlement_key: string
+          id: string
+          limit_value: number | null
+          period: string
+          plan_id: string
+          updated_at: string
+        }
+        Insert: {
+          created_at?: string
+          entitlement_key: string
+          id?: string
+          limit_value?: number | null
+          period?: string
+          plan_id: string
+          updated_at?: string
+        }
+        Update: {
+          created_at?: string
+          entitlement_key?: string
+          id?: string
+          limit_value?: number | null
+          period?: string
+          plan_id?: string
+          updated_at?: string
+        }
+        Relationships: [
+          {
+            foreignKeyName: "plan_entitlements_plan_id_fkey"
+            columns: ["plan_id"]
+            isOneToOne: false
+            referencedRelation: "subscription_plans"
             referencedColumns: ["id"]
           },
         ]
@@ -3992,12 +4148,14 @@ export type Database = {
           amount_cents: number
           client_notes: string | null
           created_at: string
+          credit_transaction_id: string | null
           currency: string
           delivered_at: string | null
           delivery_tier: Database["public"]["Enums"]["service_delivery_tier"]
           discount_cents: number
           environment: string
           id: string
+          payment_method: string
           product_id: string
           project_id: string | null
           rush: boolean
@@ -4011,12 +4169,14 @@ export type Database = {
           amount_cents?: number
           client_notes?: string | null
           created_at?: string
+          credit_transaction_id?: string | null
           currency?: string
           delivered_at?: string | null
           delivery_tier?: Database["public"]["Enums"]["service_delivery_tier"]
           discount_cents?: number
           environment?: string
           id?: string
+          payment_method?: string
           product_id: string
           project_id?: string | null
           rush?: boolean
@@ -4030,12 +4190,14 @@ export type Database = {
           amount_cents?: number
           client_notes?: string | null
           created_at?: string
+          credit_transaction_id?: string | null
           currency?: string
           delivered_at?: string | null
           delivery_tier?: Database["public"]["Enums"]["service_delivery_tier"]
           discount_cents?: number
           environment?: string
           id?: string
+          payment_method?: string
           product_id?: string
           project_id?: string | null
           rush?: boolean
@@ -4046,6 +4208,13 @@ export type Database = {
           user_id?: string
         }
         Relationships: [
+          {
+            foreignKeyName: "service_orders_credit_transaction_id_fkey"
+            columns: ["credit_transaction_id"]
+            isOneToOne: false
+            referencedRelation: "credit_transactions"
+            referencedColumns: ["id"]
+          },
           {
             foreignKeyName: "service_orders_product_id_fkey"
             columns: ["product_id"]
@@ -4065,6 +4234,7 @@ export type Database = {
       service_products: {
         Row: {
           active: boolean
+          ai_assisted_available: boolean
           base_price_cents: number
           category: string
           client_question: string | null
@@ -4072,6 +4242,8 @@ export type Database = {
           commercial_price_cents: number | null
           complexity_multiplier: number
           created_at: string
+          credit_type: string | null
+          credits_consumed: number
           currency: string
           custom_quote_required: boolean
           deliverables: Json
@@ -4094,12 +4266,15 @@ export type Database = {
           rush_price_cents: number | null
           sheet_pricing_rules: Json
           starting_price_cents: number | null
+          subscriber_discount_eligible: boolean
+          subscriber_price_cents: number | null
           supports_professional_review: boolean
           turnaround_estimate: string | null
           updated_at: string
         }
         Insert: {
           active?: boolean
+          ai_assisted_available?: boolean
           base_price_cents?: number
           category: string
           client_question?: string | null
@@ -4107,6 +4282,8 @@ export type Database = {
           commercial_price_cents?: number | null
           complexity_multiplier?: number
           created_at?: string
+          credit_type?: string | null
+          credits_consumed?: number
           currency?: string
           custom_quote_required?: boolean
           deliverables?: Json
@@ -4129,12 +4306,15 @@ export type Database = {
           rush_price_cents?: number | null
           sheet_pricing_rules?: Json
           starting_price_cents?: number | null
+          subscriber_discount_eligible?: boolean
+          subscriber_price_cents?: number | null
           supports_professional_review?: boolean
           turnaround_estimate?: string | null
           updated_at?: string
         }
         Update: {
           active?: boolean
+          ai_assisted_available?: boolean
           base_price_cents?: number
           category?: string
           client_question?: string | null
@@ -4142,6 +4322,8 @@ export type Database = {
           commercial_price_cents?: number | null
           complexity_multiplier?: number
           created_at?: string
+          credit_type?: string | null
+          credits_consumed?: number
           currency?: string
           custom_quote_required?: boolean
           deliverables?: Json
@@ -4164,6 +4346,8 @@ export type Database = {
           rush_price_cents?: number | null
           sheet_pricing_rules?: Json
           starting_price_cents?: number | null
+          subscriber_discount_eligible?: boolean
+          subscriber_price_cents?: number | null
           supports_professional_review?: boolean
           turnaround_estimate?: string | null
           updated_at?: string
@@ -5388,6 +5572,45 @@ export type Database = {
           },
         ]
       }
+      subscription_plans: {
+        Row: {
+          active: boolean
+          created_at: string
+          currency: string
+          description: string | null
+          display_order: number
+          id: string
+          monthly_price_cents: number | null
+          name: string
+          plan_key: string
+          updated_at: string
+        }
+        Insert: {
+          active?: boolean
+          created_at?: string
+          currency?: string
+          description?: string | null
+          display_order?: number
+          id?: string
+          monthly_price_cents?: number | null
+          name: string
+          plan_key: string
+          updated_at?: string
+        }
+        Update: {
+          active?: boolean
+          created_at?: string
+          currency?: string
+          description?: string | null
+          display_order?: number
+          id?: string
+          monthly_price_cents?: number | null
+          name?: string
+          plan_key?: string
+          updated_at?: string
+        }
+        Relationships: []
+      }
       subscriptions: {
         Row: {
           cancel_at_period_end: boolean | null
@@ -5543,6 +5766,22 @@ export type Database = {
       can_access_agent_run: { Args: { _run_id: string }; Returns: boolean }
       can_access_project: { Args: { _project_id: string }; Returns: boolean }
       can_write_project: { Args: { _project_id: string }; Returns: boolean }
+      consume_credit: {
+        Args: {
+          _credit_type: string
+          _idempotency_key: string
+          _product_id?: string
+          _project_id?: string
+          _quantity: number
+          _reason?: string
+          _user_id: string
+        }
+        Returns: string
+      }
+      credit_balance: {
+        Args: { _credit_type: string; _user_id: string }
+        Returns: number
+      }
       has_active_subscription: {
         Args: { check_env?: string; user_uuid: string }
         Returns: boolean
@@ -5563,6 +5802,10 @@ export type Database = {
       }
       is_agent_reviewer: { Args: { _org_id: string }; Returns: boolean }
       is_org_member: { Args: { _org_id: string }; Returns: boolean }
+      refund_credit: {
+        Args: { _reason: string; _usage_id: string }
+        Returns: string
+      }
       roadmap_visible: { Args: { _roadmap_id: string }; Returns: boolean }
     }
     Enums: {

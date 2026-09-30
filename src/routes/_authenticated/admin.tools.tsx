@@ -18,6 +18,7 @@ import { ORDER_STATUS_LABEL, money, statusTone } from "@/lib/toolsCatalog";
 import { Input } from "@/components/ui/input";
 import { Textarea } from "@/components/ui/textarea";
 import { Label } from "@/components/ui/label";
+import { MembershipPlansAdmin } from "@/components/billing/MembershipPlansAdmin";
 
 export const Route = createFileRoute("/_authenticated/admin/tools")({
   component: AdminToolsPage,
@@ -51,6 +52,11 @@ type ProductForm = {
   supports_professional_review: boolean;
   active: boolean;
   display_order: string;
+  subscriber_price: string;
+  subscriber_discount_eligible: boolean;
+  credit_type: string;
+  credits_consumed: string;
+  ai_assisted_available: boolean;
 };
 
 const EMPTY: ProductForm = {
@@ -68,6 +74,11 @@ const EMPTY: ProductForm = {
   supports_professional_review: true,
   active: true,
   display_order: "0",
+  subscriber_price: "",
+  subscriber_discount_eligible: false,
+  credit_type: "",
+  credits_consumed: "0",
+  ai_assisted_available: true,
 };
 
 const ORDER_STATUSES = [
@@ -105,7 +116,7 @@ function AdminToolsPage() {
   const orderFn = useServerFn(updateServiceOrderAdmin);
   const qc = useQueryClient();
 
-  const [tab, setTab] = useState<"products" | "orders">("products");
+  const [tab, setTab] = useState<"products" | "orders" | "plans">("products");
   const [form, setForm] = useState<ProductForm | null>(null);
   const [query, setQuery] = useState("");
 
@@ -143,6 +154,11 @@ function AdminToolsPage() {
           supports_professional_review: f.supports_professional_review,
           active: f.active,
           display_order: Number(f.display_order) || 0,
+          subscriber_price_cents: dollarsToCents(f.subscriber_price),
+          subscriber_discount_eligible: f.subscriber_discount_eligible,
+          credit_type: (f.credit_type || null) as never,
+          credits_consumed: f.credit_type ? Math.max(0, Number(f.credits_consumed) || 0) : 0,
+          ai_assisted_available: f.ai_assisted_available,
         },
       }),
     onSuccess: () => {
@@ -213,7 +229,7 @@ function AdminToolsPage() {
         </header>
 
         <div className="flex gap-2">
-          {(["products", "orders"] as const).map((t) => (
+          {(["products", "orders", "plans"] as const).map((t) => (
             <button
               key={t}
               onClick={() => setTab(t)}
@@ -221,10 +237,12 @@ function AdminToolsPage() {
                 tab === t ? "border-brand text-brand" : "border-border text-muted-foreground hover:border-brand/60"
               }`}
             >
-              {t === "products" ? "Products & pricing" : "Client orders"}
+              {t === "products" ? "Products & pricing" : t === "orders" ? "Client orders" : "Membership plans"}
             </button>
           ))}
         </div>
+
+        {tab === "plans" && <MembershipPlansAdmin />}
 
         {tab === "products" && (
           <>
@@ -320,6 +338,39 @@ function AdminToolsPage() {
                     <Label className="text-xs">Display order</Label>
                     <Input value={form.display_order} onChange={(e) => setForm({ ...form, display_order: e.target.value })} inputMode="numeric" />
                   </div>
+                  <div>
+                    <Label className="text-xs">Subscriber price ($, replaces base — blank for none)</Label>
+                    <Input value={form.subscriber_price} onChange={(e) => setForm({ ...form, subscriber_price: e.target.value })} inputMode="decimal" />
+                  </div>
+                  <div className="grid grid-cols-2 gap-2">
+                    <div>
+                      <Label className="text-xs">Included credit type</Label>
+                      <select
+                        value={form.credit_type}
+                        onChange={(e) => setForm({ ...form, credit_type: e.target.value })}
+                        className="h-9 w-full rounded-md border border-input bg-background px-2 text-sm"
+                      >
+                        <option value="">None</option>
+                        <option value="report_credits">Report credits</option>
+                        <option value="plan_review_credits">Plan Review credits</option>
+                        <option value="correction_review_credits">Correction Review credits</option>
+                      </select>
+                    </div>
+                    <div>
+                      <Label className="text-xs">Credits consumed</Label>
+                      <Input value={form.credits_consumed} onChange={(e) => setForm({ ...form, credits_consumed: e.target.value })} inputMode="numeric" disabled={!form.credit_type} />
+                    </div>
+                  </div>
+                  <div className="flex flex-wrap items-end gap-4 text-xs">
+                    <label className="inline-flex items-center gap-2">
+                      <input type="checkbox" checked={form.subscriber_discount_eligible} onChange={(e) => setForm({ ...form, subscriber_discount_eligible: e.target.checked })} />
+                      Member discount eligible
+                    </label>
+                    <label className="inline-flex items-center gap-2">
+                      <input type="checkbox" checked={form.ai_assisted_available} onChange={(e) => setForm({ ...form, ai_assisted_available: e.target.checked })} />
+                      AI-assisted option
+                    </label>
+                  </div>
                   <div className="flex items-end gap-4 text-xs">
                     <label className="inline-flex items-center gap-2">
                       <input
@@ -400,6 +451,11 @@ function AdminToolsPage() {
                             supports_professional_review: !!p.supports_professional_review,
                             active: !!p.active,
                             display_order: String(p.display_order),
+                            subscriber_price: p.subscriber_price_cents != null ? String(p.subscriber_price_cents / 100) : "",
+                            subscriber_discount_eligible: !!p.subscriber_discount_eligible,
+                            credit_type: p.credit_type ?? "",
+                            credits_consumed: String(p.credits_consumed ?? 0),
+                            ai_assisted_available: p.ai_assisted_available !== false,
                           })
                         }
                         className="inline-flex items-center gap-1.5 rounded-lg border border-border px-2.5 py-1.5 text-[11px] font-mono uppercase tracking-wider hover:border-brand hover:text-brand"

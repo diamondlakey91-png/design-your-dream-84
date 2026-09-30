@@ -21,6 +21,8 @@ import {
   ShieldCheck, Check, Settings2, Users,
 } from "lucide-react";
 import { OrganizationTeamPanel } from "@/components/org/OrganizationTeamPanel";
+import { BillingPanel } from "@/components/billing/BillingPanel";
+import { CreditCard } from "lucide-react";
 
 export const Route = createFileRoute("/_authenticated/settings")({
   head: () => ({
@@ -72,6 +74,7 @@ export const Route = createFileRoute("/_authenticated/settings")({
 type TabKey =
   | "profile"
   | "team"
+  | "billing"
   | "security"
   | "notifications"
   | "credentials"
@@ -81,6 +84,7 @@ type TabKey =
 const TABS: { key: TabKey; label: string; icon: typeof User }[] = [
   { key: "profile", label: "Profile", icon: User },
   { key: "team", label: "Organization & Team", icon: Users },
+  { key: "billing", label: "Billing & Membership", icon: CreditCard },
   { key: "security", label: "Security", icon: Lock },
   { key: "notifications", label: "Notifications", icon: Bell },
   { key: "credentials", label: "Portal Credentials", icon: KeyRound },
@@ -252,6 +256,7 @@ function SettingsPage() {
 
         {tab === "profile" ? <ProfileSection /> : null}
         {tab === "team" ? <OrganizationTeamPanel /> : null}
+        {tab === "billing" ? <BillingPanel /> : null}
         {tab === "security" ? <SecuritySection /> : null}
         {tab === "notifications" ? <NotificationsSection /> : null}
         {tab === "credentials" ? <CredentialsSection /> : null}

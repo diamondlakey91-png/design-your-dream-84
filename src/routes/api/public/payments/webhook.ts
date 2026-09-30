@@ -1,6 +1,7 @@
 import { createFileRoute } from "@tanstack/react-router";
 import { createClient, type SupabaseClient } from "@supabase/supabase-js";
-import { type StripeEnv, verifyWebhook } from "@/lib/stripe.server";
+import { type StripeEnv, verifyWebhook, createStripeClient } from "@/lib/stripe.server";
+import { grantPeriodAllowances } from "@/lib/commerce.server";
 
 let _supabase: SupabaseClient | null = null;
 function getSupabase(): SupabaseClient {
@@ -134,9 +135,66 @@ async function handleServiceCheckoutCompleted(session: CheckoutSession) {
   }
 }
 
+type Invoice = {
+  id: string;
+  status?: string;
+  billing_reason?: string;
+  subscription?: string | null;
+  parent?: { subscription_details?: { subscription?: string } | null } | null;
+};
+
+/**
+ * Monthly allowances are granted only here — after a verified, paid invoice for
+ * a subscription (first payment or renewal). Never from a browser redirect.
+ * Grants are idempotent per invoice, so repeated deliveries cannot double-grant.
+ */
+async function handleInvoicePaid(invoice: Invoice, env: StripeEnv) {
+  const subId = invoice.parent?.subscription_details?.subscription ?? invoice.subscription ?? null;
+  if (!subId) return;
+  const db = getSupabase();
+  let { data: row } = await db
+    .from("subscriptions")
+    .select("id,user_id,price_id")
+    .eq("stripe_subscription_id", subId)
+    .eq("environment", env)
+    .maybeSingle();
+  if (!row) {
+    // invoice.paid can arrive before customer.subscription.created — sync first.
+    const sub = (await createStripeClient(env).subscriptions.retrieve(subId)) as unknown as Sub;
+    await handleSubscriptionCreated(sub, env);
+    ({ data: row } = await db
+      .from("subscriptions")
+      .select("id,user_id,price_id")
+      .eq("stripe_subscription_id", subId)
+      .eq("environment", env)
+      .maybeSingle());
+  }
+  if (!row?.user_id || !row.price_id) return;
+  await grantPeriodAllowances(db, {
+    userId: row.user_id,
+    subscriptionRowId: row.id,
+    planKey: row.price_id,
+    invoiceId: invoice.id,
+  });
+}
+
 async function handleWebhook(req: Request, env: StripeEnv) {
   const event = await verifyWebhook(req, env);
+  const db = getSupabase();
+  // Idempotency: skip events already fully processed.
+  const { data: seen } = await db.from("payment_webhook_events").select("event_id").eq("event_id", event.id).maybeSingle();
+  if (seen) return;
+  await dispatch(event, env);
+  await db.from("payment_webhook_events").upsert(
+    { event_id: event.id, event_type: event.type, environment: env },
+    { onConflict: "event_id", ignoreDuplicates: true },
+  );
+}
+
+async function dispatch(event: { type: string; data: { object: unknown } }, env: StripeEnv) {
   switch (event.type) {
+    case "invoice.paid":
+      await handleInvoicePaid(event.data.object as Invoice, env); break;
     case "checkout.session.completed":
     case "checkout.session.async_payment_succeeded":
       await handleServiceCheckoutCompleted(event.data.object as CheckoutSession); break;

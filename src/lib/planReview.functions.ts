@@ -369,7 +369,16 @@ export const reviewPlan = createServerFn({ method: "POST" })
   .inputValidator((input: unknown) => z.object({ id: z.string().uuid() }).parse(input))
   .handler(async ({ data, context }) => {
     requireFeature(await getEntitlement(context.supabase, context.userId), "planReview");
-    return runPlanReviewForDocument(context.supabase, context.userId, data.id);
+    const { chargeIncludedUsage, refundCredit } = await import("@/lib/commerce.server");
+    const usageId = await chargeIncludedUsage(context.supabase, context.userId, "plan_review_credits", `plan_review:${data.id}:${new Date().toISOString().slice(0, 13)}`, {
+      reason: "AI Plan Review",
+    });
+    try {
+      return await runPlanReviewForDocument(context.supabase, context.userId, data.id);
+    } catch (e) {
+      if (usageId) await refundCredit(usageId, "Plan Review failed — credit restored");
+      throw e;
+    }
   });
 
 // Batch review + consolidated PermitHealth report across all plan documents in a project.
