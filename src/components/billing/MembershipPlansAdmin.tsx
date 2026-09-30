@@ -125,7 +125,7 @@ function PlanCard({ plan }: { plan: PlanRow }) {
               label={ENTITLEMENT_LABEL[key]}
               configured={!!cur}
               limit={cur ? (cur.limit_value == null ? "" : String(cur.limit_value)) : ""}
-              period={cur?.period ?? (key.endsWith("_credits") || key === "ai_queries" ? "monthly" : "none")}
+              period={cur?.period ?? (key.endsWith("_credits") || key === "ai_queries" || key === "ai_messages" ? "monthly" : "none")}
               onSave={(limit, period) => saveEnt.mutate({ key, limit, period })}
               onRemove={() => saveEnt.mutate({ key, limit: "", period: "none", remove: true })}
             />
@@ -174,8 +174,8 @@ function AdjustCredits() {
   const [qty, setQty] = useState("1");
   const [reason, setReason] = useState("");
   const m = useMutation({
-    mutationFn: () =>
-      fn({ data: { user_id: userId.trim(), credit_type: type as never, quantity: Number(qty) || 0, reason: reason.trim() } }),
+    mutationFn: (kind: "adjustment" | "promotional_grant") =>
+      fn({ data: { user_id: userId.trim(), credit_type: type as never, quantity: Number(qty) || 0, reason: reason.trim() || "Beta testing", kind } }),
     onSuccess: () => {
       toast.success("Adjustment recorded in the credit ledger");
       setReason("");
@@ -189,7 +189,7 @@ function AdjustCredits() {
       <div className="mt-2 grid gap-2 md:grid-cols-4">
         <Input value={userId} onChange={(e) => setUserId(e.target.value)} placeholder="Customer user ID" />
         <select value={type} onChange={(e) => setType(e.target.value)} className="h-9 rounded-md border border-input bg-background px-2 text-sm">
-          {ENTITLEMENT_ORDER.filter((k) => k.endsWith("_credits") || k === "ai_queries").map((k) => (
+          {ENTITLEMENT_ORDER.filter((k) => k.endsWith("_credits") || k === "ai_queries" || k === "ai_messages").map((k) => (
             <option key={k} value={k}>{ENTITLEMENT_LABEL[k]}</option>
           ))}
         </select>
@@ -197,11 +197,18 @@ function AdjustCredits() {
         <Input value={reason} onChange={(e) => setReason(e.target.value)} placeholder="Reason" />
       </div>
       <button
-        onClick={() => m.mutate()}
+        onClick={() => m.mutate("adjustment")}
         disabled={m.isPending || !userId || reason.trim().length < 3 || !Number(qty)}
         className="mt-2 rounded-lg bg-brand px-3 py-1.5 text-[11px] font-mono uppercase tracking-wider text-brand-foreground disabled:opacity-50"
       >
         Record adjustment
+      </button>
+      <button
+        onClick={() => m.mutate("promotional_grant")}
+        disabled={m.isPending || !userId || !(Number(qty) > 0)}
+        className="ml-2 mt-2 rounded-lg border border-brand px-3 py-1.5 text-[11px] font-mono uppercase tracking-wider text-brand disabled:opacity-50"
+      >
+        Grant beta credits
       </button>
     </div>
   );

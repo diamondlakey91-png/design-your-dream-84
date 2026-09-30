@@ -24,7 +24,7 @@ export default defineTool({
     const { runMeteredAi, meterKey } = await import("@/lib/aiMeter.server");
     try {
       return await runMeteredAi(
-        { db: supabaseForUser(ctx), userId, operation: "assistant_mcp", creditType: "ai_queries", key: meterKey("assistant_mcp", userId ?? "anon", { question, jurisdiction }) },
+        { db: supabaseForUser(ctx), userId, operation: "assistant_mcp", creditType: "ai_messages", key: meterKey("assistant_mcp", userId ?? "anon", { question, jurisdiction }) },
         async () => {
     const res = await aiFetch("https://ai.gateway.lovable.dev/v1/chat/completions", {
       method: "POST",

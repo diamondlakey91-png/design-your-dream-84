@@ -4,13 +4,14 @@
 // for balances; writes go through the service role only.
 import { isSubscriptionActive } from "@/lib/tiers";
 
-export const CREDIT_TYPES = ["report_credits", "plan_review_credits", "correction_review_credits", "ai_queries"] as const;
+export const CREDIT_TYPES = ["report_credits", "plan_review_credits", "correction_review_credits", "ai_queries", "ai_messages"] as const;
 export type CreditType = (typeof CREDIT_TYPES)[number];
 
 export const ENTITLEMENT_KEYS = [
   "active_projects",
   "team_seats",
   "ai_queries",
+  "ai_messages",
   "report_credits",
   "plan_review_credits",
   "correction_review_credits",
@@ -138,8 +139,8 @@ export class CreditRequiredError extends Error {
 }
 
 /**
- * Server-side gate for every paid AI "Run". Fail-closed: platform admins run
- * as internal use; everyone else must hold at least one ledger credit of this
+ * Server-side gate for every paid AI "Run". Fail-closed: holders of the
+ * internal_ai role run as internal use; everyone else must hold at least one ledger credit of this
  * type (from a membership grant, purchase or admin adjustment). No subscription,
  * no plan limit or a zero balance blocks the run — there is no free pass-through.
  */
@@ -150,8 +151,9 @@ export async function chargeIncludedUsage(
   key: string,
   meta: { projectId?: string | null; reason: string },
 ): Promise<{ usageId: string | null; internal: boolean }> {
-  const { data: isAdmin } = await db.rpc("has_role", { _user_id: userId, _role: "admin" });
-  if (isAdmin === true) return { usageId: null, internal: true };
+  // Internal AI access is its own server-controlled role — admin alone does NOT bypass credits.
+  const { data: isInternal } = await db.rpc("has_role", { _user_id: userId, _role: "internal_ai" });
+  if (isInternal === true) return { usageId: null, internal: true };
   const admin = await getAdmin();
   // Idempotent retry of the same run: already charged, don't block or re-charge.
   const { data: prior } = await admin.from("credit_transactions").select("id").eq("idempotency_key", key).maybeSingle();

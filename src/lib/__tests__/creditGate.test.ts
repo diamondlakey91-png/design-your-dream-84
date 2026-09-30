@@ -23,7 +23,9 @@ const admin = {
 };
 vi.mock("@/integrations/supabase/client.server", () => ({ supabaseAdmin: admin }));
 
-const userDb = (isAdmin: boolean) => ({ rpc: async () => ({ data: isAdmin }) });
+const userDb = (internal: boolean) => ({ rpc: async (_f: string, a: { _role: string }) => ({ data: internal && a._role === "internal_ai" }) });
+// admin-only user (no internal_ai): must still be blocked
+const adminOnlyDb = { rpc: async (_f: string, a: { _role: string }) => ({ data: a._role === "admin" }) };
 
 describe("chargeIncludedUsage (fail-closed)", () => {
   beforeEach(() => { ledger = []; });
@@ -33,9 +35,14 @@ describe("chargeIncludedUsage (fail-closed)", () => {
     await expect(chargeIncludedUsage(userDb(false), "u1", "ai_queries", "k1", { reason: "t" })).rejects.toBeInstanceOf(CreditRequiredError);
   });
 
-  it("admins run as internal use without a charge", async () => {
+  it("internal_ai holders run as internal use without a charge", async () => {
     const { chargeIncludedUsage } = await import("@/lib/commerce.server");
     expect(await chargeIncludedUsage(userDb(true), "a1", "ai_queries", "k2", { reason: "t" })).toEqual({ usageId: null, internal: true });
+  });
+
+  it("admin role alone does not bypass credits", async () => {
+    const { chargeIncludedUsage, CreditRequiredError } = await import("@/lib/commerce.server");
+    await expect(chargeIncludedUsage(adminOnlyDb, "s1", "ai_queries", "k9", { reason: "t" })).rejects.toBeInstanceOf(CreditRequiredError);
   });
 
   it("charges once per key when a credit exists", async () => {

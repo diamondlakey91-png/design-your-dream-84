@@ -4308,6 +4308,7 @@ export type Database = {
           commercial_price_cents: number | null
           complexity_multiplier: number
           created_at: string
+          credit_config_status: string
           credit_type: string | null
           credits_consumed: number
           currency: string
@@ -4321,6 +4322,7 @@ export type Database = {
           is_recommended: boolean
           name: string
           product_key: string
+          professional_review_available: boolean
           professional_review_price_cents: number | null
           professional_review_required: boolean
           recommended_phases: Json
@@ -4348,6 +4350,7 @@ export type Database = {
           commercial_price_cents?: number | null
           complexity_multiplier?: number
           created_at?: string
+          credit_config_status?: string
           credit_type?: string | null
           credits_consumed?: number
           currency?: string
@@ -4361,6 +4364,7 @@ export type Database = {
           is_recommended?: boolean
           name: string
           product_key: string
+          professional_review_available?: boolean
           professional_review_price_cents?: number | null
           professional_review_required?: boolean
           recommended_phases?: Json
@@ -4388,6 +4392,7 @@ export type Database = {
           commercial_price_cents?: number | null
           complexity_multiplier?: number
           created_at?: string
+          credit_config_status?: string
           credit_type?: string | null
           credits_consumed?: number
           currency?: string
@@ -4401,6 +4406,7 @@ export type Database = {
           is_recommended?: boolean
           name?: string
           product_key?: string
+          professional_review_available?: boolean
           professional_review_price_cents?: number | null
           professional_review_required?: boolean
           recommended_phases?: Json
@@ -5875,7 +5881,7 @@ export type Database = {
       roadmap_visible: { Args: { _roadmap_id: string }; Returns: boolean }
     }
     Enums: {
-      app_role: "admin" | "user"
+      app_role: "admin" | "user" | "internal_ai"
       authority_level:
         | "city"
         | "county"
@@ -6190,7 +6196,7 @@ export type CompositeTypes<
 export const Constants = {
   public: {
     Enums: {
-      app_role: ["admin", "user"],
+      app_role: ["admin", "user", "internal_ai"],
       authority_level: [
         "city",
         "county",

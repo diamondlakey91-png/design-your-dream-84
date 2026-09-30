@@ -2,11 +2,12 @@ import { createServerFn } from "@tanstack/react-start";
 import { z } from "zod";
 import { requireSupabaseAuth } from "@/integrations/supabase/auth-middleware";
 
-const CREDIT = z.enum(["report_credits", "plan_review_credits", "correction_review_credits", "ai_queries"]);
+const CREDIT = z.enum(["report_credits", "plan_review_credits", "correction_review_credits", "ai_queries", "ai_messages"]);
 const ENT_KEY = z.enum([
   "active_projects",
   "team_seats",
   "ai_queries",
+  "ai_messages",
   "report_credits",
   "plan_review_credits",
   "correction_review_credits",
@@ -228,6 +229,8 @@ export const adjustCreditsAdmin = createServerFn({ method: "POST" })
       credit_type: CREDIT,
       quantity: z.number().int().min(-1000).max(1000).refine((n) => n !== 0),
       reason: z.string().min(3).max(300),
+      organization_id: z.string().uuid().nullable().optional(),
+      kind: z.enum(["adjustment", "promotional_grant"]).optional(),
     }).parse(d),
   )
   .handler(async ({ data, context }) => {
@@ -238,7 +241,9 @@ export const adjustCreditsAdmin = createServerFn({ method: "POST" })
       user_id: data.user_id,
       credit_type: data.credit_type,
       quantity: data.quantity,
-      transaction_type: "adjustment",
+      // Beta/promotional grants are ledger entries only — never a purchase or Stripe charge.
+      transaction_type: data.kind === "promotional_grant" && data.quantity > 0 ? "promotional_grant" : "adjustment",
+      organization_id: data.organization_id ?? null,
       reason: data.reason,
       created_by: context.userId,
     });
