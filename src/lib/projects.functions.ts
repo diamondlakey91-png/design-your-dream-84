@@ -94,6 +94,11 @@ const CreateProjectInput = z.object({
   project_type: z.string().max(80).default("Commercial"),
   jurisdiction: z.string().max(200).default(""),
   permit_count: z.number().int().min(0).max(50).default(3),
+  scope_description: z.string().trim().max(4000).optional(),
+  occupancy_class: z.enum(["residential", "commercial", "mixed_use"]).optional(),
+  work_type: z.enum(["new_construction", "addition", "alteration", "tenant_improvement", "change_of_occupancy", "repair", "demolition", "shell", "core_and_shell", "other"]).optional(),
+  target_start_date: z.string().regex(/^\d{4}-\d{2}-\d{2}$/).optional(),
+  intake_notes: z.string().trim().max(4000).optional(),
 });
 
 export const createProject = createServerFn({ method: "POST" })
@@ -117,6 +122,11 @@ export const createProject = createServerFn({ method: "POST" })
         permits_issued: 0,
         current_stage: 0,
         status: "Pre-Planning",
+        scope_description: data.scope_description || null,
+        occupancy_class: data.occupancy_class ?? null,
+        work_type: data.work_type ?? null,
+        target_start_date: data.target_start_date ?? null,
+        intake_notes: data.intake_notes || null,
       })
       .select("*")
       .single();
