@@ -246,9 +246,9 @@ function Field({ label, value }: { label: string; value: string }) {
 
 function StatusBadge({ status }: { status: string }) {
   if (status === "human_verified")
-    return <Badge className="bg-emerald-500/10 text-emerald-400 border-emerald-500/30 border">Human-verified</Badge>;
+    return <Badge className="bg-emerald-500/10 text-emerald-400 border-emerald-500/30 border">Verified by Permivio</Badge>;
   if (status === "user_confirmed")
-    return <Badge className="bg-emerald-500/10 text-emerald-400 border-emerald-500/30 border">Confirmed by user</Badge>;
+    return <Badge className="bg-muted text-muted-foreground border-border border">Confirmed by you · not verified by Permivio</Badge>;
   if (status === "pending_review")
     return <Badge className="bg-sky-500/10 text-sky-400 border-sky-500/30 border">Pending human review</Badge>;
   return <Badge className="bg-sky-500/10 text-sky-400 border-sky-500/30 border">Unconfirmed</Badge>;
