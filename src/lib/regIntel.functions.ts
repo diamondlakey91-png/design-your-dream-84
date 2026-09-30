@@ -44,7 +44,9 @@ async function projectInputs(db: Db, projectId: string) {
   for (const r of corr ?? []) if (r.fact_key.startsWith("user:")) corrections[r.fact_key.slice(5)] = !!(r.value as { value?: boolean })?.value;
   const scopeText = p?.scope_description ?? null;
   const scopeHash = addressHash(`${scopeText ?? ""}|${p?.work_type ?? ""}|${p?.project_type ?? ""}|${JSON.stringify(corrections)}`);
+  const { data: filing } = await db.from("permit_filings").select("submitted_at").eq("project_id", projectId).not("submitted_at", "is", null).order("submitted_at", { ascending: true }).limit(1).maybeSingle();
   return {
+    applicationDate: (filing?.submitted_at as string | null) ?? null,
     project: p, address, postalCity, stored, scopeText, scopeHash, corrections,
     hasSeptic: (docs ?? []).some((d: { name: string }) => /septic|ostds|drainfield/i.test(d.name)),
   };
@@ -121,6 +123,7 @@ export const advanceRegulatoryResearch = createServerFn({ method: "POST" })
       ...(job.state ?? {}),
       address: job.address, scopeText: inp.scopeText, workType: inp.project?.work_type ?? null, projectType: inp.project?.project_type ?? null,
       scopeCorrections: inp.corrections, hasSepticDocument: inp.hasSeptic, storedJurisdiction: inp.stored,
+      applicationDate: inp.applicationDate,
     };
     const step = steps[idx]!;
     step.status = "running";

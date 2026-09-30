@@ -8,7 +8,8 @@ import { decideVerification, recheckAfter, resolveGoverningAuthority, type Fact,
 import { arcgisAll, arcgisFirst, classifyFlood, epochToDate, floodPosition, pickPanel, reconcileEditions, parseBcisRows, withRetry, PROVENANCE_LABEL, type ArcgisResponse, type HealthEvent, type SourceProvenance, type EditionEvidence } from "./providers.shared";
 import { codeApplicability, APPLICABILITY_LABEL } from "./codeStack";
 import { normalizeScope, effectiveScope, SCOPE_LABEL, type ScopeAttribute } from "./scope";
-import { adoptionsFor, amendmentPolicyFor, RESEARCHED_AS_OF, type AdoptionDiscipline } from "./stateAdoptions";
+import { seedFor, amendmentPolicyFor, LOCAL_ADOPTION_STATES } from "./stateAdoptions";
+import { resolveFamily, applicableCodeDate, TEMPORAL_LABEL, SOURCE_TYPE_LABEL, type CodeEvidence, type CodeFamily, type SourceType } from "./codeTemporal";
 import { resolveGoverningUnit, matchDotGov, classifyLink, govNameTokens, type GoverningUnit, type DotGovRow, type GeoUnit } from "./nationalAhj";
 import { evaluatePermitCandidates, REQUIREMENT_TYPE_LABEL } from "./rules";
 
@@ -26,6 +27,8 @@ export type StepKey = (typeof STEP_DEFS)[number]["key"];
 export type StepState = { key: StepKey; label: string; status: "pending" | "running" | "done" | "warning" | "failed" | "skipped"; note?: string; ms?: number };
 
 export type PipelineState = {
+  /** Earliest permit application date — drives the Applicable Code Date. */
+  applicationDate?: string | null;
   address: string;
   postalCity: string | null;
   lat: number | null;
@@ -619,26 +622,86 @@ async function floridaAmendments(n: Net, s: PipelineState, st: StateConfig): Pro
   return facts;
 }
 
-function researchedAdoptionFacts(s: PipelineState, scope: Set<ScopeAttribute>, only?: AdoptionDiscipline[]): Fact[] {
+type EvidenceRow = { id?: string; state: string; family: string; edition: string | null; adopted: string | null; effective_from: string | null; effective_to: string | null; source_published_at: string | null; retrieved_at: string; authority: string; source_type: string; url: string; quote: string; is_primary: boolean; proposed: boolean; local_only: boolean; recheck_after: string | null; source_status: string; note: string | null; layer: string; jurisdiction_key: string | null };
+const toEv = (r: EvidenceRow): CodeEvidence => ({ layer: r.layer as CodeEvidence["layer"], state: r.state, jurisdiction_key: r.jurisdiction_key, family: r.family as CodeFamily, edition: r.edition, adopted: r.adopted, effective_from: r.effective_from, effective_to: r.effective_to, published: r.source_published_at, retrieved_at: r.retrieved_at, authority: r.authority, source_type: r.source_type as SourceType, url: r.url, quote: r.quote, primary: r.is_primary && r.source_status !== "quote_missing", proposed: r.proposed, local_only: r.local_only, note: r.source_status === "quote_missing" ? `${r.note ?? ""} On the last recheck the cited text was no longer found on this page.`.trim() : r.note });
+const toRow = (e: CodeEvidence) => ({ layer: e.layer, state: e.state, jurisdiction_key: e.jurisdiction_key ?? null, family: e.family, edition: e.edition, adopted: e.adopted ?? null, effective_from: e.effective_from ?? null, effective_to: e.effective_to ?? null, source_published_at: e.published ?? null, retrieved_at: e.retrieved_at, authority: e.authority, source_type: e.source_type, url: e.url, quote: e.quote, is_primary: e.primary, proposed: !!e.proposed, local_only: !!e.local_only, note: e.note ?? null, discovered_by: "seed" });
+
+/** Load reusable evidence (DB knowledge + seed baseline), seeding the DB the first time a state is seen,
+ *  and recheck stale primary evidence by confirming the quoted text is still published. */
+// eslint-disable-next-line @typescript-eslint/no-explicit-any
+async function loadCodeEvidence(s: PipelineState, n: Net, db: any, today: string): Promise<{ evidence: CodeEvidence[]; rechecked: number; changed: number }> {
+  const seed = seedFor(s.state);
+  let rows: EvidenceRow[] = [];
+  if (db && s.state) {
+    const { data } = await db.from("code_adoption_evidence").select("*").eq("state", s.state).eq("layer", "state");
+    rows = (data ?? []) as EvidenceRow[];
+    const have = new Set(rows.map((r) => `${r.family}|${r.edition ?? ""}|${r.url}`));
+    const missing = seed.filter((e) => !have.has(`${e.family}|${e.edition ?? ""}|${e.url}`));
+    if (missing.length) {
+      const { data: ins } = await db.from("code_adoption_evidence").insert(missing.map(toRow)).select("*");
+      rows.push(...((ins ?? []) as EvidenceRow[]));
+    }
+  }
+  if (!rows.length) return { evidence: seed, rechecked: 0, changed: 0 };
+  let rechecked = 0, changed = 0;
+  for (const r of rows) {
+    if (!r.is_primary || !r.quote || (r.recheck_after && r.recheck_after > today) || rechecked >= 4) continue;
+    rechecked++;
+    const t = await getText(n, r.url, "code_recheck", "Code adoption source recheck", 0);
+    if (t === null) continue; // unreachable: keep prior evidence
+    const norm = (x: string) => x.toLowerCase().replace(/[^a-z0-9]+/g, " ");
+    const probe = norm(r.quote).split(" ").filter((w) => w.length > 3).slice(0, 8).join(" ");
+    const found = norm(t).includes(probe) || norm(t).includes(norm(r.quote).slice(0, 40));
+    const status = found ? "ok" : "quote_missing";
+    if (status !== r.source_status) changed++;
+    r.source_status = status; r.retrieved_at = new Date().toISOString();
+    await db.from("code_adoption_evidence").update({ source_status: status, retrieved_at: r.retrieved_at }).eq("id", r.id);
+  }
+  return { evidence: rows.map(toEv), rechecked, changed };
+}
+
+// eslint-disable-next-line @typescript-eslint/no-explicit-any
+async function temporalCodeFacts(s: PipelineState, n: Net, db: any, scope: Set<ScopeAttribute>, only?: CodeFamily[]): Promise<Fact[]> {
+  const today = new Date().toISOString().slice(0, 10);
+  const cd = applicableCodeDate({ application_date: s.applicationDate ?? null, today });
+  const { evidence } = await loadCodeEvidence(s, n, db, today);
   const out: Fact[] = [];
-  for (const a of adoptionsFor(s.state)) {
-    if (only && !only.includes(a.discipline)) continue;
-    const app = codeApplicability(a.discipline, scope);
-    const verified = a.primary && !!a.code;
-    out.push(mk({ fact_type: "code", fact_key: `researched:${a.discipline}`, label: `${a.discipline === "building" ? "Statewide building code" : a.discipline === "electrical" ? "Electrical code (NEC)" : "Fire code"} — ${s.state}`, value: { code: a.code, discipline: a.discipline, effective: a.effective, quote: a.quote || null, applicability: app.applicability, basis: app.basis, researched_as_of: RESEARCHED_AS_OF, primary_source: a.primary }, display_value: a.code ? `${a.code}${a.effective ? ` · effective ${a.effective}` : ""}` : null, source_org: a.org, source_title: a.quote ? `“${a.quote}”` : a.org, source_url: a.url, provider: "researched_state_adoption", source_tier: a.primary ? 2 : 6, origin: "research", verification: verified ? "verified" : "needs_verification", effective_date: a.effective, limitation: [a.note, a.primary ? null : "Cited from a copy or mirror, not the adopting agency's own page.", "Local adoption or amendments may change what applies to this property."].filter(Boolean).join(" ") }));
+  const families = [...new Set(evidence.map((e) => e.family))].filter((f) => !only || only.includes(f));
+  for (const fam of families) {
+    const r = resolveFamily(s.state!, fam, evidence, cd.date);
+    const app = codeApplicability(fam, scope);
+    const localState = LOCAL_ADOPTION_STATES.includes(s.state ?? "");
+    const verification = r.status === "current_verified" && !localState ? "verified" : "needs_verification";
+    const ref = r.current ? r.current.evidence[0]! : (r.future[0] ?? r.proposed[0])?.evidence[0] ?? evidence.find((e) => e.family === fam)!;
+    const evRec = (p: { edition: string; status: string; effective_from: string | null; effective_to: string | null; evidence: CodeEvidence[] }) => ({ edition: p.edition, status: p.status, status_label: TEMPORAL_LABEL[p.status as keyof typeof TEMPORAL_LABEL], effective_from: p.effective_from, effective_to: p.effective_to, sources: p.evidence.map((e) => ({ authority: e.authority, url: e.url, quote: e.quote, source_type: SOURCE_TYPE_LABEL[e.source_type], primary: e.primary, published: e.published ?? null })) });
+    out.push(mk({
+      fact_type: "code", fact_key: `temporal:${fam}`, label: `${FAMILY_LABEL[fam]} — ${s.state} state baseline`,
+      value: { family: fam, status: r.status, status_label: TEMPORAL_LABEL[r.status], why: r.why, code_date: cd.date, code_date_basis: cd.basis, code_date_caveat: cd.caveat,
+        current: r.current ? evRec(r.current) : null, future: r.future.map(evRec), proposed: r.proposed.map(evRec), superseded: r.superseded.map(evRec), conflicts: r.conflicts,
+        applicability: app.applicability, basis: app.basis, layer: "state", local_adoption_required: localState, recheck_after: r.recheck_after },
+      display_value: r.current ? `${r.current.edition} · ${TEMPORAL_LABEL[r.status]}` : TEMPORAL_LABEL[r.status],
+      source_org: ref?.authority ?? null, source_title: ref ? SOURCE_TYPE_LABEL[ref.source_type] : null, source_url: ref?.url ?? null,
+      provider: "code_adoption_evidence", source_tier: ref?.primary ? 2 : 6, origin: "research", verification, effective_date: r.current?.effective_from ?? null,
+      recheck_after: r.recheck_after,
+      conflicts: r.conflicts.map((c) => ({ source: c.authority, says: c.edition, url: c.url })),
+      limitation: [r.why, localState ? "This is only the state baseline — the local jurisdiction's adoption and amendments determine the code that applies to this project." : "Local amendments may modify this baseline.", cd.caveat].filter(Boolean).join(" "),
+    } as Fact));
   }
   const pol = amendmentPolicyFor(s.state);
-  if (pol) out.push(mk({ fact_type: "local_amendment", fact_key: "state_policy", label: `Local amendment rules — ${s.state}`, value: { policy: pol.policy }, display_value: pol.text, source_org: null, source_title: "State amendment policy", source_url: pol.url, provider: "researched_state_adoption", source_tier: pol.primary ? 2 : 6, origin: "research", verification: "needs_verification", limitation: "Whether this jurisdiction actually amended the code must be checked in its local ordinances." }));
+  if (pol) out.push(mk({ fact_type: "local_amendment", fact_key: "state_policy", label: `Local adoption / amendment rules — ${s.state}`, value: { policy: pol.policy }, display_value: pol.text, source_org: null, source_title: "State amendment policy", source_url: pol.url, provider: "code_adoption_evidence", source_tier: 2, origin: "research", verification: "needs_verification", limitation: "Whether this jurisdiction adopted or amended the code must be checked in its local ordinances." }));
   return out;
 }
 
-async function codesWorker(s: PipelineState, n: Net): Promise<StepResult> {
+const FAMILY_LABEL: Record<CodeFamily, string> = { building: "Building code", residential: "Residential code", existing_building: "Existing building code", electrical: "Electrical code", mechanical: "Mechanical code", plumbing: "Plumbing code", fuel_gas: "Fuel gas code", energy: "Energy code", fire: "Fire code", accessibility: "Accessibility code" };
+
+// eslint-disable-next-line @typescript-eslint/no-explicit-any
+async function codesWorker(s: PipelineState, n: Net, db: any = null): Promise<StepResult> {
   const st = s.state ? STATE_CONFIGS[s.state] : undefined;
   const facts: Fact[] = [];
   const scope = effectiveScope(normalizeScope({ scopeText: s.scopeText, workType: s.workType, projectType: s.projectType }).attributes, s.scopeCorrections) as Set<ScopeAttribute>;
   const today = new Date().toISOString().slice(0, 10);
   if (!st) {
-    facts.push(...researchedAdoptionFacts(s, scope));
+    facts.push(...(await temporalCodeFacts(s, n, db, scope)));
     const src = s.state ? STATE_CODE_SOURCES[s.state] : undefined;
     const text = src ? await getText(n, src.url, "state_code_page", "State code adoption page") : null;
     const found = new Map<string, Set<string>>();
@@ -680,7 +743,7 @@ async function codesWorker(s: PipelineState, n: Net): Promise<StepResult> {
     const text = [...pages.values(), resources].join(" ");
     if (st.pendingEditionPattern.re.test(text)) facts.push(mk({ fact_type: "special_condition", fact_key: "pending_code_edition", label: "Upcoming code edition", value: {}, display_value: "9th Edition (2026) FBC listed as a draft / upcoming edition", source_org: "Florida Building Commission", source_title: "Florida Building Code menu", source_url: st.codes[0]!.source.url, provider: "state_code_adoption", source_tier: 2, origin: "research", verification: "needs_verification", limitation: st.pendingEditionPattern.note }));
   }
-  facts.push(...researchedAdoptionFacts(s, scope, ["electrical"]));
+  facts.push(...(await temporalCodeFacts(s, n, db, scope, ["electrical"])));
   facts.push(...(await floridaAmendments(n, s, st)));
   const unresolved = facts.filter((f) => f.fact_type === "code" && f.verification !== "verified" && (f.value as { applicability?: string }).applicability !== "not_primary");
   const esc = facts.filter((f) => f.fact_type === "local_amendment" && f.verification !== "verified").length ? ["Codes: local amendment status could not be established from state registries — confirm with the local building official."] : [];
@@ -742,7 +805,7 @@ export async function runWorker(key: StepKey, s: PipelineState, u: Usage, db: an
     case "ahj": return ahjWorker(s, n, db);
     case "flood": return floodWorker(s, n);
     case "zoning": return { ...(await zoningWorker(s, n, db)), health: n.health };
-    case "codes": return codesWorker(s, n);
+    case "codes": return codesWorker(s, n, db);
     case "permits": return permitsWorker(s, n);
     case "reconcile": return reconcileWorker(s);
   }
