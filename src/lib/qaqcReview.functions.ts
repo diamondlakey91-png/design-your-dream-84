@@ -12,7 +12,6 @@ import {
   computeReadiness,
   containsProhibitedAssertion,
   PERMIVIO_PROFESSIONAL_DISCLAIMER,
-  readinessMeta,
   type QaQcCategoryId,
 } from "@/lib/qaqcConfig";
 
@@ -875,9 +874,12 @@ export const generateQaQcReportPdf = createServerFn({ method: "POST" })
     text(`Address: ${project?.location ?? ""}`);
     text(`Jurisdiction: ${review.jurisdiction_snapshot?.jurisdiction ?? project?.jurisdiction ?? "unconfirmed"}`);
     text(`Project type: ${project?.project_type ?? ""}`);
-    text(`Revision reviewed: ${review.revision_label}`);
-    text(`Prepared: ${new Date(review.created_at).toLocaleString()}`);
-    text(`Permit readiness: ${readinessMeta(review.readiness_category).label} (${review.readiness_score ?? 0}/100)`, { b: true, gap: 8 });
+    const { data: reviewedSet } = review.plan_set_id
+      ? await sb.from("plan_sets").select("title, version_number").eq("id", review.plan_set_id).maybeSingle()
+      : { data: null };
+    text(`Plan set reviewed: ${reviewedSet ? planSetLabel(reviewedSet) : review.revision_label}`);
+    text(`Review date: ${new Date(review.completed_at ?? review.created_at).toLocaleString()}`);
+    text("Pre-submittal QA/QC assistance. Findings are potential issues, not confirmed code violations. This report does not guarantee code compliance or permit approval and does not replace licensed professional or AHJ review.", { size: 8, color: [0.35, 0.38, 0.44], gap: 8 });
 
     heading("Executive summary");
     text(review.executive_summary || "No summary generated.");
@@ -914,12 +916,12 @@ export const generateQaQcReportPdf = createServerFn({ method: "POST" })
       if (!rows.length) continue;
       heading(`${sev.toUpperCase()} findings (${rows.length})`);
       for (const f of rows) {
-        text(`#${f.finding_no} [${f.discipline}] ${f.sheet_number ?? ""} — ${f.summary}`, { b: true, gap: 1 });
+        text(`#${f.finding_no} [${f.discipline}] ${f.sheet_number ?? ""}${f.page ? ` p.${f.page}` : ""}${(f.related_sheets ?? []).length ? ` <-> ${(f.related_sheets as string[]).join(", ")}` : ""} — ${f.summary}`, { b: true, gap: 1 });
         if (f.plain_language) text(`What it means: ${f.plain_language}`, { gap: 1 });
         if (f.why_it_matters) text(`Why it matters: ${f.why_it_matters}`, { gap: 1 });
         if (f.code_basis) text(`Potential basis: ${f.code_basis}`, { gap: 1 });
         if (f.recommended_action) text(`Recommended action: ${f.recommended_action}`, { gap: 1 });
-        text(`Responsible: ${f.responsible_discipline ?? f.discipline} · Status: ${f.verification.replace(/_/g, " ")}${f.jurisdiction_source_url ? ` · ${f.jurisdiction_source_url}` : ""}`, { size: 8, color: [0.35, 0.38, 0.44] });
+        text(`Responsible: ${f.responsible_discipline ?? f.discipline} · Status: ${String(f.status ?? "open").replace(/_/g, " ")} · Evidence: ${f.verification.replace(/_/g, " ")}${f.confidence ? ` · ${f.confidence} confidence` : ""}${f.jurisdiction_source_url ? ` · ${f.jurisdiction_source_url}` : ""}`, { size: 8, color: [0.35, 0.38, 0.44] });
       }
     }
 
