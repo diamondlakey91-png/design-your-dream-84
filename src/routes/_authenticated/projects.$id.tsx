@@ -131,6 +131,7 @@ function ProjectDetail() {
             setEditOpen(false);
             qc.invalidateQueries({ queryKey: ["project", id] });
             qc.invalidateQueries({ queryKey: ["projects"] });
+            qc.invalidateQueries({ queryKey: ["project-foundation", id] });
           } catch (e) {
             toast.error(e instanceof Error ? e.message : "Update failed");
           }
@@ -252,7 +253,7 @@ function EditProjectDialog({
 
   return (
     <Dialog open={open} onOpenChange={onOpenChange}>
-      <DialogContent>
+      <DialogContent className="max-h-[90vh] overflow-y-auto">
         <DialogHeader>
           <DialogTitle>Edit project</DialogTitle>
         </DialogHeader>
