@@ -365,6 +365,20 @@ export const runQaQcReview = createServerFn({ method: "POST" })
       .single();
     if (insErr || !review) throw new Error(insErr?.message ?? "Could not start review");
 
+    // Server-side entitlement: plans with a Plan Review allowance consume one
+    // credit per review (idempotent per review id); restored on system failure.
+    const { chargeIncludedUsage, refundCredit } = await import("@/lib/commerce.server");
+    let usageId: string | null = null;
+    try {
+      usageId = await chargeIncludedUsage(sb, context.userId, "plan_review_credits", `qaqc:${review.id}`, {
+        projectId: data.project_id,
+        reason: `Plan QA/QC review (${data.revision_label})`,
+      });
+    } catch (e) {
+      await sb.from("qaqc_reviews").update({ status: "error", error: "No Plan Review credit available" }).eq("id", review.id);
+      throw e;
+    }
+
     try {
       const { codes, sources, context: codeContext, agency_contacts } = await researchJurisdictionCodes(
         sb,
@@ -628,6 +642,7 @@ Return JSON: { "findings": [{ "severity": "critical|high|medium|low|informationa
     } catch (e) {
       const msg = e instanceof Error ? e.message : "QA/QC review failed";
       await sb.from("qaqc_reviews").update({ status: "error", error: msg }).eq("id", review.id);
+      if (usageId) await refundCredit(usageId, "QA/QC review failed — credit restored");
       throw new Error(msg);
     }
   });
