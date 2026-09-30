@@ -16,5 +16,7 @@
 - [ ] credit_balance() can be called with another user's id (returns 0 under RLS; no data exposed) — restrict to caller/service role
 - [ ] 9 documented DB warnings (1 extension in public, 8 SECURITY DEFINER) — intentionally unchanged
 - [x] H1/M1/M2/M3/M4 beta-blocking fixes (SIR insert, QA/QC sign-offs, professional reviews, filing status, jurisdiction human-verified)
+- [x] Phase 2A — Project Foundation (workspace header, overview, intake, jurisdiction context, activity, Next Actions)
+- [ ] Phase 2B — Roadmap + Documents (awaiting approval)
 - [ ] L1 jurisdiction profile creation + created_by/verified_by visible to customers
 - [ ] L3 empty-organization first-member edge case

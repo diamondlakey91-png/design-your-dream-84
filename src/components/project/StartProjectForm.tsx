@@ -32,6 +32,11 @@ export function StartProjectForm({ onCreated }: { onCreated?: (projectId: string
   const [primaryTypeId, setPrimaryTypeId] = useState<string | null>(null);
   const [permitCount, setPermitCount] = useState(3);
   const [geocodeVerified, setGeocodeVerified] = useState(false);
+  const [scope, setScope] = useState("");
+  const [occupancy, setOccupancy] = useState<"" | "residential" | "commercial" | "mixed_use">("");
+  const [workType, setWorkType] = useState("");
+  const [targetStart, setTargetStart] = useState("");
+  const [notes, setNotes] = useState("");
 
   const verifyMut = useMutation({
     mutationFn: () => geocodeFn({ data: { address: location } }),
@@ -47,7 +52,14 @@ export function StartProjectForm({ onCreated }: { onCreated?: (projectId: string
   const mut = useMutation({
     mutationFn: async () => {
       const row = await createFn({
-        data: { name, location, jurisdiction, project_type: projectType, permit_count: permitCount },
+        data: {
+          name, location, jurisdiction, project_type: projectType, permit_count: permitCount,
+          scope_description: scope.trim() || undefined,
+          occupancy_class: occupancy || undefined,
+          work_type: (workType || undefined) as never,
+          target_start_date: targetStart || undefined,
+          intake_notes: notes.trim() || undefined,
+        },
       });
       if (primaryTypeId) {
         await setTypeFn({
@@ -140,6 +152,48 @@ export function StartProjectForm({ onCreated }: { onCreated?: (projectId: string
           label=""
           helperText=""
         />
+      </Field>
+
+      <Field label="Scope of work (plain English)">
+        <textarea
+          value={scope}
+          onChange={(e) => setScope(e.target.value)}
+          rows={3}
+          maxLength={4000}
+          placeholder="e.g. Convert a 2,400 sq ft retail space into a 60-seat restaurant with a new hood and restrooms"
+          className="rounded-lg border border-input bg-card px-3 py-2 text-sm outline-none focus:border-primary"
+        />
+      </Field>
+
+      <div className="grid gap-3 sm:grid-cols-2">
+        <Field label="Residential or commercial">
+          <select value={occupancy} onChange={(e) => setOccupancy(e.target.value as typeof occupancy)} className="h-11 rounded-lg border border-input bg-card px-3 text-sm outline-none focus:border-primary">
+            <option value="">Not sure yet</option>
+            <option value="residential">Residential</option>
+            <option value="commercial">Commercial</option>
+            <option value="mixed_use">Mixed use</option>
+          </select>
+        </Field>
+        <Field label="Type of work">
+          <select value={workType} onChange={(e) => setWorkType(e.target.value)} className="h-11 rounded-lg border border-input bg-card px-3 text-sm outline-none focus:border-primary">
+            <option value="">Not sure yet</option>
+            <option value="new_construction">New construction</option>
+            <option value="addition">Addition</option>
+            <option value="alteration">Alteration / renovation</option>
+            <option value="tenant_improvement">Tenant improvement</option>
+            <option value="change_of_occupancy">Change of use</option>
+            <option value="demolition">Demolition</option>
+            <option value="other">Other</option>
+          </select>
+        </Field>
+      </div>
+
+      <Field label="Target start date (optional)">
+        <input type="date" value={targetStart} onChange={(e) => setTargetStart(e.target.value)} className="h-11 rounded-lg border border-input bg-card px-3 text-sm outline-none focus:border-primary" />
+      </Field>
+
+      <Field label="Notes (optional)">
+        <input value={notes} onChange={(e) => setNotes(e.target.value)} maxLength={4000} className="h-11 rounded-lg border border-input bg-card px-3 text-sm outline-none focus:border-primary" />
       </Field>
 
       <Field label="Estimated permit count">
