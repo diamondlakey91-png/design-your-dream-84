@@ -29,6 +29,7 @@ import { PlanQaQcTab } from "@/components/project/PlanQaQcTab";
 import { SiteInvestigationTab } from "@/components/project/SiteInvestigationTab";
 import { IntelligenceTab } from "@/components/project/IntelligenceTab";
 import { PropertyJurisdictionPanel } from "@/components/project/PropertyJurisdictionPanel";
+import { RegulatoryProfilePanel } from "@/components/project/RegulatoryProfilePanel";
 import { ProjectFoundationPanel, ProjectPhaseChips } from "@/components/project/ProjectFoundationPanel";
 import { useViewMode } from "@/hooks/useViewMode";
 import { ViewModeToggle } from "@/components/client/ViewModeToggle";
@@ -187,7 +188,10 @@ function ProjectDetail() {
         )}
         {tab === "intelligence" && <IntelligenceTab projectId={id} />}
         {tab === "property" && (
-          <PropertyJurisdictionPanel projectId={id} defaultAddress={project.location} projectType={project.project_type} />
+          <div className="space-y-6">
+            <RegulatoryProfilePanel projectId={id} />
+            <PropertyJurisdictionPanel projectId={id} defaultAddress={project.location} projectType={project.project_type} />
+          </div>
         )}
         {tab === "scope" && <ScopeTab projectId={id} defaultAddress={project.location} />}
         {tab === "site" && (
