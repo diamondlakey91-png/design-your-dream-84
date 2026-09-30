@@ -509,7 +509,7 @@ async function discoverZoning(s: PipelineState, n: Net, db: any): Promise<{ code
       const host = new URL(lu).hostname.toLowerCase();
       const onGov = !!govHost && (host.endsWith(govHost) || host.endsWith(".gov"));
       if (!stored && s.jurisdictionKey) await saveKnowledge(db, s.jurisdictionKey, c.owner, [{ category: "gis_zoning", url: lu, title: c.title, trust: onGov ? "authoritative_structured" : "official_catalogue_unconfirmed", host }]).catch(() => {});
-      return { code, field, layerUrl: lu, title: c.title, owner: c.owner, onGov, tried };
+      return { code, field: field ?? null, layerUrl: lu, title: c.title, owner: c.owner, onGov, tried };
     }
   }
   return { ...none, tried };
