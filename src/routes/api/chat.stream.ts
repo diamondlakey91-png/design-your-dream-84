@@ -157,14 +157,14 @@ export const Route = createFileRoute("/api/chat/stream")({
         const chargeKeyStr = `chat:${threadId}:${userId}:${(history ?? []).length}`;
         let charge: { usageId: string | null; internal: boolean };
         try {
-          charge = await chargeIncludedUsage(supabase, userId, "ai_queries", chargeKeyStr, { projectId: thread.project_id ?? null, reason: "AI Assistant message" });
+          charge = await chargeIncludedUsage(supabase, userId, "ai_messages", chargeKeyStr, { projectId: thread.project_id ?? null, reason: "AI Assistant message" });
         } catch (e) {
           const msg = e instanceof CreditRequiredError ? e.message : "We couldn't apply your credit. Please try again.";
           return new Response(msg, { status: 402 });
         }
         const failRun = async (err: string) => {
           if (charge.usageId) await refundCredit(charge.usageId, "AI Assistant message failed — credit restored");
-          await logAiCall({ userId, operation: "assistant_chat", model: "google/gemini-2.5-flash", success: false, error: err, projectId: thread.project_id ?? null, creditType: "ai_queries", creditTransactionId: charge.usageId, internal: charge.internal, key: chargeKeyStr, refunded: Boolean(charge.usageId) });
+          await logAiCall({ userId, operation: "assistant_chat", model: "google/gemini-2.5-flash", success: false, error: err, projectId: thread.project_id ?? null, creditType: "ai_messages", creditTransactionId: charge.usageId, internal: charge.internal, key: chargeKeyStr, refunded: Boolean(charge.usageId) });
         };
 
         const upstream = await aiFetch("https://ai.gateway.lovable.dev/v1/chat/completions", {
@@ -211,7 +211,7 @@ export const Route = createFileRoute("/api/chat/stream")({
                   } catch { /* ignore keep-alives / partial */ }
                 }
               }
-              await logAiCall({ userId, operation: "assistant_chat", model: "google/gemini-2.5-flash", success: true, projectId: thread.project_id ?? null, creditType: "ai_queries", creditTransactionId: charge.usageId, internal: charge.internal, key: chargeKeyStr });
+              await logAiCall({ userId, operation: "assistant_chat", model: "google/gemini-2.5-flash", success: true, projectId: thread.project_id ?? null, creditType: "ai_messages", creditTransactionId: charge.usageId, internal: charge.internal, key: chargeKeyStr });
               // Persist assistant message
               if (full.trim()) {
                 await supabase.from("chat_messages").insert({
