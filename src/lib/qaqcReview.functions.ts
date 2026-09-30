@@ -639,9 +639,11 @@ Return JSON: { "findings": [{ "severity": "critical|high|medium|low|informationa
         description: `Plan QA/QC review (${data.revision_label}) complete — ${allFindings.length} findings · ${readinessMeta(category).label}`,
       });
 
+      await (await import("@/lib/aiMeter.server")).logAiCall({ userId: context.userId, operation: "plan_qaqc", success: true, projectId: data.project_id, creditType: "plan_review_credits", creditTransactionId: usageId, internal: !usageId, key: `qaqc:${review.id}` });
       return { review_id: review.id as string, findings: allFindings.length, readiness_score: score, readiness_category: category };
     } catch (e) {
       const msg = e instanceof Error ? e.message : "QA/QC review failed";
+      await (await import("@/lib/aiMeter.server")).logAiCall({ userId: context.userId, operation: "plan_qaqc", success: false, error: msg, projectId: data.project_id, creditType: "plan_review_credits", creditTransactionId: usageId, refunded: Boolean(usageId), key: `qaqc:${review.id}` });
       await sb.from("qaqc_reviews").update({ status: "error", error: msg }).eq("id", review.id);
       if (usageId) await refundCredit(usageId, "QA/QC review failed — credit restored");
       throw new Error(msg);
