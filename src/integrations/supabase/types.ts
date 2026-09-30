@@ -5875,7 +5875,7 @@ export type Database = {
       roadmap_visible: { Args: { _roadmap_id: string }; Returns: boolean }
     }
     Enums: {
-      app_role: "admin" | "user"
+      app_role: "admin" | "user" | "internal_ai"
       authority_level:
         | "city"
         | "county"
@@ -6190,7 +6190,7 @@ export type CompositeTypes<
 export const Constants = {
   public: {
     Enums: {
-      app_role: ["admin", "user"],
+      app_role: ["admin", "user", "internal_ai"],
       authority_level: [
         "city",
         "county",
