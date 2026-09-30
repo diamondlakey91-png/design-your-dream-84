@@ -2211,49 +2211,82 @@ export type Database = {
       }
       permit_items: {
         Row: {
+          agency: string | null
           application_fields: Json | null
           application_packet_doc_id: string | null
+          application_url: string | null
           category: string
           created_at: string
+          depends_on: string[]
+          description: string | null
           due_date: string | null
+          fee_text: string | null
           id: string
+          last_verified_at: string | null
           name: string
           notes: string
+          owner_name: string | null
           project_id: string
           required: boolean
+          requirement_confidence: string
+          review_timing: string | null
+          roadmap_permit_id: string | null
           sort_order: number
+          source_url: string | null
           status: string
           updated_at: string
           user_id: string
         }
         Insert: {
+          agency?: string | null
           application_fields?: Json | null
           application_packet_doc_id?: string | null
+          application_url?: string | null
           category?: string
           created_at?: string
+          depends_on?: string[]
+          description?: string | null
           due_date?: string | null
+          fee_text?: string | null
           id?: string
+          last_verified_at?: string | null
           name: string
           notes?: string
+          owner_name?: string | null
           project_id: string
           required?: boolean
+          requirement_confidence?: string
+          review_timing?: string | null
+          roadmap_permit_id?: string | null
           sort_order?: number
+          source_url?: string | null
           status?: string
           updated_at?: string
           user_id: string
         }
         Update: {
+          agency?: string | null
           application_fields?: Json | null
           application_packet_doc_id?: string | null
+          application_url?: string | null
           category?: string
           created_at?: string
+          depends_on?: string[]
+          description?: string | null
           due_date?: string | null
+          fee_text?: string | null
           id?: string
+          last_verified_at?: string | null
           name?: string
           notes?: string
+          owner_name?: string | null
           project_id?: string
           required?: boolean
+          requirement_confidence?: string
+          review_timing?: string | null
+          roadmap_permit_id?: string | null
           sort_order?: number
+          source_url?: string | null
           status?: string
           updated_at?: string
           user_id?: string
@@ -2510,6 +2543,7 @@ export type Database = {
           disciplines: string[]
           document_ids: string[]
           id: string
+          is_current: boolean
           issue_date: string | null
           jurisdiction: string | null
           notes: string | null
@@ -2520,10 +2554,12 @@ export type Database = {
           revision_label: string | null
           sheet_count: number
           source_review_id: string | null
+          superseded_at: string | null
           tags: string[]
           title: string
           updated_at: string
           user_id: string
+          version_number: number | null
         }
         Insert: {
           archived?: boolean
@@ -2531,6 +2567,7 @@ export type Database = {
           disciplines?: string[]
           document_ids?: string[]
           id?: string
+          is_current?: boolean
           issue_date?: string | null
           jurisdiction?: string | null
           notes?: string | null
@@ -2541,10 +2578,12 @@ export type Database = {
           revision_label?: string | null
           sheet_count?: number
           source_review_id?: string | null
+          superseded_at?: string | null
           tags?: string[]
           title: string
           updated_at?: string
           user_id?: string
+          version_number?: number | null
         }
         Update: {
           archived?: boolean
@@ -2552,6 +2591,7 @@ export type Database = {
           disciplines?: string[]
           document_ids?: string[]
           id?: string
+          is_current?: boolean
           issue_date?: string | null
           jurisdiction?: string | null
           notes?: string | null
@@ -2562,10 +2602,12 @@ export type Database = {
           revision_label?: string | null
           sheet_count?: number
           source_review_id?: string | null
+          superseded_at?: string | null
           tags?: string[]
           title?: string
           updated_at?: string
           user_id?: string
+          version_number?: number | null
         }
         Relationships: [
           {
@@ -2743,6 +2785,7 @@ export type Database = {
           ai_summary: string | null
           analyzed_at: string | null
           created_at: string
+          document_category: string
           id: string
           mime_type: string
           name: string
@@ -2760,6 +2803,7 @@ export type Database = {
           ai_summary?: string | null
           analyzed_at?: string | null
           created_at?: string
+          document_category?: string
           id?: string
           mime_type?: string
           name: string
@@ -2777,6 +2821,7 @@ export type Database = {
           ai_summary?: string | null
           analyzed_at?: string | null
           created_at?: string
+          document_category?: string
           id?: string
           mime_type?: string
           name?: string
