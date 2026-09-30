@@ -1,4 +1,5 @@
-import { useEffect, useMemo, useState } from "react";
+import {
+  Layers, useEffect, useMemo, useState } from "react";
 import { Link, useLocation, useNavigate } from "@tanstack/react-router";
 import { useQuery, useQueryClient } from "@tanstack/react-query";
 import { useServerFn } from "@tanstack/react-start";
@@ -113,6 +114,7 @@ const TOOLS_PRO: NavLink[] = [
   },
   { to: "/lookup", label: "Permit Lookup", icon: MapPin, description: "Live permits by address" },
   { to: "/filing", label: "Permit Filing", icon: Send, description: "Submission workflow" },
+  { to: "/plans", label: "Plan Set Library", icon: Layers, description: "Search and reuse past plan sets" },
   { to: "/portals", label: "Portal Directory", icon: Library, description: "Mapped agency portals" },
 ];
 

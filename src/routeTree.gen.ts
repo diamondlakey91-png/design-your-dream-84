@@ -25,6 +25,7 @@ import { Route as AuthenticatedSettingsRouteImport } from './routes/_authenticat
 import { Route as AuthenticatedReportRouteImport } from './routes/_authenticated/report'
 import { Route as AuthenticatedPropertyRouteImport } from './routes/_authenticated/property'
 import { Route as AuthenticatedPortalsRouteImport } from './routes/_authenticated/portals'
+import { Route as AuthenticatedPlansRouteImport } from './routes/_authenticated/plans'
 import { Route as AuthenticatedPlanQaqcRouteImport } from './routes/_authenticated/plan-qaqc'
 import { Route as AuthenticatedLookupRouteImport } from './routes/_authenticated/lookup'
 import { Route as AuthenticatedJurisdictionsRouteImport } from './routes/_authenticated/jurisdictions'
@@ -143,6 +144,11 @@ const AuthenticatedPropertyRoute = AuthenticatedPropertyRouteImport.update({
 const AuthenticatedPortalsRoute = AuthenticatedPortalsRouteImport.update({
   id: '/portals',
   path: '/portals',
+  getParentRoute: () => AuthenticatedRouteRoute,
+} as any)
+const AuthenticatedPlansRoute = AuthenticatedPlansRouteImport.update({
+  id: '/plans',
+  path: '/plans',
   getParentRoute: () => AuthenticatedRouteRoute,
 } as any)
 const AuthenticatedPlanQaqcRoute = AuthenticatedPlanQaqcRouteImport.update({
@@ -388,6 +394,7 @@ export interface FileRoutesByFullPath {
   '/jurisdictions': typeof AuthenticatedJurisdictionsRouteWithChildren
   '/lookup': typeof AuthenticatedLookupRoute
   '/plan-qaqc': typeof AuthenticatedPlanQaqcRoute
+  '/plans': typeof AuthenticatedPlansRoute
   '/portals': typeof AuthenticatedPortalsRoute
   '/property': typeof AuthenticatedPropertyRoute
   '/report': typeof AuthenticatedReportRouteWithChildren
@@ -444,6 +451,7 @@ export interface FileRoutesByTo {
   '/jurisdictions': typeof AuthenticatedJurisdictionsRouteWithChildren
   '/lookup': typeof AuthenticatedLookupRoute
   '/plan-qaqc': typeof AuthenticatedPlanQaqcRoute
+  '/plans': typeof AuthenticatedPlansRoute
   '/portals': typeof AuthenticatedPortalsRoute
   '/property': typeof AuthenticatedPropertyRoute
   '/report': typeof AuthenticatedReportRouteWithChildren
@@ -502,6 +510,7 @@ export interface FileRoutesById {
   '/_authenticated/jurisdictions': typeof AuthenticatedJurisdictionsRouteWithChildren
   '/_authenticated/lookup': typeof AuthenticatedLookupRoute
   '/_authenticated/plan-qaqc': typeof AuthenticatedPlanQaqcRoute
+  '/_authenticated/plans': typeof AuthenticatedPlansRoute
   '/_authenticated/portals': typeof AuthenticatedPortalsRoute
   '/_authenticated/property': typeof AuthenticatedPropertyRoute
   '/_authenticated/report': typeof AuthenticatedReportRouteWithChildren
@@ -561,6 +570,7 @@ export interface FileRouteTypes {
     | '/jurisdictions'
     | '/lookup'
     | '/plan-qaqc'
+    | '/plans'
     | '/portals'
     | '/property'
     | '/report'
@@ -617,6 +627,7 @@ export interface FileRouteTypes {
     | '/jurisdictions'
     | '/lookup'
     | '/plan-qaqc'
+    | '/plans'
     | '/portals'
     | '/property'
     | '/report'
@@ -674,6 +685,7 @@ export interface FileRouteTypes {
     | '/_authenticated/jurisdictions'
     | '/_authenticated/lookup'
     | '/_authenticated/plan-qaqc'
+    | '/_authenticated/plans'
     | '/_authenticated/portals'
     | '/_authenticated/property'
     | '/_authenticated/report'
@@ -848,6 +860,13 @@ declare module '@tanstack/react-router' {
       path: '/portals'
       fullPath: '/portals'
       preLoaderRoute: typeof AuthenticatedPortalsRouteImport
+      parentRoute: typeof AuthenticatedRouteRoute
+    }
+    '/_authenticated/plans': {
+      id: '/_authenticated/plans'
+      path: '/plans'
+      fullPath: '/plans'
+      preLoaderRoute: typeof AuthenticatedPlansRouteImport
       parentRoute: typeof AuthenticatedRouteRoute
     }
     '/_authenticated/plan-qaqc': {
@@ -1205,6 +1224,7 @@ interface AuthenticatedRouteRouteChildren {
   AuthenticatedJurisdictionsRoute: typeof AuthenticatedJurisdictionsRouteWithChildren
   AuthenticatedLookupRoute: typeof AuthenticatedLookupRoute
   AuthenticatedPlanQaqcRoute: typeof AuthenticatedPlanQaqcRoute
+  AuthenticatedPlansRoute: typeof AuthenticatedPlansRoute
   AuthenticatedPortalsRoute: typeof AuthenticatedPortalsRoute
   AuthenticatedPropertyRoute: typeof AuthenticatedPropertyRoute
   AuthenticatedReportRoute: typeof AuthenticatedReportRouteWithChildren
@@ -1237,6 +1257,7 @@ const AuthenticatedRouteRouteChildren: AuthenticatedRouteRouteChildren = {
   AuthenticatedJurisdictionsRoute: AuthenticatedJurisdictionsRouteWithChildren,
   AuthenticatedLookupRoute: AuthenticatedLookupRoute,
   AuthenticatedPlanQaqcRoute: AuthenticatedPlanQaqcRoute,
+  AuthenticatedPlansRoute: AuthenticatedPlansRoute,
   AuthenticatedPortalsRoute: AuthenticatedPortalsRoute,
   AuthenticatedPropertyRoute: AuthenticatedPropertyRoute,
   AuthenticatedReportRoute: AuthenticatedReportRouteWithChildren,
