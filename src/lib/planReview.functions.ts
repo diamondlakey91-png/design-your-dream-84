@@ -708,7 +708,7 @@ async function runReviewerSummary(supabase: any, projectId: string) { // eslint-
       .from("project_documents")
       .select("name, ai_summary, ai_action_items, plan_review")
       .eq("project_id", data.project_id);
-    const analyzed = (docs ?? []).filter((d) => d.ai_summary || d.ai_action_items || d.plan_review);
+    const analyzed = (docs ?? []).filter((d: any) => d.ai_summary || d.ai_action_items || d.plan_review);
     if (analyzed.length === 0) throw new Error("Analyze or plan-review at least one document first.");
     const prompt = `Consolidate reviewer comments across these documents into themes an owner/PM can act on:
 
