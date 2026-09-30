@@ -445,7 +445,9 @@ export const runQaQcReview = createServerFn({ method: "POST" })
           })
           .eq("id", review.id);
       }
-      const projectBlock = contextBlock(ctx);
+      const { regulatoryContextBlock } = await import("@/lib/regIntel/planReviewContext");
+      const regBlock = await regulatoryContextBlock(sb, data.project_id).catch(() => "");
+      const projectBlock = regBlock ? `${contextBlock(ctx)}\n${regBlock}` : contextBlock(ctx);
       const batches = await buildPlanBatches(sb, docs);
       if (!batches.length) throw new Error("Selected documents could not be read (PDF or image only).");
 
