@@ -10,3 +10,8 @@
 ## Phase 1.2 follow-ups (recorded, not started)
 - [ ] A. Correction Review runs must also write to the central AI usage log (ai_usage_log), not only the credit ledger
 - [ ] B. Customer-purchased Site Investigation must not be classified "Internal"; add a separate funding classification (e.g. purchased_service / order-funded) with internal_use=false — schema not yet chosen
+- [x] A. (done) Correction Review runs written to ai_usage_log
+
+## Security-hardening backlog (recorded, not started)
+- [ ] credit_balance() can be called with another user's id (returns 0 under RLS; no data exposed) — restrict to caller/service role
+- [ ] 9 documented DB warnings (1 extension in public, 8 SECURITY DEFINER) — intentionally unchanged
