@@ -12,6 +12,7 @@ import { seedFor, amendmentPolicyFor, LOCAL_ADOPTION_STATES } from "./stateAdopt
 import { resolveFamily, applicableCodeDate, TEMPORAL_LABEL, SOURCE_TYPE_LABEL, type CodeEvidence, type CodeFamily, type SourceType } from "./codeTemporal";
 import { resolveGoverningUnit, matchDotGov, classifyLink, govNameTokens, type GoverningUnit, type DotGovRow, type GeoUnit } from "./nationalAhj";
 import { evaluatePermitCandidates, REQUIREMENT_TYPE_LABEL } from "./rules";
+import { adoptionLinkScore, extractAdoptionStatements, classifySourceType, toEvidence, htmlToText, statePreemptionCue } from "./evidenceFollower";
 
 export const STEP_DEFS = [
   { key: "property", label: "Locating address & parcel" },
@@ -20,6 +21,7 @@ export const STEP_DEFS = [
   { key: "flood", label: "Checking FEMA flood data" },
   { key: "zoning", label: "Researching zoning & land use" },
   { key: "codes", label: "Researching applicable codes" },
+  { key: "local", label: "Researching local code adoption & amendments" },
   { key: "permits", label: "Determining scope-specific permits" },
   { key: "reconcile", label: "Reconciling evidence" },
 ] as const;
@@ -341,10 +343,30 @@ async function ahjWorker(s: PipelineState, n: Net, db: any): Promise<StepResult>
     const d = await discoverOfficialSources(n, unit.name, unit.level, s.state);
     sources = d.sources;
     domainOrg = d.domain?.org ?? null;
+    // Townships / minor civil divisions often rely on the county (or state) for building services:
+    // when the unit has no .gov, also discover the county's official sources, labelled as county sources.
+    if (sources.length <= 1) {
+      const stName = STATE_NAMES[s.state] ?? s.state;
+      const { core } = govNameTokens(unit.name);
+      const tie = (h: string) => /\.(gov|us)$/.test(h) || (!!core && h.replace(/[^a-z]/g, "").includes(core.replace(/[^a-z]/g, "")));
+      const hits = await searchOfficial(n, `${unit.name} ${stName} building permits zoning official`, (h) => tie(h) || VENDOR_HOST.test(h));
+      // A city/town must not inherit a county page (e.g. City of Los Angeles ≠ Los Angeles County).
+      const wrongLevel = (h: { host: string; title: string }) => unit.level !== "county" && /count(y|ies)/i.test(`${h.host} ${h.title}`) && !/city and county|consolidated/i.test(h.title);
+      for (const h of hits.filter((x) => !wrongLevel(x)).slice(0, 5)) {
+        const onGov = /\.(gov|us)$/.test(h.host);
+        if (!onGov && !VENDOR_HOST.test(h.host)) VERIFIED_EXTRA_HOSTS.add(h.host);
+        const cat = classifyLink(h.title, h.url) ?? (sources.some((x) => x.category === "official_website") ? "permits" : "official_website");
+        if (!sources.some((x) => x.url === h.url)) sources.push({ category: cat, url: h.url, title: h.title.slice(0, 120), trust: onGov ? "official_informational" : VENDOR_HOST.test(h.host) ? "official_linked_vendor" : "unverified_domain", host: h.host });
+      }
+    }
+    if (unit.level !== "county" && unit.certainty !== "structural" && s.county && sources.length <= 1) {
+      const c = await discoverOfficialSources(n, s.county, "county", s.state);
+      sources = [...sources, ...c.sources.map((x) => ({ ...x, title: `${s.county}: ${x.title}`, category: x.category === "official_website" ? "county_website" : x.category }))];
+    }
     await saveKnowledge(db, key, domainOrg ?? unit.name, sources).catch(() => {});
   }
   s.discovered = sources;
-  const site = sources.find((x) => x.category === "official_website");
+  const site = sources.find((x) => x.category === "official_website") ?? sources.find((x) => x.category === "county_website");
   const pick = (cat: string) => sources!.find((x) => x.category === cat) ?? null;
   const bldPage = pick("building") ?? pick("permits");
   const portal = pick("permit_portal");
@@ -379,7 +401,7 @@ async function ahjWorker(s: PipelineState, n: Net, db: any): Promise<StepResult>
     const ww = String(s.parcel["WASTEWATERSERVICEAREAS"] ?? "").trim();
     if (w || ww) facts.push(mk({ fact_type: "agency", fact_key: "utility", label: "Water / wastewater service area", value: { water: w || null, wastewater: ww || null }, display_value: `Water: ${w || "—"} · Wastewater: ${ww || "—"}`, source_org: cfg.gisOrg, source_title: cfg.layers.parcel!.title, source_url: s.parcelUrl, provider: "county_arcgis_parcel", source_tier: 1, origin: "research", verification: "verified", limitation: "Service area does not prove a line is available at the lot." }));
   }
-  const esc = site ? [] : [`Permitting authority: official website for ${unit.name} not discovered automatically.`];
+  const esc = site || sources.some((x) => ["building", "permits", "zoning"].includes(x.category)) ? [] : [`Permitting authority: official website for ${unit.name} not discovered automatically.`];
   return { facts, health: n.health, status: site ? "done" : "warning", escalations: esc, note: reused ? "Reused jurisdiction knowledge" : `${sources.length} official source(s) discovered` };
 }
 
@@ -661,18 +683,26 @@ async function loadCodeEvidence(s: PipelineState, n: Net, db: any, today: string
 }
 
 // eslint-disable-next-line @typescript-eslint/no-explicit-any
-async function temporalCodeFacts(s: PipelineState, n: Net, db: any, scope: Set<ScopeAttribute>, only?: CodeFamily[]): Promise<Fact[]> {
+async function temporalCodeFacts(s: PipelineState, n: Net, db: any, scope: Set<ScopeAttribute>, only?: CodeFamily[], extra: CodeEvidence[] = []): Promise<Fact[]> {
   const today = new Date().toISOString().slice(0, 10);
   const cd = applicableCodeDate({ application_date: s.applicationDate ?? null, today });
   const { evidence } = await loadCodeEvidence(s, n, db, today);
+  evidence.push(...extra);
   const out: Fact[] = [];
-  const families = [...new Set(evidence.map((e) => e.family))].filter((f) => !only || only.includes(f));
+  // Dynamic code stack: every family relevant to this scope is shown, even when no evidence was found.
+  const relevant = ALL_FAMILIES.filter((f) => codeApplicability(f, scope).applicability !== "not_primary");
+  const families = [...new Set([...evidence.map((e) => e.family), ...(only ? [] : relevant)])].filter((f) => !only || only.includes(f));
+  // A "state baseline" may only be Verified when its citation is on a STATE government host
+  // (a city page quoting the state code is useful evidence, not the legal authority).
+  const regRows = await dotgovRows(n);
+  const stateHosts = new Set(regRows.filter((r) => r.type.startsWith("State") && r.state.toUpperCase() === s.state).map((r) => r.domain));
+  const onStateHost = (url: string | null | undefined) => { try { const h = new URL(url!).hostname.toLowerCase().replace(/^www\./, ""); return [...stateHosts].some((d) => h === d || h.endsWith(`.${d}`)) || /\.state\.[a-z]{2}\.us$/.test(h); } catch { return false; } };
   for (const fam of families) {
     const r = resolveFamily(s.state!, fam, evidence, cd.date);
     const app = codeApplicability(fam, scope);
     const localState = LOCAL_ADOPTION_STATES.includes(s.state ?? "");
-    const verification = r.status === "current_verified" && !localState ? "verified" : "needs_verification";
-    const ref = r.current ? r.current.evidence[0]! : (r.future[0] ?? r.proposed[0])?.evidence[0] ?? evidence.find((e) => e.family === fam)!;
+    const ref = r.current ? r.current.evidence[0]! : (r.future[0] ?? r.proposed[0])?.evidence[0] ?? evidence.find((e) => e.family === fam) ?? null;
+    const verification = r.status === "current_verified" && !localState && (onStateHost(ref?.url) || (r.current?.evidence ?? []).some((e) => onStateHost(e.url))) ? "verified" : "needs_verification";
     const evRec = (p: { edition: string; status: string; effective_from: string | null; effective_to: string | null; evidence: CodeEvidence[] }) => ({ edition: p.edition, status: p.status, status_label: TEMPORAL_LABEL[p.status as keyof typeof TEMPORAL_LABEL], effective_from: p.effective_from, effective_to: p.effective_to, sources: p.evidence.map((e) => ({ authority: e.authority, url: e.url, quote: e.quote, source_type: SOURCE_TYPE_LABEL[e.source_type], primary: e.primary, published: e.published ?? null })) });
     out.push(mk({
       fact_type: "code", fact_key: `temporal:${fam}`, label: `${FAMILY_LABEL[fam]} — ${s.state} state baseline`,
@@ -692,6 +722,7 @@ async function temporalCodeFacts(s: PipelineState, n: Net, db: any, scope: Set<S
   return out;
 }
 
+const ALL_FAMILIES: CodeFamily[] = ["building", "residential", "existing_building", "electrical", "mechanical", "plumbing", "fuel_gas", "energy", "fire", "accessibility"];
 const FAMILY_LABEL: Record<CodeFamily, string> = { building: "Building code", residential: "Residential code", existing_building: "Existing building code", electrical: "Electrical code", mechanical: "Mechanical code", plumbing: "Plumbing code", fuel_gas: "Fuel gas code", energy: "Energy code", fire: "Fire code", accessibility: "Accessibility code" };
 
 // eslint-disable-next-line @typescript-eslint/no-explicit-any
@@ -701,7 +732,10 @@ async function codesWorker(s: PipelineState, n: Net, db: any = null): Promise<St
   const scope = effectiveScope(normalizeScope({ scopeText: s.scopeText, workType: s.workType, projectType: s.projectType }).attributes, s.scopeCorrections) as Set<ScopeAttribute>;
   const today = new Date().toISOString().slice(0, 10);
   if (!st) {
-    facts.push(...(await temporalCodeFacts(s, n, db, scope)));
+    const seeded = seedFor(s.state).length > 0;
+    const disc = seeded ? { evidence: [] as CodeEvidence[], pages: 0, sources: [] as string[] } : await discoverStateCodeEvidence(s, n);
+    facts.push(...(await temporalCodeFacts(s, n, db, scope, undefined, disc.evidence)));
+    if (!seeded) facts.push(mk({ fact_type: "code", fact_key: "state_authority_discovery", label: `State code authority — discovered (${s.state})`, value: { pages_read: disc.pages, sources: disc.sources, statements: disc.evidence.length }, display_value: disc.sources.length ? `${disc.sources.length} official state source(s) · ${disc.evidence.length} edition statement(s)` : "No official state code authority discovered", source_org: "CISA .gov registry → state agency websites", source_title: "Autonomous official-source discovery", source_url: disc.sources[0] ?? null, provider: "evidence_follower", source_tier: disc.sources.length ? 3 : 7, origin: "research", verification: "needs_verification", limitation: "Editions were read only from official state pages and the documents they link to. Page wording is not a formal adoption record unless it is a statute, rule or adoption notice." }));
     const src = s.state ? STATE_CODE_SOURCES[s.state] : undefined;
     const text = src ? await getText(n, src.url, "state_code_page", "State code adoption page") : null;
     const found = new Map<string, Set<string>>();
@@ -713,7 +747,6 @@ async function codesWorker(s: PipelineState, n: Net, db: any = null): Promise<St
       }
     }
     facts.push(mk({ fact_type: "code", fact_key: "state_adoption", label: "State code adoption", value: { state: s.state, source: src?.url ?? null, extracted: found.size }, display_value: src ? (text ? `${src.title} — ${found.size ? `${found.size} code families found` : "no editions extracted"}` : `${src.title} — page unavailable`) : null, source_org: src?.org ?? null, source_title: src?.title ?? null, source_url: src?.url ?? null, provider: "state_code_page_extraction", source_tier: src ? 3 : 7, origin: "research", verification: "needs_verification", limitation: `${src ? "" : `No state adoption source is known for ${s.state ?? "this state"} yet — `}Model code → state adoption → state modifications → local adoption must be confirmed for this jurisdiction. Do not assume the newest model code.` }));
-    facts.push(mk({ fact_type: "local_amendment", fact_key: "building", label: "Local code adoption / amendments", value: { status: "unknown" }, display_value: null, source_org: null, source_title: null, source_url: s.discovered?.find((d) => d.category === "municipal_code")?.url ?? null, provider: "local_amendment_research", source_tier: 7, origin: "research", verification: "needs_verification", limitation: "Local adoption and amendments were not established automatically. Check the local code of ordinances." }));
     return { facts, health: n.health, status: "warning", escalations: [`Codes: applicable code editions for ${s.unit?.name ?? s.state ?? "this jurisdiction"} need confirmation.`] };
   }
   const pages = new Map<string, string | null>();
@@ -748,6 +781,160 @@ async function codesWorker(s: PipelineState, n: Net, db: any = null): Promise<St
   const unresolved = facts.filter((f) => f.fact_type === "code" && f.verification !== "verified" && (f.value as { applicability?: string }).applicability !== "not_primary");
   const esc = facts.filter((f) => f.fact_type === "local_amendment" && f.verification !== "verified").length ? ["Codes: local amendment status could not be established from state registries — confirm with the local building official."] : [];
   return { facts, health: n.health, status: unresolved.length ? "warning" : "done", escalations: esc, sourceUnavailable: pages.size && [...pages.values()].every((t) => !t) ? st.codes.map((v) => `code:${v.key}`) : [] };
+}
+
+// ------------------------------------------------------------------ evidence following (nationwide)
+
+// Discovery assist (paid, metered): web search only LOCATES candidate pages; a result is used only when its
+// host is an official government / official code-publisher host. Search snippets are never evidence.
+const PAID_BUDGET = 14;
+const mdLinks = (md: string) => [...md.matchAll(/\[([^\]]{0,120})\]\((https?:[^)\s]+)\)/g)].map((m) => ({ text: m[1]!, href: m[2]! }));
+async function searchOfficial(n: Net, query: string, accept: (host: string) => boolean, limit = 6): Promise<Array<{ url: string; title: string; host: string }>> {
+  const key = process.env["FIRECRAWL_API_KEY"];
+  if (!key || n.u.paid_data_calls >= PAID_BUDGET) return [];
+  const t0 = Date.now();
+  n.u.paid_data_calls++; n.u.estimated_cost_usd += 0.002;
+  try {
+    const { firecrawlSearch } = await import("@/lib/firecrawl.shared");
+    const r = await firecrawlSearch(key, query, limit);
+    track(n, "discovery_search", "Web search (discovery only)", "api.firecrawl.dev/search", true, 1, Date.now() - t0);
+    return r.map((x) => { let host = ""; try { host = new URL(x.url).hostname.toLowerCase(); } catch { /* skip */ } return { url: x.url, title: x.title ?? x.url, host }; }).filter((x) => x.host && accept(x.host));
+  } catch (e) {
+    track(n, "discovery_search", "Web search (discovery only)", "api.firecrawl.dev/search", false, 1, Date.now() - t0, (e as Error).message);
+    return [];
+  }
+}
+async function scrapeFallback(n: Net, url: string): Promise<{ text: string; links: Array<{ text: string; href: string }> } | null> {
+  const key = process.env["FIRECRAWL_API_KEY"];
+  if (!key || n.u.paid_data_calls >= PAID_BUDGET) return null;
+  const t0 = Date.now();
+  n.u.paid_data_calls++; n.u.estimated_cost_usd += 0.001;
+  try {
+    const { firecrawlScrape } = await import("@/lib/firecrawl.shared");
+    const r = await firecrawlScrape(key, url);
+    track(n, "official_page_render", "Official page (rendered retrieval)", url.split("?")[0]!, !!r.markdown, 1, Date.now() - t0);
+    return r.markdown ? { text: r.markdown.replace(/\[([^\]]*)\]\([^)]*\)/g, "$1").replace(/\s+/g, " "), links: mdLinks(r.markdown) } : null;
+  } catch (e) {
+    track(n, "official_page_render", "Official page (rendered retrieval)", url.split("?")[0]!, false, 1, Date.now() - t0, (e as Error).message);
+    return null;
+  }
+}
+
+/** Non-.gov hosts accepted for crawling in this run because discovery tied them to the named government. */
+const VERIFIED_EXTRA_HOSTS = new Set<string>();
+const PAGE_CACHE = new Map<string, { at: number; text: string | null; links: Array<{ text: string; href: string }> }>();
+const isOfficialHost = (h: string) => /\.(gov|us)$/.test(h) || VERIFIED_EXTRA_HOSTS.has(h) || /(municode|ecode360|amlegal|codelibrary|codepublishing|generalcode)/.test(h);
+
+/** Bounded breadth-first crawl from official seed pages, following only links that point toward adoption evidence. */
+async function followEvidence(n: Net, seeds: string[], opts: { maxPages: number; maxDepth: number; provider: string; label: string }): Promise<Array<{ url: string; text: string; depth: number }>> {
+  const out: Array<{ url: string; text: string; depth: number }> = [];
+  const queue = seeds.map((u) => ({ url: u, depth: 0, score: 99 }));
+  const seen = new Set<string>();
+  while (queue.length && out.length < opts.maxPages) {
+    queue.sort((a, b) => b.score - a.score);
+    const cur = queue.shift()!;
+    const key = cur.url.split("#")[0]!;
+    if (seen.has(key)) continue;
+    seen.add(key);
+    let host = "";
+    try { host = new URL(key).hostname.toLowerCase(); } catch { continue; }
+    if (!isOfficialHost(host)) continue;
+    let hit = PAGE_CACHE.get(key);
+    if (hit && Date.now() - hit.at < 6 * 3600000) n.u.cache_hits++;
+    else {
+      if (/\.pdf(\?|$)/i.test(key)) { hit = { at: Date.now(), text: null, links: [] }; } // PDFs recorded as links only (text extraction not run in the Worker)
+      else {
+        const r = await getRaw(n, key, {}, opts.provider, opts.label);
+        hit = { at: Date.now(), text: r.html ? htmlToText(r.html) : null, links: r.html ? extractLinks(r.html, key) : [] };
+        // Bot-blocked / script-rendered official page: retrieve it once through the rendering service.
+        if (!hit.text || hit.text.length < 400) { const f = await scrapeFallback(n, key); if (f) hit = { at: Date.now(), text: f.text, links: f.links }; }
+      }
+      PAGE_CACHE.set(key, hit);
+    }
+    if (!hit.text) continue;
+    out.push({ url: key, text: hit.text, depth: cur.depth });
+    if (cur.depth >= opts.maxDepth) continue;
+    for (const l of hit.links) {
+      const sc = adoptionLinkScore(l.text, l.href);
+      if (sc >= 3 && !seen.has(l.href)) queue.push({ url: l.href, depth: cur.depth + 1, score: sc });
+    }
+  }
+  return out;
+}
+
+const STATE_NAMES: Record<string, string> = { AL: "Alabama", AK: "Alaska", AZ: "Arizona", AR: "Arkansas", CA: "California", CO: "Colorado", CT: "Connecticut", DE: "Delaware", DC: "District of Columbia", FL: "Florida", GA: "Georgia", HI: "Hawaii", ID: "Idaho", IL: "Illinois", IN: "Indiana", IA: "Iowa", KS: "Kansas", KY: "Kentucky", LA: "Louisiana", ME: "Maine", MD: "Maryland", MA: "Massachusetts", MI: "Michigan", MN: "Minnesota", MS: "Mississippi", MO: "Missouri", MT: "Montana", NE: "Nebraska", NV: "Nevada", NH: "New Hampshire", NJ: "New Jersey", NM: "New Mexico", NY: "New York", NC: "North Carolina", ND: "North Dakota", OH: "Ohio", OK: "Oklahoma", OR: "Oregon", PA: "Pennsylvania", RI: "Rhode Island", SC: "South Carolina", SD: "South Dakota", TN: "Tennessee", TX: "Texas", UT: "Utah", VT: "Vermont", VA: "Virginia", WA: "Washington", WV: "West Virginia", WI: "Wisconsin", WY: "Wyoming" };
+
+/** Unknown state: find its code authority through the .gov registry, then follow the evidence chain. */
+async function discoverStateCodeEvidence(s: PipelineState, n: Net): Promise<{ evidence: CodeEvidence[]; pages: number; sources: string[] }> {
+  if (!s.state) return { evidence: [], pages: 0, sources: [] };
+  const rows = await dotgovRows(n);
+  const name = STATE_NAMES[s.state] ?? s.state;
+  const stateRows = rows.filter((r) => r.type.startsWith("State") && r.state.toUpperCase() === s.state);
+  const CODE_RE = /(building|construction|codes?|fire ?marshal|firemarshal|commerce|labor|industr|licens|safety|housing|dhcd|dli|dol)/i;
+  const agencies = stateRows.filter((r) => CODE_RE.test(`${r.org} ${r.domain}`) && !/(court|election|lottery|tourism|fish|hunt|veteran|school|college|univ)/i.test(`${r.org} ${r.domain}`))
+    .sort((a, b) => Number(/(building|codes?|construction|fire ?marshal)/i.test(`${b.org} ${b.domain}`)) - Number(/(building|codes?|construction|fire ?marshal)/i.test(`${a.org} ${a.domain}`))).slice(0, 4);
+  const portal = stateRows.find((r) => r.domain === `${name.toLowerCase().replace(/ /g, "")}.gov`) ?? stateRows.find((r) => r.domain === `${s.state!.toLowerCase()}.gov`);
+  const seeds = [...agencies.map((a) => `https://${a.domain}/`), ...(portal ? [`https://${portal.domain}/`] : [])];
+  const found = await searchOfficial(n, `${name} state building code adopted edition effective date residential commercial`, (h) => /\.(gov|us)$/.test(h));
+  seeds.unshift(...found.map((f) => f.url).slice(0, 4));
+  const pages = await followEvidence(n, seeds, { maxPages: 10, maxDepth: 2, provider: "state_official_site", label: `${name} official state website` });
+  const evidence: CodeEvidence[] = [];
+  const sources: string[] = [];
+  for (const p of pages) {
+    const stmts = extractAdoptionStatements(p.text);
+    if (!stmts.length) continue;
+    sources.push(p.url);
+    const type = classifySourceType(p.url, p.text);
+    const auth = agencies.find((a) => p.url.includes(a.domain))?.org ?? `${name} state government`;
+    for (const st of stmts) evidence.push(toEvidence(st, { layer: "state", state: s.state, authority: auth, url: p.url, source_type: type, primary: true }));
+  }
+  return { evidence, pages: pages.length, sources };
+}
+
+/** Local AHJ adoption & amendment research. Never substitutes the state baseline for an unestablished local adoption. */
+// eslint-disable-next-line @typescript-eslint/no-explicit-any
+async function localWorker(s: PipelineState, n: Net, db: any): Promise<StepResult> {
+  const facts: Fact[] = [];
+  const unit = s.unit;
+  const localState = LOCAL_ADOPTION_STATES.includes(s.state ?? "");
+  const pol = amendmentPolicyFor(s.state);
+  const ahj = unit?.name ?? "the local jurisdiction";
+  const disc = s.discovered ?? [];
+  const seeds = [...disc.filter((d) => ["building", "permits", "municipal_code", "code_adoption"].includes(d.category)).map((d) => d.url), ...disc.filter((d) => d.category === "official_website" || d.category === "county_website").map((d) => d.url)].slice(0, 5);
+  if (unit?.name && s.state) {
+    const hits = await searchOfficial(n, `${unit.name} ${STATE_NAMES[s.state] ?? s.state} adopted building codes edition`, (h) => isOfficialHost(h));
+    for (const h of hits.slice(0, 3)) if (!seeds.includes(h.url)) seeds.unshift(h.url);
+  }
+  if (!seeds.length) {
+    facts.push(mk({ fact_type: "local_amendment", fact_key: "local_adoption", label: `Local code adoption — ${ahj}`, value: { status: "not_established", reason: "no_official_sources" }, display_value: "Needs Verification — local adoption not established", source_org: null, source_title: null, source_url: null, provider: "local_adoption_research", source_tier: 7, origin: "research", verification: "needs_verification", limitation: `No official local building or code pages were discovered for ${ahj}, so local adoption could not be researched. The state baseline is not substituted.` }));
+    return { facts, health: n.health, status: "warning", escalations: localState ? [`Local code adoption for ${ahj} not established (state requires local adoption).`] : [] };
+  }
+  const pages = await followEvidence(n, seeds, { maxPages: 8, maxDepth: 2, provider: "local_official_site", label: `${ahj} official website` });
+  const byFam = new Map<CodeFamily, { ev: CodeEvidence; page: string }>();
+  let amendmentPage: { url: string; quote: string } | null = null;
+  let preempt: { url: string; quote: string } | null = null;
+  for (const p of pages) {
+    const type = classifySourceType(p.url, p.text);
+    for (const st of extractAdoptionStatements(p.text)) {
+      if (st.proposed) continue;
+      const ev = toEvidence(st, { layer: "local", state: s.state ?? "", jurisdiction_key: s.jurisdictionKey ?? null, authority: ahj, url: p.url, source_type: type, primary: true });
+      const prev = byFam.get(st.family);
+      if (!prev || (ev.edition ?? "") > (prev.ev.edition ?? "")) byFam.set(st.family, { ev, page: p.url });
+    }
+    if (!amendmentPage) { const m = p.text.match(/[^.]{0,160}\b(local amendments?|amendments? to the (20\d\d )?(international|florida|national))[^.]{0,200}\./i); if (m) amendmentPage = { url: p.url, quote: m[0].trim().slice(0, 360) }; }
+    if (!preempt) { const q = statePreemptionCue(p.text); if (q) preempt = { url: p.url, quote: q }; }
+  }
+  for (const [fam, { ev }] of byFam) {
+    facts.push(mk({ fact_type: "local_amendment", fact_key: `local_adoption:${fam}`, label: `${FAMILY_LABEL[fam]} — locally adopted (${ahj})`, value: { family: fam, edition: ev.edition, effective_from: ev.effective_from, source_type: ev.source_type, quote: ev.quote, layer: "local" }, display_value: `${ev.edition}${ev.effective_from ? ` · effective ${ev.effective_from}` : ""}`, source_org: ahj, source_title: SOURCE_TYPE_LABEL[ev.source_type], source_url: ev.url, provider: "local_adoption_research", source_tier: ev.source_type === "rule" || ev.source_type === "adoption_notice" ? 2 : 3, origin: "research", verification: "needs_verification", effective_date: ev.effective_from ?? null, limitation: `Read from the jurisdiction's official page: “${ev.quote.slice(0, 220)}”. ${ev.source_type === "rule" || ev.source_type === "adoption_notice" ? "" : "An informational page is not the adopting ordinance — confirm against the ordinance."}` }));
+  }
+  if (!byFam.size) facts.push(mk({ fact_type: "local_amendment", fact_key: "local_adoption", label: `Local code adoption — ${ahj}`, value: { status: "not_established", pages_read: pages.length }, display_value: "Needs Verification — local adoption not established", source_org: ahj, source_title: "Official website (searched)", source_url: seeds[0] ?? null, provider: "local_adoption_research", source_tier: 7, origin: "research", verification: "needs_verification", limitation: `${pages.length} official page(s) were read; none stated the locally adopted edition. The state baseline is not substituted.` }));
+  facts.push(mk({ fact_type: "local_amendment", fact_key: "local_amendments", label: `Local amendments — ${ahj}`, value: { found: !!amendmentPage }, display_value: amendmentPage ? "Local amendments referenced on official page" : "Not established", source_org: ahj, source_title: amendmentPage ? "Official page mentioning amendments" : null, source_url: amendmentPage?.url ?? null, provider: "local_adoption_research", source_tier: amendmentPage ? 3 : 7, origin: "research", verification: "needs_verification", limitation: amendmentPage ? `“${amendmentPage.quote}” — amendment text itself must be reviewed in the ordinance.` : "No official page stated whether local amendments exist. Absence is not proof there are none." }));
+  if (preempt || pol) facts.push(mk({ fact_type: "local_amendment", fact_key: "amendment_authority", label: "Limits on local amendments", value: { local_quote: preempt?.quote ?? null, state_policy: pol?.policy ?? null }, display_value: preempt ? preempt.quote.slice(0, 120) : pol!.text, source_org: preempt ? ahj : null, source_title: preempt ? "Official local page" : "State amendment policy", source_url: preempt?.url ?? pol?.url ?? null, provider: "local_adoption_research", source_tier: 2, origin: "research", verification: "needs_verification" }));
+  if (db && byFam.size && s.jurisdictionKey) {
+    await saveKnowledge(db, s.jurisdictionKey, ahj, [...byFam.values()].map(({ page }) => ({ category: "code_adoption", url: page, title: `${ahj} — adopted codes`, trust: "official_informational", host: new URL(page).hostname }))).catch(() => {});
+  }
+  const esc = !byFam.size && localState ? [`Local code adoption for ${ahj} not established (state requires local adoption).`] : [];
+  return { facts, health: n.health, status: byFam.size ? "done" : "warning", escalations: esc, note: `${pages.length} official page(s) read` };
 }
 
 async function permitsWorker(s: PipelineState, n: Net): Promise<StepResult> {
@@ -806,6 +993,7 @@ export async function runWorker(key: StepKey, s: PipelineState, u: Usage, db: an
     case "flood": return floodWorker(s, n);
     case "zoning": return { ...(await zoningWorker(s, n, db)), health: n.health };
     case "codes": return codesWorker(s, n, db);
+    case "local": return localWorker(s, n, db);
     case "permits": return permitsWorker(s, n);
     case "reconcile": return reconcileWorker(s);
   }

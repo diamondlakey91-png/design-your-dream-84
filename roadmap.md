@@ -35,3 +35,8 @@
 ## Phase 2C.1 nationwide correction (preview only)
 - [ ] Generic jurisdiction discovery for unknown jurisdictions (no county-by-county config)
 - [ ] Pasco becomes one discovered provider, not the target
+
+## Phase 2C.1 — nationwide autonomy (preview only)
+- [x] Unknown-jurisdiction live test (Blendon Twp, OH) + 13-address national sample
+- [x] Fixes: scope negation, spaced work types, city≠county sources, state-host verification, search-assisted official discovery
+- [ ] Open: PDF reading of adoption documents; township/county/state building-authority resolution (OH); zoning for LA, New Orleans, Maricopa; geocoder miss on some civic addresses

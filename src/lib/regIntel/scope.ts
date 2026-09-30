@@ -24,7 +24,7 @@ const PATTERNS: Array<[ScopeAttribute, RegExp]> = [
   ["single_family", /\bsingle[- ]family\b|\bsfr\b/i],
   ["commercial", /\b(commercial|retail|office|restaurant|warehouse|industrial)\b/i],
   ["mixed_use", /\bmixed[- ]use\b/i],
-  ["new_construction", /\bnew (construction|build|residence|home|building)|\bconstruct(ion)? of a new\b|\bground[- ]up\b/i],
+  ["new_construction", /\bnew (([\w-]+ ){0,3})?(construction|build|residence|home|house|dwelling|building)|\bconstruct(ion)? of a new\b|\bground[- ]up\b/i],
   ["addition", /\baddition\b/i],
   ["alteration", /\b(alteration|remodel|renovat)/i],
   ["tenant_improvement", /\btenant improvement|\bbuild[- ]?out\b/i],
@@ -58,9 +58,11 @@ export function normalizeScope(input: { scopeText: string | null; workType: stri
   const out = new Map<ScopeAttribute, DerivedAttribute>();
   for (const [key, re] of PATTERNS) {
     const m = original.match(re);
+    // Negated mentions ("no change of occupancy", "without structural work") do not derive the attribute.
+    if (m && /\b(no|not|without|excluding|none|nor)\s+(\w+\s+){0,2}$/i.test(original.slice(Math.max(0, (m.index ?? 0) - 30), m.index ?? 0))) continue;
     if (m) out.set(key, { key, value: true, origin: "scope_text", evidence: `Scope text mentions "${m[0]}"` });
   }
-  const wt = (input.workType ?? "").toLowerCase();
+  const wt = (input.workType ?? "").toLowerCase().trim().replace(/[\s-]+/g, "_");
   const wtMap: Record<string, ScopeAttribute> = {
     new_construction: "new_construction", addition: "addition", alteration: "alteration",
     tenant_improvement: "tenant_improvement", change_of_occupancy: "change_of_occupancy", demolition: "demolition",

@@ -7,13 +7,14 @@ import { requireSupabaseAuth } from "@/integrations/supabase/auth-middleware";
 import { addressHash } from "@/lib/regIntel/providers.shared";
 import { findDuplicate } from "@/lib/regIntel/rules";
 
-const STEP_KEYS = ["property", "boundary", "ahj", "flood", "zoning", "codes", "permits", "reconcile"] as const;
+const STEP_KEYS = ["property", "boundary", "ahj", "flood", "zoning", "codes", "local", "permits", "reconcile"] as const;
 const STEP_LABELS: Record<string, string> = {
   property: "Locating address & parcel", boundary: "Checking county & municipal boundaries", ahj: "Identifying permitting authorities",
   flood: "Checking FEMA flood data", zoning: "Researching zoning & land use", codes: "Researching applicable codes",
+  local: "Researching local code adoption & amendments",
   permits: "Determining scope-specific permits", reconcile: "Reconciling evidence",
 };
-const ADDRESS_STEPS = new Set(["property", "boundary", "ahj", "flood", "zoning", "codes"]);
+const ADDRESS_STEPS = new Set(["property", "boundary", "ahj", "flood", "zoning", "codes", "local"]);
 
 // eslint-disable-next-line @typescript-eslint/no-explicit-any
 type Db = any;
