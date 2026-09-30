@@ -647,7 +647,7 @@ async function loadCodeEvidence(s: PipelineState, n: Net, db: any, today: string
   for (const r of rows) {
     if (!r.is_primary || !r.quote || (r.recheck_after && r.recheck_after > today) || rechecked >= 4) continue;
     rechecked++;
-    const t = await getText(n, r.url, "code_recheck", "Code adoption source recheck", 0);
+    const t = await getText(n, r.url, "code_recheck", "Code adoption source recheck");
     if (t === null) continue; // unreachable: keep prior evidence
     const norm = (x: string) => x.toLowerCase().replace(/[^a-z0-9]+/g, " ");
     const probe = norm(r.quote).split(" ").filter((w) => w.length > 3).slice(0, 8).join(" ");
