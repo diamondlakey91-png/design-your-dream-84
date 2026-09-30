@@ -1,6 +1,7 @@
 import { createServerFn } from "@tanstack/react-start";
 import { z } from "zod";
 import { requireSupabaseAuth } from "@/integrations/supabase/auth-middleware";
+import { FILING_AUTHORITATIVE, checkFilingTransition } from "./trustedStates";
 
 const STATUSES = [
   "draft",
@@ -108,15 +109,59 @@ export const updateFiling = createServerFn({ method: "POST" })
     if ("target_submittal_date" in clean && !clean.target_submittal_date) {
       clean.target_submittal_date = null;
     }
-    const { data: row, error } = await context.supabase
+
+    const touchesAuthoritative =
+      (clean.status !== undefined && (FILING_AUTHORITATIVE as readonly string[]).includes(clean.status as string)) ||
+      "submitted_at" in clean || "confirmation_number" in clean || "status_source" in clean;
+
+    if (!touchesAuthoritative) {
+      // Draft data — written as the customer; the database blocks authoritative fields.
+      const { data: row, error } = await context.supabase
+        .from("permit_filings")
+        // eslint-disable-next-line @typescript-eslint/no-explicit-any
+        .update(clean as any)
+        .eq("id", id)
+        .select("*")
+        .single();
+      if (error) throw new Error(error.message);
+      return row;
+    }
+
+    // Trusted workflow: owner only, validated transition, recorded provenance.
+    const { data: current, error: readErr } = await context.supabase
+      .from("permit_filings")
+      .select("id,user_id,project_id,status,approved_at,confirmation_number,status_source")
+      .eq("id", id)
+      .maybeSingle();
+    if (readErr) throw new Error(readErr.message);
+    if (!current || current.user_id !== context.userId) throw new Error("Filing not found.");
+    const problem = checkFilingTransition(current, {
+      status: clean.status as string | undefined,
+      confirmation_number: clean.confirmation_number as string | null | undefined,
+      status_source: clean.status_source as string | null | undefined,
+    });
+    if (problem) throw new Error(problem);
+    if (clean.status === "submitted" || clean.status === "monitoring") {
+      clean.submitted_at = clean.submitted_at ?? new Date().toISOString();
+    }
+
+    const { supabaseAdmin } = await import("@/integrations/supabase/client.server");
+    const { data: row, error } = await supabaseAdmin
       .from("permit_filings")
       // eslint-disable-next-line @typescript-eslint/no-explicit-any
       .update(clean as any)
-
       .eq("id", id)
+      .eq("user_id", context.userId)
       .select("*")
       .single();
     if (error) throw new Error(error.message);
+    if (current.project_id && clean.status && clean.status !== current.status) {
+      await context.supabase.from("activity").insert({
+        project_id: current.project_id,
+        user_id: context.userId,
+        description: `Filing status recorded as ${String(clean.status)} (source: ${row.status_source ?? "not given"})`,
+      });
+    }
     return row;
   });
 
