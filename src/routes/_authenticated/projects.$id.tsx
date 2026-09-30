@@ -166,7 +166,7 @@ function ProjectDetail() {
                 : t === "qaqc"
                   ? "qa/qc gate"
                   : t === "planqaqc"
-                    ? "plan qa/qc"
+                    ? "plan review"
                     : t === "site"
                       ? "site investigation"
                       : t === "timeline"
