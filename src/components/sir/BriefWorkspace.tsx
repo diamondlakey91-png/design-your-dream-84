@@ -218,7 +218,7 @@ export function BriefWorkspace({
         </section>
 
         <AhjAuthorityPanel
-          query={form.siteAddress.trim() || form.jurisdiction.trim()}
+          query={(form.siteAddress ?? "").trim() || (form.jurisdiction ?? "").trim()}
           title="Who controls permitting at this site"
         />
 
