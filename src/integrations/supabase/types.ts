@@ -16,23 +16,32 @@ export type Database = {
     Tables: {
       activity: {
         Row: {
+          action: string | null
           created_at: string
           description: string
           id: string
+          object_id: string | null
+          object_type: string | null
           project_id: string | null
           user_id: string
         }
         Insert: {
+          action?: string | null
           created_at?: string
           description: string
           id?: string
+          object_id?: string | null
+          object_type?: string | null
           project_id?: string | null
           user_id: string
         }
         Update: {
+          action?: string | null
           created_at?: string
           description?: string
           id?: string
+          object_id?: string | null
+          object_type?: string | null
           project_id?: string | null
           user_id?: string
         }
@@ -2933,6 +2942,7 @@ export type Database = {
           estimate: Json | null
           estimate_generated_at: string | null
           id: string
+          intake_notes: string | null
           jurisdiction: string
           linked_permit_data: Json | null
           linked_permit_number: string | null
@@ -2940,6 +2950,7 @@ export type Database = {
           linked_permit_url: string | null
           location: string
           name: string
+          occupancy_class: Database["public"]["Enums"]["res_or_com"] | null
           organization_id: string | null
           permit_count: number
           permits_issued: number
@@ -2949,9 +2960,12 @@ export type Database = {
           project_type_confirmed_at: string | null
           project_type_confirmed_by: string | null
           project_type_source: string | null
+          scope_description: string | null
           status: string
+          target_start_date: string | null
           updated_at: string
           user_id: string
+          work_type: Database["public"]["Enums"]["scope_project_type"] | null
         }
         Insert: {
           additional_project_type_ids?: string[]
@@ -2961,6 +2975,7 @@ export type Database = {
           estimate?: Json | null
           estimate_generated_at?: string | null
           id?: string
+          intake_notes?: string | null
           jurisdiction?: string
           linked_permit_data?: Json | null
           linked_permit_number?: string | null
@@ -2968,6 +2983,7 @@ export type Database = {
           linked_permit_url?: string | null
           location?: string
           name: string
+          occupancy_class?: Database["public"]["Enums"]["res_or_com"] | null
           organization_id?: string | null
           permit_count?: number
           permits_issued?: number
@@ -2977,9 +2993,12 @@ export type Database = {
           project_type_confirmed_at?: string | null
           project_type_confirmed_by?: string | null
           project_type_source?: string | null
+          scope_description?: string | null
           status?: string
+          target_start_date?: string | null
           updated_at?: string
           user_id: string
+          work_type?: Database["public"]["Enums"]["scope_project_type"] | null
         }
         Update: {
           additional_project_type_ids?: string[]
@@ -2989,6 +3008,7 @@ export type Database = {
           estimate?: Json | null
           estimate_generated_at?: string | null
           id?: string
+          intake_notes?: string | null
           jurisdiction?: string
           linked_permit_data?: Json | null
           linked_permit_number?: string | null
@@ -2996,6 +3016,7 @@ export type Database = {
           linked_permit_url?: string | null
           location?: string
           name?: string
+          occupancy_class?: Database["public"]["Enums"]["res_or_com"] | null
           organization_id?: string | null
           permit_count?: number
           permits_issued?: number
@@ -3005,9 +3026,12 @@ export type Database = {
           project_type_confirmed_at?: string | null
           project_type_confirmed_by?: string | null
           project_type_source?: string | null
+          scope_description?: string | null
           status?: string
+          target_start_date?: string | null
           updated_at?: string
           user_id?: string
+          work_type?: Database["public"]["Enums"]["scope_project_type"] | null
         }
         Relationships: [
           {
