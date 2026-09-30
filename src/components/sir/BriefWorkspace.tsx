@@ -216,6 +216,11 @@ export function BriefWorkspace({
           <p className="mt-4 text-xs leading-relaxed text-slate-500">{SIR_AI_RESEARCH_DISCLAIMER}</p>
         </section>
 
+        <AhjAuthorityPanel
+          query={form.siteAddress.trim() || form.jurisdiction.trim()}
+          title="Who controls permitting at this site"
+        />
+
         <section className="rounded-2xl border border-white/10 bg-white/[0.02] p-5">
           <h2 className="text-sm font-semibold text-white">Your briefs</h2>
           {briefsQ.isPending && <p className="mt-3 text-xs text-slate-400">Loading…</p>}
