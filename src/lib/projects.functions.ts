@@ -146,6 +146,11 @@ const UpdateProjectInput = z.object({
   project_type: z.string().trim().max(80).optional(),
   jurisdiction: z.string().trim().max(200).optional(),
   permit_count: z.number().int().min(0).max(50).optional(),
+  scope_description: z.string().trim().max(4000).nullable().optional(),
+  occupancy_class: z.enum(["residential", "commercial", "mixed_use"]).nullable().optional(),
+  work_type: z.enum(["new_construction", "addition", "alteration", "tenant_improvement", "change_of_occupancy", "repair", "demolition", "shell", "core_and_shell", "other"]).nullable().optional(),
+  target_start_date: z.string().regex(/^\d{4}-\d{2}-\d{2}$/).nullable().optional(),
+  intake_notes: z.string().trim().max(4000).nullable().optional(),
 });
 
 export const updateProject = createServerFn({ method: "POST" })
@@ -153,7 +158,7 @@ export const updateProject = createServerFn({ method: "POST" })
   .inputValidator((input: unknown) => UpdateProjectInput.parse(input))
   .handler(async ({ data, context }) => {
     const { data: existing, error: eErr } = await context.supabase
-      .from("projects").select("id, user_id, jurisdiction, name, location, project_type, permit_count")
+      .from("projects").select("id, user_id, jurisdiction, name, location, project_type, permit_count, scope_description, occupancy_class, work_type, target_start_date, intake_notes")
       .eq("id", data.id).maybeSingle();
     if (eErr) throw new Error(eErr.message);
     if (!existing) throw new Error("Project not found");
@@ -166,6 +171,12 @@ export const updateProject = createServerFn({ method: "POST" })
         patch[k] = data[k];
         changes.push(`${k.replace("_", " ")} → ${data[k]}`);
       }
+    });
+    const INTAKE_LABEL = { scope_description: "scope of work", occupancy_class: "residential/commercial", work_type: "type of work", target_start_date: "target start date", intake_notes: "notes" } as const;
+    (Object.keys(INTAKE_LABEL) as (keyof typeof INTAKE_LABEL)[]).forEach((k) => {
+      if (data[k] === undefined) return;
+      const v = data[k] === "" ? null : data[k];
+      if (v !== (existing as any)[k]) { patch[k] = v; changes.push(INTAKE_LABEL[k]); }
     });
 
     if (Object.keys(patch).length === 1) return existing;
