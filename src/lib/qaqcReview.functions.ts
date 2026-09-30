@@ -23,7 +23,8 @@ export const QAQC_MODEL = "google/gemini-2.5-pro";
 
 type ContentPart = { type: "text"; text: string } | { type: "file"; file: { filename: string; file_data: string } } | { type: "image_url"; image_url: { url: string } };
 
-type PlanBatch = { label: string; parts: ContentPart[]; pages: number };
+type PlanSegment = { label: string; docId: string; firstPage: number };
+type PlanBatch = { label: string; parts: ContentPart[]; pages: number; segments: PlanSegment[] };
 
 /**
  * Reads the selected plan documents and turns them into batches small enough
@@ -36,14 +37,14 @@ async function buildPlanBatches(
   docs: Array<{ id: string; name: string; mime_type: string | null; storage_path: string }>,
 ): Promise<PlanBatch[]> {
   const { splitPdfIntoChunks, MAX_PAGES_PER_CALL } = await import("@/lib/pdfChunk.server");
-  const items: Array<{ label: string; part: ContentPart; pages: number }> = [];
+  const items: Array<{ label: string; part: ContentPart; pages: number; docId: string; firstPage: number }> = [];
 
   for (const doc of docs) {
     const { data: signed } = await sb.storage.from("project-docs").createSignedUrl(doc.storage_path, 1800);
     if (!signed?.signedUrl) continue;
     const mime = doc.mime_type || "application/pdf";
     if (mime.startsWith("image/")) {
-      items.push({ label: doc.name, part: { type: "image_url", image_url: { url: signed.signedUrl } }, pages: 1 });
+      items.push({ label: doc.name, part: { type: "image_url", image_url: { url: signed.signedUrl } }, pages: 1, docId: doc.id, firstPage: 1 });
       continue;
     }
     const isPdf = mime === "application/pdf" || doc.name.toLowerCase().endsWith(".pdf");
@@ -57,6 +58,8 @@ async function buildPlanBatches(
         label: c.label,
         part: { type: "file", file: { filename: doc.name, file_data: `data:application/pdf;base64,${c.base64}` } },
         pages: c.pages || MAX_PAGES_PER_CALL,
+        docId: doc.id,
+        firstPage: c.firstPage || 1,
       });
     }
   }
@@ -65,12 +68,13 @@ async function buildPlanBatches(
   let cur: PlanBatch | null = null;
   for (const it of items) {
     if (!cur || cur.pages + it.pages > MAX_PAGES_PER_CALL) {
-      cur = { label: it.label, parts: [], pages: 0 };
+      cur = { label: it.label, parts: [], pages: 0, segments: [] };
       batches.push(cur);
     }
     cur.parts.push({ type: "text", text: `PLAN FILE SEGMENT: ${it.label}` });
     cur.parts.push(it.part);
     cur.pages += it.pages;
+    cur.segments.push({ label: it.label, docId: it.docId, firstPage: it.firstPage });
   }
   return batches;
 }
@@ -120,7 +124,7 @@ type Inventory = {
 };
 
 type FindingsOut = {
-  findings: Array<{ severity: string; category: string; discipline: string; sheet_number: string; sheet_title: string; location: string; summary: string; plain_language: string; why_it_matters: string; code_basis: string; jurisdiction_source_url: string; recommended_action: string; responsible_discipline: string; verification: string }>;
+  findings: Array<{ severity: string; category: string; discipline: string; sheet_number: string; sheet_title: string; location: string; summary: string; plain_language: string; why_it_matters: string; code_basis: string; jurisdiction_source_url: string; recommended_action: string; responsible_discipline: string; verification: string; segment?: string; page?: number | null; bbox?: { x: number; y: number; w: number; h: number } | null; related_sheets?: string[]; confidence?: "high" | "medium" | "low" | null }>;
   missing_documents: Array<{ name: string; reason: string; blocking: boolean }>;
   submission_issues: string[];
   needs_professional_confirmation: string[];
@@ -169,6 +173,14 @@ const FindingsSchema = z.object({
       "verified_requirement", "ai_suggested", "coordination_issue",
       "missing_information", "human_review_recommended", "agency_confirmation_required",
     ]).default("ai_suggested"),
+    // Optional visual location: which PLAN FILE SEGMENT, which page inside it, and
+    // an approximate normalized box. Invalid/absent values are dropped, never guessed.
+    segment: z.string().default(""),
+    page: z.coerce.number().int().min(1).max(2000).nullable().optional().catch(null),
+    bbox: z.object({ x: z.number().min(0).max(1), y: z.number().min(0).max(1), w: z.number().gt(0).max(1), h: z.number().gt(0).max(1) })
+      .nullable().optional().catch(null),
+    related_sheets: z.array(z.string()).max(8).default([]).catch([]),
+    confidence: z.enum(["high", "medium", "low"]).nullable().optional().catch(null),
   })).max(120).default([]),
   missing_documents: z.array(z.object({ name: z.string(), reason: z.string().default(""), blocking: z.boolean().default(false) })).max(40).default([]),
   submission_issues: z.array(z.string()).max(40).default([]),
@@ -547,8 +559,11 @@ RULES:
 - Never invent a code section, local amendment, or edition. If unknown, leave code_basis empty and set verification to agency_confirmation_required.
 - verification must be one of: verified_requirement (backed by a jurisdiction source you cite), ai_suggested, coordination_issue, missing_information, human_review_recommended, agency_confirmation_required.
 - category must be one of the ids listed above. discipline should be one of: ${QAQC_DISCIPLINES.join(", ")}.
+- confidence (high | medium | low) is how sure you are the observation is real on these drawings — separate from severity (review priority).
+- Location (optional): "segment" = the exact PLAN FILE SEGMENT label the issue is on; "page" = 1-indexed page within that segment file; "bbox" = approximate normalized {x,y,w,h} in [0,1] from the page's top-left. Omit bbox (null) if you cannot localize it; never return a whole-page box.
+- related_sheets: other sheet numbers involved ONLY when the finding is a conflict between sheets you actually saw in this segment or the inventory. Otherwise [].
 
-Return JSON: { "findings": [{ "severity": "critical|high|medium|low|informational", "category": "...", "discipline": "...", "sheet_number": "", "sheet_title": "", "location": "", "summary": "", "plain_language": "", "why_it_matters": "", "code_basis": "", "jurisdiction_source_url": "", "recommended_action": "", "responsible_discipline": "", "verification": "..." }], "missing_documents": [{"name":"","reason":"","blocking":false}], "submission_issues": [], "needs_professional_confirmation": [], "recommended_actions": [], "executive_summary": "" }`,
+Return JSON: { "findings": [{ "severity": "critical|high|medium|low|informational", "category": "...", "discipline": "...", "sheet_number": "", "sheet_title": "", "location": "", "summary": "", "plain_language": "", "why_it_matters": "", "code_basis": "", "jurisdiction_source_url": "", "recommended_action": "", "responsible_discipline": "", "verification": "...", "confidence": "medium", "segment": "", "page": null, "bbox": null, "related_sheets": [] }], "missing_documents": [{"name":"","reason":"","blocking":false}], "submission_issues": [], "needs_professional_confirmation": [], "recommended_actions": [], "executive_summary": "" }`,
               },
               ...b.parts,
             ],
