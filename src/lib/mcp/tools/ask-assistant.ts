@@ -20,7 +20,7 @@ export default defineTool({
     const key = process.env.LOVABLE_API_KEY;
     if (!key) return { content: [{ type: "text", text: "AI not configured" }], isError: true };
     const userMsg = jurisdiction ? `Jurisdiction: ${jurisdiction}\n\n${question}` : question;
-    const userId = ctx.getUserId();
+    const userId = ctx.getUserId() ?? null;
     const { runMeteredAi, meterKey } = await import("@/lib/aiMeter.server");
     try {
       return await runMeteredAi(
