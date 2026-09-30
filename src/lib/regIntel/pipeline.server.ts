@@ -8,6 +8,7 @@ import { decideVerification, recheckAfter, resolveGoverningAuthority, type Fact,
 import { arcgisAll, arcgisFirst, classifyFlood, epochToDate, floodPosition, pickPanel, reconcileEditions, parseBcisRows, withRetry, PROVENANCE_LABEL, type ArcgisResponse, type HealthEvent, type SourceProvenance, type EditionEvidence } from "./providers.shared";
 import { codeApplicability, APPLICABILITY_LABEL } from "./codeStack";
 import { normalizeScope, effectiveScope, SCOPE_LABEL, type ScopeAttribute } from "./scope";
+import { adoptionsFor, amendmentPolicyFor, RESEARCHED_AS_OF, type AdoptionDiscipline } from "./stateAdoptions";
 import { resolveGoverningUnit, matchDotGov, classifyLink, govNameTokens, type GoverningUnit, type DotGovRow, type GeoUnit } from "./nationalAhj";
 import { evaluatePermitCandidates, REQUIREMENT_TYPE_LABEL } from "./rules";
 
@@ -618,12 +619,26 @@ async function floridaAmendments(n: Net, s: PipelineState, st: StateConfig): Pro
   return facts;
 }
 
+function researchedAdoptionFacts(s: PipelineState, scope: Set<ScopeAttribute>, only?: AdoptionDiscipline[]): Fact[] {
+  const out: Fact[] = [];
+  for (const a of adoptionsFor(s.state)) {
+    if (only && !only.includes(a.discipline)) continue;
+    const app = codeApplicability(a.discipline, scope);
+    const verified = a.primary && !!a.code;
+    out.push(mk({ fact_type: "code", fact_key: `researched:${a.discipline}`, label: `${a.discipline === "building" ? "Statewide building code" : a.discipline === "electrical" ? "Electrical code (NEC)" : "Fire code"} — ${s.state}`, value: { code: a.code, discipline: a.discipline, effective: a.effective, quote: a.quote || null, applicability: app.applicability, basis: app.basis, researched_as_of: RESEARCHED_AS_OF, primary_source: a.primary }, display_value: a.code ? `${a.code}${a.effective ? ` · effective ${a.effective}` : ""}` : null, source_org: a.org, source_title: a.quote ? `“${a.quote}”` : a.org, source_url: a.url, provider: "researched_state_adoption", source_tier: a.primary ? 2 : 6, origin: "research", verification: verified ? "verified" : "needs_verification", effective_date: a.effective, limitation: [a.note, a.primary ? null : "Cited from a copy or mirror, not the adopting agency's own page.", "Local adoption or amendments may change what applies to this property."].filter(Boolean).join(" ") }));
+  }
+  const pol = amendmentPolicyFor(s.state);
+  if (pol) out.push(mk({ fact_type: "local_amendment", fact_key: "state_policy", label: `Local amendment rules — ${s.state}`, value: { policy: pol.policy }, display_value: pol.text, source_org: null, source_title: "State amendment policy", source_url: pol.url, provider: "researched_state_adoption", source_tier: pol.primary ? 2 : 6, origin: "research", verification: "needs_verification", limitation: "Whether this jurisdiction actually amended the code must be checked in its local ordinances." }));
+  return out;
+}
+
 async function codesWorker(s: PipelineState, n: Net): Promise<StepResult> {
   const st = s.state ? STATE_CONFIGS[s.state] : undefined;
   const facts: Fact[] = [];
   const scope = effectiveScope(normalizeScope({ scopeText: s.scopeText, workType: s.workType, projectType: s.projectType }).attributes, s.scopeCorrections) as Set<ScopeAttribute>;
   const today = new Date().toISOString().slice(0, 10);
   if (!st) {
+    facts.push(...researchedAdoptionFacts(s, scope));
     const src = s.state ? STATE_CODE_SOURCES[s.state] : undefined;
     const text = src ? await getText(n, src.url, "state_code_page", "State code adoption page") : null;
     const found = new Map<string, Set<string>>();
@@ -665,6 +680,7 @@ async function codesWorker(s: PipelineState, n: Net): Promise<StepResult> {
     const text = [...pages.values(), resources].join(" ");
     if (st.pendingEditionPattern.re.test(text)) facts.push(mk({ fact_type: "special_condition", fact_key: "pending_code_edition", label: "Upcoming code edition", value: {}, display_value: "9th Edition (2026) FBC listed as a draft / upcoming edition", source_org: "Florida Building Commission", source_title: "Florida Building Code menu", source_url: st.codes[0]!.source.url, provider: "state_code_adoption", source_tier: 2, origin: "research", verification: "needs_verification", limitation: st.pendingEditionPattern.note }));
   }
+  facts.push(...researchedAdoptionFacts(s, scope, ["electrical"]));
   facts.push(...(await floridaAmendments(n, s, st)));
   const unresolved = facts.filter((f) => f.fact_type === "code" && f.verification !== "verified" && (f.value as { applicability?: string }).applicability !== "not_primary");
   const esc = facts.filter((f) => f.fact_type === "local_amendment" && f.verification !== "verified").length ? ["Codes: local amendment status could not be established from state registries — confirm with the local building official."] : [];
