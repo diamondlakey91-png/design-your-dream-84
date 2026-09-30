@@ -32,6 +32,8 @@ export type AhjContactsResult =
       /** Whether the site sits inside municipal corporate limits. */
       incorporated: boolean | null;
       postal_city: string | null;
+      /** Plain-language explanation of how the authority was determined. */
+      determination_note: string | null;
       formatted_address: string | null;
       contacts: AgencyContact[];
       /** Official online permit portals found on the agencies' own pages. */
@@ -65,6 +67,7 @@ export const lookupAhjContacts = createServerFn({ method: "POST" })
     let county: string | null = null;
     let state: string | null = null;
     let incorporated: boolean | null = null;
+    let determinationNote: string | null = null;
 
     if (g?.lat && g?.lng) {
       const geo = await resolveAuthoritativeGeography({
@@ -109,6 +112,7 @@ export const lookupAhjContacts = createServerFn({ method: "POST" })
         state,
         incorporated,
         postal_city: g?.components?.locality ?? null,
+        determination_note: determinationNote,
         formatted_address: g?.formatted_address ?? null,
         contacts: [],
         portals: [],
@@ -139,6 +143,7 @@ export const lookupAhjContacts = createServerFn({ method: "POST" })
       state,
       incorporated,
       postal_city: g?.components?.locality ?? null,
+      determination_note: determinationNote,
       formatted_address: g?.formatted_address ?? null,
       contacts,
       portals,
