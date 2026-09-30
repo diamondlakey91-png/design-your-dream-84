@@ -6,3 +6,7 @@
 - [x] Plan set database: search and reuse past building plan sets instead of re-uploading
 
 - [x] Commerce & entitlement foundation (plans, limits, credit ledger, member pricing, billing tab, admin plans)
+
+## Phase 1.2 follow-ups (recorded, not started)
+- [ ] A. Correction Review runs must also write to the central AI usage log (ai_usage_log), not only the credit ledger
+- [ ] B. Customer-purchased Site Investigation must not be classified "Internal"; add a separate funding classification (e.g. purchased_service / order-funded) with internal_use=false — schema not yet chosen
