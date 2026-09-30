@@ -91,7 +91,7 @@ export const importRoadmapToChecklist = createServerFn({ method: "POST" })
         required: p.likelihood === "required" || p.likelihood === "likely",
         status: p.likelihood === "not_required" ? "n_a" : "not_started",
         description: p.trigger_condition ?? null,
-        notes: p.notes ?? null,
+        notes: p.notes ?? "",
         agency: p.agency ?? null,
         source_url: (p.source_ids ?? []).map((s: string) => srcUrl.get(s)).find(Boolean) ?? null,
         requirement_confidence: p.verification === "verified" ? "verified" : p.likelihood === "conditional" ? "potential" : "needs_verification",

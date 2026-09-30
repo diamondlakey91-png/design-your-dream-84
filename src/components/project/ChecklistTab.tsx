@@ -32,6 +32,7 @@ const CONF_COLOR: Record<string, string> = {
   potential: "bg-muted text-muted-foreground",
 };
 
+type UpdateInput = { id: string; status?: (typeof ROADMAP_PICKABLE)[number]; agency?: string | null; owner_name?: string | null; due_date?: string | null; application_url?: string | null; notes?: string; description?: string | null; depends_on?: string[]; requirement_confidence?: "needs_verification" | "potential" };
 type Item = Awaited<ReturnType<typeof listPermitItems>>[number];
 
 export function ChecklistTab({ projectId, jurisdiction }: { projectId: string; jurisdiction: string }) {
@@ -74,7 +75,7 @@ export function ChecklistTab({ projectId, jurisdiction }: { projectId: string; j
     onSuccess: () => { refresh(); setNewName(""); }, onError: onErr,
   });
   const update = useMutation({
-    mutationFn: (v: Parameters<typeof updateFn>[0]["data"]) => updateFn({ data: v }),
+    mutationFn: (v: UpdateInput) => updateFn({ data: v }),
     onSuccess: refresh, onError: onErr,
   });
   const del = useMutation({ mutationFn: (id: string) => delFn({ data: { id } }), onSuccess: refresh });
