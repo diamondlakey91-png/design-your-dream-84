@@ -78,13 +78,15 @@ export const lookupAhjContacts = createServerFn({ method: "POST" })
         unavailable.push("U.S. Census Bureau boundary services");
       } else {
         unavailable.push(...geo.unavailable);
-        const place = geo.census?.place ?? null;
-        county = geo.census?.countyName ?? null;
-        state = geo.census?.stateName ?? geo.census?.stateAbbr ?? null;
-        incorporated = place ? true : geo.census ? false : null;
-        authority = place?.name ?? county ?? null;
-        for (const e of geo.evidence ?? []) {
-          if (e?.url) sources.push({ title: e.title ?? e.url, url: e.url });
+        county = geo.census?.county ?? null;
+        state = geo.census?.state ?? geo.census?.stateAbbr ?? null;
+        incorporated = geo.determination.authoritative
+          ? geo.determination.incorporation_status !== "unincorporated_county"
+          : null;
+        authority = geo.determination.authoritative ? geo.determination.place_in_control : null;
+        determinationNote = geo.determination.note;
+        for (const e of geo.evidence) {
+          if (e.url) sources.push({ title: e.title, url: e.url });
         }
       }
     } else {
