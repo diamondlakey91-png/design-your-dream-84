@@ -3677,6 +3677,7 @@ export type Database = {
           requested_by: string | null
           scope_hash: string | null
           started_at: string | null
+          state: Json
           status: string
           steps: Json
           trigger: string
@@ -3697,6 +3698,7 @@ export type Database = {
           requested_by?: string | null
           scope_hash?: string | null
           started_at?: string | null
+          state?: Json
           status?: string
           steps?: Json
           trigger?: string
@@ -3717,6 +3719,7 @@ export type Database = {
           requested_by?: string | null
           scope_hash?: string | null
           started_at?: string | null
+          state?: Json
           status?: string
           steps?: Json
           trigger?: string
