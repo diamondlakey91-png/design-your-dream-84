@@ -176,9 +176,11 @@ export const getRegulatoryProfile = createServerFn({ method: "GET" })
     const county = factRows.find((f) => f["fact_type"] === "jurisdiction" && f["fact_key"] === "county");
     const cv = (county?.["value"] ?? {}) as { state?: string; fips?: string };
     return {
-      facts: factRows,
-      job: ((jobs ?? []) as Array<Record<string, unknown>>)[0] ?? null,
-      roadmapItems: (items ?? []) as Array<{ id: string; name: string; category: string | null; regulatory_fact_id: string | null }>,
+      // eslint-disable-next-line @typescript-eslint/no-explicit-any
+      facts: factRows as any[],
+      // eslint-disable-next-line @typescript-eslint/no-explicit-any
+      job: (((jobs ?? []) as unknown as any[])[0] ?? null) as any,
+      roadmapItems: (items ?? []) as unknown as Array<{ id: string; name: string; category: string | null; regulatory_fact_id: string | null }>,
       coverage: cv.state ? coverageFor(cv.state, cv.fips ?? null) : null,
     };
   });
@@ -208,7 +210,7 @@ export const addCandidatesToRoadmap = createServerFn({ method: "POST" })
     await assertAccess(sb, data.project_id, true);
     const { data: facts } = await sb.from("project_regulatory_facts" as never).select("id,fact_key,label,value,verification,source_url").eq("project_id", data.project_id).eq("fact_type", "permit_candidate").in("id", data.fact_ids);
     const { data: existing } = await sb.from("permit_items").select("id,name,category,regulatory_fact_id" as never).eq("project_id", data.project_id);
-    const items = ((existing ?? []) as Array<{ id: string; name: string; category: string | null; regulatory_fact_id: string | null }>);
+    const items = ((existing ?? []) as unknown as Array<{ id: string; name: string; category: string | null; regulatory_fact_id: string | null }>);
     const { data: { user } } = await sb.auth.getUser();
     let added = 0, linked = 0;
     for (const f of (facts ?? []) as Array<{ id: string; fact_key: string; label: string; value: Record<string, unknown>; verification: string; source_url: string | null }>) {
