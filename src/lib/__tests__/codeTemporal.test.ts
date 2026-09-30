@@ -59,3 +59,19 @@ describe("temporal code resolution", () => {
     expect(applicableCodeDate({ application_date: "2026-01-05T00:00:00Z", today: R }).date).toBe("2026-01-05");
   });
 });
+
+import { SEED_EVIDENCE } from "../regIntel/stateAdoptions";
+describe("seeded evidence regressions (as of 2026-09-30)", () => {
+  const res = (st: string, f: Parameters<typeof resolveFamily>[1]) => resolveFamily(st, f, SEED_EVIDENCE, "2026-09-30");
+  it("TX NEC 2026 current, 2023 superseded", () => { const r = res("TX", "electrical"); expect(r.current?.edition).toBe("NEC 2026"); expect(r.superseded.map((s) => s.edition)).toContain("NEC 2023"); });
+  it("FL electrical not promoted from development material", () => { const r = res("FL", "electrical"); expect(r.status).not.toBe("current_verified"); expect(r.current?.edition ?? null).toBeNull(); });
+  it("MA NEC 2026 current", () => expect(res("MA", "electrical").current?.edition).toMatch(/2026/));
+  it("NH fire 2024 effective 2026-07-27", () => { const r = res("NH", "fire"); expect(r.current?.edition).toMatch(/2024/); expect(r.current?.effective_from).toBe("2026-07-27"); });
+  it("NC 2024 package not shown as current", () => expect(res("NC", "building").current?.edition).toMatch(/2018/));
+  it("WA NEC 2026 future-adopted", () => { const r = res("WA", "electrical"); expect(r.current?.edition).toBe("NEC 2023"); expect(r.future[0]?.edition).toBe("NEC 2026"); expect(r.recheck_after).toBe("2026-12-17"); });
+  it("CO building local; NEC 2026 current", () => { expect(res("CO", "building").status).toBe("local_determination"); expect(res("CO", "electrical").current?.edition).toBe("NEC 2026"); });
+  it("prints matrix", () => {
+    const fams = ["building", "electrical", "fire"] as const;
+    for (const st of [...new Set(SEED_EVIDENCE.map((e) => e.state))]) console.log(st, fams.map((f) => { const r = res(st, f); return `${f}=${r.current?.edition ?? "-"}[${r.status}]${r.future.length ? ` future:${r.future.map((x) => x.edition + "@" + x.effective_from).join(",")}` : ""}${r.proposed.length ? ` proposed:${r.proposed.map((x) => x.edition).join(",")}` : ""}${r.superseded.length ? ` superseded:${r.superseded.map((x) => x.edition).join(",")}` : ""}`; }).join(" | "));
+  });
+});
