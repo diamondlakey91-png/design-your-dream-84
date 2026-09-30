@@ -4,6 +4,7 @@
 // Phase 4 helpers: send to checklist, export roadmap PDF, answer follow-ups.
 
 import { createServerFn } from "@tanstack/react-start";
+import { withRegulatoryGrounding } from "@/lib/regulatoryGrounding";
 import { requireSupabaseAuth } from "@/integrations/supabase/auth-middleware";
 import { z } from "zod";
 import { callGeminiJSON } from "@/lib/ai.shared";

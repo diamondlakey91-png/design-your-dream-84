@@ -1,6 +1,7 @@
 import { createServerFn } from "@tanstack/react-start";
 import { requireSupabaseAuth } from "@/integrations/supabase/auth-middleware";
 import { z } from "zod";
+import { withRegulatoryGrounding } from "@/lib/regulatoryGrounding";
 import { callLovableAI } from "@/lib/ai.shared";
 
 // ---- Response Matrix: reviewer comments + drafted official responses ----

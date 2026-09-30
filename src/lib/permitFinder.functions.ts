@@ -2,6 +2,7 @@ import { createServerFn } from "@tanstack/react-start";
 import { z } from "zod";
 import { requireSupabaseAuth } from "@/integrations/supabase/auth-middleware";
 import { loadJurisdictionContextBlock } from "@/lib/ai.shared";
+import { withRegulatoryGrounding } from "@/lib/regulatoryGrounding";
 import {
   PERMIT_CATEGORIES,
   type PermitDetermination,

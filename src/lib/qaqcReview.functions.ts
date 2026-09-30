@@ -1,6 +1,7 @@
 import { createServerFn } from "@tanstack/react-start";
 import { requireSupabaseAuth } from "@/integrations/supabase/auth-middleware";
 import { z } from "zod";
+import { withRegulatoryGrounding } from "@/lib/regulatoryGrounding";
 import { toSlug } from "@/lib/ai.shared";
 import { firecrawlSearch, firecrawlScrape } from "@/lib/firecrawl.shared";
 import type { AgencyContact } from "@/lib/agencyContacts";
