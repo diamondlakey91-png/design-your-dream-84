@@ -394,6 +394,12 @@ async function researchAuthorities(s: PipelineState, n: Net, db: any, sources: D
     }
     if (db && s.jurisdictionKey && edges.length) await saveKnowledge(db, s.jurisdictionKey, unit.name!, edges.slice(0, 20).map((e, i) => ({ category: "authority_edge", url: e.url ? `${e.url}#edge-${e.fn}-${i}` : `edge:${e.fn}:${i}`, title: `${FUNCTION_LABEL[e.fn]} → ${e.agency}`, trust: e.origin, host: e.url ? new URL(e.url).hostname : "", meta: e as unknown as Record<string, unknown> }))).catch(() => {});
   } else n.u.cache_hits++;
+  {
+    // Applied to fresh and reused knowledge alike.
+    const cityLike = unit.level === "municipality" || unit.level === "independent_city" || unit.level === "town_or_township";
+    const core = govNameTokens(unit.name!).core, tok = (x: string) => x.replace(/[^a-z]/g, "");
+    if (cityLike) edges = edges.filter((e) => !e.url || e.origin === "structure" || tok(new URL(e.url).hostname.toLowerCase()).includes(tok(core)) || e.quote.toLowerCase().includes(core));
+  }
   const nodes = resolveAuthorityGraph(edges, presumption, fns);
   return { nodes, locatedIn, pages: pagesRead, ai };
 }
