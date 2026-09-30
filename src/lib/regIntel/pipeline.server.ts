@@ -350,7 +350,9 @@ async function ahjWorker(s: PipelineState, n: Net, db: any): Promise<StepResult>
       const { core } = govNameTokens(unit.name);
       const tie = (h: string) => /\.(gov|us)$/.test(h) || (!!core && h.replace(/[^a-z]/g, "").includes(core.replace(/[^a-z]/g, "")));
       const hits = await searchOfficial(n, `${unit.name} ${stName} building permits zoning official`, (h) => tie(h) || VENDOR_HOST.test(h));
-      for (const h of hits.slice(0, 5)) {
+      // A city/town must not inherit a county page (e.g. City of Los Angeles ≠ Los Angeles County).
+      const wrongLevel = (h: { host: string; title: string }) => unit.level !== "county" && /count(y|ies)/i.test(`${h.host} ${h.title}`) && !/city and county|consolidated/i.test(h.title);
+      for (const h of hits.filter((x) => !wrongLevel(x)).slice(0, 5)) {
         const onGov = /\.(gov|us)$/.test(h.host);
         if (!onGov && !VENDOR_HOST.test(h.host)) VERIFIED_EXTRA_HOSTS.add(h.host);
         const cat = classifyLink(h.title, h.url) ?? (sources.some((x) => x.category === "official_website") ? "permits" : "official_website");
