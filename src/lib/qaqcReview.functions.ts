@@ -12,7 +12,6 @@ import {
   computeReadiness,
   containsProhibitedAssertion,
   PERMIVIO_PROFESSIONAL_DISCLAIMER,
-  readinessMeta,
   type QaQcCategoryId,
 } from "@/lib/qaqcConfig";
 
@@ -23,7 +22,8 @@ export const QAQC_MODEL = "google/gemini-2.5-pro";
 
 type ContentPart = { type: "text"; text: string } | { type: "file"; file: { filename: string; file_data: string } } | { type: "image_url"; image_url: { url: string } };
 
-type PlanBatch = { label: string; parts: ContentPart[]; pages: number };
+type PlanSegment = { label: string; docId: string; firstPage: number };
+type PlanBatch = { label: string; parts: ContentPart[]; pages: number; segments: PlanSegment[] };
 
 /**
  * Reads the selected plan documents and turns them into batches small enough
@@ -36,14 +36,14 @@ async function buildPlanBatches(
   docs: Array<{ id: string; name: string; mime_type: string | null; storage_path: string }>,
 ): Promise<PlanBatch[]> {
   const { splitPdfIntoChunks, MAX_PAGES_PER_CALL } = await import("@/lib/pdfChunk.server");
-  const items: Array<{ label: string; part: ContentPart; pages: number }> = [];
+  const items: Array<{ label: string; part: ContentPart; pages: number; docId: string; firstPage: number }> = [];
 
   for (const doc of docs) {
     const { data: signed } = await sb.storage.from("project-docs").createSignedUrl(doc.storage_path, 1800);
     if (!signed?.signedUrl) continue;
     const mime = doc.mime_type || "application/pdf";
     if (mime.startsWith("image/")) {
-      items.push({ label: doc.name, part: { type: "image_url", image_url: { url: signed.signedUrl } }, pages: 1 });
+      items.push({ label: doc.name, part: { type: "image_url", image_url: { url: signed.signedUrl } }, pages: 1, docId: doc.id, firstPage: 1 });
       continue;
     }
     const isPdf = mime === "application/pdf" || doc.name.toLowerCase().endsWith(".pdf");
@@ -57,6 +57,8 @@ async function buildPlanBatches(
         label: c.label,
         part: { type: "file", file: { filename: doc.name, file_data: `data:application/pdf;base64,${c.base64}` } },
         pages: c.pages || MAX_PAGES_PER_CALL,
+        docId: doc.id,
+        firstPage: c.firstPage || 1,
       });
     }
   }
@@ -65,12 +67,13 @@ async function buildPlanBatches(
   let cur: PlanBatch | null = null;
   for (const it of items) {
     if (!cur || cur.pages + it.pages > MAX_PAGES_PER_CALL) {
-      cur = { label: it.label, parts: [], pages: 0 };
+      cur = { label: it.label, parts: [], pages: 0, segments: [] };
       batches.push(cur);
     }
     cur.parts.push({ type: "text", text: `PLAN FILE SEGMENT: ${it.label}` });
     cur.parts.push(it.part);
     cur.pages += it.pages;
+    cur.segments.push({ label: it.label, docId: it.docId, firstPage: it.firstPage });
   }
   return batches;
 }
@@ -120,7 +123,7 @@ type Inventory = {
 };
 
 type FindingsOut = {
-  findings: Array<{ severity: string; category: string; discipline: string; sheet_number: string; sheet_title: string; location: string; summary: string; plain_language: string; why_it_matters: string; code_basis: string; jurisdiction_source_url: string; recommended_action: string; responsible_discipline: string; verification: string }>;
+  findings: Array<{ severity: string; category: string; discipline: string; sheet_number: string; sheet_title: string; location: string; summary: string; plain_language: string; why_it_matters: string; code_basis: string; jurisdiction_source_url: string; recommended_action: string; responsible_discipline: string; verification: string; segment?: string; page?: number | null; bbox?: { x: number; y: number; w: number; h: number } | null; related_sheets?: string[]; confidence?: "high" | "medium" | "low" | null; document_id?: string | null; abs_page?: number | null }>;
   missing_documents: Array<{ name: string; reason: string; blocking: boolean }>;
   submission_issues: string[];
   needs_professional_confirmation: string[];
@@ -169,6 +172,14 @@ const FindingsSchema = z.object({
       "verified_requirement", "ai_suggested", "coordination_issue",
       "missing_information", "human_review_recommended", "agency_confirmation_required",
     ]).default("ai_suggested"),
+    // Optional visual location: which PLAN FILE SEGMENT, which page inside it, and
+    // an approximate normalized box. Invalid/absent values are dropped, never guessed.
+    segment: z.string().default(""),
+    page: z.coerce.number().int().min(1).max(2000).nullable().optional().catch(null),
+    bbox: z.object({ x: z.number().min(0).max(1), y: z.number().min(0).max(1), w: z.number().gt(0).max(1), h: z.number().gt(0).max(1) })
+      .nullable().optional().catch(null),
+    related_sheets: z.array(z.string()).max(8).default([]).catch([]),
+    confidence: z.enum(["high", "medium", "low"]).nullable().optional().catch(null),
   })).max(120).default([]),
   missing_documents: z.array(z.object({ name: z.string(), reason: z.string().default(""), blocking: z.boolean().default(false) })).max(40).default([]),
   submission_issues: z.array(z.string()).max(40).default([]),
@@ -323,42 +334,90 @@ function contextBlock(ctx: Awaited<ReturnType<typeof loadProjectContext>>): stri
 
 // ------------------------------------------------------------------ run review
 
+export function planSetLabel(ps: { title: string; version_number: number | null }): string {
+  const v = ps.version_number ? `V${ps.version_number}` : "";
+  return v && !new RegExp(`\\b${v}\\b`, "i").test(ps.title) ? `${ps.title} (${v})` : ps.title;
+}
+
+/** Map a finding's segment-relative page to the real document + page. Never guesses. */
+function locateFinding(
+  b: PlanBatch,
+  f: { segment?: string; page?: number | null; bbox?: { x: number; y: number; w: number; h: number } | null },
+): { document_id: string | null; abs_page: number | null; bbox: { x: number; y: number; w: number; h: number } | null } {
+  const label = (f.segment ?? "").trim().toLowerCase();
+  const seg = b.segments.find((x) => x.label.trim().toLowerCase() === label) ?? (b.segments.length === 1 ? b.segments[0] : null);
+  if (!seg) return { document_id: null, abs_page: null, bbox: null };
+  const abs = f.page ? seg.firstPage + f.page - 1 : null;
+  const box = f.bbox;
+  const okBox = box && box.x + box.w <= 1.001 && box.y + box.h <= 1.001 && box.w * box.h < 0.9 ? box : null;
+  return { document_id: seg.docId, abs_page: abs, bbox: abs ? okBox : null };
+}
+
 export const runQaQcReview = createServerFn({ method: "POST" })
   .middleware([requireSupabaseAuth])
   .inputValidator((d: unknown) =>
     z.object({
       project_id: z.string().uuid(),
-      document_ids: z.array(z.string().uuid()).min(1).max(25),
+      plan_set_id: z.string().uuid().optional(),
+      document_ids: z.array(z.string().uuid()).min(1).max(25).optional(),
       revision_label: z.string().max(40).default("Rev A"),
-    }).parse(d),
+      // One id per pre-run screen: repeat clicks reuse it, so only one run/charge happens.
+      request_id: z.string().uuid(),
+    }).refine((v) => Boolean(v.plan_set_id || v.document_ids?.length), "Choose a plan set to review").parse(d),
   )
   .handler(async ({ data, context }) => {
     const sb = context.supabase;
     const ctx = await loadProjectContext(sb, data.project_id);
     if (!ctx.project) throw new Error("Project not found");
 
+    let documentIds = data.document_ids ?? [];
+    let planSet: { id: string; title: string; version_number: number | null; document_ids: string[] | null; sheet_count: number | null } | null = null;
+    if (data.plan_set_id) {
+      const { data: ps } = await sb
+        .from("plan_sets")
+        .select("id, project_id, title, version_number, document_ids, sheet_count")
+        .eq("id", data.plan_set_id)
+        .maybeSingle();
+      if (!ps || ps.project_id !== data.project_id) throw new Error("Plan set not found on this project");
+      planSet = ps;
+      documentIds = (ps.document_ids ?? []).slice(0, 25);
+    }
+    if (!documentIds.length) throw new Error("This plan set has no files to review");
+
     const { data: docs } = await sb
       .from("project_documents")
       .select("id, name, mime_type, storage_path")
-      .in("id", data.document_ids);
+      .eq("project_id", data.project_id)
+      .in("id", documentIds);
     if (!docs?.length) throw new Error("No readable plan documents selected");
 
     const jurisdiction = String(ctx.project['jurisdiction'] ?? "");
     const state = (ctx.confirmation?.['state'] as string | undefined) ?? null;
+    const revisionLabel = planSet ? planSetLabel(planSet).slice(0, 40) : data.revision_label;
+    const key = `qaqc:${data.project_id}:${data.plan_set_id ?? "files"}:${data.request_id}`;
 
+    // Same fail-closed meter as every paid run: claim key (duplicate clicks) →
+    // charge Plan Review credit → run → log tokens/cost; refund on failure.
+    const { runMeteredAi } = await import("@/lib/aiMeter.server");
+    return runMeteredAi(
+      { db: sb, userId: context.userId, operation: "plan_qaqc", creditType: "plan_review_credits", key, projectId: data.project_id },
+      async () => {
     const { data: review, error: insErr } = await sb
       .from("qaqc_reviews")
       .insert({
         user_id: context.userId,
         project_id: data.project_id,
-        revision_label: data.revision_label,
-        document_ids: data.document_ids,
+        plan_set_id: planSet?.id ?? null,
+        request_key: key,
+        started_at: new Date().toISOString(),
+        revision_label: revisionLabel,
+        document_ids: docs.map((d: { id: string }) => d.id),
         status: "running",
         model: QAQC_MODEL,
         prompt_version: QAQC_PROMPT_VERSION,
         project_context: ({
-          project_type: ctx.project['project_type'] ?? null,
-          address: ctx.confirmation?.['formatted_address'] ?? ctx.project['location'] ?? null,
+          project_type: ctx.project!['project_type'] ?? null,
+          address: ctx.confirmation?.['formatted_address'] ?? ctx.project!['location'] ?? null,
           confirmation_status: String(ctx.confirmation?.['status'] ?? "unconfirmed"),
         } as Record<string, unknown>) as never,
       })
@@ -366,26 +425,12 @@ export const runQaQcReview = createServerFn({ method: "POST" })
       .single();
     if (insErr || !review) throw new Error(insErr?.message ?? "Could not start review");
 
-    // Server-side entitlement: plans with a Plan Review allowance consume one
-    // credit per review (idempotent per review id); restored on system failure.
-    const { chargeIncludedUsage, refundCredit } = await import("@/lib/commerce.server");
-    let usageId: string | null = null;
-    try {
-      usageId = (await chargeIncludedUsage(sb, context.userId, "plan_review_credits", `qaqc:${review.id}`, {
-        projectId: data.project_id,
-        reason: `Plan QA/QC review (${data.revision_label})`,
-      })).usageId;
-    } catch (e) {
-      await sb.from("qaqc_reviews").update({ status: "error", error: (e as Error).message }).eq("id", review.id);
-      throw e;
-    }
-
     try {
       const { codes, sources, context: codeContext, agency_contacts } = await researchJurisdictionCodes(
         sb,
         jurisdiction,
         state,
-        (ctx.confirmation?.['formatted_address'] as string | undefined) ?? (ctx.project['location'] as string | undefined) ?? null,
+        (ctx.confirmation?.['formatted_address'] as string | undefined) ?? (ctx.project!['location'] as string | undefined) ?? null,
       );
       if (agency_contacts.length) {
         // Keep the retrieved agency contacts on the review so the report shows
@@ -547,14 +592,17 @@ RULES:
 - Never invent a code section, local amendment, or edition. If unknown, leave code_basis empty and set verification to agency_confirmation_required.
 - verification must be one of: verified_requirement (backed by a jurisdiction source you cite), ai_suggested, coordination_issue, missing_information, human_review_recommended, agency_confirmation_required.
 - category must be one of the ids listed above. discipline should be one of: ${QAQC_DISCIPLINES.join(", ")}.
+- confidence (high | medium | low) is how sure you are the observation is real on these drawings — separate from severity (review priority).
+- Location (optional): "segment" = the exact PLAN FILE SEGMENT label the issue is on; "page" = 1-indexed page within that segment file; "bbox" = approximate normalized {x,y,w,h} in [0,1] from the page's top-left. Omit bbox (null) if you cannot localize it; never return a whole-page box.
+- related_sheets: other sheet numbers involved ONLY when the finding is a conflict between sheets you actually saw in this segment or the inventory. Otherwise [].
 
-Return JSON: { "findings": [{ "severity": "critical|high|medium|low|informational", "category": "...", "discipline": "...", "sheet_number": "", "sheet_title": "", "location": "", "summary": "", "plain_language": "", "why_it_matters": "", "code_basis": "", "jurisdiction_source_url": "", "recommended_action": "", "responsible_discipline": "", "verification": "..." }], "missing_documents": [{"name":"","reason":"","blocking":false}], "submission_issues": [], "needs_professional_confirmation": [], "recommended_actions": [], "executive_summary": "" }`,
+Return JSON: { "findings": [{ "severity": "critical|high|medium|low|informational", "category": "...", "discipline": "...", "sheet_number": "", "sheet_title": "", "location": "", "summary": "", "plain_language": "", "why_it_matters": "", "code_basis": "", "jurisdiction_source_url": "", "recommended_action": "", "responsible_discipline": "", "verification": "...", "confidence": "medium", "segment": "", "page": null, "bbox": null, "related_sheets": [] }], "missing_documents": [{"name":"","reason":"","blocking":false}], "submission_issues": [], "needs_professional_confirmation": [], "recommended_actions": [], "executive_summary": "" }`,
               },
               ...b.parts,
             ],
             FindingsSchema,
           ) as unknown as FindingsOut;
-          results.push(out);
+          results.push({ ...out, findings: out.findings.map((f) => ({ ...f, ...locateFinding(b, f) })) });
         }
       }
 
@@ -593,6 +641,11 @@ Return JSON: { "findings": [{ "severity": "critical|high|medium|low|informationa
           recommended_action: f.recommended_action || null,
           responsible_discipline: f.responsible_discipline || null,
           verification: f.verification,
+          document_id: f.document_id ?? null,
+          page: f.abs_page ?? null,
+          bbox: f.abs_page && f.bbox ? f.bbox : null,
+          related_sheets: (f.related_sheets ?? []).map((x) => x.trim()).filter(Boolean).slice(0, 8),
+          confidence: f.confidence ?? null,
         })));
       }
 
@@ -608,6 +661,8 @@ Return JSON: { "findings": [{ "severity": "critical|high|medium|low|informationa
 
       await sb.from("qaqc_reviews").update({
         status: "complete",
+        completed_at: new Date().toISOString(),
+        sheet_count: sheetRows.length,
         inventory_gaps: {
           index_sheets_not_uploaded: inventory.index_sheets_not_uploaded,
           uploaded_sheets_not_indexed: inventory.uploaded_sheets_not_indexed,
@@ -633,21 +688,14 @@ Return JSON: { "findings": [{ "severity": "critical|high|medium|low|informationa
         needs_professional_confirmation: results.flatMap((r) => r.needs_professional_confirmation),
       }).eq("id", review.id);
 
-      await sb.from("activity").insert({
-        project_id: data.project_id,
-        user_id: context.userId,
-        description: `Plan QA/QC review (${data.revision_label}) complete — ${allFindings.length} findings · ${readinessMeta(category).label}`,
-      });
-
-      await (await import("@/lib/aiMeter.server")).logAiCall({ userId: context.userId, operation: "plan_qaqc", success: true, projectId: data.project_id, creditType: "plan_review_credits", creditTransactionId: usageId, internal: !usageId, key: `qaqc:${review.id}` });
-      return { review_id: review.id as string, findings: allFindings.length, readiness_score: score, readiness_category: category };
+      return { review_id: review.id as string, findings: allFindings.length };
     } catch (e) {
-      const msg = e instanceof Error ? e.message : "QA/QC review failed";
-      await (await import("@/lib/aiMeter.server")).logAiCall({ userId: context.userId, operation: "plan_qaqc", success: false, error: msg, projectId: data.project_id, creditType: "plan_review_credits", creditTransactionId: usageId, refunded: Boolean(usageId), key: `qaqc:${review.id}` });
-      await sb.from("qaqc_reviews").update({ status: "error", error: msg }).eq("id", review.id);
-      if (usageId) await refundCredit(usageId, "QA/QC review failed — credit restored");
+      const msg = e instanceof Error ? e.message : "Plan Review failed";
+      await sb.from("qaqc_reviews").update({ status: "error", error: msg, completed_at: new Date().toISOString() }).eq("id", review.id);
       throw new Error(msg);
     }
+      },
+    );
   });
 
 // ------------------------------------------------------------------- read APIs
@@ -826,9 +874,12 @@ export const generateQaQcReportPdf = createServerFn({ method: "POST" })
     text(`Address: ${project?.location ?? ""}`);
     text(`Jurisdiction: ${review.jurisdiction_snapshot?.jurisdiction ?? project?.jurisdiction ?? "unconfirmed"}`);
     text(`Project type: ${project?.project_type ?? ""}`);
-    text(`Revision reviewed: ${review.revision_label}`);
-    text(`Prepared: ${new Date(review.created_at).toLocaleString()}`);
-    text(`Permit readiness: ${readinessMeta(review.readiness_category).label} (${review.readiness_score ?? 0}/100)`, { b: true, gap: 8 });
+    const { data: reviewedSet } = review.plan_set_id
+      ? await sb.from("plan_sets").select("title, version_number").eq("id", review.plan_set_id).maybeSingle()
+      : { data: null };
+    text(`Plan set reviewed: ${reviewedSet ? planSetLabel(reviewedSet) : review.revision_label}`);
+    text(`Review date: ${new Date(review.completed_at ?? review.created_at).toLocaleString()}`);
+    text("Pre-submittal QA/QC assistance. Findings are potential issues, not confirmed code violations. This report does not guarantee code compliance or permit approval and does not replace licensed professional or AHJ review.", { size: 8, color: [0.35, 0.38, 0.44], gap: 8 });
 
     heading("Executive summary");
     text(review.executive_summary || "No summary generated.");
@@ -865,12 +916,12 @@ export const generateQaQcReportPdf = createServerFn({ method: "POST" })
       if (!rows.length) continue;
       heading(`${sev.toUpperCase()} findings (${rows.length})`);
       for (const f of rows) {
-        text(`#${f.finding_no} [${f.discipline}] ${f.sheet_number ?? ""} — ${f.summary}`, { b: true, gap: 1 });
+        text(`#${f.finding_no} [${f.discipline}] ${f.sheet_number ?? ""}${f.page ? ` p.${f.page}` : ""}${(f.related_sheets ?? []).length ? ` <-> ${(f.related_sheets as string[]).join(", ")}` : ""} — ${f.summary}`, { b: true, gap: 1 });
         if (f.plain_language) text(`What it means: ${f.plain_language}`, { gap: 1 });
         if (f.why_it_matters) text(`Why it matters: ${f.why_it_matters}`, { gap: 1 });
         if (f.code_basis) text(`Potential basis: ${f.code_basis}`, { gap: 1 });
         if (f.recommended_action) text(`Recommended action: ${f.recommended_action}`, { gap: 1 });
-        text(`Responsible: ${f.responsible_discipline ?? f.discipline} · Status: ${f.verification.replace(/_/g, " ")}${f.jurisdiction_source_url ? ` · ${f.jurisdiction_source_url}` : ""}`, { size: 8, color: [0.35, 0.38, 0.44] });
+        text(`Responsible: ${f.responsible_discipline ?? f.discipline} · Status: ${String(f.status ?? "open").replace(/_/g, " ")} · Evidence: ${f.verification.replace(/_/g, " ")}${f.confidence ? ` · ${f.confidence} confidence` : ""}${f.jurisdiction_source_url ? ` · ${f.jurisdiction_source_url}` : ""}`, { size: 8, color: [0.35, 0.38, 0.44] });
       }
     }
 
