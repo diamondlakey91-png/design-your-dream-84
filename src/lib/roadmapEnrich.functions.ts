@@ -222,6 +222,8 @@ export const enrichRoadmapWithAI = createServerFn({ method: "POST" })
       `(6) When you are less than confident an item applies, add a followup question instead of asserting it. ` +
       `(7) When a [CONTROLLING AUTHORITY] block is present, it was resolved from official boundary data — route permits to that authority and never to the mailing-address city when they differ.`;
 
+    const system = withRegulatoryGrounding(agentInstructions, "research");
+
     const prompt =
       (live?.block ?? "") +
       `SCOPE:\n${JSON.stringify(scopeSummary, null, 2)}\n\n` +
