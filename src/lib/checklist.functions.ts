@@ -1,6 +1,7 @@
 import { createServerFn } from "@tanstack/react-start";
 import { requireSupabaseAuth } from "@/integrations/supabase/auth-middleware";
 import { z } from "zod";
+import { ROADMAP_STATUSES, wouldCreateCycle } from "@/lib/roadmapWorkflow";
 import { callLovableAI, SYSTEM_PROMPT, PERMIT_STATUSES, ExtractedItem, loadJurisdictionContextBlock, loadHealthAgencyContextBlock } from "@/lib/ai.shared";
 
 // ---- Permit checklist ----
@@ -23,27 +24,93 @@ export const updatePermitItem = createServerFn({ method: "POST" })
   .inputValidator((input: unknown) =>
     z.object({
       id: z.string().uuid(),
-      status: z.enum(PERMIT_STATUSES).optional(),
+      status: z.enum(ROADMAP_STATUSES).optional(),
       notes: z.string().max(2000).optional(),
       due_date: z.string().nullable().optional(),
+      description: z.string().max(2000).nullable().optional(),
+      agency: z.string().max(200).nullable().optional(),
+      application_url: z.string().url().max(500).nullable().optional().or(z.literal("").transform(() => null)),
+      owner_name: z.string().max(120).nullable().optional(),
+      // customers may only choose unverified confidence levels; "verified" is Permivio-only (DB-enforced)
+      requirement_confidence: z.enum(["needs_verification", "potential"]).optional(),
+      depends_on: z.array(z.string().uuid()).max(20).optional(),
     }).parse(input),
   )
   .handler(async ({ data, context }) => {
-    const patch: { status?: string; notes?: string; due_date?: string | null } = {};
-    if (data.status) patch.status = data.status;
-    if (data.notes !== undefined) patch.notes = data.notes;
-    if (data.due_date !== undefined) patch.due_date = data.due_date;
-    const { data: row, error } = await context.supabase
-      .from("permit_items").update(patch).eq("id", data.id).select("*").single();
-    if (error) throw new Error(error.message);
-    if (data.status) {
-      await context.supabase.from("activity").insert({
-        user_id: context.userId,
-        project_id: row.project_id,
-        description: `${row.name} → ${data.status.replace(/_/g, " ")}`,
-      });
+    const { id, ...rest } = data;
+    const patch: Record<string, unknown> = {};
+    for (const [k, v] of Object.entries(rest)) if (v !== undefined) patch[k] = v;
+    if (data.depends_on) {
+      const { data: cur } = await context.supabase.from("permit_items").select("id,project_id").eq("id", id).maybeSingle();
+      if (!cur) throw new Error("Roadmap item not found");
+      const { data: all } = await context.supabase.from("permit_items").select("id,name,status,depends_on").eq("project_id", cur.project_id!);
+      const others = (all ?? []).map((i) => (i.id === id ? { ...i, depends_on: [] } : i));
+      for (const d of data.depends_on) {
+        if (!others.some((o) => o.id === d)) throw new Error("Prerequisites must be items on this project");
+        if (wouldCreateCycle(id, d, others)) throw new Error("That prerequisite would create a loop");
+      }
     }
-    return row;
+    const { data: row, error } = await context.supabase
+      .from("permit_items").update(patch as never).eq("id", id).select("*").single();
+    if (error) throw new Error(error.message);
+    return row; // status / prerequisite changes are logged by the DB activity trigger
+  });
+
+/** Bring the sourced AI roadmap into the project workflow. Sourced fee/timing/verification copied as-is — never invented. */
+export const importRoadmapToChecklist = createServerFn({ method: "POST" })
+  .middleware([requireSupabaseAuth])
+  .inputValidator((input: unknown) => z.object({ project_id: z.string().uuid() }).parse(input))
+  .handler(async ({ data, context }) => {
+    const sb = context.supabase;
+    const ok = await sb.rpc("can_write_project", { _project_id: data.project_id });
+    if (!ok.data) throw new Error("You can't edit this project");
+    const { data: rm } = await sb.from("permit_roadmaps").select("id").eq("project_id", data.project_id).order("created_at", { ascending: false }).limit(1).maybeSingle();
+    if (!rm) throw new Error("No permit roadmap has been generated for this project yet");
+    const [{ data: permits }, { data: sources }, { data: existing }] = await Promise.all([
+      sb.from("roadmap_permits").select("*").eq("roadmap_id", rm.id).order("sequence_order"),
+      sb.from("roadmap_sources").select("id,url").eq("roadmap_id", rm.id),
+      sb.from("permit_items").select("id,roadmap_permit_id").eq("project_id", data.project_id),
+    ]);
+    const already = new Set((existing ?? []).map((e) => e.roadmap_permit_id).filter(Boolean));
+    const srcUrl = new Map((sources ?? []).map((x) => [x.id, x.url]));
+    const todo = (permits ?? []).filter((p) => !already.has(p.id));
+    if (!todo.length) return { added: 0 };
+    const { supabaseAdmin } = await import("@/integrations/supabase/client.server");
+    const idMap = new Map<string, string>();
+    for (const e of existing ?? []) if (e.roadmap_permit_id) idMap.set(e.roadmap_permit_id, e.id);
+    const rows = todo.map((p, i) => {
+      const sourced = p.timeline_basis === "published" || p.timeline_basis === "permivio_history";
+      const newId = crypto.randomUUID();
+      idMap.set(p.id, newId);
+      return {
+        id: newId,
+        user_id: context.userId,
+        project_id: data.project_id,
+        name: p.name,
+        category: String(p.category ?? "other").replace(/_/g, " ").replace(/^./, (c: string) => c.toUpperCase()),
+        required: p.likelihood === "required" || p.likelihood === "likely",
+        status: p.likelihood === "not_required" ? "n_a" : "not_started",
+        description: p.trigger_condition ?? null,
+        notes: p.notes ?? "",
+        agency: p.agency ?? null,
+        source_url: (p.source_ids ?? []).map((s: string) => srcUrl.get(s)).find(Boolean) ?? null,
+        requirement_confidence: p.verification === "verified" ? "verified" : p.likelihood === "conditional" ? "potential" : "needs_verification",
+        fee_text: p.fee_estimate_cents != null && p.fee_basis && sourced ? `$${(p.fee_estimate_cents / 100).toLocaleString()} — ${p.fee_basis}` : null,
+        review_timing: p.review_days_min != null && sourced ? `${p.review_days_min}${p.review_days_max ? `–${p.review_days_max}` : ""} days (${p.timeline_basis === "published" ? "published" : "Permivio history"})` : null,
+        last_verified_at: p.last_verified_at ?? null,
+        roadmap_permit_id: p.id,
+        sort_order: 100 + i,
+        depends_on: [] as string[],
+      };
+    });
+    const { error } = await supabaseAdmin.from("permit_items").insert(rows);
+    if (error) throw new Error(error.message);
+    // second pass: prerequisites (now that every target exists)
+    for (const p of todo) {
+      const deps = (p.depends_on ?? []).map((d: string) => idMap.get(d)).filter((d): d is string => !!d);
+      if (deps.length) await supabaseAdmin.from("permit_items").update({ depends_on: deps }).eq("id", idMap.get(p.id)!);
+    }
+    return { added: rows.length };
   });
 
 export const addPermitItem = createServerFn({ method: "POST" })

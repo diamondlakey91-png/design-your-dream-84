@@ -22,6 +22,11 @@ export type FoundationState = {
   inspectionsPassed: number;
   inspectionsFailed: number;
   inspectionsUpcoming: number;
+  // Phase 2B roadmap signals (optional so older callers stay valid)
+  roadmapBlocked?: { name: string; waitingOn: string[] }[];
+  roadmapNeedsVerification?: number;
+  roadmapReadyToSubmit?: string[];
+  roadmapCorrectionsRequired?: string[];
 };
 
 export type NextAction = {
@@ -76,6 +81,14 @@ export function nextActions(s: FoundationState): NextAction[] {
     out.push({ key: "describe_scope", title: "Describe the scope of work", why: "The permit roadmap is built from property, scope and jurisdiction.", tab: "scope", tone: "attention" });
   if (!s.hasRoadmap && s.hasJurisdiction)
     out.push({ key: "build_roadmap", title: "Build the permit roadmap", why: "No roadmap exists for this project yet.", tab: "scope", tone: "attention" });
+  if ((s.roadmapNeedsVerification ?? 0) > 0)
+    out.push({ key: "verify_requirements", title: "Verify requirements", why: `${s.roadmapNeedsVerification} required roadmap item(s) are not yet verified against an official source.`, tab: "checklist", tone: "attention" });
+  for (const b of (s.roadmapBlocked ?? []).slice(0, 2))
+    out.push({ key: `blocked_${b.name}`, title: `Resolve prerequisite for ${b.name}`, why: b.waitingOn.length ? `Blocked by: ${b.waitingOn.join(", ")}` : "Marked blocked.", tab: "checklist", tone: "attention" });
+  if ((s.roadmapReadyToSubmit ?? []).length > 0)
+    out.push({ key: "prepare_submit", title: "Prepare / submit permit", why: `Ready to submit: ${s.roadmapReadyToSubmit!.join(", ")}`, tab: "checklist", tone: "attention" });
+  if ((s.roadmapCorrectionsRequired ?? []).length > 0)
+    out.push({ key: "roadmap_corrections", title: "Review corrections", why: `Corrections required: ${s.roadmapCorrectionsRequired!.join(", ")}`, tab: "responses", tone: "urgent" });
   if (s.hasRoadmap && s.planDocs === 0)
     out.push({ key: "upload_plans", title: "Upload plans", why: "The roadmap needs drawings, but none are uploaded.", tab: "docs", tone: "attention" });
   if (s.planDocs > s.planDocsReviewed)

@@ -4,6 +4,7 @@ import { useQuery, useQueryClient } from "@tanstack/react-query";
 import { useServerFn } from "@tanstack/react-start";
 import { AppShell } from "@/components/AppShell";
 import { getProject, updateProject } from "@/lib/projects.functions";
+import { OCCUPANCY_OPTIONS, WORK_TYPE_OPTIONS } from "@/lib/intakeOptions";
 import { ArrowLeft, MapPin, Landmark, Pencil } from "lucide-react";
 import { useState } from "react";
 import { toast } from "sonner";
@@ -130,6 +131,7 @@ function ProjectDetail() {
             setEditOpen(false);
             qc.invalidateQueries({ queryKey: ["project", id] });
             qc.invalidateQueries({ queryKey: ["projects"] });
+            qc.invalidateQueries({ queryKey: ["project-foundation", id] });
           } catch (e) {
             toast.error(e instanceof Error ? e.message : "Update failed");
           }
@@ -169,6 +171,10 @@ function ProjectDetail() {
                       ? "site investigation"
                       : t === "timeline"
                         ? "activity"
+                        : t === "checklist"
+                          ? "permit roadmap"
+                          : t === "docs"
+                            ? "documents"
                         : t}
             </button>
           ))}
@@ -208,6 +214,11 @@ type EditPatch = {
   project_type?: string;
   jurisdiction?: string;
   permit_count?: number;
+  scope_description?: string | null;
+  occupancy_class?: "residential" | "commercial" | "mixed_use" | null;
+  work_type?: string | null;
+  target_start_date?: string | null;
+  intake_notes?: string | null;
   primary_project_type_id?: string | null;
   additional_project_type_ids?: string[];
 };
@@ -222,7 +233,7 @@ function EditProjectDialog({
 }: {
   open: boolean;
   onOpenChange: (v: boolean) => void;
-  project: { name: string; location: string | null; project_type: string | null; jurisdiction: string | null; permit_count: number; primary_project_type_id?: string | null; additional_project_type_ids?: string[] | null };
+  project: { name: string; location: string | null; project_type: string | null; jurisdiction: string | null; permit_count: number; primary_project_type_id?: string | null; additional_project_type_ids?: string[] | null; scope_description?: string | null; occupancy_class?: string | null; work_type?: string | null; target_start_date?: string | null; intake_notes?: string | null };
   onSave: (patch: EditPatch, typeIds: TypeIds) => void | Promise<void>;
 }) {
   const { byId } = useProjectTypes();
@@ -232,11 +243,17 @@ function EditProjectDialog({
   const [additionalIds, setAdditionalIds] = useState<string[]>(project.additional_project_type_ids ?? []);
   const [jurisdiction, setJurisdiction] = useState(project.jurisdiction ?? "");
   const [permitCount, setPermitCount] = useState(String(project.permit_count ?? 0));
+  const [scope, setScope] = useState(project.scope_description ?? "");
+  const [occupancy, setOccupancy] = useState(project.occupancy_class ?? "");
+  const [workType, setWorkType] = useState(project.work_type ?? "");
+  const [startDate, setStartDate] = useState(project.target_start_date ?? "");
+  const [notes, setNotes] = useState(project.intake_notes ?? "");
   const [saving, setSaving] = useState(false);
+  const selectCls = "h-9 w-full rounded-md border border-input bg-card px-3 text-sm outline-none focus:border-primary";
 
   return (
     <Dialog open={open} onOpenChange={onOpenChange}>
-      <DialogContent>
+      <DialogContent className="max-h-[90vh] overflow-y-auto">
         <DialogHeader>
           <DialogTitle>Edit project</DialogTitle>
         </DialogHeader>
@@ -279,6 +296,35 @@ function EditProjectDialog({
               onChange={(e) => setPermitCount(e.target.value)}
             />
           </div>
+          <div className="space-y-1.5">
+            <Label htmlFor="edit-scope">Scope of work</Label>
+            <textarea id="edit-scope" value={scope} onChange={(e) => setScope(e.target.value)} maxLength={4000} rows={3} className="w-full rounded-md border border-input bg-card px-3 py-2 text-sm outline-none focus:border-primary" />
+          </div>
+          <div className="grid grid-cols-2 gap-3">
+            <div className="space-y-1.5">
+              <Label htmlFor="edit-occupancy">Residential / commercial</Label>
+              <select id="edit-occupancy" value={occupancy} onChange={(e) => setOccupancy(e.target.value)} className={selectCls}>
+                <option value="">Not sure yet</option>
+                {OCCUPANCY_OPTIONS.map((o) => <option key={o.value} value={o.value}>{o.label}</option>)}
+              </select>
+            </div>
+            <div className="space-y-1.5">
+              <Label htmlFor="edit-worktype">Type of work</Label>
+              <select id="edit-worktype" value={workType} onChange={(e) => setWorkType(e.target.value)} className={selectCls}>
+                <option value="">Not sure yet</option>
+                {WORK_TYPE_OPTIONS.map((o) => <option key={o.value} value={o.value}>{o.label}</option>)}
+                {workType && !WORK_TYPE_OPTIONS.some((o) => o.value === workType) && <option value={workType}>{workType.replace(/_/g, " ")}</option>}
+              </select>
+            </div>
+          </div>
+          <div className="space-y-1.5">
+            <Label htmlFor="edit-start">Target start date</Label>
+            <Input id="edit-start" type="date" value={startDate} onChange={(e) => setStartDate(e.target.value)} />
+          </div>
+          <div className="space-y-1.5">
+            <Label htmlFor="edit-notes">Notes</Label>
+            <textarea id="edit-notes" value={notes} onChange={(e) => setNotes(e.target.value)} maxLength={4000} rows={2} className="w-full rounded-md border border-input bg-card px-3 py-2 text-sm outline-none focus:border-primary" />
+          </div>
         </div>
         <DialogFooter>
           <Button variant="ghost" onClick={() => onOpenChange(false)}>Cancel</Button>
@@ -295,6 +341,11 @@ function EditProjectDialog({
                     project_type: (primaryLabel ?? "").trim(),
                     jurisdiction: jurisdiction.trim(),
                     permit_count: Math.max(0, Math.min(50, Number(permitCount) || 0)),
+                    scope_description: scope.trim() || null,
+                    occupancy_class: (occupancy || null) as EditPatch["occupancy_class"],
+                    work_type: workType || null,
+                    target_start_date: startDate || null,
+                    intake_notes: notes.trim() || null,
                   },
                   { primaryId, additionalIds },
                 );

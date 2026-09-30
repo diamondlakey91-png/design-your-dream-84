@@ -1,6 +1,7 @@
 import { createServerFn } from "@tanstack/react-start";
 import { z } from "zod";
 import { requireSupabaseAuth } from "@/integrations/supabase/auth-middleware";
+import { roadmapSummary, blockers } from "./roadmapWorkflow";
 import { derivePhase, nextActions, permitProgress, PHASES, type FoundationState } from "./projectFoundation";
 
 const isPlan = (d: { name: string; mime_type: string | null }) =>
@@ -13,16 +14,17 @@ export const getProjectFoundation = createServerFn({ method: "GET" })
   .handler(async ({ data, context }) => {
     const sb = context.supabase;
     const pid = data.project_id;
-    const [proj, conf, roadmaps, items, docs, comments, findings, insp, act] = await Promise.all([
+    const [proj, conf, roadmaps, items, docs, comments, findings, insp, act, psets] = await Promise.all([
       sb.from("projects").select("id,name,location,jurisdiction,project_type,scope_description,occupancy_class,work_type,target_start_date").eq("id", pid).maybeSingle(),
       sb.from("jurisdiction_confirmations").select("status,jurisdiction_id,city,state,formatted_address").eq("project_id", pid).maybeSingle(),
       sb.from("permit_roadmaps").select("id").eq("project_id", pid).limit(1),
-      sb.from("permit_items").select("id,name,status,required").eq("project_id", pid),
+      sb.from("permit_items").select("id,name,status,required,depends_on,requirement_confidence").eq("project_id", pid),
       sb.from("project_documents").select("id,name,mime_type,plan_reviewed_at,created_at").eq("project_id", pid).order("created_at", { ascending: false }),
       sb.from("comment_responses").select("id,status").eq("project_id", pid),
       sb.from("qaqc_findings").select("id,resolved,qaqc_reviews!inner(project_id)").eq("qaqc_reviews.project_id", pid).eq("resolved", false),
       sb.from("inspections").select("id,inspection_type,scheduled_date,status").eq("project_id", pid).order("scheduled_date", { ascending: true }),
       sb.from("activity").select("id,description,action,object_type,created_at,user_id").eq("project_id", pid).order("created_at", { ascending: false }).limit(8),
+      sb.from("plan_sets").select("id,title,version_number,is_current,created_at").eq("project_id", pid).eq("archived", false).order("created_at", { ascending: false }),
     ]);
     if (proj.error) throw new Error(proj.error.message);
     if (!proj.data) throw new Error("Project not found");
@@ -45,6 +47,8 @@ export const getProjectFoundation = createServerFn({ method: "GET" })
     const inspections = insp.data ?? [];
     const today = new Date().toISOString().slice(0, 10);
 
+    const allItems = items.data ?? [];
+    const rs = roadmapSummary(allItems);
     const state: FoundationState = {
       hasAddress: !!(p.location ?? "").trim(),
       hasJurisdiction: !!(p.jurisdiction ?? "").trim() || !!conf.data?.jurisdiction_id,
@@ -62,7 +66,13 @@ export const getProjectFoundation = createServerFn({ method: "GET" })
       inspectionsPassed: inspections.filter((i) => i.status === "passed").length,
       inspectionsFailed: inspections.filter((i) => i.status === "failed").length,
       inspectionsUpcoming: inspections.filter((i) => (i.status === "scheduled" || i.status === "rescheduled") && (!i.scheduled_date || i.scheduled_date >= today)).length,
+      roadmapBlocked: rs.blocked.map((i) => ({ name: i.name, waitingOn: blockers(i, allItems) })),
+      roadmapNeedsVerification: rs.needsVerification.length,
+      roadmapReadyToSubmit: rs.readyToSubmit.map((i) => i.name),
+      roadmapCorrectionsRequired: rs.correctionsRequired.map((i) => i.name),
     };
+    const sets = psets.data ?? [];
+    const current = sets.find((x) => x.is_current) ?? null;
 
     const phase = derivePhase(state);
     return {
@@ -84,5 +94,8 @@ export const getProjectFoundation = createServerFn({ method: "GET" })
         .slice(0, 5)
         .map((i) => ({ id: i.id, type: i.inspection_type, date: i.scheduled_date, status: i.status })),
       recentActivity: act.data ?? [],
+      roadmap: { total: rs.total, done: rs.done, blocked: rs.blocked.length },
+      currentPlanSet: current ? { id: current.id, title: current.title, version: current.version_number } : null,
+      planSetCount: sets.length,
     };
   });

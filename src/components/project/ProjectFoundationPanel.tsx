@@ -104,6 +104,17 @@ export function ProjectFoundationPanel({ projectId, onOpenTab }: { projectId: st
               </button>
             ))}
           </dl>
+          <div className="mt-3 grid grid-cols-2 gap-2 text-xs">
+            <button onClick={() => onOpenTab("checklist")} className="rounded-lg border border-border p-2 text-left hover:border-brand">
+              <span className="block text-[10px] font-mono uppercase tracking-widest text-muted-foreground">Roadmap</span>
+              <span className="text-foreground">{d.roadmap.total ? `${d.roadmap.done} of ${d.roadmap.total} done` : "Not started"}</span>
+              {d.roadmap.blocked > 0 && <span className="block text-destructive">{d.roadmap.blocked} blocked</span>}
+            </button>
+            <button onClick={() => onOpenTab("docs")} className="rounded-lg border border-border p-2 text-left hover:border-brand">
+              <span className="block text-[10px] font-mono uppercase tracking-widest text-muted-foreground">Current plan set</span>
+              <span className="text-foreground">{d.currentPlanSet ? `${d.currentPlanSet.title}${d.currentPlanSet.version && !d.currentPlanSet.title.includes(`V${d.currentPlanSet.version}`) ? ` · V${d.currentPlanSet.version}` : ""}` : "None selected"}</span>
+            </button>
+          </div>
         </Card>
       </div>
 
