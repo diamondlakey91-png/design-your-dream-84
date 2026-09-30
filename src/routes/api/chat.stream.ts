@@ -226,6 +226,7 @@ export const Route = createFileRoute("/api/chat/stream")({
                   .eq("id", threadId);
               }
             } catch (e) {
+              await failRun(e instanceof Error ? e.message : "stream error");
               controller.enqueue(encoder.encode(`\n\n[stream error: ${e instanceof Error ? e.message : "unknown"}]`));
             } finally {
               controller.close();
