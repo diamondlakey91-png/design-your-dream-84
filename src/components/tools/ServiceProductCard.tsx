@@ -23,12 +23,20 @@ export function ServiceProductCard({
   onBuy,
   onFullService,
   purchasedTier,
+  memberPriceCents,
+  creditsAvailable,
+  onUseCredit,
 }: {
   product: ServiceProduct;
   recommendation: Recommendation;
   onBuy: (tier: DeliveryTier) => void;
   onFullService: () => void;
   purchasedTier?: DeliveryTier | null;
+  /** Subscriber price for the base option (from admin-configured data). */
+  memberPriceCents?: number | null;
+  /** Included credits the member can apply to this product, when configured. */
+  creditsAvailable?: { available: number; needed: number; label: string } | null;
+  onUseCredit?: (tier: DeliveryTier) => void;
 }) {
   const deliverables = Array.isArray(product.deliverables) ? (product.deliverables as string[]) : [];
   const fullScope = Array.isArray(product.full_scope) ? (product.full_scope as string[]) : [];
@@ -106,13 +114,32 @@ export function ServiceProductCard({
         </div>
       ) : (
         <>
+          {creditsAvailable && onUseCredit && (
+            <div className="mt-5 flex flex-wrap items-center justify-between gap-2 rounded-2xl border border-primary/40 bg-primary/10 p-3">
+              <p className="text-xs text-foreground">
+                {creditsAvailable.available} {creditsAvailable.label} available
+                <span className="text-muted-foreground"> · uses {creditsAvailable.needed}</span>
+              </p>
+              <button
+                onClick={() => onUseCredit(reviewRequired ? "professional_review" : "ai_assisted")}
+                disabled={creditsAvailable.available < creditsAvailable.needed}
+                className="rounded-full bg-primary px-3 py-1.5 text-xs font-semibold text-primary-foreground disabled:opacity-50"
+              >
+                Use included credit
+              </button>
+            </div>
+          )}
           <div className="mt-5 space-y-3 border-t border-border pt-4">
             {!reviewRequired && (
               <TierRow
                 icon={<Sparkles className="size-4 text-primary" />}
                 tier="ai_assisted"
                 priceLabel={money(product.base_price_cents, product.currency)}
-                subLabel="Base report"
+                subLabel={
+                  memberPriceCents != null && memberPriceCents < product.base_price_cents
+                    ? `Standard price · ${money(memberPriceCents, product.currency)} member price at checkout`
+                    : "Base report"
+                }
                 purchased={purchasedTier === "ai_assisted"}
                 onBuy={() => onBuy("ai_assisted")}
               />
