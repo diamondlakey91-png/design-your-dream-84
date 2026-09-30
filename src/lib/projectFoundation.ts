@@ -27,6 +27,10 @@ export type FoundationState = {
   roadmapNeedsVerification?: number;
   roadmapReadyToSubmit?: string[];
   roadmapCorrectionsRequired?: string[];
+  // Phase 2C plan-review signals, scoped to the CURRENT plan set.
+  currentPlanSet?: { label: string; reviewed: boolean; previousReviewedLabel: string | null } | null;
+  planFindingsHighOpen?: number;
+  planFindingsNeedsReview?: number;
 };
 
 export type NextAction = {
@@ -91,10 +95,25 @@ export function nextActions(s: FoundationState): NextAction[] {
     out.push({ key: "roadmap_corrections", title: "Review corrections", why: `Corrections required: ${s.roadmapCorrectionsRequired!.join(", ")}`, tab: "responses", tone: "urgent" });
   if (s.hasRoadmap && s.planDocs === 0)
     out.push({ key: "upload_plans", title: "Upload plans", why: "The roadmap needs drawings, but none are uploaded.", tab: "docs", tone: "attention" });
-  if (s.planDocs > s.planDocsReviewed)
+  if (s.currentPlanSet) {
+    if (!s.currentPlanSet.reviewed)
+      out.push({
+        key: "run_plan_review", title: "Run Plan Review",
+        why: `${s.currentPlanSet.label} has not been reviewed yet.${s.currentPlanSet.previousReviewedLabel ? ` Previous findings belong to ${s.currentPlanSet.previousReviewedLabel}.` : ""}`,
+        tab: "planqaqc", tone: "attention",
+      });
+  } else if (s.planDocs > s.planDocsReviewed)
     out.push({ key: "run_plan_review", title: "Run plan review", why: `${s.planDocs - s.planDocsReviewed} uploaded plan file(s) have never been reviewed.`, tab: "docs", tone: "attention" });
-  if (s.openPlanFindings > 0)
-    out.push({ key: "review_findings", title: "Review plan findings", why: `${s.openPlanFindings} open finding(s) need a decision. AI findings are suggestions, not confirmed violations.`, tab: "planqaqc", tone: "attention" });
+  if (s.openPlanFindings > 0) {
+    const high = s.planFindingsHighOpen ?? 0;
+    out.push({
+      key: "review_findings", title: "Review plan findings",
+      why: `${s.openPlanFindings} open finding(s)${high ? `, ${high} high priority` : ""} need a decision. AI findings are potential issues, not confirmed violations.`,
+      tab: "planqaqc", tone: high > 0 ? "urgent" : "attention",
+    });
+  }
+  if ((s.planFindingsNeedsReview ?? 0) > 0)
+    out.push({ key: "review_flagged_findings", title: "Review flagged findings", why: `${s.planFindingsNeedsReview} finding(s) are marked Needs Review.`, tab: "planqaqc", tone: "attention" });
   if (s.openCorrections > 0)
     out.push({ key: "review_corrections", title: "Review corrections", why: `${s.openCorrections} reviewer comment(s) are still open.`, tab: "responses", tone: "urgent" });
   if (s.inspectionsFailed > 0)
@@ -102,4 +121,37 @@ export function nextActions(s: FoundationState): NextAction[] {
   if (s.permitsRequired > 0 && s.permitsApproved >= s.permitsRequired && (s.inspectionsTotal === 0 || s.inspectionsPassed < s.inspectionsTotal))
     out.push({ key: "track_final_inspections", title: "Schedule / track final inspections", why: "Permits are approved but inspections are not complete.", tab: "inspections", tone: "attention" });
   return out;
+}
+
+const setLabel = (ps: { title: string; version_number: number | null }) =>
+  ps.version_number && !new RegExp(`\\bV${ps.version_number}\\b`, "i").test(ps.title) ? `${ps.title} (V${ps.version_number})` : ps.title;
+
+/**
+ * Plan-review signals for Next Actions. Findings count only from the latest
+ * completed review of the CURRENT plan set, so an older version's findings never
+ * masquerade as the current set's. Accepted / Not applicable / Resolved never prompt.
+ */
+export function planReviewSignals(
+  sets: Array<{ id: string; title: string; version_number: number | null; is_current: boolean | null }>,
+  completedReviews: Array<{ id: string; plan_set_id: string | null; created_at: string }>,
+  openFindings: Array<{ review_id: string; status: string; severity: string }>,
+) {
+  const current = sets.find((x) => x.is_current) ?? null;
+  const latestFor = (setId: string) =>
+    completedReviews.filter((r) => r.plan_set_id === setId).sort((a, b) => b.created_at.localeCompare(a.created_at))[0] ?? null;
+  let scoped = openFindings;
+  let cur: FoundationState["currentPlanSet"] = null;
+  if (current) {
+    const rev = latestFor(current.id);
+    const prevSet = !rev ? sets.find((x) => x.id !== current.id && latestFor(x.id)) ?? null : null;
+    cur = { label: setLabel(current), reviewed: !!rev, previousReviewedLabel: prevSet ? setLabel(prevSet) : null };
+    scoped = rev ? openFindings.filter((f) => f.review_id === rev.id) : [];
+  }
+  const live = scoped.filter((f) => f.status === "open" || f.status === "needs_review");
+  return {
+    current: cur,
+    open: live.length,
+    high: live.filter((f) => f.severity === "critical" || f.severity === "high").length,
+    needsReview: live.filter((f) => f.status === "needs_review").length,
+  };
 }

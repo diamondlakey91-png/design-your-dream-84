@@ -2,7 +2,7 @@ import { createServerFn } from "@tanstack/react-start";
 import { z } from "zod";
 import { requireSupabaseAuth } from "@/integrations/supabase/auth-middleware";
 import { roadmapSummary, blockers } from "./roadmapWorkflow";
-import { derivePhase, nextActions, permitProgress, PHASES, type FoundationState } from "./projectFoundation";
+import { derivePhase, nextActions, permitProgress, planReviewSignals, PHASES, type FoundationState } from "./projectFoundation";
 
 const isPlan = (d: { name: string; mime_type: string | null }) =>
   (d.mime_type || "").startsWith("image/") || d.mime_type === "application/pdf" || d.name.toLowerCase().endsWith(".pdf");
@@ -14,17 +14,18 @@ export const getProjectFoundation = createServerFn({ method: "GET" })
   .handler(async ({ data, context }) => {
     const sb = context.supabase;
     const pid = data.project_id;
-    const [proj, conf, roadmaps, items, docs, comments, findings, insp, act, psets] = await Promise.all([
+    const [proj, conf, roadmaps, items, docs, comments, findings, insp, act, psets, reviews] = await Promise.all([
       sb.from("projects").select("id,name,location,jurisdiction,project_type,scope_description,occupancy_class,work_type,target_start_date").eq("id", pid).maybeSingle(),
       sb.from("jurisdiction_confirmations").select("status,jurisdiction_id,city,state,formatted_address").eq("project_id", pid).maybeSingle(),
       sb.from("permit_roadmaps").select("id").eq("project_id", pid).limit(1),
       sb.from("permit_items").select("id,name,status,required,depends_on,requirement_confidence").eq("project_id", pid),
       sb.from("project_documents").select("id,name,mime_type,plan_reviewed_at,created_at").eq("project_id", pid).order("created_at", { ascending: false }),
       sb.from("comment_responses").select("id,status").eq("project_id", pid),
-      sb.from("qaqc_findings").select("id,resolved,qaqc_reviews!inner(project_id)").eq("qaqc_reviews.project_id", pid).eq("resolved", false),
+      sb.from("qaqc_findings").select("id,status,severity,review_id,qaqc_reviews!inner(project_id)").eq("qaqc_reviews.project_id", pid).in("status", ["open", "needs_review"]),
       sb.from("inspections").select("id,inspection_type,scheduled_date,status").eq("project_id", pid).order("scheduled_date", { ascending: true }),
       sb.from("activity").select("id,description,action,object_type,created_at,user_id").eq("project_id", pid).order("created_at", { ascending: false }).limit(8),
       sb.from("plan_sets").select("id,title,version_number,is_current,created_at").eq("project_id", pid).eq("archived", false).order("created_at", { ascending: false }),
+      sb.from("qaqc_reviews").select("id,plan_set_id,status,created_at").eq("project_id", pid).eq("status", "complete").order("created_at", { ascending: false }),
     ]);
     if (proj.error) throw new Error(proj.error.message);
     if (!proj.data) throw new Error("Project not found");
@@ -48,6 +49,8 @@ export const getProjectFoundation = createServerFn({ method: "GET" })
     const today = new Date().toISOString().slice(0, 10);
 
     const allItems = items.data ?? [];
+    const setsForReview = psets.data ?? [];
+    const plan = planReviewSignals(setsForReview, reviews.data ?? [], findings.data ?? []);
     const rs = roadmapSummary(allItems);
     const state: FoundationState = {
       hasAddress: !!(p.location ?? "").trim(),
@@ -60,7 +63,10 @@ export const getProjectFoundation = createServerFn({ method: "GET" })
       permitsApproved: req.filter((i) => i.status === "approved" || i.status === "issued").length,
       planDocs: plans.length,
       planDocsReviewed: plans.filter((d) => !!d.plan_reviewed_at).length,
-      openPlanFindings: (findings.data ?? []).length,
+      openPlanFindings: plan.open,
+      planFindingsHighOpen: plan.high,
+      planFindingsNeedsReview: plan.needsReview,
+      currentPlanSet: plan.current,
       openCorrections: (comments.data ?? []).filter((c) => c.status !== "resolved" && c.status !== "n_a").length,
       inspectionsTotal: inspections.filter((i) => i.status !== "canceled").length,
       inspectionsPassed: inspections.filter((i) => i.status === "passed").length,
