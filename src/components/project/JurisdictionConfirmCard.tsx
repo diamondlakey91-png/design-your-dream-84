@@ -172,11 +172,12 @@ export function JurisdictionConfirmCard({ projectId }: { projectId: string }) {
         <>
           <div className="grid grid-cols-1 md:grid-cols-2 gap-3 text-sm">
             <Field label="Standardized address" value={c.formatted_address ?? `${c.street}${c.suite ? " " + c.suite : ""}, ${c.city}, ${c.state} ${c.zip}`} />
-            <Field label="Parcel / Tax account" value={c.parcel_number ?? "—"} />
-            <Field label="Municipality" value={jurisdiction?.municipality ?? (jurisdiction?.incorporated ? "—" : "Unincorporated")} />
-            <Field label="County" value={jurisdiction ? `${jurisdiction.county} County` : "—"} />
+            <Field label="Parcel / Tax account" value={c.parcel_number ?? "Not yet established — see Regulatory Profile research"} />
+            {/* Never show "Unincorporated" unless a resolved jurisdiction record (boundary evidence) establishes it. */}
+            <Field label="Municipality" value={!jurisdiction ? "Needs Verification — research not complete" : jurisdiction.municipality ?? (jurisdiction.incorporated === false ? "None (unincorporated)" : "Needs Verification")} />
+            <Field label="County" value={jurisdiction?.county ? `${String(jurisdiction.county).replace(/ County$/i, "")} County` : "Needs Verification"} />
             <Field label="State" value={jurisdiction?.state ?? c.state} />
-            <Field label="Incorporated" value={jurisdiction?.incorporated ? "Inside city limits" : "Unincorporated area"} />
+            <Field label="Municipal status" value={!jurisdiction ? "Needs Verification" : jurisdiction.incorporated === true ? "Inside city limits" : jurisdiction.incorporated === false ? "Unincorporated area" : "Needs Verification"} />
           </div>
 
           <div className="space-y-2">
