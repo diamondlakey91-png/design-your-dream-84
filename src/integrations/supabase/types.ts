@@ -3662,6 +3662,77 @@ export type Database = {
           },
         ]
       }
+      regulatory_research_jobs: {
+        Row: {
+          address: string
+          address_hash: string
+          created_at: string
+          current_step: number
+          error: string | null
+          escalations: Json
+          finished_at: string | null
+          id: string
+          lease_until: string | null
+          project_id: string
+          requested_by: string | null
+          scope_hash: string | null
+          started_at: string | null
+          status: string
+          steps: Json
+          trigger: string
+          updated_at: string
+          usage: Json
+        }
+        Insert: {
+          address: string
+          address_hash: string
+          created_at?: string
+          current_step?: number
+          error?: string | null
+          escalations?: Json
+          finished_at?: string | null
+          id?: string
+          lease_until?: string | null
+          project_id: string
+          requested_by?: string | null
+          scope_hash?: string | null
+          started_at?: string | null
+          status?: string
+          steps?: Json
+          trigger?: string
+          updated_at?: string
+          usage?: Json
+        }
+        Update: {
+          address?: string
+          address_hash?: string
+          created_at?: string
+          current_step?: number
+          error?: string | null
+          escalations?: Json
+          finished_at?: string | null
+          id?: string
+          lease_until?: string | null
+          project_id?: string
+          requested_by?: string | null
+          scope_hash?: string | null
+          started_at?: string | null
+          status?: string
+          steps?: Json
+          trigger?: string
+          updated_at?: string
+          usage?: Json
+        }
+        Relationships: [
+          {
+            foreignKeyName: "regulatory_research_jobs_project_id_fkey"
+            columns: ["project_id"]
+            isOneToOne: false
+            referencedRelation: "projects"
+            referencedColumns: ["id"]
+          },
+        ]
+      }
       report_shares: {
         Row: {
           created_at: string
