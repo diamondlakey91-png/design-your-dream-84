@@ -129,11 +129,19 @@ export async function refundCredit(usageId: string, reason: string): Promise<voi
   await admin.rpc("refund_credit", { _usage_id: usageId, _reason: reason });
 }
 
+/** Thrown when a paid AI run has no credit behind it. Fail-closed. */
+export class CreditRequiredError extends Error {
+  constructor(message = "This run needs a credit. Choose a plan or buy a report on the Tools page.") {
+    super(message);
+    this.name = "CreditRequiredError";
+  }
+}
+
 /**
- * Server-side gate for metered operations (Plan Review, QA/QC, Correction Review).
- * When the caller's plan defines a limit for this credit type, one credit is
- * consumed (idempotent per operation key) and its id returned so a system
- * failure can restore it. Plans without a limit fall back to feature gating.
+ * Server-side gate for every paid AI "Run". Fail-closed: platform admins run
+ * as internal use; everyone else must hold at least one ledger credit of this
+ * type (from a membership grant, purchase or admin adjustment). No subscription,
+ * no plan limit or a zero balance blocks the run — there is no free pass-through.
  */
 export async function chargeIncludedUsage(
   db: Db,
@@ -141,13 +149,22 @@ export async function chargeIncludedUsage(
   type: CreditType,
   key: string,
   meta: { projectId?: string | null; reason: string },
-): Promise<string | null> {
+): Promise<{ usageId: string | null; internal: boolean }> {
   const { data: isAdmin } = await db.rpc("has_role", { _user_id: userId, _role: "admin" });
-  if (isAdmin === true) return null;
-  const m = await getMembership(db, userId);
-  const lim = m.limits[type];
-  if (!m.active || !lim || lim.limit === null) return null;
-  return consumeCredit({ userId, type, quantity: 1, key, projectId: meta.projectId, reason: meta.reason });
+  if (isAdmin === true) return { usageId: null, internal: true };
+  const admin = await getAdmin();
+  // Idempotent retry of the same run: already charged, don't block or re-charge.
+  const { data: prior } = await admin.from("credit_transactions").select("id").eq("idempotency_key", key).maybeSingle();
+  if (prior?.id) return { usageId: prior.id as string, internal: false };
+  const bal = await creditBalance(admin, userId, type);
+  if (bal < 1) throw new CreditRequiredError();
+  try {
+    const usageId = await consumeCredit({ userId, type, quantity: 1, key, projectId: meta.projectId, reason: meta.reason });
+    return { usageId, internal: false };
+  } catch (e) {
+    if (String((e as Error).message).includes("included credit")) throw new CreditRequiredError();
+    throw e;
+  }
 }
 
 /**
@@ -228,7 +245,7 @@ export async function withIncludedUsage<T>(
   meta: { projectId?: string | null; reason: string },
   run: () => Promise<T>,
 ): Promise<T> {
-  const usageId = await chargeIncludedUsage(db, userId, type, key, meta);
+  const { usageId } = await chargeIncludedUsage(db, userId, type, key, meta);
   try {
     return await run();
   } catch (e) {
