@@ -5874,6 +5874,7 @@ export type Database = {
       }
       is_agent_reviewer: { Args: { _org_id: string }; Returns: boolean }
       is_org_member: { Args: { _org_id: string }; Returns: boolean }
+      is_trusted_writer: { Args: never; Returns: boolean }
       refund_credit: {
         Args: { _reason: string; _usage_id: string }
         Returns: string
