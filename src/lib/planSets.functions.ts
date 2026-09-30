@@ -305,7 +305,7 @@ export const reusePlanSet = createServerFn({ method: "POST" })
     await supabase.from("activity").insert({
       user_id: userId,
       project_id: data.project_id,
-      message: `Reused plan set "${source.title}" (${newDocIds.length} file${newDocIds.length === 1 ? "" : "s"}) from the plan library.`,
+      description: `Reused plan set "${source.title}" (${newDocIds.length} file${newDocIds.length === 1 ? "" : "s"}) from the plan library.`,
     });
 
     return { ok: true, id: created.id, documents_attached: newDocIds.length };
