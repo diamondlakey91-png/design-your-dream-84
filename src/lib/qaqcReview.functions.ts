@@ -416,8 +416,8 @@ export const runQaQcReview = createServerFn({ method: "POST" })
         model: QAQC_MODEL,
         prompt_version: QAQC_PROMPT_VERSION,
         project_context: ({
-          project_type: ctx.project['project_type'] ?? null,
-          address: ctx.confirmation?.['formatted_address'] ?? ctx.project['location'] ?? null,
+          project_type: ctx.project!['project_type'] ?? null,
+          address: ctx.confirmation?.['formatted_address'] ?? ctx.project!['location'] ?? null,
           confirmation_status: String(ctx.confirmation?.['status'] ?? "unconfirmed"),
         } as Record<string, unknown>) as never,
       })
@@ -430,7 +430,7 @@ export const runQaQcReview = createServerFn({ method: "POST" })
         sb,
         jurisdiction,
         state,
-        (ctx.confirmation?.['formatted_address'] as string | undefined) ?? (ctx.project['location'] as string | undefined) ?? null,
+        (ctx.confirmation?.['formatted_address'] as string | undefined) ?? (ctx.project!['location'] as string | undefined) ?? null,
       );
       if (agency_contacts.length) {
         // Keep the retrieved agency contacts on the review so the report shows
