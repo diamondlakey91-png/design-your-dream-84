@@ -215,8 +215,9 @@ export const draftMatrixResponse = createServerFn({ method: "POST" })
       [
         {
           role: "system",
-          content:
-            "You are a permit expeditor drafting formal plan-review comment responses. Output plain text only — a single response paragraph, no headings, no sign-off. Never invent sheet numbers or code sections that were not provided. Never assert a code violation as confirmed. When a live evidence block is supplied, it was retrieved from official government records: follow that jurisdiction's stated resubmittal procedure and adopted code edition, cite only URLs and code editions that appear in it, and say a requirement must be confirmed with the agency when it is absent.",
+          content: withRegulatoryGrounding(
+            "Draft a formal plan-review comment response. Output plain text only — a single response paragraph, no headings, no sign-off. Never invent sheet numbers or code sections that were not provided. Never assert a code violation as confirmed. When a live evidence block is supplied, it was retrieved from official government records: follow that jurisdiction's stated resubmittal procedure and adopted code edition, cite only URLs and code editions that appear in it, and say a requirement must be confirmed with the agency when it is absent. Corrections must be actionable and located per the correction-intelligence rule.",
+          ),
         },
         {
           role: "user",

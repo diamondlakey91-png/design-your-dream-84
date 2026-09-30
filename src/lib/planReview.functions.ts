@@ -226,7 +226,7 @@ LOCATION (VERY IMPORTANT for markup): for every finding you visually identify on
     body: JSON.stringify({
       model: "google/gemini-2.5-pro",
       messages: [
-        { role: "system", content: "You are a senior plan reviewer. Output valid JSON only, no prose, no code fences. Prefer false negatives over false positives — omit any finding you cannot visually confirm." },
+        { role: "system", content: withRegulatoryGrounding("Senior plan reviewer. Output valid JSON only, no prose, no code fences. Prefer false negatives over false positives — omit any finding you cannot visually confirm.") },
         { role: "user", content: contentParts },
       ],
     }),
