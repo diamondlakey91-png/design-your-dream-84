@@ -40,3 +40,9 @@
 - [x] Unknown-jurisdiction live test (Blendon Twp, OH) + 13-address national sample
 - [x] Fixes: scope negation, spaced work types, city≠county sources, state-host verification, search-assisted official discovery
 - [ ] Open: PDF reading of adoption documents; township/county/state building-authority resolution (OH); zoning for LA, New Orleans, Maricopa; geocoder miss on some civic addresses
+
+## Phase 2C.1 — Nationwide gap closure (preview only)
+- [x] Official PDF reading (page/section/dates/excerpt; scanned = Needs Verification)
+- [x] Layered authority graph (building/zoning/trades/fire/health; direct/county/state/split/contracted/presumed)
+- [x] Local-vs-state edition staleness; bounded crawl; grounded AI fallback (not triggered in tests)
+- [ ] Open: official FEMA service unreachable during tests (third-party copy used, flagged); zoning unresolved LA/New Orleans/Bentonville; no local adoption statement found in any retest; AI fallback not exercised live
