@@ -270,4 +270,5 @@ Write a ${data.tone === "concise" ? "2-3 sentence" : "3-5 sentence"} professiona
       .single();
     if (error) throw new Error(error.message);
     return updated;
-  });
+  }
+}
