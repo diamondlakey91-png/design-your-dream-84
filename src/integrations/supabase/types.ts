@@ -864,6 +864,72 @@ export type Database = {
         }
         Relationships: []
       }
+      ai_usage_log: {
+        Row: {
+          created_at: string
+          credit_transaction_id: string | null
+          credit_type: string | null
+          credits_charged: number
+          error: string | null
+          estimated_cost: number
+          id: string
+          input_tokens: number
+          internal_use: boolean
+          model: string | null
+          operation: string
+          organization_id: string | null
+          output_tokens: number
+          project_id: string | null
+          provider: string
+          refunded: boolean
+          request_key: string | null
+          success: boolean
+          user_id: string | null
+        }
+        Insert: {
+          created_at?: string
+          credit_transaction_id?: string | null
+          credit_type?: string | null
+          credits_charged?: number
+          error?: string | null
+          estimated_cost?: number
+          id?: string
+          input_tokens?: number
+          internal_use?: boolean
+          model?: string | null
+          operation: string
+          organization_id?: string | null
+          output_tokens?: number
+          project_id?: string | null
+          provider?: string
+          refunded?: boolean
+          request_key?: string | null
+          success?: boolean
+          user_id?: string | null
+        }
+        Update: {
+          created_at?: string
+          credit_transaction_id?: string | null
+          credit_type?: string | null
+          credits_charged?: number
+          error?: string | null
+          estimated_cost?: number
+          id?: string
+          input_tokens?: number
+          internal_use?: boolean
+          model?: string | null
+          operation?: string
+          organization_id?: string | null
+          output_tokens?: number
+          project_id?: string | null
+          provider?: string
+          refunded?: boolean
+          request_key?: string | null
+          success?: boolean
+          user_id?: string | null
+        }
+        Relationships: []
+      }
       authorities: {
         Row: {
           created_at: string
