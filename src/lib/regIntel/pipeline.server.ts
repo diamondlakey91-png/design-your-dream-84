@@ -9,10 +9,12 @@ import { arcgisAll, arcgisFirst, classifyFlood, epochToDate, floodPosition, pick
 import { codeApplicability, APPLICABILITY_LABEL } from "./codeStack";
 import { normalizeScope, effectiveScope, SCOPE_LABEL, type ScopeAttribute } from "./scope";
 import { seedFor, amendmentPolicyFor, LOCAL_ADOPTION_STATES } from "./stateAdoptions";
-import { resolveFamily, applicableCodeDate, TEMPORAL_LABEL, SOURCE_TYPE_LABEL, type CodeEvidence, type CodeFamily, type SourceType } from "./codeTemporal";
+import { resolveFamily, reconcileLocal, applicableCodeDate, TEMPORAL_LABEL, SOURCE_TYPE_LABEL, type CodeEvidence, type CodeFamily, type SourceType } from "./codeTemporal";
 import { resolveGoverningUnit, matchDotGov, classifyLink, govNameTokens, type GoverningUnit, type DotGovRow, type GeoUnit } from "./nationalAhj";
 import { evaluatePermitCandidates, REQUIREMENT_TYPE_LABEL } from "./rules";
 import { adoptionLinkScore, extractAdoptionStatements, classifySourceType, toEvidence, htmlToText, statePreemptionCue } from "./evidenceFollower";
+import { extractAuthorityRelations, resolveAuthorityGraph, authorityLinkScore, FUNCTION_LABEL, type AuthorityEdge, type AuthorityFunction, type GraphNode } from "./authorityGraph";
+import { classifyDocKind, documentDates, documentAuthority, type DocEvidence, type DocKind } from "./officialDocs";
 
 export const STEP_DEFS = [
   { key: "property", label: "Locating address & parcel" },
@@ -56,11 +58,16 @@ export type PipelineState = {
   geo?: { place: GeoUnit; countySub: GeoUnit } | null;
   unit?: GoverningUnit | null;
   jurisdictionKey?: string | null;
-  discovered?: Array<{ category: string; url: string; title: string; trust: string; host: string }> | null;
+  discovered?: Array<{ category: string; url: string; title: string; trust: string; host: string; meta?: Record<string, unknown> | object }> | null;
+  requestedBy?: string | null;
+  projectId?: string | null;
+  /** Agency the authority graph found administering building / zoning (may differ from the governing unit). */
+  buildingAgency?: string | null;
+  zoningAgency?: string | null;
   storedJurisdiction: { label: string | null; county: string | null; municipality: string | null; incorporated: boolean | null; status: string | null } | null;
 };
 
-export type Usage = { deterministic_calls: number; gis_calls: number; paid_data_calls: number; ai_calls: number; tokens: number; estimated_cost_usd: number; duration_ms: number; retries: number; cache_hits: number };
+export type Usage = { deterministic_calls: number; gis_calls: number; paid_data_calls: number; ai_calls: number; tokens: number; estimated_cost_usd: number; duration_ms: number; retries: number; cache_hits: number; pages_read?: number; documents_read?: number; duplicates_skipped?: number; conflicts_resolved?: number };
 export type StepResult = {
   facts: Fact[]; status: StepState["status"]; note?: string; escalations?: string[];
   /** Provider health observed in this step (tracked separately from facts). */
@@ -71,7 +78,7 @@ export type StepResult = {
 
 const UA = { "User-Agent": "Permivio/1.0 (permitting research)", Accept: "application/json,text/html" };
 
-type Net = { u: Usage; health: HealthEvent[] };
+type Net = { u: Usage; health: HealthEvent[]; unreadableDocs?: Array<{ url: string; title: string; reason: string }> };
 const net = (u: Usage): Net => ({ u, health: [] });
 
 function track(n: Net, provider: string, label: string, endpoint: string, ok: boolean, attempts: number, ms: number, error?: string | null) {
@@ -256,7 +263,7 @@ async function dotgovRows(n: Net): Promise<DotGovRow[]> {
   }
 }
 
-type Discovered = { category: string; url: string; title: string; trust: string; host: string };
+type Discovered = { category: string; url: string; title: string; trust: string; host: string; meta?: Record<string, unknown> | DocEvidence };
 const VENDOR_HOST = /(accela|energov|tylerhost|tylertech|citizenserve|opengov|viewpointcloud|mygov|municode|ecode360|amlegal|codelibrary|generalcode|codepublishing|arcgis\.com|etrakit|cityview|selectron)/i;
 
 function extractLinks(html: string, base: string): Array<{ text: string; href: string }> {
@@ -310,7 +317,7 @@ async function loadKnowledge(db: any, key: string): Promise<Discovered[] | null>
   if (!db) return null;
   const { data } = await db.from("official_sources").select("url,title,category,trust,meta,recheck_after").eq("jurisdiction_key", key).gt("recheck_after", new Date().toISOString());
   if (!data?.length) return null;
-  return data.map((r: { url: string; title: string; category: string; trust: string; meta: { host?: string } }) => ({ url: r.url, title: r.title, category: r.category, trust: r.trust, host: r.meta?.host ?? "" }));
+  return data.map((r: { url: string; title: string; category: string; trust: string; meta: { host?: string; data?: Record<string, unknown> } }) => ({ url: r.url, title: r.title, category: r.category, trust: r.trust, host: r.meta?.host ?? "", meta: r.meta?.data }));
 }
 
 // eslint-disable-next-line @typescript-eslint/no-explicit-any
@@ -320,10 +327,81 @@ async function saveKnowledge(db: any, key: string, publisher: string, list: Disc
   const { data: existing } = await db.from("official_sources").select("id,url,category").eq("jurisdiction_key", key);
   for (const d of list) {
     const hit = (existing ?? []).find((e: { url: string; category: string }) => e.url === d.url && e.category === d.category);
-    const row = { url: d.url, title: d.title.slice(0, 200), publisher, kind: d.category === "municipal_code" ? "code" : d.category === "permit_portal" ? "portal" : "agency_site", jurisdiction_key: key, category: d.category, trust: d.trust, discovered_by: "official_source_discovery", verification: "needs_verification", recheck_after: recheck, fetched_at: new Date().toISOString(), meta: { host: d.host } };
+    const row = { url: d.url, title: d.title.slice(0, 200), publisher, kind: d.category === "municipal_code" ? "code" : d.category === "permit_portal" ? "portal" : d.category === "official_document" ? "ordinance" : d.category === "authority_edge" || d.category === "gis_zoning" ? "other" : "agency_site", jurisdiction_key: key, category: d.category, trust: d.trust, discovered_by: "official_source_discovery", verification: "needs_verification", recheck_after: recheck, fetched_at: new Date().toISOString(), meta: { host: d.host, ...(d.meta ? { data: d.meta } : {}) } };
     if (hit) await db.from("official_sources").update(row).eq("id", hit.id);
     else await db.from("official_sources").insert(row);
   }
+}
+
+/** Layered AHJ research: read the unit's and county's official building/permit/zoning pages (and linked
+ *  documents) for explicit statements of who administers each function. AI is used only as a last resort
+ *  on official text, and only sentences that literally exist there are kept. */
+// eslint-disable-next-line @typescript-eslint/no-explicit-any
+async function researchAuthorities(s: PipelineState, n: Net, db: any, sources: Discovered[], reused: boolean): Promise<{ nodes: GraphNode[]; locatedIn: Array<{ type: string; name: string }>; pages: number; ai: { calls: number; tokens: number; cost: number; model: string | null } | null }> {
+  const unit = s.unit!;
+  const locatedIn = [
+    ...(unit.level !== "county" ? [{ type: unit.kind ?? unit.level, name: unit.name! }] : []),
+    ...(s.county ? [{ type: "county", name: s.county }] : []),
+    ...(s.state ? [{ type: "state", name: STATE_NAMES[s.state] ?? s.state }] : []),
+  ];
+  const fns: AuthorityFunction[] = ["building", "zoning", "electrical", "plumbing_mechanical", "fire", ...(s.hasSepticDocument || /septic/i.test(s.scopeText ?? "") ? (["health"] as AuthorityFunction[]) : [])];
+  const presumption = unit.level === "municipality" || unit.level === "independent_city" || unit.level === "federal_district" || unit.level === "county" || unit.certainty === "structural"
+    ? { agency: unit.name, basis: `${unit.basis} General-purpose government presumed to administer its own permits.` }
+    : { agency: null, basis: unit.basis };
+  // Stored edges are re-derived from their stored official quote so parser improvements apply to reused knowledge.
+  let edges: AuthorityEdge[] = sources.filter((x) => x.category === "authority_edge" && x.meta).map((x) => x.meta as unknown as AuthorityEdge)
+    .flatMap((e) => e.origin !== "official_text" ? [e] : extractAuthorityRelations(e.quote, { self: e.agency, url: e.url, page: e.page, state: s.state }).filter((r) => r.fn === e.fn).map((r) => ({ ...r, applies_to: e.applies_to === "all" ? r.applies_to : e.applies_to })).slice(0, 1));
+  let pagesRead = 0;
+  let ai: { calls: number; tokens: number; cost: number; model: string | null } | null = null;
+  if (!reused || !edges.length) {
+    const countyHosts = new Set(sources.filter((x) => x.category.startsWith("county_")).map((x) => x.host));
+    const seeds = [
+      ...sources.filter((x) => /(^|_)(building|permits)$/.test(x.category)).map((x) => x.url),
+      ...sources.filter((x) => /(^|_)(zoning|planning)$/.test(x.category)).map((x) => x.url),
+      ...sources.filter((x) => x.category === "official_website" || x.category === "county_website").map((x) => x.url),
+    ];
+    const stName = STATE_NAMES[s.state ?? ""] ?? s.state ?? "";
+    const hits = await searchOfficial(n, `who issues building permits ${unit.name} ${s.county ?? ""} ${stName}`, (h) => /\.(gov|us)$/.test(h));
+    for (const h of hits.slice(0, 3)) if (!seeds.includes(h.url)) seeds.unshift(h.url);
+    const pages = await followEvidence(n, [...new Set(seeds)].slice(0, 8), { maxPages: 10, maxDepth: 1, provider: "authority_research", label: "Official permitting pages", readPdf: true, maxPdfs: 1, score: authorityLinkScore, minScore: 4 });
+    pagesRead = pages.length;
+    for (const p of pages) {
+      const h = new URL(p.url).hostname.toLowerCase();
+      const self = countyHosts.has(h) ? s.county ?? unit.name! : unit.name!;
+      (p.pages ?? [p.text]).forEach((t, i) => edges.push(...extractAuthorityRelations(t, { self, url: p.url, page: p.pages ? i + 1 : null, state: s.state })));
+    }
+    // Keep only edges that name the unit, the county, the state or an agency (not random other towns).
+    const core = govNameTokens(unit.name!).core, cc = govNameTokens(s.county ?? "").core;
+    // A city/town must not inherit statements made on another government's pages about that government's own territory
+    // (e.g. a county page describing unincorporated areas) unless the statement names the city/town.
+    const cityLike = unit.level === "municipality" || unit.level === "independent_city" || unit.level === "town_or_township";
+    const tok = (x: string) => x.replace(/[^a-z]/g, "");
+    edges = edges.filter((e) => {
+      if (!cityLike || !e.url) return true;
+      const host = tok(new URL(e.url).hostname.toLowerCase());
+      return host.includes(tok(core)) || e.quote.toLowerCase().includes(core);
+    });
+    edges = edges.filter((e) => { const a = e.agency.toLowerCase(); return a.includes(core) || (!!cc && a.includes(cc)) || /\bstate\b|division|department of|fire marshal|fire district/.test(a) || e.relationship === "not_administered"; });
+    const hasBuilding = edges.some((e) => e.fn === "building" && e.relationship !== "not_administered");
+    if (!hasBuilding && presumption.agency === null && pages.length) {
+      // Ambiguous structure, official text read, no deterministic answer: escalate to grounded AI extraction.
+      const rel = pages.filter((p) => /permit/i.test(p.text)).slice(0, 3).map((p) => ({ url: p.url, text: p.text }));
+      const { aiExtractAuthority } = await import("./aiEscalation.server");
+      const r = await aiExtractAuthority({ unit: unit.name!, county: s.county, state: stName, pages: rel, userId: s.requestedBy ?? null, projectId: s.projectId ?? null, key: `regintel-ai:${s.jurisdictionKey}:${Date.now()}` });
+      ai = r.usage;
+      n.u.ai_calls += r.usage.calls; n.u.tokens += r.usage.tokens; n.u.estimated_cost_usd += r.usage.cost;
+      edges.push(...r.edges);
+    }
+    if (db && s.jurisdictionKey && edges.length) await saveKnowledge(db, s.jurisdictionKey, unit.name!, edges.slice(0, 20).map((e, i) => ({ category: "authority_edge", url: e.url ? `${e.url}#edge-${e.fn}-${i}` : `edge:${e.fn}:${i}`, title: `${FUNCTION_LABEL[e.fn]} → ${e.agency}`, trust: e.origin, host: e.url ? new URL(e.url).hostname : "", meta: e as unknown as Record<string, unknown> }))).catch(() => {});
+  } else n.u.cache_hits++;
+  {
+    // Applied to fresh and reused knowledge alike.
+    const cityLike = unit.level === "municipality" || unit.level === "independent_city" || unit.level === "town_or_township";
+    const core = govNameTokens(unit.name!).core, tok = (x: string) => x.replace(/[^a-z]/g, "");
+    if (cityLike) edges = edges.filter((e) => !e.url || e.origin === "structure" || tok(new URL(e.url).hostname.toLowerCase()).includes(tok(core)) || e.quote.toLowerCase().includes(core));
+  }
+  const nodes = resolveAuthorityGraph(edges, presumption, fns);
+  return { nodes, locatedIn, pages: pagesRead, ai };
 }
 
 // eslint-disable-next-line @typescript-eslint/no-explicit-any
@@ -359,9 +437,11 @@ async function ahjWorker(s: PipelineState, n: Net, db: any): Promise<StepResult>
         if (!sources.some((x) => x.url === h.url)) sources.push({ category: cat, url: h.url, title: h.title.slice(0, 120), trust: onGov ? "official_informational" : VENDOR_HOST.test(h.host) ? "official_linked_vendor" : "unverified_domain", host: h.host });
       }
     }
-    if (unit.level !== "county" && unit.certainty !== "structural" && s.county && sources.length <= 1) {
+    // Layered governments: towns/townships/villages (and uncertain structures) also get the county's sources,
+    // because building/electrical/health are often county- or state-administered there.
+    if (unit.level !== "county" && s.county && (unit.certainty !== "structural" || unit.level === "town_or_township" || sources.length <= 1)) {
       const c = await discoverOfficialSources(n, s.county, "county", s.state);
-      sources = [...sources, ...c.sources.map((x) => ({ ...x, title: `${s.county}: ${x.title}`, category: x.category === "official_website" ? "county_website" : x.category }))];
+      sources = [...sources, ...c.sources.map((x) => ({ ...x, title: `${s.county}: ${x.title}`, category: x.category === "official_website" ? "county_website" : `county_${x.category}` }))];
     }
     await saveKnowledge(db, key, domainOrg ?? unit.name, sources).catch(() => {});
   }
@@ -389,10 +469,24 @@ async function ahjWorker(s: PipelineState, n: Net, db: any): Promise<StepResult>
       facts.push(mk({ fact_type: "agency", fact_key: a.role, label: { building: "Building permitting authority", planning_zoning: "Planning / zoning authority", fire: "Fire authority", health: "Health / onsite sewage authority" }[a.role] ?? a.role, value: { name: a.name, basis: "Unincorporated territory → county agency", stored_record: stored?.official_name ?? null }, display_value: a.name, source_org: a.source.org, source_title: a.source.title, source_url: a.source.url, provider: stored ? "ahj_resolver+permivio_verified" : "ahj_resolver", source_tier: verified ? 5 : a.source.tier, origin: stored ? "stored" : "research", verification: verified ? "verified" : "needs_verification", limitation: verified ? "Matches Permivio's human-verified authority record." : "Agency responsibility not independently confirmed by an automated source." }));
     }
   } else {
-    const gov = unit.level === "county" ? `${unit.name}` : unit.name;
+    const gov = unit.name;
+    const graph = await researchAuthorities(s, n, db, sources, reused);
+    const node = (fn: AuthorityFunction) => graph.nodes.find((x) => x.fn === fn)!;
+    const bNode = node("building"), zNode = node("zoning");
     const noCountyCodes = s.state === "TX" && unit.level === "county";
-    facts.push(mk({ fact_type: "agency", fact_key: "building", label: "Building permitting authority", value: { government: gov, level: unit.level, page: bldPage?.url ?? null }, display_value: noCountyCodes ? `${gov} (county building-code authority is limited in Texas)` : `${gov} — building department${bldPage ? ` (${bldPage.title})` : ""}`, source_org: bldPage ? domainOrg ?? gov : "U.S. Census Bureau", source_title: bldPage ? bldPage.title : "Governing jurisdiction from TIGER boundaries", source_url: bldPage?.url ?? s.censusUrl, provider: "ahj_resolver+official_source_discovery", source_tier: bldPage ? 3 : 4, origin: reused ? "stored" : "research", verification: "needs_verification", limitation: `${unit.basis} ${bldPage ? "A building/permits page was found on the official site; the department's responsibility for this scope is not formally confirmed." : "No building-department page was discovered automatically."}${unit.stateNote ? ` ${unit.stateNote}` : ""} Some governments contract building services to another agency.` }));
-    facts.push(mk({ fact_type: "agency", fact_key: "planning_zoning", label: "Planning / zoning authority", value: { government: gov, page: zon?.url ?? null }, display_value: `${gov}${zon ? ` — ${zon.title}` : ""}`, source_org: zon ? domainOrg ?? gov : "U.S. Census Bureau", source_title: zon?.title ?? "Governing jurisdiction", source_url: zon?.url ?? s.censusUrl, provider: "ahj_resolver+official_source_discovery", source_tier: zon ? 3 : 4, origin: reused ? "stored" : "research", verification: "needs_verification", limitation: "Zoning is normally administered by the governing jurisdiction; confirm (some towns have no zoning)." }));
+    const official = (e: AuthorityEdge | undefined) => !!e?.url && /\.(gov|us)$/.test(new URL(e.url).hostname) && e.origin === "official_text";
+    // Verified only when the evidenced statement covers this project's class (a commercial-only statement never verifies a residential project).
+    const projClass: "residential" | "commercial" | null = /resid|single-family|dwelling/i.test(`${s.projectType ?? ""} ${s.scopeText ?? ""}`) ? "residential" : /commercial|tenant|office|retail/i.test(`${s.projectType ?? ""} ${s.scopeText ?? ""}`) ? "commercial" : null;
+    const covers = (e: AuthorityEdge | undefined) => !!e && (e.applies_to === "all" || e.applies_to === projClass);
+    const edgeVerified = (nd: GraphNode) => nd.status === "evidenced" && official(nd.edges[0]) && covers(nd.edges[0]);
+    if (bNode.status === "evidenced" || bNode.status === "split") s.buildingAgency = bNode.edges[0]!.agency;
+    if (zNode.status === "evidenced") s.zoningAgency = zNode.edges[0]!.agency;
+    facts.push(mk({ fact_type: "agency", fact_key: "building", label: "Building permitting authority", value: { government: gov, level: unit.level, page: bldPage?.url ?? null, graph_status: bNode.status, edges: bNode.edges }, display_value: bNode.status === "presumed" || bNode.status === "unresolved" ? (noCountyCodes ? `${gov} (county building-code authority is limited in Texas)` : bNode.status === "presumed" ? `${gov} — presumed${bldPage ? ` (${bldPage.title})` : ""}` : null) : bNode.summary, source_org: bNode.edges[0]?.url ? bNode.edges[0].agency : "U.S. Census Bureau", source_title: bNode.edges[0]?.origin === "official_text" ? "Official statement of who administers permits" : bNode.edges[0]?.origin === "ai_extraction" ? "Official text (AI-located sentence)" : "Governing jurisdiction from TIGER boundaries", source_url: bNode.edges[0]?.url ?? bldPage?.url ?? s.censusUrl, provider: "authority_graph", source_tier: edgeVerified(bNode) ? 3 : 4, origin: reused ? "stored" : "research", verification: edgeVerified(bNode) ? "verified" : "needs_verification", conflicts: bNode.status === "conflict" ? bNode.edges.map((e) => ({ source: e.url ?? "official page", says: e.agency, url: e.url })) : [], limitation: `${bNode.edges[0]?.quote ? `“${bNode.edges[0].quote.slice(0, 240)}” ` : ""}${bNode.status === "presumed" ? "No official statement of the administering agency was found; this is a structural presumption. " : ""}${unit.basis}${unit.stateNote ? ` ${unit.stateNote}` : ""}` }));
+    facts.push(mk({ fact_type: "agency", fact_key: "planning_zoning", label: "Planning / zoning authority", value: { government: gov, page: zon?.url ?? null, graph_status: zNode.status, edges: zNode.edges }, display_value: zNode.status === "evidenced" ? zNode.summary : `${gov}${zon ? ` — ${zon.title}` : ""} (presumed)`, source_org: zNode.edges[0]?.agency ?? gov, source_title: zon?.title ?? "Governing jurisdiction", source_url: zNode.edges[0]?.url ?? zon?.url ?? s.censusUrl, provider: "authority_graph", source_tier: edgeVerified(zNode) ? 3 : 4, origin: reused ? "stored" : "research", verification: edgeVerified(zNode) ? "verified" : "needs_verification", limitation: zNode.status === "evidenced" ? `“${zNode.edges[0]!.quote.slice(0, 240)}”` : "Zoning is normally administered by the governing jurisdiction; not confirmed by an official statement (some towns have no zoning)." }));
+    for (const nd of graph.nodes.filter((x) => !["building", "zoning"].includes(x.fn))) {
+      facts.push(mk({ fact_type: "agency", fact_key: `authority:${nd.fn}`, label: `${FUNCTION_LABEL[nd.fn]} — administered by`, value: { graph_status: nd.status, edges: nd.edges }, display_value: nd.status === "unresolved" ? null : nd.summary, source_org: nd.edges[0]?.agency ?? null, source_title: nd.edges[0]?.origin === "official_text" ? "Official statement" : "Structural presumption", source_url: nd.edges[0]?.url ?? null, provider: "authority_graph", source_tier: edgeVerified(nd) ? 3 : 7, origin: "research", verification: edgeVerified(nd) ? "verified" : "needs_verification", limitation: nd.edges[0]?.quote && nd.edges[0].origin !== "structure" ? `“${nd.edges[0].quote.slice(0, 240)}”` : "Not stated on the official pages read; typically administered with building permits — confirm." }));
+    }
+    facts.push(mk({ fact_type: "jurisdiction", fact_key: "authority_graph", label: "Authority graph", value: { located_in: graph.locatedIn, nodes: graph.nodes, pages_read: graph.pages, ai: graph.ai }, display_value: graph.nodes.map((x) => `${FUNCTION_LABEL[x.fn]}: ${x.status}`).join(" · "), source_org: null, source_title: "Located-in vs administered-by relationships", source_url: null, provider: "authority_graph", source_tier: 7, origin: "research", verification: "needs_verification", limitation: "Each administered-by relationship carries its own evidence and verification state." }));
   }
   if (portal) facts.push(mk({ fact_type: "agency", fact_key: "permit_portal", label: "Online permit portal", value: { url: portal.url, trust: portal.trust }, display_value: portal.url.replace(/^https?:\/\//, "").slice(0, 80), source_org: domainOrg ?? unit.name, source_title: `Linked from the official website: ${portal.title}`, source_url: portal.url, provider: "official_source_discovery", source_tier: 3, origin: reused ? "stored" : "research", verification: "needs_verification", limitation: "Linked from the official government site; confirm it is the current portal for this permit type." }));
   if (code) facts.push(mk({ fact_type: "local_amendment", fact_key: "municipal_code_source", label: "Local code of ordinances", value: { url: code.url }, display_value: code.url.replace(/^https?:\/\//, "").slice(0, 80), source_org: domainOrg ?? unit.name, source_title: `Linked from the official website: ${code.title}`, source_url: code.url, provider: "official_source_discovery", source_tier: 3, origin: reused ? "stored" : "research", verification: "needs_verification", limitation: "Source for local amendments and zoning text; content not yet extracted." }));
@@ -487,58 +581,139 @@ async function floodWorker(s: PipelineState, n: Net): Promise<StepResult> {
   };
 }
 
-const ZONING_FIELD = /^(zon(e|ing)?(_?(class|code|dist(rict)?|type|desc))?|zn_?type|zoning_?code|zone_?cd|zonecode|zonedist|zoning1|base_?zone|zone_?name)$/i;
-const ZONING_BAD = /(opportunity|flood|school|time|plane|climate|weather|hurricane|fire|evac|storm|parking zone|enterprise|census|utility|police|trash|snow|wind|seismic)/i;
+const ZONING_FIELD = /^(zon(e|ing)?(_?(class|code|dist(rict)?|type|desc|cmplt))?|zn_?type|zoning_?code|zone_?cd|zonecode|zonedist|zoning1|base_?zone|zone_?name|zone_?class|zone_?smry)$/i;
+const ZONING_BAD = /(opportunity|flood|school|time|plane|climate|weather|hurricane|fire|evac|storm|parking zone|enterprise|census|utility|police|trash|snow|wind|seismic|future land use|general plan|comprehensive plan|land use plan|overlay|historic|council|ward|precinct)/i;
+const ZONE_NAME_FIELD = /^(zone_?desc|zoning_?desc|zone_?name|district_?name|zonedesc|description|zdesc|zone_?label|long_?name)$/i;
 
-/** Nationwide zoning discovery: known provider → stored layer → ArcGIS catalogue search, validated by
- *  owner/jurisdiction match and an actual point hit. Discovered layers are official-looking but not
- *  verified unless hosted on the government's own .gov domain. */
+type ZoningHit = { code: string | null; name: string | null; field: string | null; layerUrl: string | null; title: string | null; owner: string | null; onGov: boolean; linkedFrom: string | null; tried: number; method: string | null; ordinance: { url: string; title: string } | null; retrieved: string };
+
+/** Nationwide zoning discovery, in order:
+ *  1 stored layer (knowledge reuse) → 2 ArcGIS catalogue near the point matched by jurisdiction name →
+ *  3 GIS services / open-data links found on the government's own planning/zoning/GIS pages →
+ *  4 official-host search for the zoning map service → 5 official zoning ordinance (document only).
+ *  Every layer must answer AT the property point. Nearby parcels are never used; FLU layers are excluded. */
 // eslint-disable-next-line @typescript-eslint/no-explicit-any
-async function discoverZoning(s: PipelineState, n: Net, db: any): Promise<{ code: string | null; field: string | null; layerUrl: string | null; title: string | null; owner: string | null; onGov: boolean; tried: number }> {
-  const none = { code: null, field: null, layerUrl: null, title: null, owner: null, onGov: false, tried: 0 };
+async function discoverZoning(s: PipelineState, n: Net, db: any): Promise<ZoningHit> {
+  const none: ZoningHit = { code: null, name: null, field: null, layerUrl: null, title: null, owner: null, onGov: false, linkedFrom: null, tried: 0, method: null, ordinance: null, retrieved: now() };
   if (!s.unit?.name || s.lat === null || s.lng === null) return none;
-  const core = govNameTokens(s.unit.name).core;
-  const govHost = s.discovered?.find((d) => d.category === "official_website")?.host ?? null;
-  // Reuse a previously validated zoning layer for this jurisdiction.
-  const stored = s.discovered?.find((d) => d.category === "gis_zoning");
-  const candidates: Array<{ url: string; title: string; owner: string }> = [];
-  if (stored) { candidates.push({ url: stored.url, title: stored.title, owner: stored.host }); n.u.cache_hits++; }
-  else {
-    const q = `title:zoning AND (${core.split(" ").map((w) => `"${w}"`).join(" ")}) AND (type:"Feature Service" OR type:"Map Service")`;
-    const bbox = `${s.lng - 0.02},${s.lat - 0.02},${s.lng + 0.02},${s.lat + 0.02}`;
-    const j = (await getJson(n, `https://www.arcgis.com/sharing/rest/search?q=${encodeURIComponent(q)}&bbox=${bbox}&num=15&f=json`, "arcgis_catalog", "ArcGIS Online catalogue", 1)) as unknown as { results?: Array<{ title: string; owner: string; url: string | null }> } | null;
-    for (const r of j?.results ?? []) {
-      if (!r.url || ZONING_BAD.test(r.title)) continue;
-      const hay = `${r.title} ${r.owner} ${r.url}`.toLowerCase().replace(/[^a-z0-9]/g, "");
-      if (!hay.includes(core.replace(/[^a-z0-9]/g, ""))) continue;
-      candidates.push({ url: r.url, title: r.title, owner: r.owner });
-      if (candidates.length >= 5) break;
-    }
-  }
+  const lat = s.lat, lng = s.lng;
+  const zoningGov = s.zoningAgency ?? s.unit.name;
+  const cores = [...new Set([govNameTokens(s.unit.name).core, govNameTokens(zoningGov).core].filter(Boolean))];
+  const govHosts = [...new Set((s.discovered ?? []).filter((d) => /website|planning|zoning|gis|building|permits/.test(d.category) && /\.(gov|us)$/.test(d.host)).map((d) => d.host.replace(/^www\./, "")))];
+  const onGovHost = (h: string) => govHosts.some((g) => h === g || h.endsWith(`.${g}`)) || (/\.gov$/.test(h) && cores.some((c) => h.replace(/[^a-z]/g, "").includes(c.replace(/[^a-z]/g, ""))));
   let tried = 0;
-  for (const c of candidates) {
-    const isLayer = /\/(MapServer|FeatureServer)\/\d+\/?$/.test(c.url);
-    let layers: string[] = [];
-    if (isLayer) layers = [c.url.replace(/\/$/, "")];
-    else {
-      const meta = (await getJson(n, `${c.url.replace(/\/$/, "")}?f=json`, "arcgis_catalog", "ArcGIS Online catalogue", 0)) as unknown as { layers?: Array<{ id: number; name: string }> } | null;
-      layers = (meta?.layers ?? []).filter((l) => /zon/i.test(l.name) && !ZONING_BAD.test(l.name)).slice(0, 2).map((l) => `${c.url.replace(/\/$/, "")}/${l.id}`);
-      if (!layers.length && (meta?.layers ?? []).length === 1) layers = [`${c.url.replace(/\/$/, "")}/${meta!.layers![0]!.id}`];
+  const testedLayers = new Set<string>();
+
+  const testLayer = async (lu: string, meta: { title: string; owner: string; linkedFrom: string | null; method: string }): Promise<ZoningHit | null> => {
+    if (testedLayers.has(lu) || tried >= 14) return null;
+    testedLayers.add(lu);
+    tried++;
+    const attrs = arcgisFirst(await getJson(n, pointQuery({ url: lu }, lat, lng), "discovered_gis", "Discovered local GIS", 0));
+    if (!attrs) return null;
+    const field = Object.keys(attrs).find((k) => ZONING_FIELD.test(k)) ?? Object.keys(attrs).find((k) => /zon/i.test(k) && !/(overlay|flood|fire)/i.test(k) && typeof attrs[k] === "string");
+    const code = field ? String(attrs[field] ?? "").trim() : "";
+    if (!code) return null;
+    const nf = Object.keys(attrs).find((k) => k !== field && ZONE_NAME_FIELD.test(k));
+    const host = new URL(lu).hostname.toLowerCase();
+    const onGov = onGovHost(host) || (!!meta.linkedFrom && onGovHost(new URL(meta.linkedFrom).hostname.toLowerCase()));
+    return { code, name: nf ? String(attrs[nf] ?? "").trim() || null : null, field: field ?? null, layerUrl: lu, title: meta.title, owner: meta.owner, onGov, linkedFrom: meta.linkedFrom, tried, method: meta.method, ordinance: null, retrieved: now() };
+  };
+  /** Expand a service / server root into candidate zoning layers (bounded). */
+  const expand = async (url: string): Promise<string[]> => {
+    const u = url.split("?")[0]!.replace(/\/$/, "");
+    if (/\/(MapServer|FeatureServer)\/\d+$/i.test(u)) return [u];
+    if (/\/(MapServer|FeatureServer)$/i.test(u)) {
+      const meta = (await getJson(n, `${u}?f=json`, "discovered_gis", "Discovered local GIS", 0)) as unknown as { layers?: Array<{ id: number; name: string }> } | null;
+      const ls = (meta?.layers ?? []).filter((l) => /zon/i.test(l.name) && !ZONING_BAD.test(l.name)).slice(0, 2).map((l) => `${u}/${l.id}`);
+      return ls.length ? ls : (meta?.layers ?? []).length === 1 ? [`${u}/${meta!.layers![0]!.id}`] : [];
     }
-    for (const lu of layers) {
-      tried++;
-      const attrs = arcgisFirst(await getJson(n, pointQuery({ url: lu }, s.lat, s.lng), "discovered_gis", "Discovered local GIS", 0));
-      if (!attrs) continue;
-      const field = Object.keys(attrs).find((k) => ZONING_FIELD.test(k)) ?? Object.keys(attrs).find((k) => /zon/i.test(k) && typeof attrs[k] === "string");
-      const code = field ? String(attrs[field] ?? "").trim() : "";
-      if (!code) continue;
-      const host = new URL(lu).hostname.toLowerCase();
-      const onGov = !!govHost && (host.endsWith(govHost) || host.endsWith(".gov"));
-      if (!stored && s.jurisdictionKey) await saveKnowledge(db, s.jurisdictionKey, c.owner, [{ category: "gis_zoning", url: lu, title: c.title, trust: onGov ? "authoritative_structured" : "official_catalogue_unconfirmed", host }]).catch(() => {});
-      return { code, field: field ?? null, layerUrl: lu, title: c.title, owner: c.owner, onGov, tried };
+    // REST catalogue root or folder: list services whose names mention zoning.
+    const m = u.match(/^(.*\/rest\/services)(\/.*)?$/i);
+    if (!m) return [];
+    const root = u;
+    const cat = (await getJson(n, `${root}?f=json`, "discovered_gis", "Discovered local GIS", 0)) as unknown as { folders?: string[]; services?: Array<{ name: string; type: string }> } | null;
+    const svc = (cat?.services ?? []).filter((x) => /zon/i.test(x.name) && !ZONING_BAD.test(x.name) && /MapServer|FeatureServer/.test(x.type)).slice(0, 2).map((x) => `${m[1]}/${x.name}/${x.type}`);
+    if (!svc.length) for (const f of (cat?.folders ?? []).filter((f) => /(zon|plan|land|property|parcel|public)/i.test(f)).slice(0, 2)) {
+      const sub = (await getJson(n, `${m[1]}/${f}?f=json`, "discovered_gis", "Discovered local GIS", 0)) as unknown as { services?: Array<{ name: string; type: string }> } | null;
+      svc.push(...(sub?.services ?? []).filter((x) => /zon/i.test(x.name) && !ZONING_BAD.test(x.name) && /MapServer|FeatureServer/.test(x.type)).slice(0, 2).map((x) => `${m[1]}/${x.name}/${x.type}`));
+    }
+    const out: string[] = [];
+    for (const sv of svc.slice(0, 3)) out.push(...(await expand(sv)));
+    return out;
+  };
+  const tryAll = async (list: Array<{ url: string; title: string; owner: string; linkedFrom: string | null; method: string }>) => {
+    for (const c of list) for (const lu of await expand(c.url)) { const h = await testLayer(lu, c); if (h) return h; }
+    return null;
+  };
+  const remember = async (h: ZoningHit) => {
+    if (s.jurisdictionKey && h.layerUrl) await saveKnowledge(db, s.jurisdictionKey, h.owner ?? zoningGov, [{ category: "gis_zoning", url: h.layerUrl, title: h.title ?? "Zoning layer", trust: h.onGov ? "authoritative_structured" : "official_catalogue_unconfirmed", host: new URL(h.layerUrl).hostname, meta: { linked_from: h.linkedFrom, method: h.method } }]).catch(() => {});
+    return h;
+  };
+
+  // 1 — reuse a previously validated layer (still re-queried at THIS property's point).
+  const stored = s.discovered?.find((d) => d.category === "gis_zoning");
+  if (stored) { n.u.cache_hits++; const h = await testLayer(stored.url, { title: stored.title, owner: stored.host, linkedFrom: (stored.meta as { linked_from?: string } | undefined)?.linked_from ?? null, method: "reused_layer" }); if (h) return h; }
+
+  // 2 — ArcGIS catalogue near the point, matched to the zoning government by name.
+  const bbox = `${lng - 0.02},${lat - 0.02},${lng + 0.02},${lat + 0.02}`;
+  const catalog: Array<{ url: string; title: string; owner: string; linkedFrom: string | null; method: string }> = [];
+  for (const core of cores) {
+    const q = `zoning AND (${core.split(" ").map((w) => `"${w}"`).join(" ")}) AND (type:"Feature Service" OR type:"Map Service")`;
+    const j = (await getJson(n, `https://www.arcgis.com/sharing/rest/search?q=${encodeURIComponent(q)}&bbox=${bbox}&num=20&f=json`, "arcgis_catalog", "ArcGIS Online catalogue", 1)) as unknown as { results?: Array<{ title: string; owner: string; url: string | null; snippet?: string }> } | null;
+    for (const r of j?.results ?? []) {
+      if (!r.url || ZONING_BAD.test(r.title) || !/zon/i.test(`${r.title} ${r.url}`)) continue;
+      const hay = `${r.title} ${r.owner} ${r.url} ${r.snippet ?? ""}`.toLowerCase().replace(/[^a-z0-9]/g, "");
+      if (!hay.includes(core.replace(/[^a-z0-9]/g, ""))) continue;
+      if (!catalog.some((c) => c.url === r.url)) catalog.push({ url: r.url, title: r.title, owner: r.owner, linkedFrom: null, method: "arcgis_catalogue" });
+      if (catalog.length >= 6) break;
     }
   }
-  return { ...none, tried };
+  const c1 = await tryAll(catalog);
+  if (c1) return remember(c1);
+
+  // 3 — GIS / open-data links on the government's own planning, zoning and GIS pages (one hop).
+  const pagesToScan = (s.discovered ?? []).filter((d) => ["zoning", "planning", "gis", "official_website"].includes(d.category)).slice(0, 4);
+  const linked: Array<{ url: string; title: string; owner: string; linkedFrom: string | null; method: string }> = [];
+  const itemIds: Array<{ id: string; from: string }> = [];
+  for (const pg of pagesToScan) {
+    if (/\/(MapServer|FeatureServer)/i.test(pg.url)) { linked.push({ url: pg.url, title: pg.title, owner: pg.host, linkedFrom: null, method: "official_gis_link" }); continue; }
+    const r = await getRaw(n, pg.url, {}, "official_site", "Official government website");
+    if (!r.html) continue;
+    const html = r.html;
+    for (const m of html.matchAll(/https?:\/\/[^"'\s<>]+\/rest\/services[^"'\s<>]*/gi)) { const u = m[0].replace(/&amp;/g, "&"); if (!linked.some((l) => l.url === u)) linked.push({ url: u, title: "GIS service linked from official page", owner: new URL(u).hostname, linkedFrom: pg.url, method: "official_page_gis_link" }); }
+    for (const m of html.matchAll(/(?:webmap|appid|id)=([0-9a-f]{32})/gi)) if (!itemIds.some((x) => x.id === m[1])) itemIds.push({ id: m[1]!, from: pg.url });
+    for (const l of extractLinks(html, pg.url)) if (/zon/i.test(`${l.text} ${l.href}`) && /(map|gis|arcgis|hub|open ?data|viewer)/i.test(`${l.text} ${l.href}`)) {
+      if (/\/rest\/services/i.test(l.href)) { if (!linked.some((x) => x.url === l.href)) linked.push({ url: l.href, title: l.text || "Zoning GIS", owner: new URL(l.href).hostname, linkedFrom: pg.url, method: "official_page_gis_link" }); }
+      else for (const m of l.href.matchAll(/(?:webmap|appid|id)=([0-9a-f]{32})/gi)) if (!itemIds.some((x) => x.id === m[1])) itemIds.push({ id: m[1]!, from: pg.url });
+    }
+  }
+  // ArcGIS web maps / apps linked from an official page → their operational zoning layers.
+  for (const it of itemIds.slice(0, 3)) {
+    const data = (await getJson(n, `https://www.arcgis.com/sharing/rest/content/items/${it.id}/data?f=json`, "arcgis_catalog", "ArcGIS Online catalogue", 0)) as unknown as { operationalLayers?: Array<{ title?: string; url?: string; layers?: Array<{ id: number; title?: string }> }>; map?: { itemId?: string }; values?: { webmap?: string } } | null;
+    const wm = data?.values?.webmap ?? data?.map?.itemId;
+    const ops = data?.operationalLayers ?? (wm ? ((await getJson(n, `https://www.arcgis.com/sharing/rest/content/items/${wm}/data?f=json`, "arcgis_catalog", "ArcGIS Online catalogue", 0)) as unknown as { operationalLayers?: Array<{ title?: string; url?: string }> })?.operationalLayers : null) ?? [];
+    for (const o of ops) if (o.url && /zon/i.test(`${o.title ?? ""} ${o.url}`) && !ZONING_BAD.test(o.title ?? "")) linked.push({ url: o.url, title: o.title ?? "Zoning layer", owner: new URL(o.url).hostname, linkedFrom: it.from, method: "official_webmap_layer" });
+  }
+  const c2 = await tryAll(linked.slice(0, 8));
+  if (c2) return remember(c2);
+
+  // 4 — official-host search for the zoning map service / open-data item.
+  const stName = STATE_NAMES[s.state ?? ""] ?? s.state ?? "";
+  const hits = await searchOfficial(n, `${zoningGov} ${stName} zoning map GIS open data`, (h) => onGovHost(h) || /\.(gov|us)$/.test(h) || /(arcgis\.com|hub\.arcgis\.com|opendata)/.test(h));
+  const searchLinked: Array<{ url: string; title: string; owner: string; linkedFrom: string | null; method: string }> = [];
+  for (const h of hits.slice(0, 4)) {
+    if (/\/rest\/services/i.test(h.url)) searchLinked.push({ url: h.url, title: h.title, owner: h.host, linkedFrom: null, method: "official_search_service" });
+    else if (/\.(gov|us)$/.test(h.host)) {
+      const r = await getRaw(n, h.url, {}, "official_site", "Official government website");
+      if (r.html) for (const m of r.html.matchAll(/https?:\/\/[^"'\s<>]+\/rest\/services[^"'\s<>]*/gi)) searchLinked.push({ url: m[0], title: h.title, owner: new URL(m[0]).hostname, linkedFrom: h.url, method: "official_search_page_gis_link" });
+    }
+  }
+  const c3 = await tryAll(searchLinked.slice(0, 6));
+  if (c3) return remember(c3);
+
+  // 5 — official zoning ordinance / code (documentary source only — never a district for this parcel).
+  const ord = (s.discovered ?? []).find((d) => d.category === "municipal_code") ?? (s.discovered ?? []).find((d) => d.category === "zoning");
+  return { ...none, tried, ordinance: ord ? { url: ord.url, title: ord.title } : null };
 }
 
 // eslint-disable-next-line @typescript-eslint/no-explicit-any
@@ -552,8 +727,11 @@ async function zoningWorker(s: PipelineState, n: Net, db: any = null): Promise<S
     }
     const z = await discoverZoning(s, n, db);
     s.zoningCode = z.code;
-    facts.push(mk({ fact_type: "zoning", fact_key: "district", label: "Zoning district", value: { code: z.code, field: z.field, zoning_jurisdiction: s.unit.name, layer: z.layerUrl, owner: z.owner, on_gov_domain: z.onGov, layers_tested: z.tried }, display_value: z.code, source_org: z.owner ?? null, source_title: z.title ?? "Zoning source discovery", source_url: z.layerUrl, provider: "zoning_discovery", source_tier: z.code ? (z.onGov ? 1 : 6) : 7, origin: "research", verification: z.code && z.onGov ? "verified" : "needs_verification", limitation: z.code ? (z.onGov ? `Read from ${s.unit.name}'s own GIS service at the property point.` : `Read from a zoning layer published by "${z.owner}" in the ArcGIS catalogue that answers at this point. The publisher was matched to ${s.unit.name} by name only — confirm it is the official, current zoning map.`) : `No authoritative zoning layer for ${s.unit.name} was found automatically (${z.tried} candidate layer(s) tested). Research the official zoning map or contact the planning department.` }));
-    return { facts, health: n.health, status: z.code && z.onGov ? "done" : "warning", note: z.code ? (z.onGov ? "Official GIS" : "Discovered layer — needs verification") : "No zoning source found", escalations: z.code ? [] : [`Zoning: no official zoning source discovered for ${s.unit.name}.`] };
+    const zj = s.zoningAgency ?? s.unit.name;
+    const how = z.method ? { reused_layer: "a zoning layer Permivio validated earlier for this jurisdiction", arcgis_catalogue: "the ArcGIS catalogue (publisher matched by name)", official_page_gis_link: "a GIS service linked from the government's own website", official_webmap_layer: "the zoning layer of an official web map linked from the government's website", official_search_service: "an official GIS service located by search", official_search_page_gis_link: "a GIS service linked from an official page located by search", official_gis_link: "an official GIS link" }[z.method] ?? z.method : null;
+    facts.push(mk({ fact_type: "zoning", fact_key: "district", label: "Zoning district", value: { code: z.code, district_name: z.name, field: z.field, zoning_jurisdiction: zj, layer: z.layerUrl, owner: z.owner, on_gov_domain: z.onGov, linked_from: z.linkedFrom, method: z.method, layers_tested: z.tried, ordinance: z.ordinance, retrieved_at: z.retrieved }, display_value: z.code ? `${z.code}${z.name && z.name !== z.code ? ` — ${z.name}` : ""}` : null, source_org: z.owner ?? null, source_title: z.title ?? "Zoning source discovery", source_url: z.layerUrl ?? z.ordinance?.url ?? null, provider: "zoning_discovery", source_tier: z.code ? (z.onGov ? 1 : 6) : 7, origin: "research", verification: z.code && z.onGov ? "verified" : "needs_verification",
+      limitation: z.code ? (z.onGov ? `Read at the property point from ${how}. Zoning jurisdiction: ${zj}.` : `Read at the property point from ${how}; publisher "${z.owner}" is not confirmed as ${zj}'s official current zoning map.`) : `No zoning layer answering at this property was found (${z.tried} candidate layer(s) tested across catalogue, official-page links and official search).${z.ordinance ? ` The official zoning ordinance/code was located (${z.ordinance.title}) but a district cannot be assigned from text alone.` : ""} Zoning is not inferred from nearby properties.` }));
+    return { facts, health: n.health, status: z.code && z.onGov ? "done" : "warning", note: z.code ? (z.onGov ? `Official GIS (${z.method})` : "Discovered layer — needs verification") : "No zoning source found", escalations: z.code ? [] : [`Zoning: no official zoning source discovered for ${zj}.`] };
   }
   const zUrl = pointQuery(cfg.layers.zoning!, s.lat, s.lng);
   const zAll = arcgisAll(await getJson(n, zUrl, "county_gis", "County GIS"));
@@ -822,28 +1000,57 @@ async function scrapeFallback(n: Net, url: string): Promise<{ text: string; link
 
 /** Non-.gov hosts accepted for crawling in this run because discovery tied them to the named government. */
 const VERIFIED_EXTRA_HOSTS = new Set<string>();
-const PAGE_CACHE = new Map<string, { at: number; text: string | null; links: Array<{ text: string; href: string }> }>();
+type CachedPage = { at: number; text: string | null; links: Array<{ text: string; href: string }>; pages?: string[]; doc?: CrawlPage["doc"]; unreadable?: string };
+const PAGE_CACHE = new Map<string, CachedPage>();
 const isOfficialHost = (h: string) => /\.(gov|us)$/.test(h) || VERIFIED_EXTRA_HOSTS.has(h) || /(municode|ecode360|amlegal|codelibrary|codepublishing|generalcode)/.test(h);
 
-/** Bounded breadth-first crawl from official seed pages, following only links that point toward adoption evidence. */
-async function followEvidence(n: Net, seeds: string[], opts: { maxPages: number; maxDepth: number; provider: string; label: string }): Promise<Array<{ url: string; text: string; depth: number }>> {
-  const out: Array<{ url: string; text: string; depth: number }> = [];
-  const queue = seeds.map((u) => ({ url: u, depth: 0, score: 99 }));
+export type CrawlPage = { url: string; text: string; depth: number; trail: string[]; pages?: string[]; doc?: { title: string; kind: DocKind; dates: { published: string | null; adopted: string | null; effective: string | null }; totalPages: number } };
+const PDF_RE = /\.pdf(\?|$)|\/documentcenter\/view\/|\/showpublisheddocument\/|\/filestorage\/|\/archive\.aspx\?adid=/i;
+const hashText = (t: string) => { let h = 5381; const x = t.slice(0, 6000); for (let i = 0; i < x.length; i++) h = ((h << 5) + h + x.charCodeAt(i)) | 0; return h >>> 0; };
+
+/**
+ * Bounded breadth-first crawl from official seed pages, following only links that score toward the
+ * evidence being sought. Crosses between official hosts (local → county → state) but never leaves them.
+ * Limits: maxPages fetched, maxDepth hops, ≤2 PDFs per crawl, duplicate URLs and duplicate content skipped.
+ */
+async function followEvidence(n: Net, seeds: string[], opts: { maxPages: number; maxDepth: number; provider: string; label: string; readPdf?: boolean; score?: (text: string, href: string) => number; minScore?: number; maxPdfs?: number }): Promise<CrawlPage[]> {
+  const out: CrawlPage[] = [];
+  const score = opts.score ?? adoptionLinkScore;
+  const queue = seeds.map((u) => ({ url: u, depth: 0, score: 99, trail: [] as string[] }));
   const seen = new Set<string>();
-  while (queue.length && out.length < opts.maxPages) {
+  const hashes = new Set<number>();
+  let fetched = 0, pdfs = 0;
+  while (queue.length && out.length < opts.maxPages && fetched < opts.maxPages + 4) {
     queue.sort((a, b) => b.score - a.score);
     const cur = queue.shift()!;
     const key = cur.url.split("#")[0]!;
-    if (seen.has(key)) continue;
+    if (seen.has(key)) { n.u.duplicates_skipped = (n.u.duplicates_skipped ?? 0) + 1; continue; }
     seen.add(key);
     let host = "";
     try { host = new URL(key).hostname.toLowerCase(); } catch { continue; }
     if (!isOfficialHost(host)) continue;
+    const isPdf = PDF_RE.test(key);
+    if (isPdf && (!opts.readPdf || pdfs >= (opts.maxPdfs ?? 2))) continue;
     let hit = PAGE_CACHE.get(key);
     if (hit && Date.now() - hit.at < 6 * 3600000) n.u.cache_hits++;
     else {
-      if (/\.pdf(\?|$)/i.test(key)) { hit = { at: Date.now(), text: null, links: [] }; } // PDFs recorded as links only (text extraction not run in the Worker)
-      else {
+      fetched++;
+      if (isPdf) {
+        pdfs++;
+        const t0 = Date.now();
+        n.u.deterministic_calls++;
+        const { readOfficialPdf } = await import("./officialDocs.server");
+        const d = await readOfficialPdf(key);
+        track(n, "official_document", "Official document (PDF)", key.split("?")[0]!, d.ok, 1, Date.now() - t0, d.error);
+        const title = d.title ?? decodeURIComponent(key.split("/").pop() ?? "document").replace(/[-_]+/g, " ").replace(/\.pdf.*$/i, "");
+        if (!d.ok || d.scanned) hit = { at: Date.now(), text: null, links: [], unreadable: d.scanned ? "scanned" : d.error ?? "unreadable" };
+        else {
+          n.u.documents_read = (n.u.documents_read ?? 0) + 1;
+          const full = d.pages.join(" ");
+          hit = { at: Date.now(), text: full, links: [], pages: d.pages, doc: { title, kind: classifyDocKind(title, full), dates: documentDates(d.pages), totalPages: d.totalPages } };
+        }
+        if (hit.unreadable) (n.unreadableDocs ??= []).push({ url: key, title, reason: hit.unreadable });
+      } else {
         const r = await getRaw(n, key, {}, opts.provider, opts.label);
         hit = { at: Date.now(), text: r.html ? htmlToText(r.html) : null, links: r.html ? extractLinks(r.html, key) : [] };
         // Bot-blocked / script-rendered official page: retrieve it once through the rendering service.
@@ -852,13 +1059,17 @@ async function followEvidence(n: Net, seeds: string[], opts: { maxPages: number;
       PAGE_CACHE.set(key, hit);
     }
     if (!hit.text) continue;
-    out.push({ url: key, text: hit.text, depth: cur.depth });
+    const h = hashText(hit.text);
+    if (hashes.has(h)) { n.u.duplicates_skipped = (n.u.duplicates_skipped ?? 0) + 1; continue; }
+    hashes.add(h);
+    out.push({ url: key, text: hit.text, depth: cur.depth, trail: [...cur.trail, key], pages: hit.pages, doc: hit.doc });
     if (cur.depth >= opts.maxDepth) continue;
     for (const l of hit.links) {
-      const sc = adoptionLinkScore(l.text, l.href);
-      if (sc >= 3 && !seen.has(l.href)) queue.push({ url: l.href, depth: cur.depth + 1, score: sc });
+      const sc = score(l.text, l.href) + (PDF_RE.test(l.href) && opts.readPdf ? 1 : 0);
+      if (sc >= (opts.minScore ?? 3) && !seen.has(l.href)) queue.push({ url: l.href, depth: cur.depth + 1, score: sc, trail: [...cur.trail, key] });
     }
   }
+  n.u.pages_read = (n.u.pages_read ?? 0) + out.length;
   return out;
 }
 
@@ -898,43 +1109,97 @@ async function localWorker(s: PipelineState, n: Net, db: any): Promise<StepResul
   const unit = s.unit;
   const localState = LOCAL_ADOPTION_STATES.includes(s.state ?? "");
   const pol = amendmentPolicyFor(s.state);
-  const ahj = unit?.name ?? "the local jurisdiction";
+  // The building authority from the authority graph (may differ from the governing unit, e.g. township → county).
+  const bldAgency = s.buildingAgency ?? unit?.name ?? "the local jurisdiction";
+  const ahj = bldAgency;
   const disc = s.discovered ?? [];
-  const seeds = [...disc.filter((d) => ["building", "permits", "municipal_code", "code_adoption"].includes(d.category)).map((d) => d.url), ...disc.filter((d) => d.category === "official_website" || d.category === "county_website").map((d) => d.url)].slice(0, 5);
+  const seeds = [...disc.filter((d) => ["building", "permits", "municipal_code", "code_adoption", "county_building", "authority_page"].includes(d.category)).map((d) => d.url), ...disc.filter((d) => d.category === "official_website" || d.category === "county_website").map((d) => d.url)].slice(0, 6);
   if (unit?.name && s.state) {
-    const hits = await searchOfficial(n, `${unit.name} ${STATE_NAMES[s.state] ?? s.state} adopted building codes edition`, (h) => isOfficialHost(h));
+    const hits = await searchOfficial(n, `${ahj} ${STATE_NAMES[s.state] ?? s.state} adopted building codes edition ordinance`, (h) => isOfficialHost(h));
     for (const h of hits.slice(0, 3)) if (!seeds.includes(h.url)) seeds.unshift(h.url);
   }
   if (!seeds.length) {
     facts.push(mk({ fact_type: "local_amendment", fact_key: "local_adoption", label: `Local code adoption — ${ahj}`, value: { status: "not_established", reason: "no_official_sources" }, display_value: "Needs Verification — local adoption not established", source_org: null, source_title: null, source_url: null, provider: "local_adoption_research", source_tier: 7, origin: "research", verification: "needs_verification", limitation: `No official local building or code pages were discovered for ${ahj}, so local adoption could not be researched. The state baseline is not substituted.` }));
     return { facts, health: n.health, status: "warning", escalations: localState ? [`Local code adoption for ${ahj} not established (state requires local adoption).`] : [] };
   }
-  const pages = await followEvidence(n, seeds, { maxPages: 8, maxDepth: 2, provider: "local_official_site", label: `${ahj} official website` });
-  const byFam = new Map<CodeFamily, { ev: CodeEvidence; page: string }>();
-  let amendmentPage: { url: string; quote: string } | null = null;
+  const pages = await followEvidence(n, seeds, { maxPages: 9, maxDepth: 2, provider: "local_official_site", label: `${ahj} official website`, readPdf: true });
+  const govHosts = [...new Set(disc.filter((d) => /website|building|permits|authority_page/.test(d.category)).map((d) => d.host).filter(Boolean))];
+  const localEv: CodeEvidence[] = [];
+  const docs: DocEvidence[] = [];
+  let amendmentPage: { url: string; quote: string; page: number | null } | null = null;
   let preempt: { url: string; quote: string } | null = null;
   for (const p of pages) {
-    const type = classifySourceType(p.url, p.text);
-    for (const st of extractAdoptionStatements(p.text)) {
-      if (st.proposed) continue;
-      const ev = toEvidence(st, { layer: "local", state: s.state ?? "", jurisdiction_key: s.jurisdictionKey ?? null, authority: ahj, url: p.url, source_type: type, primary: true });
-      const prev = byFam.get(st.family);
-      if (!prev || (ev.edition ?? "") > (prev.ev.edition ?? "")) byFam.set(st.family, { ev, page: p.url });
-    }
-    if (!amendmentPage) { const m = p.text.match(/[^.]{0,160}\b(local amendments?|amendments? to the (20\d\d )?(international|florida|national))[^.]{0,200}\./i); if (m) amendmentPage = { url: p.url, quote: m[0].trim().slice(0, 360) }; }
+    const type = p.doc ? (/(ordinance|resolution)/i.test(p.text.slice(0, 4000)) ? "adoption_notice" : classifySourceType(p.url, p.text)) : classifySourceType(p.url, p.text);
+    const auth = documentAuthority(p.url, govHosts);
+    const units = p.pages ?? [p.text];
+    units.forEach((txt, i) => {
+      for (const st of extractAdoptionStatements(txt)) {
+        if (st.proposed) continue;
+        const pageRef = p.pages ? i + 1 : null;
+        const ev = toEvidence(st, { layer: "local", state: s.state ?? "", jurisdiction_key: s.jurisdictionKey ?? null, authority: ahj, url: p.url, source_type: type, primary: auth === "issuing_government" || auth === "code_publisher" });
+        if (pageRef) ev.note = `${ev.note ? `${ev.note} ` : ""}Document page ${pageRef}.`;
+        if (!localEv.some((e) => e.family === ev.family && e.edition === ev.edition && e.url === ev.url)) localEv.push(ev);
+        if (p.doc && docs.length < 12) docs.push({ url: p.url, title: p.doc.title, issuing_authority: auth === "issuing_government" ? ahj : null, authority_class: auth, published: p.doc.dates.published, adopted: st.adopted ?? p.doc.dates.adopted, effective: st.effective_from ?? p.doc.dates.effective, page: pageRef, section: null, excerpt: st.quote.slice(0, 320), retrieved_at: now(), readable: true, kind: p.doc.kind });
+      }
+      if (!amendmentPage) { const m = txt.match(/[^.]{0,160}\b(local amendments?|amendments? to the (20\d\d )?(international|florida|national|uniform))[^.]{0,200}\./i); if (m) amendmentPage = { url: p.url, quote: m[0].trim().slice(0, 360), page: p.pages ? i + 1 : null }; }
+    });
     if (!preempt) { const q = statePreemptionCue(p.text); if (q) preempt = { url: p.url, quote: q }; }
   }
-  for (const [fam, { ev }] of byFam) {
-    facts.push(mk({ fact_type: "local_amendment", fact_key: `local_adoption:${fam}`, label: `${FAMILY_LABEL[fam]} — locally adopted (${ahj})`, value: { family: fam, edition: ev.edition, effective_from: ev.effective_from, source_type: ev.source_type, quote: ev.quote, layer: "local" }, display_value: `${ev.edition}${ev.effective_from ? ` · effective ${ev.effective_from}` : ""}`, source_org: ahj, source_title: SOURCE_TYPE_LABEL[ev.source_type], source_url: ev.url, provider: "local_adoption_research", source_tier: ev.source_type === "rule" || ev.source_type === "adoption_notice" ? 2 : 3, origin: "research", verification: "needs_verification", effective_date: ev.effective_from ?? null, limitation: `Read from the jurisdiction's official page: “${ev.quote.slice(0, 220)}”. ${ev.source_type === "rule" || ev.source_type === "adoption_notice" ? "" : "An informational page is not the adopting ordinance — confirm against the ordinance."}` }));
+  // Scanned / unreadable official documents: record, never guess.
+  for (const u of n.unreadableDocs ?? []) docs.push({ url: u.url, title: u.title, issuing_authority: null, authority_class: documentAuthority(u.url, govHosts), published: null, adopted: null, effective: null, page: null, section: null, excerpt: "", retrieved_at: now(), readable: false, kind: "other" });
+
+  // Temporal resolution of LOCAL evidence, then reconciliation against the state baseline.
+  const today = new Date().toISOString().slice(0, 10);
+  const cd = applicableCodeDate({ application_date: s.applicationDate ?? null, today });
+  let stateEv: CodeEvidence[] = [];
+  if (db && s.state) { const { data } = await db.from("code_adoption_evidence").select("*").eq("state", s.state).eq("layer", "state"); stateEv = ((data ?? []) as EvidenceRow[]).map(toEv); }
+  if (!stateEv.length) stateEv = seedFor(s.state);
+  const fams = [...new Set(localEv.map((e) => e.family))];
+  let conflictsResolved = 0;
+  for (const fam of fams) {
+    const lr = resolveFamily(s.state ?? "", fam, localEv, cd.date, "local", s.jurisdictionKey ?? null);
+    const sr = resolveFamily(s.state ?? "", fam, stateEv, cd.date);
+    const rec = reconcileLocal(lr, sr, localState);
+    if (rec.status === "local_stale" || lr.superseded.length) conflictsResolved++;
+    const ev = lr.current?.evidence[0] ?? localEv.find((e) => e.family === fam)!;
+    const verified = rec.status === "local_controls" && lr.status === "current_verified" && ev.primary && (ev.source_type === "adoption_notice" || ev.source_type === "rule");
+    facts.push(mk({ fact_type: "local_amendment", fact_key: `local_adoption:${fam}`, label: `${FAMILY_LABEL[fam]} — local adoption (${ahj})`,
+      value: { family: fam, edition: lr.current?.edition ?? ev.edition, local_status: lr.status, reconciliation: rec.status, why: `${lr.why} ${rec.why}`.trim(), state_edition: sr.current?.edition ?? null,
+        superseded: lr.superseded.map((p) => p.edition), stale: rec.status === "local_stale", effective_from: lr.current?.effective_from ?? null, source_type: ev.source_type, quote: ev.quote, note: ev.note ?? null, layer: "local" },
+      display_value: rec.status === "local_stale" ? `${ev.edition} on local page · superseded by statewide ${sr.current?.edition}` : `${lr.current?.edition ?? ev.edition}${lr.current?.effective_from ? ` · effective ${lr.current.effective_from}` : ""}`,
+      source_org: ahj, source_title: `${SOURCE_TYPE_LABEL[ev.source_type]}${ev.note ? ` — ${ev.note}` : ""}`, source_url: ev.url, provider: "local_adoption_research",
+      source_tier: ev.source_type === "rule" || ev.source_type === "adoption_notice" ? 2 : 3, origin: "research", verification: verified ? "verified" : "needs_verification", effective_date: lr.current?.effective_from ?? null,
+      conflicts: rec.status === "unresolved" && sr.current ? [{ source: `${s.state} state baseline`, says: sr.current.edition, url: sr.current.evidence[0]?.url ?? null }] : [],
+      limitation: `“${ev.quote.slice(0, 220)}” ${rec.why} ${ev.source_type === "rule" || ev.source_type === "adoption_notice" ? "" : "An informational page is not the adopting ordinance — confirm against the ordinance."}`.trim() }));
   }
-  if (!byFam.size) facts.push(mk({ fact_type: "local_amendment", fact_key: "local_adoption", label: `Local code adoption — ${ahj}`, value: { status: "not_established", pages_read: pages.length }, display_value: "Needs Verification — local adoption not established", source_org: ahj, source_title: "Official website (searched)", source_url: seeds[0] ?? null, provider: "local_adoption_research", source_tier: 7, origin: "research", verification: "needs_verification", limitation: `${pages.length} official page(s) were read; none stated the locally adopted edition. The state baseline is not substituted.` }));
-  facts.push(mk({ fact_type: "local_amendment", fact_key: "local_amendments", label: `Local amendments — ${ahj}`, value: { found: !!amendmentPage }, display_value: amendmentPage ? "Local amendments referenced on official page" : "Not established", source_org: ahj, source_title: amendmentPage ? "Official page mentioning amendments" : null, source_url: amendmentPage?.url ?? null, provider: "local_adoption_research", source_tier: amendmentPage ? 3 : 7, origin: "research", verification: "needs_verification", limitation: amendmentPage ? `“${amendmentPage.quote}” — amendment text itself must be reviewed in the ordinance.` : "No official page stated whether local amendments exist. Absence is not proof there are none." }));
+  if (db && localEv.length) {
+    const { data: have } = await db.from("code_adoption_evidence").select("family,edition,url").eq("layer", "local").eq("jurisdiction_key", s.jurisdictionKey ?? "");
+    const k = new Set(((have ?? []) as Array<{ family: string; edition: string; url: string }>).map((r) => `${r.family}|${r.edition}|${r.url}`));
+    const rows = localEv.filter((e) => !k.has(`${e.family}|${e.edition}|${e.url}`)).map((e) => ({ ...toRow(e), discovered_by: "local_adoption_research" }));
+    if (rows.length) await db.from("code_adoption_evidence").insert(rows).then(() => {}, () => {});
+  }
+  if (!fams.length) facts.push(mk({ fact_type: "local_amendment", fact_key: "local_adoption", label: `Local code adoption — ${ahj}`, value: { status: "not_established", pages_read: pages.length, documents_read: pages.filter((p) => p.doc).length }, display_value: "Needs Verification — local adoption not established", source_org: ahj, source_title: "Official website (searched)", source_url: seeds[0] ?? null, provider: "local_adoption_research", source_tier: 7, origin: "research", verification: "needs_verification", limitation: `${pages.length} official page(s)/document(s) were read; none stated the locally adopted edition. The state baseline is not substituted.` }));
+  const am = amendmentPage as { url: string; quote: string; page: number | null } | null;
+  facts.push(mk({ fact_type: "local_amendment", fact_key: "local_amendments", label: `Local amendments — ${ahj}`, value: { found: !!am, page: am?.page ?? null }, display_value: am ? `Local amendments referenced${am.page ? ` (document p. ${am.page})` : ""}` : "Not established", source_org: ahj, source_title: am ? "Official page/document mentioning amendments" : null, source_url: am?.url ?? null, provider: "local_adoption_research", source_tier: am ? 3 : 7, origin: "research", verification: "needs_verification", limitation: am ? `“${am.quote}” — amendment text itself must be reviewed in the ordinance.` : "No official page stated whether local amendments exist. Absence is not proof there are none." }));
   if (preempt || pol) facts.push(mk({ fact_type: "local_amendment", fact_key: "amendment_authority", label: "Limits on local amendments", value: { local_quote: preempt?.quote ?? null, state_policy: pol?.policy ?? null }, display_value: preempt ? preempt.quote.slice(0, 120) : pol!.text, source_org: preempt ? ahj : null, source_title: preempt ? "Official local page" : "State amendment policy", source_url: preempt?.url ?? pol?.url ?? null, provider: "local_adoption_research", source_tier: 2, origin: "research", verification: "needs_verification" }));
-  if (db && byFam.size && s.jurisdictionKey) {
-    await saveKnowledge(db, s.jurisdictionKey, ahj, [...byFam.values()].map(({ page }) => ({ category: "code_adoption", url: page, title: `${ahj} — adopted codes`, trust: "official_informational", host: new URL(page).hostname }))).catch(() => {});
+  if (docs.length) facts.push(docFact(docs, ahj));
+  if (db && s.jurisdictionKey && (fams.length || docs.length)) {
+    await saveKnowledge(db, s.jurisdictionKey, ahj, [
+      ...[...new Set(localEv.map((e) => e.url))].map((u) => ({ category: "code_adoption", url: u, title: `${ahj} — adopted codes`, trust: "official_informational", host: new URL(u).hostname })),
+      ...docs.filter((d) => d.readable).map((d) => ({ category: "official_document", url: d.url, title: d.title, trust: d.authority_class, host: new URL(d.url).hostname, meta: d })),
+    ]).catch(() => {});
   }
-  const esc = !byFam.size && localState ? [`Local code adoption for ${ahj} not established (state requires local adoption).`] : [];
-  return { facts, health: n.health, status: byFam.size ? "done" : "warning", escalations: esc, note: `${pages.length} official page(s) read` };
+  n.u.conflicts_resolved = (n.u.conflicts_resolved ?? 0) + conflictsResolved;
+  const esc = !fams.length && localState ? [`Local code adoption for ${ahj} not established (state requires local adoption).`] : [];
+  return { facts, health: n.health, status: fams.length ? "done" : "warning", escalations: esc, note: `${pages.length} official page(s) read · ${pages.filter((p) => p.doc).length} document(s)` };
+}
+
+function docFact(docs: DocEvidence[], ahj: string): Fact {
+  const readable = docs.filter((d) => d.readable);
+  return mk({ fact_type: "local_amendment", fact_key: "official_documents", label: `Official documents read — ${ahj}`, value: { documents: docs },
+    display_value: `${readable.length} document(s) read${docs.length > readable.length ? ` · ${docs.length - readable.length} scanned/unreadable` : ""}`,
+    source_org: ahj, source_title: readable[0]?.title ?? "Official documents", source_url: readable[0]?.url ?? docs[0]?.url ?? null, provider: "official_document_research", source_tier: 3, origin: "research", verification: "needs_verification",
+    limitation: `${docs.length > readable.length ? "Scanned or unreadable documents were not interpreted — they need human review. " : ""}Each excerpt cites its document page. A document hosted on a government website still needs confirmation that it is the adopting body's current version.` });
 }
 
 async function permitsWorker(s: PipelineState, n: Net): Promise<StepResult> {

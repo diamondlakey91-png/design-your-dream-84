@@ -66,8 +66,8 @@ function periods(ev: CodeEvidence[]): EditionPeriod[] {
 const cite = (p: EditionPeriod) => p.evidence[0]!;
 const strong = (p: EditionPeriod) => p.evidence.some((e) => e.primary && AUTHORITY_RANK[e.source_type] >= AUTHORITY_RANK.agency_current_code_page);
 
-export function resolveFamily(state: string, family: CodeFamily, evidence: CodeEvidence[], asOf: string): FamilyResolution {
-  const ev = evidence.filter((e) => e.state === state && e.family === family && e.layer === "state");
+export function resolveFamily(state: string, family: CodeFamily, evidence: CodeEvidence[], asOf: string, layer: Layer = "state", jurisdictionKey?: string | null): FamilyResolution {
+  const ev = evidence.filter((e) => e.state === state && e.family === family && e.layer === layer && (layer !== "local" || !jurisdictionKey || e.jurisdiction_key === jurisdictionKey));
   const base = { family, state, as_of: asOf, future: [] as EditionPeriod[], proposed: [] as EditionPeriod[], superseded: [] as EditionPeriod[], conflicts: [] as FamilyResolution["conflicts"] };
   const proposed: EditionPeriod[] = [];
   for (const e of ev.filter((x) => x.edition && (x.proposed || AUTHORITY_RANK[x.source_type] === 0))) {
@@ -132,3 +132,22 @@ export function applicableCodeDate(p: { application_date?: string | null; permit
 }
 
 export const FAMILIES: CodeFamily[] = ["building", "residential", "existing_building", "electrical", "mechanical", "plumbing", "fuel_gas", "energy", "fire", "accessibility"];
+
+/**
+ * Local vs state reconciliation. An official local page is not current merely because it is official:
+ * in a statewide-mandatory state, a local edition older than the state edition in force for the
+ * Applicable Code Date is stale (superseded). In local-adoption states the local edition controls.
+ */
+export function reconcileLocal(local: FamilyResolution, state: FamilyResolution, localAdoptionState: boolean): { status: "local_controls" | "local_stale" | "local_agrees" | "local_only" | "state_only" | "unresolved"; why: string } {
+  const le = local.current?.edition ?? null, se = state.current?.edition ?? null;
+  const yr = (e: string | null) => Number(e?.match(/20\d\d/)?.[0] ?? 0);
+  if (!le && !se) return { status: "unresolved", why: "Neither a local nor a state edition was established." };
+  if (!le) return { status: "state_only", why: "No local adoption statement found; the state baseline is shown separately and is not substituted." };
+  if (!se) return { status: localAdoptionState ? "local_controls" : "local_only", why: `The local page states ${le}; no state edition was established to compare.` };
+  if (localAdoptionState) return { status: "local_controls", why: `This state leaves adoption to local government; the local ${le} controls where adopted.` };
+  if (yr(le) < yr(se) && (state.status === "current_verified" || state.status === "current_needs_verification") && (state.current?.effective_from ?? "9999") <= local.as_of) {
+    return { status: "local_stale", why: `The local page still cites ${le}, but the statewide ${se} has been in force since ${state.current!.effective_from}. The local page is treated as out of date (superseded), not as current law.` };
+  }
+  if (yr(le) === yr(se)) return { status: "local_agrees", why: `The local page agrees with the statewide ${se}.` };
+  return { status: "unresolved", why: `The local page cites ${le} while the state baseline is ${se}; which controls could not be established.` };
+}
