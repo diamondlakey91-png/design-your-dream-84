@@ -95,7 +95,7 @@ export function resolveFamily(state: string, family: CodeFamily, evidence: CodeE
     status = "current_needs_verification";
     why = `${cite(current).authority} lists ${current.edition}, but no effective date was established.`;
   }
-  const superseded = ps.filter((p) => p !== (current && ps.find((x) => x.edition === current!.edition)) && !future.some((f) => f.edition === p.edition) && p.effective_from && p.effective_to && p.effective_to < asOf)
+  const superseded = ps.filter((p) => p.edition !== current?.edition && p.effective_from && p.effective_to && p.effective_to < asOf)
     .map((p) => ({ ...p, status: "superseded" as TemporalStatus }));
   // Undated editions that disagree with a dated current edition: stale or conflicting.
   for (const u of undated) {
