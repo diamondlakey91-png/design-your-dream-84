@@ -155,7 +155,11 @@ export async function chargeIncludedUsage(
   const admin = await getAdmin();
   // Idempotent retry of the same run: already charged, don't block or re-charge.
   const { data: prior } = await admin.from("credit_transactions").select("id").eq("idempotency_key", key).maybeSingle();
-  if (prior?.id) return { usageId: prior.id as string, internal: false };
+  if (prior?.id) {
+    const { data: refunded } = await admin.from("credit_transactions").select("id").eq("idempotency_key", `refund:${prior.id}`).maybeSingle();
+    if (!refunded) return { usageId: prior.id as string, internal: false };
+    key = `${key}:retry:${Date.now()}`;
+  }
   const bal = await creditBalance(admin, userId, type);
   if (bal < 1) throw new CreditRequiredError();
   try {
