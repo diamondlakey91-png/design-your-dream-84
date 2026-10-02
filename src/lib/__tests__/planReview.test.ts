@@ -147,6 +147,14 @@ describe("Plan Review entitlements (runMeteredAi, plan_review_credits)", () => {
     expect(logRows).toHaveLength(1);
     expect(logRows[0]).toMatchObject({ success: true, credits_charged: 1 });
   });
+  it("deliberate re-run after success is allowed and charges again", async () => {
+    credits = 3;
+    const { runMeteredAi } = await import("@/lib/aiMeter.server");
+    await runMeteredAi(args("k4"), async () => "first");
+    await expect(runMeteredAi(args("k4"), async () => "second")).resolves.toBe("second");
+    expect(charges).toEqual(["k4", "k4"]);
+    expect(logRows).toHaveLength(2);
+  });
   it("failure → credit restored and key freed for retry", async () => {
     credits = 1;
     const { runMeteredAi } = await import("@/lib/aiMeter.server");

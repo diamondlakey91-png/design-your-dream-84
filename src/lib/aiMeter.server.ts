@@ -108,7 +108,12 @@ export async function runMeteredAi<T>(a: MeterArgs, run: () => Promise<T>): Prom
   const base = { credits_charged: usageId ? 1 : 0, credit_transaction_id: usageId, internal_use: internal };
   try {
     const out = await store.run(u, run);
-    await logs.update({ ...base, success: true, error: null, model: u.model, input_tokens: u.input, output_tokens: u.output, estimated_cost: estimate(u) }).eq("id", claimId);
+    await logs.update({
+      ...base, success: true, error: null, model: u.model, input_tokens: u.input, output_tokens: u.output, estimated_cost: estimate(u),
+      // Free the key once the run is done: a deliberate re-run is allowed (and charges again);
+      // only a duplicate while the run is still in progress is blocked.
+      request_key: `${a.key}:done:${Date.now()}`,
+    }).eq("id", claimId);
     return out;
   } catch (e) {
     if (usageId) await refundCredit(usageId, `${a.operation} failed — credit restored`);
