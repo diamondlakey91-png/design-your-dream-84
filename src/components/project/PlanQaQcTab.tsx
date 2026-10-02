@@ -9,7 +9,9 @@ import {
   deleteQaQcReview,
   addQaQcGapsToChecklist,
   generateQaQcReportPdf,
+  addQaQcFindingsToRoadmap,
 } from "@/lib/qaqcReview.functions";
+import { PlanReviewSetup } from "@/components/project/PlanReviewSetup";
 import { getPlanReviewOverview, listReviewEvaluations, setQaQcFindingStatus } from "@/lib/planReviewWorkspace.functions";
 import { PERMIVIO_PROFESSIONAL_DISCLAIMER } from "@/lib/qaqcConfig";
 import { reviewSummary, type WorkspaceFinding } from "@/lib/planReviewUx";
@@ -25,7 +27,7 @@ import type { AgencyContact } from "@/lib/agencyContacts";
 
 // Project → Plan Review. The CURRENT plan set is the review target; every review stays
 // tied to the exact plan set it reviewed. Viewing is free; running is an explicit paid action.
-export function PlanQaQcTab({ projectId }: { projectId: string; userId: string }) {
+export function PlanQaQcTab({ projectId, userId }: { projectId: string; userId: string }) {
   const qc = useQueryClient();
   const { mode } = useViewMode();
   const professional = mode === "pro";
@@ -83,6 +85,18 @@ export function PlanQaQcTab({ projectId }: { projectId: string; userId: string }
     onError: (e) => toast.error(e instanceof Error ? e.message : "Could not update roadmap"),
   });
 
+  const findingsFn = useServerFn(addQaQcFindingsToRoadmap);
+  const addFindings = useMutation({
+    mutationFn: () => findingsFn({ data: { review_id: currentId as string } }),
+    onSuccess: (r) => {
+      toast.success(r.added ? `${r.added} correction item(s) added to the Permit Roadmap (Needs Verification)` : "No new open findings to add");
+      qc.invalidateQueries({ queryKey: ["checklist", projectId] });
+      qc.invalidateQueries({ queryKey: ["permit_items", projectId] });
+      qc.invalidateQueries({ queryKey: ["project-foundation", projectId] });
+    },
+    onError: (e) => toast.error(e instanceof Error ? e.message : "Could not update roadmap"),
+  });
+
   const exportPdf = useMutation({
     mutationFn: () => pdfFn({ data: { review_id: currentId as string } }),
     onSuccess: (res) => {
@@ -121,6 +135,7 @@ export function PlanQaQcTab({ projectId }: { projectId: string; userId: string }
   return (
     <div className="space-y-6">
       {overview.isLoading && <p className="text-sm text-muted-foreground">Loading plan review…</p>}
+      {o && <PlanReviewSetup key={o.planSets.length ? "has" : "none"} projectId={projectId} userId={userId} hasPlanSets={o.planSets.length > 0} />}
       {o && (
         <PlanReviewEntry o={o} activeReviewId={currentId} onSelectReview={setActiveReview}
           onRun={(planSetId, requestId) => run.mutate({ planSetId, requestId })} running={run.isPending} />
@@ -153,6 +168,7 @@ export function PlanQaQcTab({ projectId }: { projectId: string; userId: string }
                 )}
               </div>
               <div className="flex flex-wrap gap-2">
+                <button onClick={() => addFindings.mutate()} disabled={addFindings.isPending} className={btn}><ListPlus className="size-3.5" /> {addFindings.isPending ? "Adding…" : "Send findings to roadmap"}</button>
                 <button onClick={() => addGaps.mutate()} disabled={addGaps.isPending} className={btn}><ListPlus className="size-3.5" /> Add gaps to roadmap</button>
                 <button onClick={() => exportPdf.mutate()} disabled={exportPdf.isPending} className={btn}><FileDown className="size-3.5" /> {exportPdf.isPending ? "Building…" : "Report PDF"}</button>
                 <button onClick={() => remove.mutate(d.review.id)} className={`${btn} text-muted-foreground hover:border-destructive hover:text-destructive`}><Trash2 className="size-3.5" /> Delete</button>
