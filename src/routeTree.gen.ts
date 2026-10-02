@@ -9,92 +9,71 @@
 // Additionally, you should also exclude this file from your linter and/or formatter to prevent it from being checked or modified.
 
 import { Route as rootRouteImport } from './routes/__root'
-import { Route as SitemapDotxmlRouteImport } from './routes/sitemap[.]xml'
-import { Route as SiteInvestigationRouteImport } from './routes/site-investigation'
-import { Route as ResetPasswordRouteImport } from './routes/reset-password'
-import { Route as PricingRouteImport } from './routes/pricing'
-import { Route as McpRouteImport } from './routes/mcp'
-import { Route as DemoRouteImport } from './routes/demo'
-import { Route as AuthRouteImport } from './routes/auth'
-import { Route as AuthenticatedRouteRouteImport } from './routes/_authenticated/route'
 import { Route as IndexRouteImport } from './routes/index'
-import { Route as CheckoutReturnRouteImport } from './routes/checkout.return'
-import { Route as AuthenticatedToolsRouteImport } from './routes/_authenticated/tools'
-import { Route as AuthenticatedStartRouteImport } from './routes/_authenticated/start'
-import { Route as AuthenticatedSettingsRouteImport } from './routes/_authenticated/settings'
-import { Route as AuthenticatedReportRouteImport } from './routes/_authenticated/report'
-import { Route as AuthenticatedPropertyRouteImport } from './routes/_authenticated/property'
-import { Route as AuthenticatedPortalsRouteImport } from './routes/_authenticated/portals'
-import { Route as AuthenticatedPlansRouteImport } from './routes/_authenticated/plans'
-import { Route as AuthenticatedPlanQaqcRouteImport } from './routes/_authenticated/plan-qaqc'
-import { Route as AuthenticatedLookupRouteImport } from './routes/_authenticated/lookup'
-import { Route as AuthenticatedJurisdictionsRouteImport } from './routes/_authenticated/jurisdictions'
-import { Route as AuthenticatedHealthPortalsRouteImport } from './routes/_authenticated/health-portals'
-import { Route as AuthenticatedDashboardRouteImport } from './routes/_authenticated/dashboard'
-import { Route as AuthenticatedAssistantRouteImport } from './routes/_authenticated/assistant'
-import { Route as Char91DotwellKnownChar93OauthProtectedResourceRouteImport } from './routes/[.well-known]/oauth-protected-resource'
+import { Route as AuthenticatedRouteRouteImport } from './routes/_authenticated/route'
+import { Route as AuthRouteImport } from './routes/auth'
+import { Route as DemoRouteImport } from './routes/demo'
+import { Route as McpRouteImport } from './routes/mcp'
+import { Route as PricingRouteImport } from './routes/pricing'
+import { Route as ResetPasswordRouteImport } from './routes/reset-password'
+import { Route as SiteInvestigationRouteImport } from './routes/site-investigation'
+import { Route as SitemapDotxmlRouteImport } from './routes/sitemap[.]xml'
 import { Route as Char91DotmcpChar93ListToolsRouteImport } from './routes/[.mcp]/list-tools'
-import { Route as AuthenticatedSirIndexRouteImport } from './routes/_authenticated/sir.index'
-import { Route as AuthenticatedReportsIndexRouteImport } from './routes/_authenticated/reports.index'
-import { Route as AuthenticatedProjectsIndexRouteImport } from './routes/_authenticated/projects.index'
-import { Route as AuthenticatedHarvestIndexRouteImport } from './routes/_authenticated/harvest.index'
-import { Route as AuthenticatedFilingIndexRouteImport } from './routes/_authenticated/filing.index'
-import { Route as AuthenticatedFeasibilityIndexRouteImport } from './routes/_authenticated/feasibility.index'
-import { Route as AuthenticatedAssistantIndexRouteImport } from './routes/_authenticated/assistant.index'
-import { Route as ShareReportsTokenRouteImport } from './routes/share.reports.$token'
-import { Route as ApiChatStreamRouteImport } from './routes/api/chat.stream'
-import { Route as AuthenticatedToolsCheckoutRouteImport } from './routes/_authenticated/tools_.checkout'
-import { Route as AuthenticatedSirIdRouteImport } from './routes/_authenticated/sir.$id'
-import { Route as AuthenticatedReportsIdRouteImport } from './routes/_authenticated/reports.$id'
-import { Route as AuthenticatedReportIdRouteImport } from './routes/_authenticated/report.$id'
-import { Route as AuthenticatedProjectsIdRouteImport } from './routes/_authenticated/projects.$id'
-import { Route as AuthenticatedJurisdictionsSlugRouteImport } from './routes/_authenticated/jurisdictions.$slug'
-import { Route as AuthenticatedInspectionsIdRouteImport } from './routes/_authenticated/inspections.$id'
-import { Route as AuthenticatedFeasibilityIdRouteImport } from './routes/_authenticated/feasibility.$id'
-import { Route as AuthenticatedAssistantScreensRouteImport } from './routes/_authenticated/assistant.screens'
-import { Route as AuthenticatedAssistantPermitsRouteImport } from './routes/_authenticated/assistant.permits'
-import { Route as AuthenticatedAssistantAnalysisRouteImport } from './routes/_authenticated/assistant.analysis'
-import { Route as AuthenticatedAssistantThreadIdRouteImport } from './routes/_authenticated/assistant.$threadId'
-import { Route as AuthenticatedAdminUsersRouteImport } from './routes/_authenticated/admin.users'
-import { Route as AuthenticatedAdminToolsRouteImport } from './routes/_authenticated/admin.tools'
-import { Route as AuthenticatedAdminSirRouteImport } from './routes/_authenticated/admin.sir'
-import { Route as AuthenticatedAdminPortalsRouteImport } from './routes/_authenticated/admin.portals'
-import { Route as AuthenticatedAdminHealthPortalsRouteImport } from './routes/_authenticated/admin.health-portals'
-import { Route as Char91DotmcpChar93InvokeToolToolRouteImport } from './routes/[.mcp]/invoke-tool/$tool'
+import { Route as Char91DotwellKnownChar93OauthProtectedResourceRouteImport } from './routes/[.well-known]/oauth-protected-resource'
+import { Route as AuthenticatedAssistantRouteImport } from './routes/_authenticated/assistant'
+import { Route as AuthenticatedDashboardRouteImport } from './routes/_authenticated/dashboard'
+import { Route as AuthenticatedHealthPortalsRouteImport } from './routes/_authenticated/health-portals'
+import { Route as AuthenticatedJurisdictionsRouteImport } from './routes/_authenticated/jurisdictions'
+import { Route as AuthenticatedLookupRouteImport } from './routes/_authenticated/lookup'
+import { Route as AuthenticatedPlanQaqcRouteImport } from './routes/_authenticated/plan-qaqc'
+import { Route as AuthenticatedPlansRouteImport } from './routes/_authenticated/plans'
+import { Route as AuthenticatedPortalsRouteImport } from './routes/_authenticated/portals'
+import { Route as AuthenticatedPropertyRouteImport } from './routes/_authenticated/property'
+import { Route as AuthenticatedReportRouteImport } from './routes/_authenticated/report'
+import { Route as AuthenticatedSettingsRouteImport } from './routes/_authenticated/settings'
+import { Route as AuthenticatedStartRouteImport } from './routes/_authenticated/start'
+import { Route as AuthenticatedToolsRouteImport } from './routes/_authenticated/tools'
+import { Route as CheckoutReturnRouteImport } from './routes/checkout.return'
 import { Route as DotlovableOauthConsentRouteImport } from './routes/[.]lovable.oauth.consent'
+import { Route as Char91DotmcpChar93InvokeToolToolRouteImport } from './routes/[.mcp]/invoke-tool/$tool'
+import { Route as AuthenticatedAdminHealthPortalsRouteImport } from './routes/_authenticated/admin.health-portals'
+import { Route as AuthenticatedAdminPortalsRouteImport } from './routes/_authenticated/admin.portals'
+import { Route as AuthenticatedAdminSirRouteImport } from './routes/_authenticated/admin.sir'
+import { Route as AuthenticatedAdminToolsRouteImport } from './routes/_authenticated/admin.tools'
+import { Route as AuthenticatedAdminUsersRouteImport } from './routes/_authenticated/admin.users'
+import { Route as AuthenticatedAssistantIndexRouteImport } from './routes/_authenticated/assistant.index'
+import { Route as AuthenticatedAssistantThreadIdRouteImport } from './routes/_authenticated/assistant.$threadId'
+import { Route as AuthenticatedAssistantAnalysisRouteImport } from './routes/_authenticated/assistant.analysis'
+import { Route as AuthenticatedAssistantPermitsRouteImport } from './routes/_authenticated/assistant.permits'
+import { Route as AuthenticatedAssistantScreensRouteImport } from './routes/_authenticated/assistant.screens'
+import { Route as AuthenticatedFeasibilityIndexRouteImport } from './routes/_authenticated/feasibility.index'
+import { Route as AuthenticatedFeasibilityIdRouteImport } from './routes/_authenticated/feasibility.$id'
+import { Route as AuthenticatedFilingIndexRouteImport } from './routes/_authenticated/filing.index'
+import { Route as AuthenticatedHarvestIndexRouteImport } from './routes/_authenticated/harvest.index'
+import { Route as AuthenticatedInspectionsIdRouteImport } from './routes/_authenticated/inspections.$id'
+import { Route as AuthenticatedJurisdictionsSlugRouteImport } from './routes/_authenticated/jurisdictions.$slug'
+import { Route as AuthenticatedProjectsIndexRouteImport } from './routes/_authenticated/projects.index'
+import { Route as AuthenticatedProjectsIdRouteImport } from './routes/_authenticated/projects.$id'
+import { Route as AuthenticatedReportIdRouteImport } from './routes/_authenticated/report.$id'
+import { Route as AuthenticatedReportsIndexRouteImport } from './routes/_authenticated/reports.index'
+import { Route as AuthenticatedReportsIdRouteImport } from './routes/_authenticated/reports.$id'
+import { Route as AuthenticatedSirIndexRouteImport } from './routes/_authenticated/sir.index'
+import { Route as AuthenticatedSirIdRouteImport } from './routes/_authenticated/sir.$id'
+import { Route as AuthenticatedToolsCheckoutRouteImport } from './routes/_authenticated/tools_.checkout'
+import { Route as ApiChatStreamRouteImport } from './routes/api/chat.stream'
+import { Route as ShareReportsTokenRouteImport } from './routes/share.reports.$token'
 import { Route as AuthenticatedAssistantScreensIndexRouteImport } from './routes/_authenticated/assistant.screens.index'
-import { Route as ApiPublicPaymentsWebhookRouteImport } from './routes/api/public/payments/webhook'
-import { Route as ApiPublicHooksRefreshLinkedPermitsRouteImport } from './routes/api/public/hooks/refresh-linked-permits'
 import { Route as AuthenticatedAssistantScreensIdRouteImport } from './routes/_authenticated/assistant.screens.$id'
+import { Route as ApiPublicHooksRefreshLinkedPermitsRouteImport } from './routes/api/public/hooks/refresh-linked-permits'
+import { Route as ApiPublicPaymentsWebhookRouteImport } from './routes/api/public/payments/webhook'
 
-const SitemapDotxmlRoute = SitemapDotxmlRouteImport.update({
-  id: '/sitemap.xml',
-  path: '/sitemap.xml',
+const IndexRoute = IndexRouteImport.update({
+  id: '/',
+  path: '/',
   getParentRoute: () => rootRouteImport,
 } as any)
-const SiteInvestigationRoute = SiteInvestigationRouteImport.update({
-  id: '/site-investigation',
-  path: '/site-investigation',
-  getParentRoute: () => rootRouteImport,
-} as any)
-const ResetPasswordRoute = ResetPasswordRouteImport.update({
-  id: '/reset-password',
-  path: '/reset-password',
-  getParentRoute: () => rootRouteImport,
-} as any)
-const PricingRoute = PricingRouteImport.update({
-  id: '/pricing',
-  path: '/pricing',
-  getParentRoute: () => rootRouteImport,
-} as any)
-const McpRoute = McpRouteImport.update({
-  id: '/mcp',
-  path: '/mcp',
-  getParentRoute: () => rootRouteImport,
-} as any)
-const DemoRoute = DemoRouteImport.update({
-  id: '/demo',
-  path: '/demo',
+const AuthenticatedRouteRoute = AuthenticatedRouteRouteImport.update({
+  id: '/_authenticated',
   getParentRoute: () => rootRouteImport,
 } as any)
 const AuthRoute = AuthRouteImport.update({
@@ -102,53 +81,73 @@ const AuthRoute = AuthRouteImport.update({
   path: '/auth',
   getParentRoute: () => rootRouteImport,
 } as any)
-const AuthenticatedRouteRoute = AuthenticatedRouteRouteImport.update({
-  id: '/_authenticated',
+const DemoRoute = DemoRouteImport.update({
+  id: '/demo',
+  path: '/demo',
   getParentRoute: () => rootRouteImport,
 } as any)
-const IndexRoute = IndexRouteImport.update({
-  id: '/',
-  path: '/',
+const McpRoute = McpRouteImport.update({
+  id: '/mcp',
+  path: '/mcp',
   getParentRoute: () => rootRouteImport,
 } as any)
-const CheckoutReturnRoute = CheckoutReturnRouteImport.update({
-  id: '/checkout/return',
-  path: '/checkout/return',
+const PricingRoute = PricingRouteImport.update({
+  id: '/pricing',
+  path: '/pricing',
   getParentRoute: () => rootRouteImport,
 } as any)
-const AuthenticatedToolsRoute = AuthenticatedToolsRouteImport.update({
-  id: '/tools',
-  path: '/tools',
+const ResetPasswordRoute = ResetPasswordRouteImport.update({
+  id: '/reset-password',
+  path: '/reset-password',
+  getParentRoute: () => rootRouteImport,
+} as any)
+const SiteInvestigationRoute = SiteInvestigationRouteImport.update({
+  id: '/site-investigation',
+  path: '/site-investigation',
+  getParentRoute: () => rootRouteImport,
+} as any)
+const SitemapDotxmlRoute = SitemapDotxmlRouteImport.update({
+  id: '/sitemap.xml',
+  path: '/sitemap.xml',
+  getParentRoute: () => rootRouteImport,
+} as any)
+const Char91DotmcpChar93ListToolsRoute =
+  Char91DotmcpChar93ListToolsRouteImport.update({
+    id: '/.mcp/list-tools',
+    path: '/.mcp/list-tools',
+    getParentRoute: () => rootRouteImport,
+  } as any)
+const Char91DotwellKnownChar93OauthProtectedResourceRoute =
+  Char91DotwellKnownChar93OauthProtectedResourceRouteImport.update({
+    id: '/.well-known/oauth-protected-resource',
+    path: '/.well-known/oauth-protected-resource',
+    getParentRoute: () => rootRouteImport,
+  } as any)
+const AuthenticatedAssistantRoute = AuthenticatedAssistantRouteImport.update({
+  id: '/assistant',
+  path: '/assistant',
   getParentRoute: () => AuthenticatedRouteRoute,
 } as any)
-const AuthenticatedStartRoute = AuthenticatedStartRouteImport.update({
-  id: '/start',
-  path: '/start',
+const AuthenticatedDashboardRoute = AuthenticatedDashboardRouteImport.update({
+  id: '/dashboard',
+  path: '/dashboard',
   getParentRoute: () => AuthenticatedRouteRoute,
 } as any)
-const AuthenticatedSettingsRoute = AuthenticatedSettingsRouteImport.update({
-  id: '/settings',
-  path: '/settings',
-  getParentRoute: () => AuthenticatedRouteRoute,
-} as any)
-const AuthenticatedReportRoute = AuthenticatedReportRouteImport.update({
-  id: '/report',
-  path: '/report',
-  getParentRoute: () => AuthenticatedRouteRoute,
-} as any)
-const AuthenticatedPropertyRoute = AuthenticatedPropertyRouteImport.update({
-  id: '/property',
-  path: '/property',
-  getParentRoute: () => AuthenticatedRouteRoute,
-} as any)
-const AuthenticatedPortalsRoute = AuthenticatedPortalsRouteImport.update({
-  id: '/portals',
-  path: '/portals',
-  getParentRoute: () => AuthenticatedRouteRoute,
-} as any)
-const AuthenticatedPlansRoute = AuthenticatedPlansRouteImport.update({
-  id: '/plans',
-  path: '/plans',
+const AuthenticatedHealthPortalsRoute =
+  AuthenticatedHealthPortalsRouteImport.update({
+    id: '/health-portals',
+    path: '/health-portals',
+    getParentRoute: () => AuthenticatedRouteRoute,
+  } as any)
+const AuthenticatedJurisdictionsRoute =
+  AuthenticatedJurisdictionsRouteImport.update({
+    id: '/jurisdictions',
+    path: '/jurisdictions',
+    getParentRoute: () => AuthenticatedRouteRoute,
+  } as any)
+const AuthenticatedLookupRoute = AuthenticatedLookupRouteImport.update({
+  id: '/lookup',
+  path: '/lookup',
   getParentRoute: () => AuthenticatedRouteRoute,
 } as any)
 const AuthenticatedPlanQaqcRoute = AuthenticatedPlanQaqcRouteImport.update({
@@ -156,156 +155,88 @@ const AuthenticatedPlanQaqcRoute = AuthenticatedPlanQaqcRouteImport.update({
   path: '/plan-qaqc',
   getParentRoute: () => AuthenticatedRouteRoute,
 } as any)
-const AuthenticatedLookupRoute = AuthenticatedLookupRouteImport.update({
-  id: '/lookup',
-  path: '/lookup',
+const AuthenticatedPlansRoute = AuthenticatedPlansRouteImport.update({
+  id: '/plans',
+  path: '/plans',
   getParentRoute: () => AuthenticatedRouteRoute,
 } as any)
-const AuthenticatedJurisdictionsRoute =
-  AuthenticatedJurisdictionsRouteImport.update({
-    id: '/jurisdictions',
-    path: '/jurisdictions',
-    getParentRoute: () => AuthenticatedRouteRoute,
-  } as any)
-const AuthenticatedHealthPortalsRoute =
-  AuthenticatedHealthPortalsRouteImport.update({
-    id: '/health-portals',
-    path: '/health-portals',
-    getParentRoute: () => AuthenticatedRouteRoute,
-  } as any)
-const AuthenticatedDashboardRoute = AuthenticatedDashboardRouteImport.update({
-  id: '/dashboard',
-  path: '/dashboard',
+const AuthenticatedPortalsRoute = AuthenticatedPortalsRouteImport.update({
+  id: '/portals',
+  path: '/portals',
   getParentRoute: () => AuthenticatedRouteRoute,
 } as any)
-const AuthenticatedAssistantRoute = AuthenticatedAssistantRouteImport.update({
-  id: '/assistant',
-  path: '/assistant',
+const AuthenticatedPropertyRoute = AuthenticatedPropertyRouteImport.update({
+  id: '/property',
+  path: '/property',
   getParentRoute: () => AuthenticatedRouteRoute,
 } as any)
-const Char91DotwellKnownChar93OauthProtectedResourceRoute =
-  Char91DotwellKnownChar93OauthProtectedResourceRouteImport.update({
-    id: '/.well-known/oauth-protected-resource',
-    path: '/.well-known/oauth-protected-resource',
+const AuthenticatedReportRoute = AuthenticatedReportRouteImport.update({
+  id: '/report',
+  path: '/report',
+  getParentRoute: () => AuthenticatedRouteRoute,
+} as any)
+const AuthenticatedSettingsRoute = AuthenticatedSettingsRouteImport.update({
+  id: '/settings',
+  path: '/settings',
+  getParentRoute: () => AuthenticatedRouteRoute,
+} as any)
+const AuthenticatedStartRoute = AuthenticatedStartRouteImport.update({
+  id: '/start',
+  path: '/start',
+  getParentRoute: () => AuthenticatedRouteRoute,
+} as any)
+const AuthenticatedToolsRoute = AuthenticatedToolsRouteImport.update({
+  id: '/tools',
+  path: '/tools',
+  getParentRoute: () => AuthenticatedRouteRoute,
+} as any)
+const CheckoutReturnRoute = CheckoutReturnRouteImport.update({
+  id: '/checkout/return',
+  path: '/checkout/return',
+  getParentRoute: () => rootRouteImport,
+} as any)
+const DotlovableOauthConsentRoute = DotlovableOauthConsentRouteImport.update({
+  id: '/.lovable/oauth/consent',
+  path: '/.lovable/oauth/consent',
+  getParentRoute: () => rootRouteImport,
+} as any)
+const Char91DotmcpChar93InvokeToolToolRoute =
+  Char91DotmcpChar93InvokeToolToolRouteImport.update({
+    id: '/.mcp/invoke-tool/$tool',
+    path: '/.mcp/invoke-tool/$tool',
     getParentRoute: () => rootRouteImport,
   } as any)
-const Char91DotmcpChar93ListToolsRoute =
-  Char91DotmcpChar93ListToolsRouteImport.update({
-    id: '/.mcp/list-tools',
-    path: '/.mcp/list-tools',
-    getParentRoute: () => rootRouteImport,
+const AuthenticatedAdminHealthPortalsRoute =
+  AuthenticatedAdminHealthPortalsRouteImport.update({
+    id: '/admin/health-portals',
+    path: '/admin/health-portals',
+    getParentRoute: () => AuthenticatedRouteRoute,
   } as any)
-const AuthenticatedSirIndexRoute = AuthenticatedSirIndexRouteImport.update({
-  id: '/sir/',
-  path: '/sir/',
+const AuthenticatedAdminPortalsRoute =
+  AuthenticatedAdminPortalsRouteImport.update({
+    id: '/admin/portals',
+    path: '/admin/portals',
+    getParentRoute: () => AuthenticatedRouteRoute,
+  } as any)
+const AuthenticatedAdminSirRoute = AuthenticatedAdminSirRouteImport.update({
+  id: '/admin/sir',
+  path: '/admin/sir',
   getParentRoute: () => AuthenticatedRouteRoute,
 } as any)
-const AuthenticatedReportsIndexRoute =
-  AuthenticatedReportsIndexRouteImport.update({
-    id: '/reports/',
-    path: '/reports/',
-    getParentRoute: () => AuthenticatedRouteRoute,
-  } as any)
-const AuthenticatedProjectsIndexRoute =
-  AuthenticatedProjectsIndexRouteImport.update({
-    id: '/projects/',
-    path: '/projects/',
-    getParentRoute: () => AuthenticatedRouteRoute,
-  } as any)
-const AuthenticatedHarvestIndexRoute =
-  AuthenticatedHarvestIndexRouteImport.update({
-    id: '/harvest/',
-    path: '/harvest/',
-    getParentRoute: () => AuthenticatedRouteRoute,
-  } as any)
-const AuthenticatedFilingIndexRoute =
-  AuthenticatedFilingIndexRouteImport.update({
-    id: '/filing/',
-    path: '/filing/',
-    getParentRoute: () => AuthenticatedRouteRoute,
-  } as any)
-const AuthenticatedFeasibilityIndexRoute =
-  AuthenticatedFeasibilityIndexRouteImport.update({
-    id: '/feasibility/',
-    path: '/feasibility/',
-    getParentRoute: () => AuthenticatedRouteRoute,
-  } as any)
+const AuthenticatedAdminToolsRoute = AuthenticatedAdminToolsRouteImport.update({
+  id: '/admin/tools',
+  path: '/admin/tools',
+  getParentRoute: () => AuthenticatedRouteRoute,
+} as any)
+const AuthenticatedAdminUsersRoute = AuthenticatedAdminUsersRouteImport.update({
+  id: '/admin/users',
+  path: '/admin/users',
+  getParentRoute: () => AuthenticatedRouteRoute,
+} as any)
 const AuthenticatedAssistantIndexRoute =
   AuthenticatedAssistantIndexRouteImport.update({
     id: '/',
     path: '/',
-    getParentRoute: () => AuthenticatedAssistantRoute,
-  } as any)
-const ShareReportsTokenRoute = ShareReportsTokenRouteImport.update({
-  id: '/share/reports/$token',
-  path: '/share/reports/$token',
-  getParentRoute: () => rootRouteImport,
-} as any)
-const ApiChatStreamRoute = ApiChatStreamRouteImport.update({
-  id: '/api/chat/stream',
-  path: '/api/chat/stream',
-  getParentRoute: () => rootRouteImport,
-} as any)
-const AuthenticatedToolsCheckoutRoute =
-  AuthenticatedToolsCheckoutRouteImport.update({
-    id: '/tools_/checkout',
-    path: '/tools/checkout',
-    getParentRoute: () => AuthenticatedRouteRoute,
-  } as any)
-const AuthenticatedSirIdRoute = AuthenticatedSirIdRouteImport.update({
-  id: '/sir/$id',
-  path: '/sir/$id',
-  getParentRoute: () => AuthenticatedRouteRoute,
-} as any)
-const AuthenticatedReportsIdRoute = AuthenticatedReportsIdRouteImport.update({
-  id: '/reports/$id',
-  path: '/reports/$id',
-  getParentRoute: () => AuthenticatedRouteRoute,
-} as any)
-const AuthenticatedReportIdRoute = AuthenticatedReportIdRouteImport.update({
-  id: '/$id',
-  path: '/$id',
-  getParentRoute: () => AuthenticatedReportRoute,
-} as any)
-const AuthenticatedProjectsIdRoute = AuthenticatedProjectsIdRouteImport.update({
-  id: '/projects/$id',
-  path: '/projects/$id',
-  getParentRoute: () => AuthenticatedRouteRoute,
-} as any)
-const AuthenticatedJurisdictionsSlugRoute =
-  AuthenticatedJurisdictionsSlugRouteImport.update({
-    id: '/$slug',
-    path: '/$slug',
-    getParentRoute: () => AuthenticatedJurisdictionsRoute,
-  } as any)
-const AuthenticatedInspectionsIdRoute =
-  AuthenticatedInspectionsIdRouteImport.update({
-    id: '/inspections/$id',
-    path: '/inspections/$id',
-    getParentRoute: () => AuthenticatedRouteRoute,
-  } as any)
-const AuthenticatedFeasibilityIdRoute =
-  AuthenticatedFeasibilityIdRouteImport.update({
-    id: '/feasibility/$id',
-    path: '/feasibility/$id',
-    getParentRoute: () => AuthenticatedRouteRoute,
-  } as any)
-const AuthenticatedAssistantScreensRoute =
-  AuthenticatedAssistantScreensRouteImport.update({
-    id: '/screens',
-    path: '/screens',
-    getParentRoute: () => AuthenticatedAssistantRoute,
-  } as any)
-const AuthenticatedAssistantPermitsRoute =
-  AuthenticatedAssistantPermitsRouteImport.update({
-    id: '/permits',
-    path: '/permits',
-    getParentRoute: () => AuthenticatedAssistantRoute,
-  } as any)
-const AuthenticatedAssistantAnalysisRoute =
-  AuthenticatedAssistantAnalysisRouteImport.update({
-    id: '/analysis',
-    path: '/analysis',
     getParentRoute: () => AuthenticatedAssistantRoute,
   } as any)
 const AuthenticatedAssistantThreadIdRoute =
@@ -314,42 +245,111 @@ const AuthenticatedAssistantThreadIdRoute =
     path: '/$threadId',
     getParentRoute: () => AuthenticatedAssistantRoute,
   } as any)
-const AuthenticatedAdminUsersRoute = AuthenticatedAdminUsersRouteImport.update({
-  id: '/admin/users',
-  path: '/admin/users',
-  getParentRoute: () => AuthenticatedRouteRoute,
-} as any)
-const AuthenticatedAdminToolsRoute = AuthenticatedAdminToolsRouteImport.update({
-  id: '/admin/tools',
-  path: '/admin/tools',
-  getParentRoute: () => AuthenticatedRouteRoute,
-} as any)
-const AuthenticatedAdminSirRoute = AuthenticatedAdminSirRouteImport.update({
-  id: '/admin/sir',
-  path: '/admin/sir',
-  getParentRoute: () => AuthenticatedRouteRoute,
-} as any)
-const AuthenticatedAdminPortalsRoute =
-  AuthenticatedAdminPortalsRouteImport.update({
-    id: '/admin/portals',
-    path: '/admin/portals',
+const AuthenticatedAssistantAnalysisRoute =
+  AuthenticatedAssistantAnalysisRouteImport.update({
+    id: '/analysis',
+    path: '/analysis',
+    getParentRoute: () => AuthenticatedAssistantRoute,
+  } as any)
+const AuthenticatedAssistantPermitsRoute =
+  AuthenticatedAssistantPermitsRouteImport.update({
+    id: '/permits',
+    path: '/permits',
+    getParentRoute: () => AuthenticatedAssistantRoute,
+  } as any)
+const AuthenticatedAssistantScreensRoute =
+  AuthenticatedAssistantScreensRouteImport.update({
+    id: '/screens',
+    path: '/screens',
+    getParentRoute: () => AuthenticatedAssistantRoute,
+  } as any)
+const AuthenticatedFeasibilityIndexRoute =
+  AuthenticatedFeasibilityIndexRouteImport.update({
+    id: '/feasibility/',
+    path: '/feasibility/',
     getParentRoute: () => AuthenticatedRouteRoute,
   } as any)
-const AuthenticatedAdminHealthPortalsRoute =
-  AuthenticatedAdminHealthPortalsRouteImport.update({
-    id: '/admin/health-portals',
-    path: '/admin/health-portals',
+const AuthenticatedFeasibilityIdRoute =
+  AuthenticatedFeasibilityIdRouteImport.update({
+    id: '/feasibility/$id',
+    path: '/feasibility/$id',
     getParentRoute: () => AuthenticatedRouteRoute,
   } as any)
-const Char91DotmcpChar93InvokeToolToolRoute =
-  Char91DotmcpChar93InvokeToolToolRouteImport.update({
-    id: '/.mcp/invoke-tool/$tool',
-    path: '/.mcp/invoke-tool/$tool',
-    getParentRoute: () => rootRouteImport,
+const AuthenticatedFilingIndexRoute =
+  AuthenticatedFilingIndexRouteImport.update({
+    id: '/filing/',
+    path: '/filing/',
+    getParentRoute: () => AuthenticatedRouteRoute,
   } as any)
-const DotlovableOauthConsentRoute = DotlovableOauthConsentRouteImport.update({
-  id: '/.lovable/oauth/consent',
-  path: '/.lovable/oauth/consent',
+const AuthenticatedHarvestIndexRoute =
+  AuthenticatedHarvestIndexRouteImport.update({
+    id: '/harvest/',
+    path: '/harvest/',
+    getParentRoute: () => AuthenticatedRouteRoute,
+  } as any)
+const AuthenticatedInspectionsIdRoute =
+  AuthenticatedInspectionsIdRouteImport.update({
+    id: '/inspections/$id',
+    path: '/inspections/$id',
+    getParentRoute: () => AuthenticatedRouteRoute,
+  } as any)
+const AuthenticatedJurisdictionsSlugRoute =
+  AuthenticatedJurisdictionsSlugRouteImport.update({
+    id: '/$slug',
+    path: '/$slug',
+    getParentRoute: () => AuthenticatedJurisdictionsRoute,
+  } as any)
+const AuthenticatedProjectsIndexRoute =
+  AuthenticatedProjectsIndexRouteImport.update({
+    id: '/projects/',
+    path: '/projects/',
+    getParentRoute: () => AuthenticatedRouteRoute,
+  } as any)
+const AuthenticatedProjectsIdRoute = AuthenticatedProjectsIdRouteImport.update({
+  id: '/projects/$id',
+  path: '/projects/$id',
+  getParentRoute: () => AuthenticatedRouteRoute,
+} as any)
+const AuthenticatedReportIdRoute = AuthenticatedReportIdRouteImport.update({
+  id: '/$id',
+  path: '/$id',
+  getParentRoute: () => AuthenticatedReportRoute,
+} as any)
+const AuthenticatedReportsIndexRoute =
+  AuthenticatedReportsIndexRouteImport.update({
+    id: '/reports/',
+    path: '/reports/',
+    getParentRoute: () => AuthenticatedRouteRoute,
+  } as any)
+const AuthenticatedReportsIdRoute = AuthenticatedReportsIdRouteImport.update({
+  id: '/reports/$id',
+  path: '/reports/$id',
+  getParentRoute: () => AuthenticatedRouteRoute,
+} as any)
+const AuthenticatedSirIndexRoute = AuthenticatedSirIndexRouteImport.update({
+  id: '/sir/',
+  path: '/sir/',
+  getParentRoute: () => AuthenticatedRouteRoute,
+} as any)
+const AuthenticatedSirIdRoute = AuthenticatedSirIdRouteImport.update({
+  id: '/sir/$id',
+  path: '/sir/$id',
+  getParentRoute: () => AuthenticatedRouteRoute,
+} as any)
+const AuthenticatedToolsCheckoutRoute =
+  AuthenticatedToolsCheckoutRouteImport.update({
+    id: '/tools_/checkout',
+    path: '/tools/checkout',
+    getParentRoute: () => AuthenticatedRouteRoute,
+  } as any)
+const ApiChatStreamRoute = ApiChatStreamRouteImport.update({
+  id: '/api/chat/stream',
+  path: '/api/chat/stream',
+  getParentRoute: () => rootRouteImport,
+} as any)
+const ShareReportsTokenRoute = ShareReportsTokenRouteImport.update({
+  id: '/share/reports/$token',
+  path: '/share/reports/$token',
   getParentRoute: () => rootRouteImport,
 } as any)
 const AuthenticatedAssistantScreensIndexRoute =
@@ -358,11 +358,11 @@ const AuthenticatedAssistantScreensIndexRoute =
     path: '/',
     getParentRoute: () => AuthenticatedAssistantScreensRoute,
   } as any)
-const ApiPublicPaymentsWebhookRoute =
-  ApiPublicPaymentsWebhookRouteImport.update({
-    id: '/api/public/payments/webhook',
-    path: '/api/public/payments/webhook',
-    getParentRoute: () => rootRouteImport,
+const AuthenticatedAssistantScreensIdRoute =
+  AuthenticatedAssistantScreensIdRouteImport.update({
+    id: '/$id',
+    path: '/$id',
+    getParentRoute: () => AuthenticatedAssistantScreensRoute,
   } as any)
 const ApiPublicHooksRefreshLinkedPermitsRoute =
   ApiPublicHooksRefreshLinkedPermitsRouteImport.update({
@@ -370,11 +370,11 @@ const ApiPublicHooksRefreshLinkedPermitsRoute =
     path: '/api/public/hooks/refresh-linked-permits',
     getParentRoute: () => rootRouteImport,
   } as any)
-const AuthenticatedAssistantScreensIdRoute =
-  AuthenticatedAssistantScreensIdRouteImport.update({
-    id: '/$id',
-    path: '/$id',
-    getParentRoute: () => AuthenticatedAssistantScreensRoute,
+const ApiPublicPaymentsWebhookRoute =
+  ApiPublicPaymentsWebhookRouteImport.update({
+    id: '/api/public/payments/webhook',
+    path: '/api/public/payments/webhook',
+    getParentRoute: () => rootRouteImport,
   } as any)
 
 export interface FileRoutesByFullPath {
@@ -750,53 +750,11 @@ export interface RootRouteChildren {
 
 declare module '@tanstack/react-router' {
   interface FileRoutesByPath {
-    '/sitemap.xml': {
-      id: '/sitemap.xml'
-      path: '/sitemap.xml'
-      fullPath: '/sitemap.xml'
-      preLoaderRoute: typeof SitemapDotxmlRouteImport
-      parentRoute: typeof rootRouteImport
-    }
-    '/site-investigation': {
-      id: '/site-investigation'
-      path: '/site-investigation'
-      fullPath: '/site-investigation'
-      preLoaderRoute: typeof SiteInvestigationRouteImport
-      parentRoute: typeof rootRouteImport
-    }
-    '/reset-password': {
-      id: '/reset-password'
-      path: '/reset-password'
-      fullPath: '/reset-password'
-      preLoaderRoute: typeof ResetPasswordRouteImport
-      parentRoute: typeof rootRouteImport
-    }
-    '/pricing': {
-      id: '/pricing'
-      path: '/pricing'
-      fullPath: '/pricing'
-      preLoaderRoute: typeof PricingRouteImport
-      parentRoute: typeof rootRouteImport
-    }
-    '/mcp': {
-      id: '/mcp'
-      path: '/mcp'
-      fullPath: '/mcp'
-      preLoaderRoute: typeof McpRouteImport
-      parentRoute: typeof rootRouteImport
-    }
-    '/demo': {
-      id: '/demo'
-      path: '/demo'
-      fullPath: '/demo'
-      preLoaderRoute: typeof DemoRouteImport
-      parentRoute: typeof rootRouteImport
-    }
-    '/auth': {
-      id: '/auth'
-      path: '/auth'
-      fullPath: '/auth'
-      preLoaderRoute: typeof AuthRouteImport
+    '/': {
+      id: '/'
+      path: '/'
+      fullPath: '/'
+      preLoaderRoute: typeof IndexRouteImport
       parentRoute: typeof rootRouteImport
     }
     '/_authenticated': {
@@ -806,116 +764,53 @@ declare module '@tanstack/react-router' {
       preLoaderRoute: typeof AuthenticatedRouteRouteImport
       parentRoute: typeof rootRouteImport
     }
-    '/': {
-      id: '/'
-      path: '/'
-      fullPath: '/'
-      preLoaderRoute: typeof IndexRouteImport
+    '/auth': {
+      id: '/auth'
+      path: '/auth'
+      fullPath: '/auth'
+      preLoaderRoute: typeof AuthRouteImport
       parentRoute: typeof rootRouteImport
     }
-    '/checkout/return': {
-      id: '/checkout/return'
-      path: '/checkout/return'
-      fullPath: '/checkout/return'
-      preLoaderRoute: typeof CheckoutReturnRouteImport
+    '/demo': {
+      id: '/demo'
+      path: '/demo'
+      fullPath: '/demo'
+      preLoaderRoute: typeof DemoRouteImport
       parentRoute: typeof rootRouteImport
     }
-    '/_authenticated/tools': {
-      id: '/_authenticated/tools'
-      path: '/tools'
-      fullPath: '/tools'
-      preLoaderRoute: typeof AuthenticatedToolsRouteImport
-      parentRoute: typeof AuthenticatedRouteRoute
+    '/mcp': {
+      id: '/mcp'
+      path: '/mcp'
+      fullPath: '/mcp'
+      preLoaderRoute: typeof McpRouteImport
+      parentRoute: typeof rootRouteImport
     }
-    '/_authenticated/start': {
-      id: '/_authenticated/start'
-      path: '/start'
-      fullPath: '/start'
-      preLoaderRoute: typeof AuthenticatedStartRouteImport
-      parentRoute: typeof AuthenticatedRouteRoute
+    '/pricing': {
+      id: '/pricing'
+      path: '/pricing'
+      fullPath: '/pricing'
+      preLoaderRoute: typeof PricingRouteImport
+      parentRoute: typeof rootRouteImport
     }
-    '/_authenticated/settings': {
-      id: '/_authenticated/settings'
-      path: '/settings'
-      fullPath: '/settings'
-      preLoaderRoute: typeof AuthenticatedSettingsRouteImport
-      parentRoute: typeof AuthenticatedRouteRoute
+    '/reset-password': {
+      id: '/reset-password'
+      path: '/reset-password'
+      fullPath: '/reset-password'
+      preLoaderRoute: typeof ResetPasswordRouteImport
+      parentRoute: typeof rootRouteImport
     }
-    '/_authenticated/report': {
-      id: '/_authenticated/report'
-      path: '/report'
-      fullPath: '/report'
-      preLoaderRoute: typeof AuthenticatedReportRouteImport
-      parentRoute: typeof AuthenticatedRouteRoute
+    '/site-investigation': {
+      id: '/site-investigation'
+      path: '/site-investigation'
+      fullPath: '/site-investigation'
+      preLoaderRoute: typeof SiteInvestigationRouteImport
+      parentRoute: typeof rootRouteImport
     }
-    '/_authenticated/property': {
-      id: '/_authenticated/property'
-      path: '/property'
-      fullPath: '/property'
-      preLoaderRoute: typeof AuthenticatedPropertyRouteImport
-      parentRoute: typeof AuthenticatedRouteRoute
-    }
-    '/_authenticated/portals': {
-      id: '/_authenticated/portals'
-      path: '/portals'
-      fullPath: '/portals'
-      preLoaderRoute: typeof AuthenticatedPortalsRouteImport
-      parentRoute: typeof AuthenticatedRouteRoute
-    }
-    '/_authenticated/plans': {
-      id: '/_authenticated/plans'
-      path: '/plans'
-      fullPath: '/plans'
-      preLoaderRoute: typeof AuthenticatedPlansRouteImport
-      parentRoute: typeof AuthenticatedRouteRoute
-    }
-    '/_authenticated/plan-qaqc': {
-      id: '/_authenticated/plan-qaqc'
-      path: '/plan-qaqc'
-      fullPath: '/plan-qaqc'
-      preLoaderRoute: typeof AuthenticatedPlanQaqcRouteImport
-      parentRoute: typeof AuthenticatedRouteRoute
-    }
-    '/_authenticated/lookup': {
-      id: '/_authenticated/lookup'
-      path: '/lookup'
-      fullPath: '/lookup'
-      preLoaderRoute: typeof AuthenticatedLookupRouteImport
-      parentRoute: typeof AuthenticatedRouteRoute
-    }
-    '/_authenticated/jurisdictions': {
-      id: '/_authenticated/jurisdictions'
-      path: '/jurisdictions'
-      fullPath: '/jurisdictions'
-      preLoaderRoute: typeof AuthenticatedJurisdictionsRouteImport
-      parentRoute: typeof AuthenticatedRouteRoute
-    }
-    '/_authenticated/health-portals': {
-      id: '/_authenticated/health-portals'
-      path: '/health-portals'
-      fullPath: '/health-portals'
-      preLoaderRoute: typeof AuthenticatedHealthPortalsRouteImport
-      parentRoute: typeof AuthenticatedRouteRoute
-    }
-    '/_authenticated/dashboard': {
-      id: '/_authenticated/dashboard'
-      path: '/dashboard'
-      fullPath: '/dashboard'
-      preLoaderRoute: typeof AuthenticatedDashboardRouteImport
-      parentRoute: typeof AuthenticatedRouteRoute
-    }
-    '/_authenticated/assistant': {
-      id: '/_authenticated/assistant'
-      path: '/assistant'
-      fullPath: '/assistant'
-      preLoaderRoute: typeof AuthenticatedAssistantRouteImport
-      parentRoute: typeof AuthenticatedRouteRoute
-    }
-    '/.well-known/oauth-protected-resource': {
-      id: '/.well-known/oauth-protected-resource'
-      path: '/.well-known/oauth-protected-resource'
-      fullPath: '/.well-known/oauth-protected-resource'
-      preLoaderRoute: typeof Char91DotwellKnownChar93OauthProtectedResourceRouteImport
+    '/sitemap.xml': {
+      id: '/sitemap.xml'
+      path: '/sitemap.xml'
+      fullPath: '/sitemap.xml'
+      preLoaderRoute: typeof SitemapDotxmlRouteImport
       parentRoute: typeof rootRouteImport
     }
     '/.mcp/list-tools': {
@@ -925,193 +820,109 @@ declare module '@tanstack/react-router' {
       preLoaderRoute: typeof Char91DotmcpChar93ListToolsRouteImport
       parentRoute: typeof rootRouteImport
     }
-    '/_authenticated/sir/': {
-      id: '/_authenticated/sir/'
-      path: '/sir'
-      fullPath: '/sir/'
-      preLoaderRoute: typeof AuthenticatedSirIndexRouteImport
-      parentRoute: typeof AuthenticatedRouteRoute
-    }
-    '/_authenticated/reports/': {
-      id: '/_authenticated/reports/'
-      path: '/reports'
-      fullPath: '/reports/'
-      preLoaderRoute: typeof AuthenticatedReportsIndexRouteImport
-      parentRoute: typeof AuthenticatedRouteRoute
-    }
-    '/_authenticated/projects/': {
-      id: '/_authenticated/projects/'
-      path: '/projects'
-      fullPath: '/projects/'
-      preLoaderRoute: typeof AuthenticatedProjectsIndexRouteImport
-      parentRoute: typeof AuthenticatedRouteRoute
-    }
-    '/_authenticated/harvest/': {
-      id: '/_authenticated/harvest/'
-      path: '/harvest'
-      fullPath: '/harvest/'
-      preLoaderRoute: typeof AuthenticatedHarvestIndexRouteImport
-      parentRoute: typeof AuthenticatedRouteRoute
-    }
-    '/_authenticated/filing/': {
-      id: '/_authenticated/filing/'
-      path: '/filing'
-      fullPath: '/filing/'
-      preLoaderRoute: typeof AuthenticatedFilingIndexRouteImport
-      parentRoute: typeof AuthenticatedRouteRoute
-    }
-    '/_authenticated/feasibility/': {
-      id: '/_authenticated/feasibility/'
-      path: '/feasibility'
-      fullPath: '/feasibility/'
-      preLoaderRoute: typeof AuthenticatedFeasibilityIndexRouteImport
-      parentRoute: typeof AuthenticatedRouteRoute
-    }
-    '/_authenticated/assistant/': {
-      id: '/_authenticated/assistant/'
-      path: '/'
-      fullPath: '/assistant/'
-      preLoaderRoute: typeof AuthenticatedAssistantIndexRouteImport
-      parentRoute: typeof AuthenticatedAssistantRoute
-    }
-    '/share/reports/$token': {
-      id: '/share/reports/$token'
-      path: '/share/reports/$token'
-      fullPath: '/share/reports/$token'
-      preLoaderRoute: typeof ShareReportsTokenRouteImport
+    '/.well-known/oauth-protected-resource': {
+      id: '/.well-known/oauth-protected-resource'
+      path: '/.well-known/oauth-protected-resource'
+      fullPath: '/.well-known/oauth-protected-resource'
+      preLoaderRoute: typeof Char91DotwellKnownChar93OauthProtectedResourceRouteImport
       parentRoute: typeof rootRouteImport
     }
-    '/api/chat/stream': {
-      id: '/api/chat/stream'
-      path: '/api/chat/stream'
-      fullPath: '/api/chat/stream'
-      preLoaderRoute: typeof ApiChatStreamRouteImport
-      parentRoute: typeof rootRouteImport
-    }
-    '/_authenticated/tools_/checkout': {
-      id: '/_authenticated/tools_/checkout'
-      path: '/tools/checkout'
-      fullPath: '/tools/checkout'
-      preLoaderRoute: typeof AuthenticatedToolsCheckoutRouteImport
+    '/_authenticated/assistant': {
+      id: '/_authenticated/assistant'
+      path: '/assistant'
+      fullPath: '/assistant'
+      preLoaderRoute: typeof AuthenticatedAssistantRouteImport
       parentRoute: typeof AuthenticatedRouteRoute
     }
-    '/_authenticated/sir/$id': {
-      id: '/_authenticated/sir/$id'
-      path: '/sir/$id'
-      fullPath: '/sir/$id'
-      preLoaderRoute: typeof AuthenticatedSirIdRouteImport
+    '/_authenticated/dashboard': {
+      id: '/_authenticated/dashboard'
+      path: '/dashboard'
+      fullPath: '/dashboard'
+      preLoaderRoute: typeof AuthenticatedDashboardRouteImport
       parentRoute: typeof AuthenticatedRouteRoute
     }
-    '/_authenticated/reports/$id': {
-      id: '/_authenticated/reports/$id'
-      path: '/reports/$id'
-      fullPath: '/reports/$id'
-      preLoaderRoute: typeof AuthenticatedReportsIdRouteImport
+    '/_authenticated/health-portals': {
+      id: '/_authenticated/health-portals'
+      path: '/health-portals'
+      fullPath: '/health-portals'
+      preLoaderRoute: typeof AuthenticatedHealthPortalsRouteImport
       parentRoute: typeof AuthenticatedRouteRoute
     }
-    '/_authenticated/report/$id': {
-      id: '/_authenticated/report/$id'
-      path: '/$id'
-      fullPath: '/report/$id'
-      preLoaderRoute: typeof AuthenticatedReportIdRouteImport
-      parentRoute: typeof AuthenticatedReportRoute
-    }
-    '/_authenticated/projects/$id': {
-      id: '/_authenticated/projects/$id'
-      path: '/projects/$id'
-      fullPath: '/projects/$id'
-      preLoaderRoute: typeof AuthenticatedProjectsIdRouteImport
+    '/_authenticated/jurisdictions': {
+      id: '/_authenticated/jurisdictions'
+      path: '/jurisdictions'
+      fullPath: '/jurisdictions'
+      preLoaderRoute: typeof AuthenticatedJurisdictionsRouteImport
       parentRoute: typeof AuthenticatedRouteRoute
     }
-    '/_authenticated/jurisdictions/$slug': {
-      id: '/_authenticated/jurisdictions/$slug'
-      path: '/$slug'
-      fullPath: '/jurisdictions/$slug'
-      preLoaderRoute: typeof AuthenticatedJurisdictionsSlugRouteImport
-      parentRoute: typeof AuthenticatedJurisdictionsRoute
-    }
-    '/_authenticated/inspections/$id': {
-      id: '/_authenticated/inspections/$id'
-      path: '/inspections/$id'
-      fullPath: '/inspections/$id'
-      preLoaderRoute: typeof AuthenticatedInspectionsIdRouteImport
+    '/_authenticated/lookup': {
+      id: '/_authenticated/lookup'
+      path: '/lookup'
+      fullPath: '/lookup'
+      preLoaderRoute: typeof AuthenticatedLookupRouteImport
       parentRoute: typeof AuthenticatedRouteRoute
     }
-    '/_authenticated/feasibility/$id': {
-      id: '/_authenticated/feasibility/$id'
-      path: '/feasibility/$id'
-      fullPath: '/feasibility/$id'
-      preLoaderRoute: typeof AuthenticatedFeasibilityIdRouteImport
+    '/_authenticated/plan-qaqc': {
+      id: '/_authenticated/plan-qaqc'
+      path: '/plan-qaqc'
+      fullPath: '/plan-qaqc'
+      preLoaderRoute: typeof AuthenticatedPlanQaqcRouteImport
       parentRoute: typeof AuthenticatedRouteRoute
     }
-    '/_authenticated/assistant/screens': {
-      id: '/_authenticated/assistant/screens'
-      path: '/screens'
-      fullPath: '/assistant/screens'
-      preLoaderRoute: typeof AuthenticatedAssistantScreensRouteImport
-      parentRoute: typeof AuthenticatedAssistantRoute
-    }
-    '/_authenticated/assistant/permits': {
-      id: '/_authenticated/assistant/permits'
-      path: '/permits'
-      fullPath: '/assistant/permits'
-      preLoaderRoute: typeof AuthenticatedAssistantPermitsRouteImport
-      parentRoute: typeof AuthenticatedAssistantRoute
-    }
-    '/_authenticated/assistant/analysis': {
-      id: '/_authenticated/assistant/analysis'
-      path: '/analysis'
-      fullPath: '/assistant/analysis'
-      preLoaderRoute: typeof AuthenticatedAssistantAnalysisRouteImport
-      parentRoute: typeof AuthenticatedAssistantRoute
-    }
-    '/_authenticated/assistant/$threadId': {
-      id: '/_authenticated/assistant/$threadId'
-      path: '/$threadId'
-      fullPath: '/assistant/$threadId'
-      preLoaderRoute: typeof AuthenticatedAssistantThreadIdRouteImport
-      parentRoute: typeof AuthenticatedAssistantRoute
-    }
-    '/_authenticated/admin/users': {
-      id: '/_authenticated/admin/users'
-      path: '/admin/users'
-      fullPath: '/admin/users'
-      preLoaderRoute: typeof AuthenticatedAdminUsersRouteImport
+    '/_authenticated/plans': {
+      id: '/_authenticated/plans'
+      path: '/plans'
+      fullPath: '/plans'
+      preLoaderRoute: typeof AuthenticatedPlansRouteImport
       parentRoute: typeof AuthenticatedRouteRoute
     }
-    '/_authenticated/admin/tools': {
-      id: '/_authenticated/admin/tools'
-      path: '/admin/tools'
-      fullPath: '/admin/tools'
-      preLoaderRoute: typeof AuthenticatedAdminToolsRouteImport
+    '/_authenticated/portals': {
+      id: '/_authenticated/portals'
+      path: '/portals'
+      fullPath: '/portals'
+      preLoaderRoute: typeof AuthenticatedPortalsRouteImport
       parentRoute: typeof AuthenticatedRouteRoute
     }
-    '/_authenticated/admin/sir': {
-      id: '/_authenticated/admin/sir'
-      path: '/admin/sir'
-      fullPath: '/admin/sir'
-      preLoaderRoute: typeof AuthenticatedAdminSirRouteImport
+    '/_authenticated/property': {
+      id: '/_authenticated/property'
+      path: '/property'
+      fullPath: '/property'
+      preLoaderRoute: typeof AuthenticatedPropertyRouteImport
       parentRoute: typeof AuthenticatedRouteRoute
     }
-    '/_authenticated/admin/portals': {
-      id: '/_authenticated/admin/portals'
-      path: '/admin/portals'
-      fullPath: '/admin/portals'
-      preLoaderRoute: typeof AuthenticatedAdminPortalsRouteImport
+    '/_authenticated/report': {
+      id: '/_authenticated/report'
+      path: '/report'
+      fullPath: '/report'
+      preLoaderRoute: typeof AuthenticatedReportRouteImport
       parentRoute: typeof AuthenticatedRouteRoute
     }
-    '/_authenticated/admin/health-portals': {
-      id: '/_authenticated/admin/health-portals'
-      path: '/admin/health-portals'
-      fullPath: '/admin/health-portals'
-      preLoaderRoute: typeof AuthenticatedAdminHealthPortalsRouteImport
+    '/_authenticated/settings': {
+      id: '/_authenticated/settings'
+      path: '/settings'
+      fullPath: '/settings'
+      preLoaderRoute: typeof AuthenticatedSettingsRouteImport
       parentRoute: typeof AuthenticatedRouteRoute
     }
-    '/.mcp/invoke-tool/$tool': {
-      id: '/.mcp/invoke-tool/$tool'
-      path: '/.mcp/invoke-tool/$tool'
-      fullPath: '/.mcp/invoke-tool/$tool'
-      preLoaderRoute: typeof Char91DotmcpChar93InvokeToolToolRouteImport
+    '/_authenticated/start': {
+      id: '/_authenticated/start'
+      path: '/start'
+      fullPath: '/start'
+      preLoaderRoute: typeof AuthenticatedStartRouteImport
+      parentRoute: typeof AuthenticatedRouteRoute
+    }
+    '/_authenticated/tools': {
+      id: '/_authenticated/tools'
+      path: '/tools'
+      fullPath: '/tools'
+      preLoaderRoute: typeof AuthenticatedToolsRouteImport
+      parentRoute: typeof AuthenticatedRouteRoute
+    }
+    '/checkout/return': {
+      id: '/checkout/return'
+      path: '/checkout/return'
+      fullPath: '/checkout/return'
+      preLoaderRoute: typeof CheckoutReturnRouteImport
       parentRoute: typeof rootRouteImport
     }
     '/.lovable/oauth/consent': {
@@ -1121,6 +932,195 @@ declare module '@tanstack/react-router' {
       preLoaderRoute: typeof DotlovableOauthConsentRouteImport
       parentRoute: typeof rootRouteImport
     }
+    '/.mcp/invoke-tool/$tool': {
+      id: '/.mcp/invoke-tool/$tool'
+      path: '/.mcp/invoke-tool/$tool'
+      fullPath: '/.mcp/invoke-tool/$tool'
+      preLoaderRoute: typeof Char91DotmcpChar93InvokeToolToolRouteImport
+      parentRoute: typeof rootRouteImport
+    }
+    '/_authenticated/admin/health-portals': {
+      id: '/_authenticated/admin/health-portals'
+      path: '/admin/health-portals'
+      fullPath: '/admin/health-portals'
+      preLoaderRoute: typeof AuthenticatedAdminHealthPortalsRouteImport
+      parentRoute: typeof AuthenticatedRouteRoute
+    }
+    '/_authenticated/admin/portals': {
+      id: '/_authenticated/admin/portals'
+      path: '/admin/portals'
+      fullPath: '/admin/portals'
+      preLoaderRoute: typeof AuthenticatedAdminPortalsRouteImport
+      parentRoute: typeof AuthenticatedRouteRoute
+    }
+    '/_authenticated/admin/sir': {
+      id: '/_authenticated/admin/sir'
+      path: '/admin/sir'
+      fullPath: '/admin/sir'
+      preLoaderRoute: typeof AuthenticatedAdminSirRouteImport
+      parentRoute: typeof AuthenticatedRouteRoute
+    }
+    '/_authenticated/admin/tools': {
+      id: '/_authenticated/admin/tools'
+      path: '/admin/tools'
+      fullPath: '/admin/tools'
+      preLoaderRoute: typeof AuthenticatedAdminToolsRouteImport
+      parentRoute: typeof AuthenticatedRouteRoute
+    }
+    '/_authenticated/admin/users': {
+      id: '/_authenticated/admin/users'
+      path: '/admin/users'
+      fullPath: '/admin/users'
+      preLoaderRoute: typeof AuthenticatedAdminUsersRouteImport
+      parentRoute: typeof AuthenticatedRouteRoute
+    }
+    '/_authenticated/assistant/': {
+      id: '/_authenticated/assistant/'
+      path: '/'
+      fullPath: '/assistant/'
+      preLoaderRoute: typeof AuthenticatedAssistantIndexRouteImport
+      parentRoute: typeof AuthenticatedAssistantRoute
+    }
+    '/_authenticated/assistant/$threadId': {
+      id: '/_authenticated/assistant/$threadId'
+      path: '/$threadId'
+      fullPath: '/assistant/$threadId'
+      preLoaderRoute: typeof AuthenticatedAssistantThreadIdRouteImport
+      parentRoute: typeof AuthenticatedAssistantRoute
+    }
+    '/_authenticated/assistant/analysis': {
+      id: '/_authenticated/assistant/analysis'
+      path: '/analysis'
+      fullPath: '/assistant/analysis'
+      preLoaderRoute: typeof AuthenticatedAssistantAnalysisRouteImport
+      parentRoute: typeof AuthenticatedAssistantRoute
+    }
+    '/_authenticated/assistant/permits': {
+      id: '/_authenticated/assistant/permits'
+      path: '/permits'
+      fullPath: '/assistant/permits'
+      preLoaderRoute: typeof AuthenticatedAssistantPermitsRouteImport
+      parentRoute: typeof AuthenticatedAssistantRoute
+    }
+    '/_authenticated/assistant/screens': {
+      id: '/_authenticated/assistant/screens'
+      path: '/screens'
+      fullPath: '/assistant/screens'
+      preLoaderRoute: typeof AuthenticatedAssistantScreensRouteImport
+      parentRoute: typeof AuthenticatedAssistantRoute
+    }
+    '/_authenticated/feasibility/': {
+      id: '/_authenticated/feasibility/'
+      path: '/feasibility'
+      fullPath: '/feasibility/'
+      preLoaderRoute: typeof AuthenticatedFeasibilityIndexRouteImport
+      parentRoute: typeof AuthenticatedRouteRoute
+    }
+    '/_authenticated/feasibility/$id': {
+      id: '/_authenticated/feasibility/$id'
+      path: '/feasibility/$id'
+      fullPath: '/feasibility/$id'
+      preLoaderRoute: typeof AuthenticatedFeasibilityIdRouteImport
+      parentRoute: typeof AuthenticatedRouteRoute
+    }
+    '/_authenticated/filing/': {
+      id: '/_authenticated/filing/'
+      path: '/filing'
+      fullPath: '/filing/'
+      preLoaderRoute: typeof AuthenticatedFilingIndexRouteImport
+      parentRoute: typeof AuthenticatedRouteRoute
+    }
+    '/_authenticated/harvest/': {
+      id: '/_authenticated/harvest/'
+      path: '/harvest'
+      fullPath: '/harvest/'
+      preLoaderRoute: typeof AuthenticatedHarvestIndexRouteImport
+      parentRoute: typeof AuthenticatedRouteRoute
+    }
+    '/_authenticated/inspections/$id': {
+      id: '/_authenticated/inspections/$id'
+      path: '/inspections/$id'
+      fullPath: '/inspections/$id'
+      preLoaderRoute: typeof AuthenticatedInspectionsIdRouteImport
+      parentRoute: typeof AuthenticatedRouteRoute
+    }
+    '/_authenticated/jurisdictions/$slug': {
+      id: '/_authenticated/jurisdictions/$slug'
+      path: '/$slug'
+      fullPath: '/jurisdictions/$slug'
+      preLoaderRoute: typeof AuthenticatedJurisdictionsSlugRouteImport
+      parentRoute: typeof AuthenticatedJurisdictionsRoute
+    }
+    '/_authenticated/projects/': {
+      id: '/_authenticated/projects/'
+      path: '/projects'
+      fullPath: '/projects/'
+      preLoaderRoute: typeof AuthenticatedProjectsIndexRouteImport
+      parentRoute: typeof AuthenticatedRouteRoute
+    }
+    '/_authenticated/projects/$id': {
+      id: '/_authenticated/projects/$id'
+      path: '/projects/$id'
+      fullPath: '/projects/$id'
+      preLoaderRoute: typeof AuthenticatedProjectsIdRouteImport
+      parentRoute: typeof AuthenticatedRouteRoute
+    }
+    '/_authenticated/report/$id': {
+      id: '/_authenticated/report/$id'
+      path: '/$id'
+      fullPath: '/report/$id'
+      preLoaderRoute: typeof AuthenticatedReportIdRouteImport
+      parentRoute: typeof AuthenticatedReportRoute
+    }
+    '/_authenticated/reports/': {
+      id: '/_authenticated/reports/'
+      path: '/reports'
+      fullPath: '/reports/'
+      preLoaderRoute: typeof AuthenticatedReportsIndexRouteImport
+      parentRoute: typeof AuthenticatedRouteRoute
+    }
+    '/_authenticated/reports/$id': {
+      id: '/_authenticated/reports/$id'
+      path: '/reports/$id'
+      fullPath: '/reports/$id'
+      preLoaderRoute: typeof AuthenticatedReportsIdRouteImport
+      parentRoute: typeof AuthenticatedRouteRoute
+    }
+    '/_authenticated/sir/': {
+      id: '/_authenticated/sir/'
+      path: '/sir'
+      fullPath: '/sir/'
+      preLoaderRoute: typeof AuthenticatedSirIndexRouteImport
+      parentRoute: typeof AuthenticatedRouteRoute
+    }
+    '/_authenticated/sir/$id': {
+      id: '/_authenticated/sir/$id'
+      path: '/sir/$id'
+      fullPath: '/sir/$id'
+      preLoaderRoute: typeof AuthenticatedSirIdRouteImport
+      parentRoute: typeof AuthenticatedRouteRoute
+    }
+    '/_authenticated/tools_/checkout': {
+      id: '/_authenticated/tools_/checkout'
+      path: '/tools/checkout'
+      fullPath: '/tools/checkout'
+      preLoaderRoute: typeof AuthenticatedToolsCheckoutRouteImport
+      parentRoute: typeof AuthenticatedRouteRoute
+    }
+    '/api/chat/stream': {
+      id: '/api/chat/stream'
+      path: '/api/chat/stream'
+      fullPath: '/api/chat/stream'
+      preLoaderRoute: typeof ApiChatStreamRouteImport
+      parentRoute: typeof rootRouteImport
+    }
+    '/share/reports/$token': {
+      id: '/share/reports/$token'
+      path: '/share/reports/$token'
+      fullPath: '/share/reports/$token'
+      preLoaderRoute: typeof ShareReportsTokenRouteImport
+      parentRoute: typeof rootRouteImport
+    }
     '/_authenticated/assistant/screens/': {
       id: '/_authenticated/assistant/screens/'
       path: '/'
@@ -1128,12 +1128,12 @@ declare module '@tanstack/react-router' {
       preLoaderRoute: typeof AuthenticatedAssistantScreensIndexRouteImport
       parentRoute: typeof AuthenticatedAssistantScreensRoute
     }
-    '/api/public/payments/webhook': {
-      id: '/api/public/payments/webhook'
-      path: '/api/public/payments/webhook'
-      fullPath: '/api/public/payments/webhook'
-      preLoaderRoute: typeof ApiPublicPaymentsWebhookRouteImport
-      parentRoute: typeof rootRouteImport
+    '/_authenticated/assistant/screens/$id': {
+      id: '/_authenticated/assistant/screens/$id'
+      path: '/$id'
+      fullPath: '/assistant/screens/$id'
+      preLoaderRoute: typeof AuthenticatedAssistantScreensIdRouteImport
+      parentRoute: typeof AuthenticatedAssistantScreensRoute
     }
     '/api/public/hooks/refresh-linked-permits': {
       id: '/api/public/hooks/refresh-linked-permits'
@@ -1142,12 +1142,12 @@ declare module '@tanstack/react-router' {
       preLoaderRoute: typeof ApiPublicHooksRefreshLinkedPermitsRouteImport
       parentRoute: typeof rootRouteImport
     }
-    '/_authenticated/assistant/screens/$id': {
-      id: '/_authenticated/assistant/screens/$id'
-      path: '/$id'
-      fullPath: '/assistant/screens/$id'
-      preLoaderRoute: typeof AuthenticatedAssistantScreensIdRouteImport
-      parentRoute: typeof AuthenticatedAssistantScreensRoute
+    '/api/public/payments/webhook': {
+      id: '/api/public/payments/webhook'
+      path: '/api/public/payments/webhook'
+      fullPath: '/api/public/payments/webhook'
+      preLoaderRoute: typeof ApiPublicPaymentsWebhookRouteImport
+      parentRoute: typeof rootRouteImport
     }
   }
 }
