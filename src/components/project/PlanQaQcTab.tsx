@@ -9,7 +9,9 @@ import {
   deleteQaQcReview,
   addQaQcGapsToChecklist,
   generateQaQcReportPdf,
+  addQaQcFindingsToRoadmap,
 } from "@/lib/qaqcReview.functions";
+import { PlanReviewSetup } from "@/components/project/PlanReviewSetup";
 import { getPlanReviewOverview, listReviewEvaluations, setQaQcFindingStatus } from "@/lib/planReviewWorkspace.functions";
 import { PERMIVIO_PROFESSIONAL_DISCLAIMER } from "@/lib/qaqcConfig";
 import { reviewSummary, type WorkspaceFinding } from "@/lib/planReviewUx";
@@ -25,7 +27,7 @@ import type { AgencyContact } from "@/lib/agencyContacts";
 
 // Project → Plan Review. The CURRENT plan set is the review target; every review stays
 // tied to the exact plan set it reviewed. Viewing is free; running is an explicit paid action.
-export function PlanQaQcTab({ projectId }: { projectId: string; userId: string }) {
+export function PlanQaQcTab({ projectId, userId }: { projectId: string; userId: string }) {
   const qc = useQueryClient();
   const { mode } = useViewMode();
   const professional = mode === "pro";
@@ -79,6 +81,18 @@ export function PlanQaQcTab({ projectId }: { projectId: string; userId: string }
     onSuccess: (r) => {
       toast.success(r.added ? `${r.added} item(s) added to the roadmap` : "No new roadmap items");
       qc.invalidateQueries({ queryKey: ["checklist", projectId] });
+    },
+    onError: (e) => toast.error(e instanceof Error ? e.message : "Could not update roadmap"),
+  });
+
+  const findingsFn = useServerFn(addQaQcFindingsToRoadmap);
+  const addFindings = useMutation({
+    mutationFn: () => findingsFn({ data: { review_id: currentId as string } }),
+    onSuccess: (r) => {
+      toast.success(r.added ? `${r.added} correction item(s) added to the Permit Roadmap (Needs Verification)` : "No new open findings to add");
+      qc.invalidateQueries({ queryKey: ["checklist", projectId] });
+      qc.invalidateQueries({ queryKey: ["permit_items", projectId] });
+      qc.invalidateQueries({ queryKey: ["project-foundation", projectId] });
     },
     onError: (e) => toast.error(e instanceof Error ? e.message : "Could not update roadmap"),
   });

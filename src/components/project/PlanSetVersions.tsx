@@ -17,7 +17,7 @@ export function PlanSetVersions({ projectId, docs }: { projectId: string; docs: 
   const [sel, setSel] = useState<string[]>([]);
   const [revDate, setRevDate] = useState("");
   const [openSet, setOpenSet] = useState<string | null>(null);
-  const refresh = () => { qc.invalidateQueries({ queryKey: ["plan-sets", projectId] }); qc.invalidateQueries({ queryKey: ["project-foundation", projectId] }); };
+  const refresh = () => { qc.invalidateQueries({ queryKey: ["plan-sets", projectId] }); qc.invalidateQueries({ queryKey: ["project-foundation", projectId] }); qc.invalidateQueries({ queryKey: ["plan-review-overview", projectId] }); };
   const onErr = (e: unknown) => toast.error(e instanceof Error ? e.message : "Failed");
   const create = useMutation({
     mutationFn: () => createFn({ data: { project_id: projectId, document_ids: sel, revision_date: revDate || null, make_current: true } }),
