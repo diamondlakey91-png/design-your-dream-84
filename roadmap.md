@@ -46,3 +46,8 @@
 - [x] Layered authority graph (building/zoning/trades/fire/health; direct/county/state/split/contracted/presumed)
 - [x] Local-vs-state edition staleness; bounded crawl; grounded AI fallback (not triggered in tests)
 - [ ] Open: official FEMA service unreachable during tests (third-party copy used, flagged); zoning unresolved LA/New Orleans/Bentonville; no local adoption statement found in any retest; AI fallback not exercised live
+
+## Publish request (2026-10-02)
+- [ ] Publish current state to permivio.lovable.app (user explicitly requested)
+- [ ] Investigate reported 404 "Off the site map" on published site + admin access concern
+- [ ] Continue Bermudez binder upload after publish
