@@ -803,6 +803,62 @@ export const addQaQcGapsToChecklist = createServerFn({ method: "POST" })
     return { added: rows.length };
   });
 
+// ------------------------------------ project integration: findings -> roadmap
+// Open high/medium findings become correction items on the Permit Roadmap.
+// They are AI-suggested issues, so they always enter as "needs_verification" —
+// never as verified requirements.
+export const addQaQcFindingsToRoadmap = createServerFn({ method: "POST" })
+  .middleware([requireSupabaseAuth])
+  .inputValidator((d: unknown) => z.object({ review_id: z.string().uuid() }).parse(d))
+  .handler(async ({ data, context }) => {
+    const sb = context.supabase;
+    const { data: reviewRow } = await sb.from("qaqc_reviews").select("id, project_id, revision_label").eq("id", data.review_id).maybeSingle();
+    // eslint-disable-next-line @typescript-eslint/no-explicit-any
+    const review = reviewRow as any;
+    if (!review) throw new Error("Review not found");
+    const { data: fs } = await sb.from("qaqc_findings").select("*").eq("review_id", data.review_id).order("finding_no");
+    // eslint-disable-next-line @typescript-eslint/no-explicit-any
+    const open = ((fs ?? []) as any[]).filter((f) =>
+      !f.resolved && !["resolved", "dismissed", "not_applicable"].includes(String(f.status ?? "open")) && ["high", "medium"].includes(String(f.severity)),
+    );
+    if (!open.length) return { added: 0 };
+    const { data: existing } = await sb.from("permit_items").select("name").eq("project_id", review.project_id);
+    const have = new Set((existing ?? []).map((e: { name: string }) => e.name.toLowerCase()));
+    const rows = open
+      .map((f, i) => {
+        const name = `Plan correction #${f.finding_no}${f.sheet_number ? ` (${f.sheet_number})` : ""}: ${String(f.summary).slice(0, 120)}`;
+        const label = f.verification === "verified" ? "Verified Requirement" : f.verification === "needs_human_review" ? "Needs Human Review" : "AI Suggested Issue";
+        return {
+          user_id: context.userId,
+          project_id: review.project_id,
+          name,
+          category: "corrections",
+          status: "not_started",
+          required: true,
+          requirement_confidence: "needs_verification",
+          description: f.plain_language ?? f.summary,
+          source_url: f.jurisdiction_source_url ?? null,
+          notes: [
+            `${label} from Plan Review (${review.revision_label}) — not a confirmed code violation.`,
+            f.code_basis ? `Code basis cited: ${f.code_basis}` : null,
+            f.recommended_action ? `Recommended action: ${f.recommended_action}` : null,
+          ].filter(Boolean).join("\n"),
+          sort_order: 800 + i,
+        };
+      })
+      .filter((r) => !have.has(r.name.toLowerCase()))
+      .slice(0, 60);
+    if (!rows.length) return { added: 0 };
+    const { error } = await sb.from("permit_items").insert(rows as never);
+    if (error) throw new Error(error.message);
+    await sb.from("activity").insert({
+      project_id: review.project_id,
+      user_id: context.userId,
+      description: `Plan Review added ${rows.length} correction item(s) to the Permit Roadmap`,
+    });
+    return { added: rows.length };
+  });
+
 // ----------------------------------------------------------------- PDF export
 
 function pdfSafe(s: string | null | undefined): string {
