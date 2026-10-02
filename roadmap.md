@@ -51,3 +51,6 @@
 - [ ] Publish current state to permivio.lovable.app (user explicitly requested)
 - [ ] Investigate reported 404 "Off the site map" on published site + admin access concern
 - [ ] Continue Bermudez binder upload after publish
+
+- [ ] Professional Permit Due Diligence Engine phase (spec uploaded 2026-10-02): AHJ matrix by discipline, evidence status model — no paid Plan Review this phase
+- [ ] Bermudez Plan Review: run failed (AI returned malformed JSON); retry paused per new spec
