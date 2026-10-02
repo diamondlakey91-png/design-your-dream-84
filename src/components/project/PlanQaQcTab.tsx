@@ -135,6 +135,7 @@ export function PlanQaQcTab({ projectId, userId }: { projectId: string; userId: 
   return (
     <div className="space-y-6">
       {overview.isLoading && <p className="text-sm text-muted-foreground">Loading plan review…</p>}
+      {o && <PlanReviewSetup key={o.planSets.length ? "has" : "none"} projectId={projectId} userId={userId} hasPlanSets={o.planSets.length > 0} />}
       {o && (
         <PlanReviewEntry o={o} activeReviewId={currentId} onSelectReview={setActiveReview}
           onRun={(planSetId, requestId) => run.mutate({ planSetId, requestId })} running={run.isPending} />
@@ -167,6 +168,7 @@ export function PlanQaQcTab({ projectId, userId }: { projectId: string; userId: 
                 )}
               </div>
               <div className="flex flex-wrap gap-2">
+                <button onClick={() => addFindings.mutate()} disabled={addFindings.isPending} className={btn}><ListPlus className="size-3.5" /> {addFindings.isPending ? "Adding…" : "Send findings to roadmap"}</button>
                 <button onClick={() => addGaps.mutate()} disabled={addGaps.isPending} className={btn}><ListPlus className="size-3.5" /> Add gaps to roadmap</button>
                 <button onClick={() => exportPdf.mutate()} disabled={exportPdf.isPending} className={btn}><FileDown className="size-3.5" /> {exportPdf.isPending ? "Building…" : "Report PDF"}</button>
                 <button onClick={() => remove.mutate(d.review.id)} className={`${btn} text-muted-foreground hover:border-destructive hover:text-destructive`}><Trash2 className="size-3.5" /> Delete</button>

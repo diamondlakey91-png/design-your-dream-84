@@ -64,7 +64,7 @@ export function PlanReviewEntry({
         </p>
 
         {o.planSets.length === 0 ? (
-          <p className="mt-3 text-sm text-muted-foreground">No plan sets yet. Create one in Documents → Plans, then return here to review it.</p>
+          <p className="mt-3 text-sm text-muted-foreground">No plan sets yet. Upload drawings and create a plan set above, then run the review here.</p>
         ) : (
           <div className="mt-3 space-y-2">
             {prevReviewed && (
