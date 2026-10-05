@@ -97,7 +97,7 @@ export async function runMeteredAi<T>(a: MeterArgs, run: () => Promise<T>): Prom
     if (a.creditType && a.userId) {
       // Charge with a unique per-attempt key: the claim row above already blocks
       // concurrent duplicates, so every run that starts must consume its own credit.
-      const c = await chargeIncludedUsage(a.db, a.userId, a.creditType, `${a.key}:charge:${Date.now()}`, { projectId: a.projectId, reason: a.operation });
+      const c = await chargeIncludedUsage(a.db, a.userId, a.creditType, `${a.key}:charge:${Date.now()}:${Math.random().toString(36).slice(2, 8)}`, { projectId: a.projectId, reason: a.operation });
       usageId = c.usageId;
       internal = c.internal;
     }
