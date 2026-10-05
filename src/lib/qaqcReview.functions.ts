@@ -804,7 +804,7 @@ export const addQaQcGapsToChecklist = createServerFn({ method: "POST" })
   });
 
 // ------------------------------------ project integration: findings -> roadmap
-// Open high/medium findings become correction items on the Permit Roadmap.
+// Open critical/high/medium findings become correction items on the Permit Roadmap.
 // They are AI-suggested issues, so they always enter as "needs_verification" —
 // never as verified requirements.
 export const addQaQcFindingsToRoadmap = createServerFn({ method: "POST" })
