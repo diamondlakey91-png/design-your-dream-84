@@ -143,7 +143,7 @@ describe("Plan Review entitlements (runMeteredAi, plan_review_credits)", () => {
     const [a, b] = await Promise.allSettled([runMeteredAi(args("k1"), ai), runMeteredAi(args("k1"), ai)]);
     expect([a.status, b.status].sort()).toEqual(["fulfilled", "rejected"]);
     expect(ai).toHaveBeenCalledTimes(1);
-    expect(charges).toEqual(["k1"]);
+    expect(charges).toHaveLength(1); expect(charges[0]).toMatch(/^k1:charge:/);
     expect(logRows).toHaveLength(1);
     expect(logRows[0]).toMatchObject({ success: true, credits_charged: 1 });
   });
@@ -152,14 +152,14 @@ describe("Plan Review entitlements (runMeteredAi, plan_review_credits)", () => {
     const { runMeteredAi } = await import("@/lib/aiMeter.server");
     await runMeteredAi(args("k4"), async () => "first");
     await expect(runMeteredAi(args("k4"), async () => "second")).resolves.toBe("second");
-    expect(charges).toEqual(["k4", "k4"]);
+    expect(charges).toHaveLength(2); charges.forEach((c: string) => expect(c).toMatch(/^k4:charge:/)); expect(new Set(charges).size).toBe(2);
     expect(logRows).toHaveLength(2);
   });
   it("failure → credit restored and key freed for retry", async () => {
     credits = 1;
     const { runMeteredAi } = await import("@/lib/aiMeter.server");
     await expect(runMeteredAi(args("k2"), async () => { throw new Error("boom"); })).rejects.toThrow("boom");
-    expect(refunds).toEqual(["c-k2"]);
+    expect(refunds).toHaveLength(1); expect(refunds[0]).toMatch(/^c-k2:charge:/);
     expect(credits).toBe(1);
     expect(logRows[0]).toMatchObject({ success: false, refunded: true });
     await expect(runMeteredAi(args("k2"), async () => "retry")).resolves.toBe("retry");
