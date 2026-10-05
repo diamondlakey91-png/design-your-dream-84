@@ -819,7 +819,7 @@ export const addQaQcFindingsToRoadmap = createServerFn({ method: "POST" })
     const { data: fs } = await sb.from("qaqc_findings").select("*").eq("review_id", data.review_id).order("finding_no");
     // eslint-disable-next-line @typescript-eslint/no-explicit-any
     const open = ((fs ?? []) as any[]).filter((f) =>
-      !f.resolved && !["resolved", "dismissed", "not_applicable"].includes(String(f.status ?? "open")) && ["high", "medium"].includes(String(f.severity)),
+      !f.resolved && !["resolved", "dismissed", "not_applicable"].includes(String(f.status ?? "open")) && ["critical", "high", "medium"].includes(String(f.severity)),
     );
     if (!open.length) return { added: 0 };
     const { data: existing } = await sb.from("permit_items").select("name").eq("project_id", review.project_id);
